@@ -1,0 +1,36 @@
+.edit-user-dialog {
+  min-width: 400px;
+  max-width: 600px;
+
+  mat-dialog-content {
+    padding: 20px;
+    max-height: 600px;
+  }
+
+  .full-width {
+    width: 100%;
+    margin-bottom: 16px;
+  }
+
+  .status-checkbox {
+    margin-top: 16px;
+    margin-bottom: 8px;
+  }
+
+  .button-spinner {
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  mat-dialog-actions {
+    padding: 16px 20px;
+    border-top: 1px solid #e0e0e0;
+  }
+
+  mat-form-field {
+    ::ng-deep .mat-form-field-wrapper {
+      margin-bottom: 0;
+    }
+  }
+}

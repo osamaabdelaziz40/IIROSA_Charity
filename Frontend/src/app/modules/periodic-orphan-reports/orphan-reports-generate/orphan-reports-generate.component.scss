@@ -1,0 +1,32 @@
+// Orphan Reports Generate Styles
+.orphan-reports-generate {
+  .section-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  .stat-card {
+    h3 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    p {
+      font-size: 0.875rem;
+      color: var(--bs-secondary);
+    }
+  }
+
+  .report-results {
+    .table {
+      th {
+        position: sticky;
+        top: 0;
+        background-color: var(--bs-gray-100);
+        z-index: 10;
+      }
+    }
+  }
+}

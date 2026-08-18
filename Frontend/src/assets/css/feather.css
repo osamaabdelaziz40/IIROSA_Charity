@@ -1,0 +1,13 @@
+/* Feather Icons CSS placeholder */
+/* This is a placeholder for Feather Icons styles */
+/* You can replace this with actual Feather Icons styles or use the feather-icons package */
+
+.feather-icon {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}

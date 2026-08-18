@@ -1,0 +1,287 @@
+<app-breadcrumb [items]="breadcrumbsWithAction"></app-breadcrumb>
+<app-page-header
+  [title]="isEditMode ? 'missions.editMission' : 'missions.addMission'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow" *ngIf="!loading">
+        <div class="card-body">
+          <form [formGroup]="missionForm" (ngSubmit)="onSubmit()">
+            <!-- Basic Information Section -->
+            <div class="col-12">
+              <h5 class="mb-3">{{ 'missions.basicInformation' | translate }}</h5>
+            </div>
+
+            <div class="row">
+            <div class="col-md-12">
+              <div class="form-group">
+                <label for="missionTarget">
+                  {{ 'missions.missionTarget' | translate }} <span class="required">*</span>
+                </label>
+                <input type="text"
+                       id="missionTarget"
+                       class="form-control"
+                       formControlName="missionTarget"
+                       [placeholder]="'missions.enterMissionTarget' | translate"
+                       [class.is-invalid]="isFieldInvalid('missionTarget')">
+                <div *ngIf="isFieldInvalid('missionTarget')" class="invalid-feedback">
+                  {{ getFieldError('missionTarget') }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-12">
+              <div class="form-group">
+                <label for="missionDetails">{{ 'missions.missionDetails' | translate }}</label>
+                <textarea id="missionDetails"
+                          class="form-control"
+                          formControlName="missionDetails"
+                          rows="3"
+                          [placeholder]="'missions.enterMissionDetails' | translate">
+                </textarea>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-12">
+              <div class="form-group">
+                <label for="details">{{ 'missions.details' | translate }}</label>
+                <textarea id="details"
+                          class="form-control"
+                          formControlName="details"
+                          rows="2"
+                          [placeholder]="'missions.enterAdditionalNotes' | translate">
+                </textarea>
+              </div>
+            </div>
+          </div>
+
+            <!-- Classification Section -->
+            <div class="col-12 mt-4">
+              <h5 class="mb-3">{{ 'missions.classification' | translate }}</h5>
+            </div>
+
+            <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="missionTypeId">
+                  {{ 'missions.missionType' | translate }} <span class="required">*</span>
+                </label>
+                <select id="missionTypeId"
+                        class="form-control"
+                        formControlName="missionTypeId"
+                        [class.is-invalid]="isFieldInvalid('missionTypeId')">
+                  <option value="">{{ 'missions.selectMissionType' | translate }}</option>
+                  <option *ngFor="let type of missionTypes" [value]="type.id">
+                    {{ type.name }}
+                  </option>
+                </select>
+                <div *ngIf="isFieldInvalid('missionTypeId')" class="invalid-feedback">
+                  {{ getFieldError('missionTypeId') }}
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="missionTimeTypeId">
+                  {{ 'missions.missionTimeType' | translate }} <span class="required">*</span>
+                </label>
+                <select id="missionTimeTypeId"
+                        class="form-control"
+                        formControlName="missionTimeTypeId"
+                        [class.is-invalid]="isFieldInvalid('missionTimeTypeId')">
+                  <option value="">{{ 'missions.selectMissionTimeType' | translate }}</option>
+                  <option *ngFor="let type of missionTimeTypes" [value]="type.id">
+                    {{ type.name }}
+                  </option>
+                </select>
+                <div *ngIf="isFieldInvalid('missionTimeTypeId')" class="invalid-feedback">
+                  {{ getFieldError('missionTimeTypeId') }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+            <!-- Scheduling Section -->
+            <div class="col-12 mt-4">
+              <h5 class="mb-3">{{ 'missions.scheduling' | translate }}</h5>
+            </div>
+
+            <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="missionDate">
+                  {{ 'missions.missionDate' | translate }} <span class="required">*</span>
+                </label>
+                <input type="date"
+                       id="missionDate"
+                       class="form-control"
+                       formControlName="missionDate"
+                       [class.is-invalid]="isFieldInvalid('missionDate')">
+                <div *ngIf="isFieldInvalid('missionDate')" class="invalid-feedback">
+                  {{ getFieldError('missionDate') }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+            <!-- Location Section -->
+            <div class="col-12 mt-4">
+              <h5 class="mb-3">{{ 'missions.location' | translate }}</h5>
+            </div>
+
+            <div class="row">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label for="countryId">{{ 'missions.country' | translate }}</label>
+                <select id="countryId"
+                        class="form-control"
+                        formControlName="countryId"
+                        (change)="onCountryChange()">
+                  <option value="">{{ 'missions.selectCountry' | translate }}</option>
+                  <option *ngFor="let country of countries" [value]="country.id">
+                    {{ country.name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label for="regionId">{{ 'missions.region' | translate }}</label>
+                <select id="regionId"
+                        class="form-control"
+                        formControlName="regionId"
+                        (change)="onRegionChange()"
+                        [disabled]="!missionForm.get('countryId')?.value">
+                  <option value="">{{ 'missions.selectRegion' | translate }}</option>
+                  <option *ngFor="let region of filteredRegions" [value]="region.id">
+                    {{ region.name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label for="centerId">{{ 'missions.center' | translate }}</label>
+                <select id="centerId"
+                        class="form-control"
+                        formControlName="centerId"
+                        [disabled]="!missionForm.get('regionId')?.value">
+                  <option value="">{{ 'missions.selectCenter' | translate }}</option>
+                  <option *ngFor="let center of filteredCenters" [value]="center.id">
+                    {{ center.name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="missionLocation">{{ 'missions.missionLocation' | translate }}</label>
+                <input type="text"
+                       id="missionLocation"
+                       class="form-control"
+                       formControlName="missionLocation"
+                       [placeholder]="'missions.enterMissionLocation' | translate">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="village">{{ 'missions.village' | translate }}</label>
+                <input type="text"
+                       id="village"
+                       class="form-control"
+                       formControlName="village"
+                       [placeholder]="'missions.enterVillage' | translate">
+              </div>
+            </div>
+          </div>
+
+            <!-- Assignment Section -->
+            <div class="col-12 mt-4">
+              <h5 class="mb-3">{{ 'missions.assignment' | translate }}</h5>
+            </div>
+
+            <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="assignedTo">
+                  {{ 'missions.assignedTo' | translate }} <span class="required">*</span>
+                </label>
+                <select id="assignedTo"
+                        class="form-control"
+                        formControlName="assignedTo"
+                        [class.is-invalid]="isFieldInvalid('assignedTo')">
+                  <option value="">{{ 'missions.selectAssignedUser' | translate }}</option>
+                  <option *ngFor="let user of users" [value]="user.id">
+                    {{ user.name }}
+                  </option>
+                </select>
+                <div *ngIf="isFieldInvalid('assignedTo')" class="invalid-feedback">
+                  {{ getFieldError('assignedTo') }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+            <!-- Event Information Section -->
+            <div class="col-12 mt-4">
+              <h5 class="mb-3">{{ 'missions.eventInformation' | translate }}</h5>
+            </div>
+
+            <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="entityName">{{ 'missions.entityName' | translate }}</label>
+                <input type="text"
+                       id="entityName"
+                       class="form-control"
+                       formControlName="entityName"
+                       [placeholder]="'missions.enterEntityName' | translate">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="conferenceName">{{ 'missions.conferenceName' | translate }}</label>
+                <input type="text"
+                       id="conferenceName"
+                       class="form-control"
+                       formControlName="conferenceName"
+                       [placeholder]="'missions.enterConferenceName' | translate">
+              </div>
+            </div>
+          </div>
+
+            <!-- Form Actions -->
+            <div class="col-12 mt-4">
+              <div class="form-group">
+                <button type="submit" class="btn btn-primary" [disabled]="saving">
+                  <i class="fe fe-save mr-1" *ngIf="!saving"></i>
+                  <span class="spinner-border spinner-border-sm mr-1" *ngIf="saving"></span>
+                  {{ 'common.save' | translate }}
+                </button>
+                <button type="button" class="btn btn-secondary ml-2" (click)="onCancel()" [disabled]="saving">
+                  <i class="fe fe-x mr-1"></i>
+                  {{ 'common.cancel' | translate }}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">{{ 'common.loading' | translate }}</span>
+        </div>
+        <p class="mt-3 text-muted">{{ 'common.loading' | translate }}...</p>
+      </div>
+    </div>
+  </div>
+</div>

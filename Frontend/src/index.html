@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="./assets/tinydash/images/logo.svg">
+    <title>IIROSA Dashboard</title>
+    <base href="/">
+
+    <!-- Simple bar CSS -->
+    <!-- <link rel="stylesheet" href="../assets/tinydash/css/simplebar.css"> -->
+
+    <!-- Fonts CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Overpass:ital,wght@0,100;0,200;0,300;0,400;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+
+    <!-- TinyDash CSS -->
+    <link rel="stylesheet" href="../assets/tinydash/css/app-light.css" id="lightTheme">
+    <link rel="stylesheet" href="../assets/tinydash/css/app-dark.css" id="darkTheme" disabled>
+
+    <!-- ApexCharts -->
+    <script src="assets/js/charts/apexcharts.min.js"></script>
+
+    <!-- Select2 CSS -->
+    <link rel="stylesheet" href="../assets/tinydash/css/select2.css">
+
+    <style>
+      .required-control-indicator {
+        color: red !important;
+      }
+      .show {
+        display: block;
+      }
+      .hide {
+        display: none;
+      }
+      .form-check {
+        padding: 37px;
+      }
+
+      .upload-form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+      }
+
+      /* Upload Widget */
+      .upload-widget {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        border: 2px dashed #007bff;
+        border-radius: 12px;
+        width: 250px;
+        background: #f9f9f9;
+        text-align: center;
+      }
+
+      /* Image Preview */
+      .image-preview {
+        width: 200px;
+        height: 200px;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 2px solid #ddd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+      }
+
+      .image-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      /* Placeholder */
+      .image-placeholder {
+        width: 200px;
+        height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #aaa;
+        font-size: 14px;
+        background: #f1f1f1;
+        border-radius: 10px;
+        margin-bottom: 10px;
+      }
+
+      /* Buttons */
+      .btn-group {
+        display: flex;
+        gap: 10px;
+      }
+
+      .upload-btn, .add-btn {
+        padding: 10px 15px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: background 0.3s ease;
+      }
+
+      .upload-btn {
+        background: #404e67;
+        color: white;
+        border: none;
+      }
+
+      .upload-btn:hover {
+        background: #404e67;
+      }
+
+      .add-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+      }
+
+      .add-btn:hover {
+        background: #218838;
+      }
+
+      /* Submit Button */
+      .submit-btn {
+        padding: 10px 20px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        background: #28a745;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        margin-top: 10px;
+      }
+
+      .submit-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .submit-btn:hover:not(:disabled) {
+        background: #218838;
+      }
+
+      /* Ensure the image container is positioned correctly */
+      .image-container {
+        position: relative;
+        display: inline-block;
+      }
+
+      /* Small Rounded Image */
+      .rounded-img {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        cursor: pointer;
+      }
+
+      /* Large Hover Preview Image */
+      .preview-img {
+        position: fixed;
+        width: 250px;
+        height: 250px;
+        border-radius: 10px;
+        object-fit: cover;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        top: 50px;
+        left: 50px;
+        display: none;
+        z-index: 9999;
+      }
+
+      /* Show the preview image when hovering */
+      .image-container:hover .preview-img {
+        display: block;
+      }
+
+      .ExpiringSoon strong,
+      .ExpiringSoon h4 {
+        color: red !important;
+      }
+
+      .bold {
+        font-weight: bold;
+      }
+
+      .bolder {
+        font-weight: bold;
+        font-size: 20px;
+      }
+    </style>
+
+  </head>
+  <body class="vertical dark">
+
+    <div class="wrapper" id="wrapper" style="height: 80vh !important;">
+      <app-root></app-root>
+    </div>
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-56159088-1"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag('js', new Date());
+      gtag('config', 'UA-56159088-1');
+    </script>
+
+  </body>
+</html>

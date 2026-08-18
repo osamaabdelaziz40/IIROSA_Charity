@@ -1,0 +1,134 @@
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h4 class="mb-0">
+      {{ 'families.motherInformation' | translate }}
+      <span class="text-danger">*</span>
+    </h4>
+    <button type="button" class="btn btn-sm btn-primary" *ngIf="familyId" (click)="save.emit()">
+      <i class="fe fe-save mr-1"></i>
+      {{ 'common.save' | translate }}
+    </button>
+  </div>
+  <div class="card-body">
+    <form [formGroup]="motherForm">
+      <div class="row">
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="fullName"
+            [label]="'families.fullName'"
+            [required]="true"
+            [placeholder]="'families.fullNamePlaceholder' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="nationalId"
+            [label]="'families.nationalId'"
+            [required]="true"
+            [placeholder]="'families.nationalIdPlaceholder' | translate">
+          </app-input-text>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="dateOfBirth"
+            type="date"
+            [label]="'families.dateOfBirth'"
+            [required]="true">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="placeOfBirth"
+            [label]="'families.placeOfBirth'"
+            [placeholder]="'families.placeOfBirthPlaceholder' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="motherForm"
+            fcn="educationLevel"
+            [label]="'families.educationLevel'"
+            [initialData]="educationLevelOptions"
+            [hasDefaultValue]="true">
+          </app-drop-down>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="job"
+            [label]="'families.job'"
+            [placeholder]="'families.jobPlaceholder' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="monthlyIncome"
+            type="number"
+            [label]="'families.monthlyIncome'">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="motherForm"
+            fcn="healthStatus"
+            [label]="'families.healthStatus'"
+            [initialData]="healthStatusOptions"
+            [hasDefaultValue]="true">
+          </app-drop-down>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="phone"
+            [label]="'families.phone'"
+            [placeholder]="'families.phonePlaceholder' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="deathDate"
+            type="date"
+            [label]="'families.deathDate'">
+          </app-input-text>
+        </div>
+        <div class="col-md-4 d-flex align-items-center">
+          <div class="custom-control custom-checkbox mr-3">
+            <input type="checkbox" class="custom-control-input" id="motherIsAlive" formControlName="isAlive">
+            <label class="custom-control-label" for="motherIsAlive">{{ 'families.isAlive' | translate }}</label>
+          </div>
+          <div class="custom-control custom-checkbox">
+            <input type="checkbox" class="custom-control-input" id="motherIsProvider" formControlName="isProvider">
+            <label class="custom-control-label" for="motherIsProvider">{{ 'families.isProvider' | translate }}</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-12">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="notes"
+            type="textarea"
+            [label]="'families.notes'"
+            [rows]="2">
+          </app-input-text>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

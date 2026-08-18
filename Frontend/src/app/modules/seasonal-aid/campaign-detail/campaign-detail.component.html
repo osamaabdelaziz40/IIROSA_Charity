@@ -1,0 +1,310 @@
+<div class="container-fluid">
+  <app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">{{ 'common.loading' | translate }}</span>
+    </div>
+  </div>
+
+  <!-- Campaign Details -->
+  <div *ngIf="!loading && campaign">
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <button class="btn btn-outline-secondary btn-sm mb-2" (click)="router.navigate(['/seasonal-aid'])">
+          <i class="fe fe-arrow-left mr-1"></i>
+          {{ 'common.back' | translate }}
+        </button>
+        <h2 class="page-title">{{ campaign.campaignName }}</h2>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge" [ngClass]="getCampaignTypeClass(campaign.campaignType)">
+            {{ 'seasonalAid.campaignTypes.' + campaign.campaignType | translate }}
+          </span>
+          <span class="badge" [ngClass]="getStatusBadgeClass()">
+            {{ getStatusText() }}
+          </span>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" (click)="onEdit()" [disabled]="campaign.isClosed">
+          <i class="fe fe-edit mr-1"></i>
+          {{ 'common.edit' | translate }}
+        </button>
+        <button class="btn btn-warning" (click)="onCloseCampaign()" [disabled]="campaign.isClosed || closingCampaign">
+          <i class="fe fe-x-circle mr-1"></i>
+          {{ 'seasonalAid.closeCampaign' | translate }}
+        </button>
+        <button class="btn btn-info" (click)="onGenerateReport()">
+          <i class="fe fe-file-text mr-1"></i>
+          {{ 'seasonalAid.generateReport' | translate }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4" *ngIf="statistics">
+      <div class="col-md-3">
+        <div class="card stat-card">
+          <div class="card-body">
+            <div class="stat-icon bg-primary">
+              <i class="fe fe-users"></i>
+            </div>
+            <div class="stat-details">
+              <h6 class="stat-title">{{ 'seasonalAid.totalBeneficiaries' | translate }}</h6>
+              <h3 class="stat-value">{{ statistics.totalBeneficiaries }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card stat-card">
+          <div class="card-body">
+            <div class="stat-icon bg-success">
+              <i class="fe fe-package"></i>
+            </div>
+            <div class="stat-details">
+              <h6 class="stat-title">{{ 'seasonalAid.distributedBeneficiaries' | translate }}</h6>
+              <h3 class="stat-value">{{ statistics.distributedBeneficiaries }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card stat-card">
+          <div class="card-body">
+            <div class="stat-icon bg-info">
+              <i class="fe fe-dollar-sign"></i>
+            </div>
+            <div class="stat-details">
+              <h6 class="stat-title">{{ 'seasonalAid.totalBudget' | translate }}</h6>
+              <h3 class="stat-value">{{ statistics.totalBudget | number }} {{ campaign.budgetCurrency }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card stat-card">
+          <div class="card-body">
+            <div class="stat-icon bg-warning">
+              <i class="fe fe-trending-up"></i>
+            </div>
+            <div class="stat-details">
+              <h6 class="stat-title">{{ 'seasonalAid.distributedAmount' | translate }}</h6>
+              <h3 class="stat-value" [ngClass]="getBudgetUtilizationClass()">
+                {{ statistics.distributedAmount | number }} {{ campaign.budgetCurrency }}
+              </h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Campaign Information Card -->
+    <div class="row">
+      <div class="col-md-8">
+        <!-- Basic Information -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title">{{ 'seasonalAid.basicInformation' | translate }}</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="info-group">
+                  <label>{{ 'seasonalAid.campaignName' | translate }}</label>
+                  <div>{{ campaign.campaignName }}</div>
+                </div>
+                <div class="info-group">
+                  <label>{{ 'seasonalAid.campaignType' | translate }}</label>
+                  <div>{{ 'seasonalAid.campaignTypes.' + campaign.campaignType | translate }}</div>
+                </div>
+                <div class="info-group">
+                  <label>{{ 'seasonalAid.period' | translate }}</label>
+                  <div>
+                    {{ campaign.startDate | date:'mediumDate' }} - {{ campaign.endDate | date:'mediumDate' }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="info-group">
+                  <label>{{ 'seasonalAid.assignedCharity' | translate }}</label>
+                  <div>
+                    {{ campaign.assignedCharityName || ('seasonalAid.allCharities' | translate) }}
+                  </div>
+                </div>
+                <div class="info-group">
+                  <label>{{ 'seasonalAid.maximumFamilies' | translate }}</label>
+                  <div>{{ campaign.maximumFamilies || ('common.unlimited' | translate) }}</div>
+                </div>
+                <div class="info-group">
+                  <label>{{ 'seasonalAid.familyType' | translate }}</label>
+                  <div>{{ 'seasonalAid.familyTypes.' + campaign.familyType | translate }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="info-group" *ngIf="campaign.description">
+              <label>{{ 'seasonalAid.description' | translate }}</label>
+              <div>{{ campaign.description }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Beneficiaries List -->
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title">{{ 'seasonalAid.beneficiaries' | translate }}</h5>
+            <button class="btn btn-sm btn-primary" routerLink="/seasonal-aid/{{ campaign.id }}/beneficiaries" [disabled]="campaign.isClosed">
+              <i class="fe fa-plus mr-1"></i>
+              {{ 'seasonalAid.addBeneficiaries' | translate }}
+            </button>
+          </div>
+          <div class="card-body">
+            <!-- Filters using shared components -->
+            <form [formGroup]="beneficiaryFilterForm">
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <app-input-text
+                    [fg]="beneficiaryFilterForm"
+                    fcn="searchTerm"
+                    [placeholder]="'common.search' | translate"
+                    [label]="'common.search'"
+                    (input)="onBeneficiaryFilterChange()">
+                  </app-input-text>
+                </div>
+                <div class="col-md-6">
+                  <app-drop-down
+                    [fg]="beneficiaryFilterForm"
+                    fcn="distributionStatus"
+                    [initialData]="distributionStatusOptions"
+                    [hasDefaultValue]="true"
+                    (onDropDownChanged)="onBeneficiaryFilterChange()">
+                  </app-drop-down>
+                </div>
+              </div>
+
+              <div class="row mb-3" *ngIf="hasActiveBeneficiaryFilters()">
+                <div class="col-12">
+                  <button class="btn btn-sm btn-outline-secondary" (click)="clearBeneficiaryFilters()">
+                    <i class="fe fe-x mr-1"></i>
+                    {{ 'common.clearFilters' | translate }}
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            <!-- Beneficiaries Table -->
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>{{ 'seasonalAid.familyCode' | translate }}</th>
+                    <th>{{ 'seasonalAid.address' | translate }}</th>
+                    <th>{{ 'seasonalAid.charity' | translate }}</th>
+                    <th>{{ 'seasonalAid.orphanCount' | translate }}</th>
+                    <th>{{ 'seasonalAid.allocation' | translate }}</th>
+                    <th>{{ 'seasonalAid.distributionStatus' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let beneficiary of beneficiaries">
+                    <td>{{ beneficiary.familyCode }}</td>
+                    <td>{{ beneficiary.familyAddress }}</td>
+                    <td>{{ beneficiary.charityName }}</td>
+                    <td>{{ beneficiary.orphanCount }}</td>
+                    <td>{{ beneficiary.allocatedAmount | number }} {{ campaign.budgetCurrency }}</td>
+                    <td>
+                      <span class="badge" [ngClass]="getDistributionStatusClass(beneficiary.distributionStatus)">
+                        {{ 'seasonalAid.distributionStatuses.' + beneficiary.distributionStatus | translate }}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr *ngIf="beneficiaries.length === 0">
+                    <td colspan="6" class="text-center py-4">
+                      <i class="fe fe-inbox fe-2x text-muted mb-2"></i>
+                      <p class="text-muted">{{ 'seasonalAid.noBeneficiaries' | translate }}</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="col-md-4">
+        <!-- Financial Information -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title">{{ 'seasonalAid.financialInformation' | translate }}</h5>
+          </div>
+          <div class="card-body">
+            <div class="info-group">
+              <label>{{ 'seasonalAid.totalBudget' | translate }}</label>
+              <div class="text-value">{{ campaign.totalBudget | number }} {{ campaign.budgetCurrency }}</div>
+            </div>
+            <div class="info-group">
+              <label>{{ 'seasonalAid.perFamilyAllocation' | translate }}</label>
+              <div class="text-value">{{ campaign.perFamilyAllocation | number }} {{ campaign.budgetCurrency }}</div>
+            </div>
+            <div class="info-group" *ngIf="statistics">
+              <label>{{ 'seasonalAid.allocatedAmount' | translate }}</label>
+              <div class="text-value">{{ statistics.allocatedAmount | number }} {{ campaign.budgetCurrency }}</div>
+            </div>
+            <div class="info-group" *ngIf="statistics">
+              <label>{{ 'seasonalAid.distributedAmount' | translate }}</label>
+              <div class="text-value">{{ statistics.distributedAmount | number }} {{ campaign.budgetCurrency }}</div>
+            </div>
+            <div class="info-group" *ngIf="statistics">
+              <label>{{ 'seasonalAid.remainingBudget' | translate }}</label>
+              <div class="text-value">{{ statistics.remainingBudget | number }} {{ campaign.budgetCurrency }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Geographic Scope -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title">{{ 'seasonalAid.geographicScope' | translate }}</h5>
+          </div>
+          <div class="card-body">
+            <div class="info-group">
+              <label>{{ 'seasonalAid.country' | translate }}</label>
+              <div>{{ campaign.country }}</div>
+            </div>
+            <div class="info-group">
+              <label>{{ 'seasonalAid.regions' | translate }}</label>
+              <div>{{ campaign.regions.length > 0 ? campaign.regions.join(', ') : ('common.all' | translate) }}</div>
+            </div>
+            <div class="info-group">
+              <label>{{ 'seasonalAid.centers' | translate }}</label>
+              <div>{{ campaign.centers.length > 0 ? campaign.centers.join(', ') : ('common.all' | translate) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card">
+          <div class="card-body">
+            <div class="d-grid gap-2">
+              <button class="btn btn-outline-primary" routerLink="/seasonal-aid/{{ campaign.id }}/beneficiaries" [disabled]="campaign.isClosed">
+                <i class="fe fe-users mr-2"></i>
+                {{ 'seasonalAid.manageBeneficiaries' | translate }}
+              </button>
+              <button class="btn btn-outline-success" routerLink="/seasonal-aid/{{ campaign.id }}/distribution" [disabled]="campaign.isClosed">
+                <i class="fe fe-package mr-2"></i>
+                {{ 'seasonalAid.recordDistribution' | translate }}
+              </button>
+              <button class="btn btn-outline-info" (click)="onGenerateReport()">
+                <i class="fe fe-file-text mr-2"></i>
+                {{ 'seasonalAid.generateReport' | translate }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

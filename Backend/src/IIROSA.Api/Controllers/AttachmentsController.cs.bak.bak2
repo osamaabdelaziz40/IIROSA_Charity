@@ -1,0 +1,95 @@
+using Microsoft.AspNetCore.Mvc;
+using Framework.Core.SharedServices.Services;
+using Framework.Core.SharedServices.Entities;
+
+namespace IIROSA.Api.Controllers;
+
+/// <summary>
+/// Attachments controller - Uses Framework.Core AttachmentService
+/// </summary>
+[Route("api/[controller]")]
+[ApiController]
+public class AttachmentsController : ApiController
+{
+    private readonly AttachmentService _attachment;
+
+    public AttachmentsController(AttachmentService attachment)
+    {
+        _attachment = attachment;
+    }
+
+    /// <summary>
+    /// Upload file attachment
+    /// </summary>
+    [HttpPost("upload")]
+    public IActionResult Upload(IFormFile file)
+    {
+        try
+        {
+            var result = _attachment.AddAttachment(file, file.FileName, file.ContentType);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Internal Error : " + ex.Message + " More Information : " + ex.InnerException?.Message);
+            return BadRequest(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Delete attachment
+    /// </summary>
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        try
+        {
+            await _attachment.DeleteAttachmentFromDbAndFileSystem(id);
+            return Ok(true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Internal Error : " + ex.Message + " More Information : " + ex.InnerException?.Message);
+            return BadRequest(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Get attachment by ID
+    /// </summary>
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        try
+        {
+            var attach = await _attachment.GetAttachment(id, true);
+            return Ok(attach);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Internal Error : " + ex.Message + " More Information : " + ex.InnerException?.Message);
+            return BadRequest(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Download attachment
+    /// </summary>
+    [HttpPost("download")]
+    public async Task<IActionResult> Download(Guid id)
+    {
+        try
+        {
+            var result = await _attachment.GetAttachmentForDownload(id);
+            if (result != null)
+            {
+                return Ok(result);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Internal Error : " + ex.Message + " More Information : " + ex.InnerException?.Message);
+        }
+        return BadRequest("");
+    }
+}

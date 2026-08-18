@@ -1,0 +1,329 @@
+<div class="page-header">
+  <app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+  <div class="page-header-content">
+    <h2>
+      <i class="fe fe-grid"></i>
+      {{ 'officeDevelopmentProjects.projectDetails' | translate }}
+    </h2>
+    <div class="page-actions">
+      <button
+        class="btn btn-secondary"
+        (click)="onBack()">
+        <i class="fe fe-arrow-left"></i> {{ 'common.back' | translate }}
+      </button>
+      <button
+        class="btn btn-primary"
+        *ngIf="canEdit()"
+        (click)="onEdit()">
+        <i class="fe fe-edit"></i> {{ 'common.edit' | translate }}
+      </button>
+      <button
+        class="btn btn-success"
+        *ngIf="canMarkAsCompleted()"
+        (click)="onMarkAsCompleted()">
+        <i class="fe fe-check"></i> {{ 'officeDevelopmentProjects.markAsCompleted' | translate }}
+      </button>
+      <button
+        class="btn btn-danger"
+        (click)="onDelete()">
+        <i class="fe fe-trash"></i> {{ 'common.delete' | translate }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div *ngIf="loading" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">{{ 'common.loading' | translate }}</span>
+  </div>
+</div>
+
+<!-- Error State -->
+<div *ngIf="error && !loading" class="alert alert-danger">
+  {{ error }}
+</div>
+
+<!-- Project Details -->
+<div *ngIf="project && !loading">
+  <div class="row">
+    <!-- Basic Information -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'officeDevelopmentProjects.basicInformation' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.projectName' | translate }}</label>
+                <span>{{ project.projectName }}</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.projectDate' | translate }}</label>
+                <span>{{ formatDate(project.projectDate) }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-12">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.projectHint' | translate }}</label>
+                <span>{{ project.projectHint || '-' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.projectEndDate' | translate }}</label>
+                <span>{{ formatDate(project.projectEndDate) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Classification -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'officeDevelopmentProjects.projectClassification' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.officeProjectType' | translate }}</label>
+                <span>{{ project.officeProjectType?.name || '-' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Location -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'officeDevelopmentProjects.location' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.country' | translate }}</label>
+                <span>{{ project.countryName || '-' }}</span>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.region' | translate }}</label>
+                <span>{{ project.regionName || '-' }}</span>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.center' | translate }}</label>
+                <span>{{ project.centerName || '-' }}</span>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.villageName' | translate }}</label>
+                <span>{{ project.villageName || '-' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial Information -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'officeDevelopmentProjects.financialInformation' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.projectCostEGP' | translate }}</label>
+                <span>{{ formatCurrency(project.projectCostEGP) }} EGP</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.projectCostSAR' | translate }}</label>
+                <span>{{ formatCurrency(project.projectCostSAR) }} SAR</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.donorName' | translate }}</label>
+                <span>{{ project.donorName || '-' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Beneficiaries -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'officeDevelopmentProjects.beneficiaries' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.beneficiariesCount' | translate }}</label>
+                <span>{{ project.beneficiariesCount || '-' }}</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.beneficiariesType' | translate }}</label>
+                <span>{{ getBeneficiaryTypeLabel(project.beneficiariesType) | translate }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charity Assignment -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'officeDevelopmentProjects.charityAssignment' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.assignedCharity' | translate }}</label>
+                <span>{{ project.assignedCharityName || '-' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'officeDevelopmentProjects.status' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.isFinished' | translate }}</label>
+                <span [class]="project.isFinished ? 'badge badge-success' : 'badge badge-warning'">
+                  {{ (project.isFinished ? 'officeDevelopmentProjects.completed' : 'officeDevelopmentProjects.ongoing') | translate }}
+                </span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.projectEndDate' | translate }}</label>
+                <span>{{ formatDate(project.projectEndDate) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Documents -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'officeDevelopmentProjects.documents' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.attachedFile' | translate }}</label>
+                <div *ngIf="project.attachedFileName">
+                  <button
+                    class="btn btn-sm btn-outline-primary"
+                    (click)="downloadDocument()">
+                    <i class="fe fe-download"></i>
+                    {{ project.attachedFileName }}
+                  </button>
+                </div>
+                <span *ngIf="!project.attachedFileName">-</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.projectReportFile' | translate }}</label>
+                <div *ngIf="project.projectReportFileName">
+                  <button
+                    class="btn btn-sm btn-outline-primary"
+                    (click)="downloadReport()">
+                    <i class="fe fe-download"></i>
+                    {{ project.projectReportFileName }}
+                  </button>
+                </div>
+                <span *ngIf="!project.projectReportFileName">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit Trail -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'officeDevelopmentProjects.auditTrail' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.createdOn' | translate }}</label>
+                <span>{{ formatDate(project.createdAt) }}</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'officeDevelopmentProjects.modifiedOn' | translate }}</label>
+                <span>{{ formatDate(project.modifiedAt) }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'common.createdBy' | translate }}</label>
+                <span>{{ project.createdBy || '-' }}</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'common.modifiedBy' | translate }}</label>
+                <span>{{ project.modifiedBy || '-' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

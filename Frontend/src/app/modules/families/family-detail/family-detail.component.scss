@@ -1,0 +1,25 @@
+.card {
+  .card-body {
+    label {
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+  }
+
+  .card-footer {
+    background-color: transparent;
+    border-top-color: var(--border-color);
+  }
+}
+
+.badge-pill {
+  padding: 0.375rem 0.75rem;
+}
+
+table tbody tr {
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(var(--primary-rgb), 0.05);
+  }
+}

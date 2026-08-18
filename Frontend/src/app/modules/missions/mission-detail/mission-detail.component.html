@@ -1,0 +1,292 @@
+<div class="mission-detail-page" *ngIf="!loading">
+  <app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="alert alert-danger" role="alert">
+    {{ error }}
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading && !mission" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">{{ 'common.loading' | translate }}</span>
+    </div>
+  </div>
+
+  <!-- Mission Details -->
+  <div *ngIf="mission">
+    <!-- Page Header -->
+    <div class="page-header mb-4">
+      <div class="row align-items-center">
+        <div class="col">
+          <button class="btn btn-link pl-0" (click)="goBack()">
+            <i class="fe fe-arrow-left mr-1"></i>
+            {{ 'common.back' | translate }}
+          </button>
+          <h1 class="mt-2">{{ mission.missionTarget }}</h1>
+          <div class="d-flex align-items-center gap-2">
+            <span [class]="'badge ' + getStatusClass()">
+              {{ getStatusText() }}
+            </span>
+            <span class="badge badge-light">
+              {{ getMissionTypeName() }}
+            </span>
+            <span class="badge badge-light">
+              {{ getMissionTimeTypeName() }}
+            </span>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="btn-group">
+            <button class="btn btn-outline-primary"
+                    (click)="editMission()"
+                    [disabled]="!canEdit()"
+                    [title]="'missions.editThisMission' | translate">
+              <i class="fe fe-edit mr-1"></i>
+              {{ 'missions.editMission' | translate }}
+            </button>
+            <button class="btn btn-outline-success"
+                    (click)="markAsCompleted()"
+                    [disabled]="!canMarkCompleted()"
+                    [title]="'missions.markAsCompleted' | translate">
+              <i class="fe fe-check mr-1"></i>
+              {{ 'missions.markAsCompleted' | translate }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Basic Information Section -->
+    <div class="detail-section card mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-info mr-2"></i>
+          {{ 'missions.basicInformation' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="field-group">
+              <label>{{ 'missions.missionTarget' | translate }}</label>
+              <span>{{ mission.missionTarget }}</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="field-group">
+              <label>{{ 'missions.missionDate' | translate }}</label>
+              <span>{{ formatDate(mission.missionDate) }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="row" *ngIf="mission.missionDetails">
+          <div class="col-md-12">
+            <div class="field-group">
+              <label>{{ 'missions.missionDetails' | translate }}</label>
+              <span>{{ mission.missionDetails }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="row" *ngIf="mission.details">
+          <div class="col-md-12">
+            <div class="field-group">
+              <label>{{ 'missions.details' | translate }}</label>
+              <span>{{ mission.details }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Classification Section -->
+    <div class="detail-section card mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-tag mr-2"></i>
+          {{ 'missions.classification' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="field-group">
+              <label>{{ 'missions.missionType' | translate }}</label>
+              <span>{{ mission.missionTypeName }}</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="field-group">
+              <label>{{ 'missions.missionTimeType' | translate }}</label>
+              <span>{{ getMissionTimeTypeName() }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scheduling Section -->
+    <div class="detail-section card mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-calendar mr-2"></i>
+          {{ 'missions.scheduling' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="field-group">
+              <label>{{ 'missions.missionDate' | translate }}</label>
+              <span>{{ formatDate(mission.missionDate) }}</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="field-group">
+              <label>{{ 'missions.isMissionCompleted' | translate }}</label>
+              <span [class]="getStatusClass()">
+                {{ getStatusText() }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="row" *ngIf="mission.isMissionCompleted && mission.missionCompletedDate">
+          <div class="col-md-6">
+            <div class="field-group">
+              <label>{{ 'missions.missionCompletedDate' | translate }}</label>
+              <span>{{ formatDate(mission.missionCompletedDate) }}</span>
+            </div>
+          </div>
+          <div class="col-md-6" *ngIf="mission.missionCompletedTxt">
+            <div class="field-group">
+              <label>{{ 'missions.missionCompletedTxt' | translate }}</label>
+              <span>{{ mission.missionCompletedTxt }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Location Section -->
+    <div class="detail-section card mb-4"
+         *ngIf="hasSectionContent(mission.countryName, mission.regionName, mission.centerName, mission.missionLocation, mission.village)">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-map-pin mr-2"></i>
+          {{ 'missions.location' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4" *ngIf="mission.countryName">
+            <div class="field-group">
+              <label>{{ 'missions.country' | translate }}</label>
+              <span>{{ mission.countryName }}</span>
+            </div>
+          </div>
+          <div class="col-md-4" *ngIf="mission.regionName">
+            <div class="field-group">
+              <label>{{ 'missions.region' | translate }}</label>
+              <span>{{ mission.regionName }}</span>
+            </div>
+          </div>
+          <div class="col-md-4" *ngIf="mission.centerName">
+            <div class="field-group">
+              <label>{{ 'missions.center' | translate }}</label>
+              <span>{{ mission.centerName }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="row" *ngIf="mission.missionLocation">
+          <div class="col-md-6">
+            <div class="field-group">
+              <label>{{ 'missions.missionLocation' | translate }}</label>
+              <span>{{ mission.missionLocation }}</span>
+            </div>
+          </div>
+          <div class="col-md-6" *ngIf="mission.village">
+            <div class="field-group">
+              <label>{{ 'missions.village' | translate }}</label>
+              <span>{{ mission.village }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assignment Section -->
+    <div class="detail-section card mb-4" *ngIf="mission.assignedToName">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-user mr-2"></i>
+          {{ 'missions.assignment' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="field-group">
+          <label>{{ 'missions.assignedTo' | translate }}</label>
+          <span>{{ mission.assignedToName }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event Information Section -->
+    <div class="detail-section card mb-4"
+         *ngIf="hasSectionContent(mission.entityName, mission.conferenceName)">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-calendar mr-2"></i>
+          {{ 'missions.eventInformation' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6" *ngIf="mission.entityName">
+            <div class="field-group">
+              <label>{{ 'missions.entityName' | translate }}</label>
+              <span>{{ mission.entityName }}</span>
+            </div>
+          </div>
+          <div class="col-md-6" *ngIf="mission.conferenceName">
+            <div class="field-group">
+              <label>{{ 'missions.conferenceName' | translate }}</label>
+              <span>{{ mission.conferenceName }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit Trail Section -->
+    <div class="detail-section card mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-clock mr-2"></i>
+          {{ 'missions.auditTrail' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="field-group">
+              <label>{{ 'common.createdDate' | translate }}</label>
+              <span>{{ formatDate(mission.createdOn) }}</span>
+            </div>
+          </div>
+          <div class="col-md-6" *ngIf="mission.modifiedOn">
+            <div class="field-group">
+              <label>{{ 'common.modifiedDate' | translate }}</label>
+              <span>{{ formatDate(mission.modifiedOn) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cannot Edit Warning -->
+    <div class="alert alert-warning" *ngIf="mission.isMissionCompleted">
+      <i class="fe fe-alert-triangle mr-2"></i>
+      {{ 'missions.cannotEditCompleted' | translate }}
+    </div>
+  </div>
+</div>

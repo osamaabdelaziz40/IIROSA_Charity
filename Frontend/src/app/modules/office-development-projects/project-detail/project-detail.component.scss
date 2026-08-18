@@ -1,0 +1,134 @@
+.page-header {
+  margin-bottom: 1.5rem;
+
+  .page-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    h2 {
+      margin: 0;
+      display: flex;
+      align-items: center;
+
+      i {
+        margin-right: 0.5rem;
+      }
+    }
+
+    .page-actions {
+      display: flex;
+      gap: 0.5rem;
+
+      .btn {
+        display: flex;
+        align-items: center;
+
+        i {
+          margin-right: 0.25rem;
+        }
+      }
+    }
+  }
+}
+
+.detail-item {
+  margin-bottom: 1rem;
+
+  label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  span {
+    display: block;
+    color: var(--text-color);
+    font-size: 1rem;
+    font-weight: 500;
+
+    &.badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.875rem;
+      border-radius: 0.25rem;
+    }
+
+    &.badge-success {
+      background-color: var(--success);
+      color: white;
+    }
+
+    &.badge-warning {
+      background-color: var(--warning);
+      color: white;
+    }
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+
+    i {
+      margin-right: 0.25rem;
+    }
+  }
+}
+
+.card {
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+
+  .card-header {
+    background-color: rgba(var(--primary-rgb), 0.05);
+    border-bottom: 1px solid var(--border-color);
+
+    h5 {
+      margin: 0;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+  }
+
+  .card-body {
+    .detail-item:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// RTL Support
+[dir='rtl'] {
+  .page-header {
+    .page-header-content {
+      h2 {
+        i {
+          margin-right: 0;
+          margin-left: 0.5rem;
+        }
+      }
+
+      .page-actions {
+        .btn {
+          i {
+            margin-right: 0;
+            margin-left: 0.25rem;
+          }
+        }
+      }
+    }
+  }
+
+  .detail-item {
+    .btn {
+      i {
+        margin-right: 0;
+        margin-left: 0.25rem;
+      }
+    }
+  }
+}

@@ -1,0 +1,63 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<RootNamespace>Framework.Core</RootNamespace>
+		<LangVersion>8.0</LangVersion>
+	</PropertyGroup>
+	<ItemGroup>
+	  <Compile Remove="Angular\Dto\**" />
+	  <Compile Remove="SharedServices\Migrations\**" />
+	  <Content Remove="Angular\Dto\**" />
+	  <Content Remove="SharedServices\Migrations\**" />
+	  <EmbeddedResource Remove="Angular\Dto\**" />
+	  <EmbeddedResource Remove="SharedServices\Migrations\**" />
+	  <None Remove="Angular\Dto\**" />
+	  <None Remove="SharedServices\Migrations\**" />
+	</ItemGroup>
+
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+	<PropertyGroup>
+		<LangVersion>8.0</LangVersion>
+	</PropertyGroup>
+	<PropertyGroup Label="Globals">
+		<SccProjectName></SccProjectName>
+		<SccProvider></SccProvider>
+		<SccAuxPath></SccAuxPath>
+		<SccLocalPath></SccLocalPath>
+	</PropertyGroup>
+	<PropertyGroup>
+		<AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="AutoMapper" Version="12.0.1" />
+		<PackageReference Include="EPPlus" Version="5.4.0" />
+		<PackageReference Include="FluentValidation" Version="8.6.2" />
+		<PackageReference Include="FluentValidation.AspNetCore" Version="8.6.2" />
+		<PackageReference Include="HangFire" Version="1.7.18" />
+		<PackageReference Include="JetBrains.Annotations" Version="2020.3.0" />
+		<PackageReference Include="libphonenumber-csharp" Version="8.12.4" />
+		<PackageReference Include="MediatR" Version="12.2.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="NLog" Version="4.7.6" />
+		<PackageReference Include="NLog.Web.AspNetCore" Version="4.9.3" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
+		<PackageReference Include="PagedList.Core" Version="1.17.4" />
+		<PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+		<PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+		<PackageReference Include="System.IO.FileSystem.AccessControl" Version="4.7.0" />
+		<PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.5" />
+		<PackageReference Include="System.Security.AccessControl" Version="6.0.0" />
+		<PackageReference Include="ZXing.Net" Version="0.16.6" />
+	</ItemGroup>
+
+</Project>

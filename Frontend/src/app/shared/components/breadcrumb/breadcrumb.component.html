@@ -1,0 +1,20 @@
+<nav aria-label="breadcrumb" class="breadcrumb-container">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item" *ngFor="let item of displayBreadcrumbs; let last = last">
+      <ng-container *ngIf="!item.url; else linkedItem">
+        <span class="breadcrumb-current">
+          <i *ngIf="item.icon" [class]="item.icon"></i>
+          <span *ngIf="item.translate !== false">{{ item.label | translate }}</span>
+          <span *ngIf="item.translate === false">{{ item.label }}</span>
+        </span>
+      </ng-container>
+      <ng-template #linkedItem>
+        <a [routerLink]="item.url" class="breadcrumb-link">
+          <i *ngIf="item.icon" [class]="item.icon"></i>
+          <span *ngIf="item.translate !== false">{{ item.label | translate }}</span>
+          <span *ngIf="item.translate === false">{{ item.label }}</span>
+        </a>
+      </ng-template>
+    </li>
+  </ol>
+</nav>

@@ -1,0 +1,51 @@
+.empty-state {
+  padding: 3rem 0;
+}
+
+.pagination-info {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  padding: 0.5rem 0;
+}
+
+.page-size-select {
+  width: 70px;
+}
+
+.table {
+  th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+  }
+
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+.btn-group {
+  .btn {
+    margin-right: 0.25rem;
+
+    &:last-child {
+      margin-right: 0;
+    }
+  }
+}
+
+// RTL Support
+[dir='rtl'] {
+  .btn-group {
+    .btn {
+      margin-right: 0;
+      margin-left: 0.25rem;
+
+      &:last-child {
+        margin-left: 0;
+      }
+    }
+  }
+}

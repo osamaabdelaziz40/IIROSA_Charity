@@ -1,0 +1,74 @@
+.empty-state {
+  padding: 3rem 0;
+
+  i {
+    display: block;
+    margin: 0 auto 1rem;
+  }
+}
+
+.badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+
+  &.badge-success {
+    background-color: var(--success);
+  }
+
+  &.badge-warning {
+    background-color: var(--warning);
+    color: #000;
+  }
+
+  &.badge-danger {
+    background-color: var(--danger);
+  }
+
+  &.badge-secondary {
+    background-color: var(--secondary);
+  }
+
+  &.badge-info {
+    background-color: var(--info);
+  }
+
+  &.badge-primary {
+    background-color: var(--primary);
+  }
+}
+
+.btn-group {
+  .btn {
+    margin-right: 0.25rem;
+
+    &:last-child {
+      margin-right: 0;
+    }
+  }
+}
+
+// RTL Support
+[dir='rtl'] {
+  .btn-group {
+    .btn {
+      margin-right: 0;
+      margin-left: 0.25rem;
+
+      &:last-child {
+        margin-left: 0;
+      }
+    }
+  }
+
+  .mr-1,
+  .mr-2 {
+    margin-right: 0 !important;
+    margin-left: 0.5rem !important;
+  }
+
+  .ml-1,
+  .ml-2 {
+    margin-left: 0 !important;
+    margin-right: 0.5rem !important;
+  }
+}

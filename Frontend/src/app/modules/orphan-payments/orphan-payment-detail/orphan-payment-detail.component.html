@@ -1,0 +1,333 @@
+<div class="page-header">
+  <div class="row align-items-center mb-3">
+    <div class="col">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item">
+            <a routerLink="/orphan-payments">{{ 'orphanPayments.title' | translate }}</a>
+          </li>
+          <li class="breadcrumb-item active">
+            {{ paymentGroup?.groupName || 'orphanPayments.details' | translate }}
+          </li>
+        </ol>
+      </nav>
+      <h2 class="page-title">
+        <i class="fe fe-users mr-2"></i>
+        {{ paymentGroup?.groupName || '-' }}
+      </h2>
+    </div>
+    <div class="col-auto">
+      <div class="btn-group">
+        <button class="btn btn-outline-secondary" (click)="onPrint()" *ngIf="paymentGroup">
+          <i class="fe fe-printer mr-1"></i>
+          {{ 'common.print' | translate }}
+        </button>
+        <button class="btn btn-success" (click)="onExport()" *ngIf="paymentGroup">
+          <i class="fe fe-download mr-1"></i>
+          {{ 'orphanPayments.export' | translate }}
+        </button>
+        <button class="btn btn-outline-primary" (click)="onAddOrphans()" *ngIf="canModify() && paymentGroup">
+          <i class="fe fe-user-plus mr-1"></i>
+          {{ 'orphanPayments.addOrphans' | translate }}
+        </button>
+        <button class="btn btn-primary" (click)="onEdit()" *ngIf="canModify() && paymentGroup">
+          <i class="fe fe-edit mr-1"></i>
+          {{ 'common.edit' | translate }}
+        </button>
+        <button class="btn btn-warning" (click)="onMarkAsUploaded()" *ngIf="canModify() && paymentGroup && paymentGroup.orphanCount > 0">
+          <i class="fe fe-check-circle mr-1"></i>
+          {{ 'orphanPayments.markAsUploaded' | translate }}
+        </button>
+        <button class="btn btn-secondary" (click)="onUnmarkAsUploaded()" *ngIf="!canModify() && paymentGroup">
+          <i class="fe fe-arrow-left mr-1"></i>
+          {{ 'orphanPayments.unmarkAsUploaded' | translate }}
+        </button>
+        <button class="btn btn-danger" (click)="onDelete()" *ngIf="canModify() && paymentGroup">
+          <i class="fe fe-trash mr-1"></i>
+          {{ 'common.delete' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div class="text-center py-5" *ngIf="loading">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">{{ 'common.loading' | translate }}</span>
+  </div>
+</div>
+
+<!-- Content -->
+<div class="row" *ngIf="!loading && paymentGroup">
+  <!-- Left Column - Group Information -->
+  <div class="col-lg-8">
+    <!-- Group Information Card -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5 class="card-title mb-0">{{ 'orphanPayments.groupInformation' | translate }}</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="text-muted small">{{ 'orphanPayments.batchNumber' | translate }}</label>
+            <div class="font-weight-bold">{{ paymentGroup.batchNo || '-' }}</div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="text-muted small">{{ 'orphanPayments.groupName' | translate }}</label>
+            <div class="font-weight-bold">{{ paymentGroup.groupName }}</div>
+          </div>
+          <div class="col-md-12 mb-3" *ngIf="paymentGroup.description">
+            <label class="text-muted small">{{ 'orphanPayments.description' | translate }}</label>
+            <div>{{ paymentGroup.description }}</div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label class="text-muted small">{{ 'orphanPayments.paymentPeriodFrom' | translate }}</label>
+            <div>{{ formatDate(paymentGroup.paymentPeriodFrom) }}</div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label class="text-muted small">{{ 'orphanPayments.paymentPeriodTo' | translate }}</label>
+            <div>{{ formatDate(paymentGroup.paymentPeriodTo) }}</div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label class="text-muted small">{{ 'orphanPayments.groupDate' | translate }}</label>
+            <div>{{ formatDate(paymentGroup.groupDate) }}</div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="text-muted small">{{ 'orphanPayments.charity' | translate }}</label>
+            <div>{{ paymentGroup.charityName || '-' }}</div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="text-muted small">{{ 'orphanPayments.status' | translate }}</label>
+            <div>
+              <span class="badge" [ngClass]="getStatusBadgeClass()">
+                {{ getStatusText() }}
+              </span>
+            </div>
+          </div>
+          <div class="col-md-12 mb-3" *ngIf="paymentGroup.notes">
+            <label class="text-muted small">{{ 'common.notes' | translate }}</label>
+            <div>{{ paymentGroup.notes }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Orphans List Card -->
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+          {{ 'orphanPayments.orphansInGroup' | translate }}
+          <span class="badge badge-primary ml-2">{{ totalOrphans }}</span>
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <!-- Loading Orphans -->
+        <div class="text-center py-4" *ngIf="loadingOrphans">
+          <div class="spinner-border spinner-border-sm text-primary"></div>
+        </div>
+
+        <!-- Orphans Table -->
+        <div class="table-responsive" *ngIf="!loadingOrphans">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>{{ 'orphanPayments.orphanName' | translate }}</th>
+                <th>{{ 'orphanPayments.familyName' | translate }}</th>
+                <th>{{ 'orphanPayments.charity' | translate }}</th>
+                <th>{{ 'orphanPayments.age' | translate }}</th>
+                <th>{{ 'orphanPayments.gender' | translate }}</th>
+                <th>{{ 'orphanPayments.sponsorshipStatus' | translate }}</th>
+                <th *ngIf="canModify()" class="text-center">{{ 'common.actions' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let orphan of orphans; trackBy: trackOrphan">
+                <td>
+                  <a routerLink="/orphans/{{orphan.orphanId}}" class="text-primary">
+                    {{ orphan.orphanName }}
+                  </a>
+                </td>
+                <td>{{ orphan.familyName }}</td>
+                <td>{{ orphan.charityName }}</td>
+                <td>{{ orphan.age }}</td>
+                <td>{{ orphan.gender }}</td>
+                <td>
+                  <span class="badge" [ngClass]="orphan.sponsorshipStatus === 'Sponsored' ? 'badge-success' : 'badge-warning'">
+                    {{ orphan.sponsorshipStatus }}
+                  </span>
+                </td>
+                <td *ngIf="canModify()" class="text-center">
+                  <button class="btn btn-sm btn-icon btn-danger"
+                          (click)="onRemoveOrphan(orphan.orphanId)"
+                          title="{{ 'common.remove' | translate }}">
+                    <i class="fe fe-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="orphans.length === 0">
+                <td [colSpan]="canModify() ? 7 : 6" class="text-center py-4 text-muted">
+                  <i class="fe fe-inbox fe-2x mb-2 d-block"></i>
+                  {{ 'orphanPayments.noOrphansInGroup' | translate }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column - Summary & Actions -->
+  <div class="col-lg-4">
+    <!-- Statistics Card -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5 class="card-title mb-0">{{ 'orphanPayments.statistics' | translate }}</h5>
+      </div>
+      <div class="card-body">
+        <div class="text-center mb-3">
+          <div class="display-4 font-weight-bold text-primary">{{ paymentGroup.orphanCount }}</div>
+          <div class="text-muted small">{{ 'orphanPayments.totalOrphans' | translate }}</div>
+        </div>
+        <hr>
+        <div class="row text-center">
+          <div class="col-6 mb-3">
+            <div class="h4 mb-0">{{ paymentGroup.batchNo || '-' }}</div>
+            <div class="text-muted small">{{ 'orphanPayments.batchNumber' | translate }}</div>
+          </div>
+          <div class="col-6 mb-3">
+            <div class="h4 mb-0">{{ paymentGroup.currency }}</div>
+            <div class="text-muted small">{{ 'orphanPayments.currency' | translate }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial Information Card -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5 class="card-title mb-0">{{ 'orphanPayments.financialInformation' | translate }}</h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="text-muted small">{{ 'orphanPayments.exchangeRate' | translate }}</label>
+          <div class="font-weight-bold">{{ paymentGroup.exchangeRate || '-' }}</div>
+        </div>
+        <div class="mb-3">
+          <label class="text-muted small">{{ 'orphanPayments.currency' | translate }}</label>
+          <div class="font-weight-bold">{{ paymentGroup.currency }}</div>
+        </div>
+        <div class="alert alert-info small" *ngIf="paymentGroup.dontRemoveRate">
+          <i class="fe fe-lock mr-1"></i>
+          {{ 'orphanPayments.exchangeRateLocked' | translate }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit Log Toggle -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <button class="btn btn-outline-secondary btn-block" (click)="toggleAuditLog()">
+          <i class="fe fe-activity mr-1"></i>
+          {{ 'orphanPayments.viewAuditLog' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Audit Log Section -->
+<div class="card mb-3" *ngIf="showingAuditLog">
+  <div class="card-header">
+    <h5 class="card-title mb-0">{{ 'orphanPayments.auditLog' | translate }}</h5>
+  </div>
+  <div class="card-body">
+    <div class="text-center py-4" *ngIf="loadingAuditLog">
+      <div class="spinner-border spinner-border-sm text-primary"></div>
+    </div>
+    <div class="table-responsive" *ngIf="!loadingAuditLog">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>{{ 'common.date' | translate }}</th>
+            <th>{{ 'common.action' | translate }}</th>
+            <th>{{ 'common.performedBy' | translate }}</th>
+            <th>{{ 'orphanPayments.details' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let log of auditLogs">
+            <td>{{ formatDate(log.performedOn) }}</td>
+            <td>
+              <span class="badge" [ngClass]="getAuditActionClass(log.action)">
+                {{ log.action }}
+              </span>
+            </td>
+            <td>{{ log.performedBy }}</td>
+            <td>
+              <span *ngIf="log.field">{{ log.field }}:</span>
+              <span *ngIf="log.oldValue" class="text-muted line-through mr-1">{{ log.oldValue }}</span>
+              <span *ngIf="log.newValue" class="text-success">{{ log.newValue }}</span>
+            </td>
+          </tr>
+          <tr *ngIf="auditLogs.length === 0">
+            <td colspan="4" class="text-center text-muted">
+              {{ 'orphanPayments.noAuditLogs' | translate }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-backdrop fade show" *ngIf="showExportModal"></div>
+<div class="modal fade show d-block" role="dialog" *ngIf="showExportModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ 'orphanPayments.exportGroup' | translate }}</h5>
+        <button type="button" class="close" (click)="closeExportModal()">
+          <span>&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">{{ 'orphanPayments.exportFormat' | translate }}</label>
+          <select class="form-control" [(ngModel)]="exportOptions.format">
+            <option value="Excel">Excel</option>
+            <option value="PDF">PDF</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">{{ 'orphanPayments.includePhotos' | translate }}</label>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="includePhotos" [(ngModel)]="exportOptions.includePhotos">
+            <label class="form-check-label" for="includePhotos">
+              {{ 'orphanPayments.includePhotosHelp' | translate }}
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">{{ 'orphanPayments.groupOrphansBy' | translate }}</label>
+          <select class="form-control" [(ngModel)]="exportOptions.groupBy">
+            <option value="None">{{ 'orphanPayments.noGrouping' | translate }}</option>
+            <option value="Charity">{{ 'orphanPayments.groupByCharity' | translate }}</option>
+            <option value="Region">{{ 'orphanPayments.groupByRegion' | translate }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeExportModal()">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button type="button" class="btn btn-primary" (click)="doExport()">
+          <i class="fe fe-download mr-1"></i>
+          {{ 'orphanPayments.export' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

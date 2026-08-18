@@ -1,0 +1,449 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'families.familyDetails' | translate"
+  [subtitle]="family?.code || ''"
+  [icon]="'fe fe-users'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div *ngIf="loading" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">{{ 'common.loading' | translate }}</span>
+  </div>
+</div>
+
+<div *ngIf="!loading && family" class="row">
+  <!-- Family Information Card -->
+  <div class="col-md-12 mb-3">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">{{ 'families.familyInformation' | translate }}</h4>
+        <span [class]="'badge ' + (family.isActive ? 'badge-success' : 'badge-warning')">
+          {{ family.isActive ? ('common.active' | translate) : ('common.inactive' | translate) }}
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-3">
+            <label class="text-muted small">{{ 'families.familyCode' | translate }}</label>
+            <div class="font-weight-bold">{{ family.code || '-' }}</div>
+          </div>
+          <div class="col-md-3">
+            <label class="text-muted small">{{ 'families.registrationDate' | translate }}</label>
+            <div>{{ family.registrationDate | date:'mediumDate' }}</div>
+          </div>
+          <div class="col-md-3">
+            <label class="text-muted small">{{ 'families.providerType' | translate }}</label>
+            <div>{{ getProviderTypeText(family.providerType) }}</div>
+          </div>
+          <div class="col-md-3">
+            <label class="text-muted small">{{ 'families.orphansCount' | translate }}</label>
+            <div>
+              <span class="badge badge-pill badge-primary">{{ family.orphanCount || 0 }}</span>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <label class="text-muted small">{{ 'families.relativesCount' | translate }}</label>
+            <div>
+              <span class="badge badge-pill badge-info">{{ family.relativeCount || 0 }}</span>
+            </div>
+          </div>
+        </div>
+
+        <hr>
+
+        <div class="row">
+          <div class="col-md-12">
+            <label class="text-muted small">{{ 'families.address' | translate }}</label>
+            <div>{{ family.address }}</div>
+            <div class="text-muted" *ngIf="family.city || family.village">
+              {{ family.city || '' }}{{ family.city && family.village ? ', ' : '' }}{{ family.village || '' }}
+              {{ family.district ? ' (' + family.district + ')' : '' }}
+            </div>
+          </div>
+        </div>
+
+        <div class="row mt-3">
+          <div class="col-md-4">
+            <label class="text-muted small">{{ 'families.phone' | translate }}</label>
+            <div>{{ family.phone || '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="text-muted small">{{ 'families.livingCondition' | translate }}</label>
+            <div>{{ getLivingConditionText(family.livingCondition) }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="text-muted small">{{ 'families.housingType' | translate }}</label>
+            <div>{{ getHousingTypeText(family.housingType) }}</div>
+          </div>
+        </div>
+
+        <div class="row mt-3" *ngIf="family.notes">
+          <div class="col-md-12">
+            <label class="text-muted small">{{ 'families.notes' | translate }}</label>
+            <div>{{ family.notes }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer d-flex justify-content-between">
+        <div class="text-muted small">
+          {{ 'common.createdDate' | translate }}: {{ family.createdOn | date:'medium' }}
+          <span *ngIf="family.modifiedOn"> | {{ 'common.modifiedDate' | translate }}: {{ family.modifiedOn | date:'medium' }}</span>
+        </div>
+        <div>
+          <button class="btn btn-sm btn-outline-secondary" (click)="exportToPDF()">
+            <i class="fe fe-file-text mr-1"></i>
+            {{ 'common.exportPDF' | translate }}
+          </button>
+          <button class="btn btn-sm btn-outline-primary ml-2" (click)="toggleFamilyStatus()">
+            <i class="fe fe-power mr-1"></i>
+            {{ family.isActive ? ('families.deactivate' | translate) : ('families.activate' | translate) }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Father Information Card -->
+  <div class="col-md-6 mb-3">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">{{ 'families.fatherInformation' | translate }}</h4>
+        <button class="btn btn-sm btn-outline-primary" *ngIf="!father" (click)="addFather()">
+          <i class="fe fe-plus mr-1"></i>
+          {{ 'families.addFather' | translate }}
+        </button>
+      </div>
+      <div class="card-body" *ngIf="father; else noFather">
+        <div class="row">
+          <div class="col-md-12">
+            <h5 class="font-weight-bold">{{ father.fullName }}</h5>
+            <div class="mb-2">
+              <span class="badge" [ngClass]="father.isAlive ? 'badge-success' : 'badge-danger'">
+                {{ father.isAlive ? ('families.alive' | translate) : ('families.deceased' | translate) }}
+              </span>
+              <span class="badge badge-info ml-1" *ngIf="father.isProvider">
+                {{ 'families.provider' | translate }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <label class="text-muted small">{{ 'families.nationalId' | translate }}</label>
+            <div>{{ father.nationalId || '-' }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">{{ 'families.dateOfBirth' | translate }}</label>
+            <div>{{ father.dateOfBirth | date:'mediumDate' }}</div>
+          </div>
+        </div>
+
+        <div class="row mt-2">
+          <div class="col-md-6">
+            <label class="text-muted small">{{ 'families.job' | translate }}</label>
+            <div>{{ father.job || '-' }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">{{ 'families.monthlyIncome' | translate }}</label>
+            <div>{{ father.monthlyIncome || '-' }}</div>
+          </div>
+        </div>
+
+        <div class="row mt-2">
+          <div class="col-md-6">
+            <label class="text-muted small">{{ 'families.healthStatus' | translate }}</label>
+            <div>{{ father.healthStatus || '-' }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">{{ 'families.phone' | translate }}</label>
+            <div>{{ father.phone || '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #noFather>
+    <div class="card-body text-center text-muted py-4">
+      <i class="fe fe-user-plus fe-2x mb-2"></i>
+      <p>{{ 'families.noFatherAdded' | translate }}</p>
+    </div>
+  </ng-template>
+
+  <!-- Mother Information Card -->
+  <div class="col-md-6 mb-3">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">{{ 'families.motherInformation' | translate }}</h4>
+        <button class="btn btn-sm btn-outline-primary" *ngIf="!mother" (click)="addMother()">
+          <i class="fe fe-plus mr-1"></i>
+          {{ 'families.addMother' | translate }}
+        </button>
+      </div>
+      <div class="card-body" *ngIf="mother; else noMother">
+        <div class="row">
+          <div class="col-md-12">
+            <h5 class="font-weight-bold">{{ mother.fullName }}</h5>
+            <div class="mb-2">
+              <span class="badge" [ngClass]="mother.isAlive ? 'badge-success' : 'badge-danger'">
+                {{ mother.isAlive ? ('families.alive' | translate) : ('families.deceased' | translate) }}
+              </span>
+              <span class="badge badge-info ml-1" *ngIf="mother.isProvider">
+                {{ 'families.provider' | translate }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <label class="text-muted small">{{ 'families.nationalId' | translate }}</label>
+            <div>{{ mother.nationalId || '-' }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">{{ 'families.dateOfBirth' | translate }}</label>
+            <div>{{ mother.dateOfBirth | date:'mediumDate' }}</div>
+          </div>
+        </div>
+
+        <div class="row mt-2">
+          <div class="col-md-6">
+            <label class="text-muted small">{{ 'families.job' | translate }}</label>
+            <div>{{ mother.job || '-' }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">{{ 'families.monthlyIncome' | translate }}</label>
+            <div>{{ mother.monthlyIncome || '-' }}</div>
+          </div>
+        </div>
+
+        <div class="row mt-2">
+          <div class="col-md-6">
+            <label class="text-muted small">{{ 'families.healthStatus' | translate }}</label>
+            <div>{{ mother.healthStatus || '-' }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">{{ 'families.phone' | translate }}</label>
+            <div>{{ mother.phone || '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #noMother>
+    <div class="card-body text-center text-muted py-4">
+      <i class="fe fe-user-plus fe-2x mb-2"></i>
+      <p>{{ 'families.noMotherAdded' | translate }}</p>
+    </div>
+  </ng-template>
+
+  <!-- Other Provider Card (if applicable) -->
+  <div class="col-md-12 mb-3" *ngIf="family.providerType === 'other'">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">{{ 'families.providerInformation' | translate }}</h4>
+        <button class="btn btn-sm btn-outline-primary" *ngIf="!provider" (click)="addProvider()">
+          <i class="fe fe-plus mr-1"></i>
+          {{ 'families.addProvider' | translate }}
+        </button>
+      </div>
+      <div class="card-body" *ngIf="provider; else noProvider">
+        <div class="row">
+          <div class="col-md-3">
+            <h5 class="font-weight-bold">{{ provider.fullName }}</h5>
+            <span class="badge badge-info">{{ provider.relationship }}</span>
+          </div>
+          <div class="col-md-3">
+            <label class="text-muted small">{{ 'families.nationalId' | translate }}</label>
+            <div>{{ provider.nationalId || '-' }}</div>
+          </div>
+          <div class="col-md-3">
+            <label class="text-muted small">{{ 'families.phone' | translate }}</label>
+            <div>{{ provider.phone || '-' }}</div>
+          </div>
+          <div class="col-md-3">
+            <label class="text-muted small">{{ 'families.job' | translate }}</label>
+            <div>{{ provider.job || '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #noProvider>
+    <div class="card-body text-center text-muted py-4">
+      <i class="fe fe-user-plus fe-2x mb-2"></i>
+      <p>{{ 'families.noProviderAdded' | translate }}</p>
+    </div>
+  </ng-template>
+
+  <!-- Relatives Card -->
+  <div class="col-md-12 mb-3">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">{{ 'families.relatives' | translate }}</h4>
+        <span class="badge badge-secondary">{{ family.relatives?.length || 0 }}</span>
+      </div>
+      <div class="card-body">
+        <div *ngIf="!family.relatives || family.relatives.length === 0" class="text-center text-muted py-4">
+          <i class="fe fe-users fe-2x mb-2"></i>
+          <p>{{ 'families.noRelativesInFamily' | translate }}</p>
+        </div>
+
+        <div class="table-responsive" *ngIf="family.relatives && family.relatives.length > 0">
+          <table class="table table-hover table-sm">
+            <thead>
+              <tr>
+                <th>{{ 'families.fullName' | translate }}</th>
+                <th>{{ 'families.relationshipType' | translate }}</th>
+                <th>{{ 'families.gender' | translate }}</th>
+                <th>{{ 'families.age' | translate }}</th>
+                <th>{{ 'families.phone' | translate }}</th>
+                <th>{{ 'families.isAlive' | translate }}</th>
+                <th>{{ 'families.livingWithFamily' | translate }}</th>
+                <th>{{ 'common.actions' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let relative of family.relatives">
+                <td>
+                  <div class="font-weight-bold">{{ relative.fullName }}</div>
+                  <small class="text-muted" *ngIf="relative.nationalId">{{ relative.nationalId }}</small>
+                </td>
+                <td>
+                  <span class="badge badge-info">{{ relative.relationshipType }}</span>
+                </td>
+                <td>
+                  <span class="badge badge-pill" [ngClass]="relative.gender === 'male' ? 'badge-primary' : 'badge-info'">
+                    {{ relative.gender === 'male' ? ('families.male' | translate) : ('families.female' | translate) }}
+                  </span>
+                </td>
+                <td>{{ relative.age || calculateAge(relative.dateOfBirth) }}</td>
+                <td>{{ relative.phone || '-' }}</td>
+                <td>
+                  <span class="badge" [ngClass]="relative.isAlive ? 'badge-success' : 'badge-danger'">
+                    {{ relative.isAlive ? ('families.alive' | translate) : ('families.deceased' | translate) }}
+                  </span>
+                </td>
+                <td>
+                  <span [class]="relative.isLivingWithFamily ? 'text-success' : 'text-muted'">
+                    <i [class]="relative.isLivingWithFamily ? 'fe fe-home' : 'fe fe-home'" class="opacity-50"></i>
+                    {{ relative.isLivingWithFamily ? ('common.yes' | translate) : ('common.no' | translate) }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-light" (click)="deleteRelative(relative)" *ngIf="!relative.id">
+                    <i class="fe fe-trash text-danger"></i>
+                  </button>
+                  <button class="btn btn-sm btn-light mr-1" (click)="editRelative(relative)">
+                    <i class="fe fe-edit"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Orphans Card -->
+  <div class="col-md-12 mb-3">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">{{ 'families.orphans' | translate }}</h4>
+        <button class="btn btn-sm btn-primary" (click)="addOrphan()">
+          <i class="fe fe-plus mr-1"></i>
+          {{ 'families.addOrphan' | translate }}
+        </button>
+      </div>
+      <div class="card-body">
+        <div *ngIf="loadingOrphans" class="text-center py-3">
+          <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        </div>
+
+        <div *ngIf="!loadingOrphans && orphans.length === 0" class="text-center text-muted py-4">
+          <i class="fe fe-users fe-2x mb-2"></i>
+          <p>{{ 'families.noOrphansInFamily' | translate }}</p>
+        </div>
+
+        <div class="table-responsive" *ngIf="!loadingOrphans && orphans.length > 0">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>{{ 'orphans.fullName' | translate }}</th>
+                <th>{{ 'orphans.gender' | translate }}</th>
+                <th>{{ 'orphans.age' | translate }}</th>
+                <th>{{ 'orphans.orphanType' | translate }}</th>
+                <th>{{ 'orphans.sponsorshipStatus' | translate }}</th>
+                <th>{{ 'orphans.sponsor' | translate }}</th>
+                <th>{{ 'common.actions' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let orphan of orphans" style="cursor: pointer;" (click)="viewOrphan(orphan.id)">
+                <td>
+                  <div class="font-weight-bold">{{ orphan.fullName }}</div>
+                  <small class="text-muted">{{ orphan.nationalId || '-' }}</small>
+                </td>
+                <td>
+                  <span class="badge badge-pill" [ngClass]="orphan.gender === 'male' ? 'badge-primary' : 'badge-info'">
+                    {{ orphan.gender === 'male' ? ('orphans.male' | translate) : ('orphans.female' | translate) }}
+                  </span>
+                </td>
+                <td>{{ calculateAge(orphan.dateOfBirth) }}</td>
+                <td>
+                  <span [class]="'badge ' + getOrphanTypeBadgeClass(orphan.orphanType)">
+                    {{ orphan.orphanType }}
+                  </span>
+                </td>
+                <td>
+                  <span [class]="'badge ' + getSponsorshipStatusBadgeClass(orphan.sponsorshipStatus)">
+                    {{ orphan.sponsorshipStatus }}
+                  </span>
+                </td>
+                <td>{{ orphan.sponsorName || '-' }}</td>
+                <td>
+                  <button class="btn btn-sm btn-light" (click)="$event.stopPropagation(); deleteOrphan(orphan)">
+                    <i class="fe fe-trash text-danger"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attachments Card -->
+  <div class="col-md-12 mb-3" *ngIf="attachments.length > 0">
+    <div class="card">
+      <div class="card-header">
+        <h4 class="mb-0">{{ 'families.attachments' | translate }}</h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 mb-3" *ngFor="let attachment of attachments">
+            <div class="border rounded p-3">
+              <div class="d-flex align-items-center">
+                <i class="fe fe-file fe-2x text-muted mr-3"></i>
+                <div class="flex-grow-1">
+                  <div class="font-weight-bold">{{ attachment.fileName }}</div>
+                  <small class="text-muted">
+                    {{ attachment.documentType }} |
+                    {{ attachment.uploadedOn | date:'mediumDate' }}
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

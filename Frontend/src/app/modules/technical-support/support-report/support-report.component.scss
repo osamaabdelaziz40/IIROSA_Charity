@@ -1,0 +1,85 @@
+.stat-card {
+  background-color: rgba(var(--primary-rgb), 0.05);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+  border: 1px solid var(--border-color);
+
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.report-section {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  h5 {
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: var(--text-color);
+  }
+}
+
+.progress-item {
+  .progress {
+    height: 8px;
+    border-radius: 4px;
+    background-color: rgba(var(--primary-rgb), 0.1);
+  }
+}
+
+.category-stat {
+  background-color: rgba(var(--info-rgb), 0.05);
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  text-align: center;
+  border: 1px solid var(--border-color);
+
+  .category-name {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+  }
+
+  .category-count {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--info);
+  }
+}
+
+.form-actions {
+  margin-top: 1.5rem;
+}
+
+// RTL Support
+[dir='rtl'] {
+  .mr-1 {
+    margin-right: 0 !important;
+    margin-left: 0.25rem !important;
+  }
+
+  .mr-2 {
+    margin-right: 0 !important;
+    margin-left: 0.5rem !important;
+  }
+
+  .text-right {
+    text-align: left !important;
+  }
+}

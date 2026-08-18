@@ -1,0 +1,13 @@
+// Use default Bootstrap pagination styles
+.page-link {
+  cursor: pointer;
+  i {
+    font-size: 1rem;
+  }
+}
+
+.page-item {
+  &.disabled .page-link {
+    cursor: not-allowed;
+  }
+}

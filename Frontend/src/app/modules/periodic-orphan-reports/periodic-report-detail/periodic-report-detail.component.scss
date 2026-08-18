@@ -1,0 +1,23 @@
+// Periodic Report Detail Styles
+.periodic-report-detail {
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px dashed var(--bs-gray-200);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .label {
+      font-weight: 500;
+      color: var(--bs-secondary);
+    }
+
+    .value {
+      font-weight: 600;
+      color: var(--bs-gray-900);
+    }
+  }
+}

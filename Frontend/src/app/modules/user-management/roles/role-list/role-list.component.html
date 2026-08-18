@@ -1,0 +1,100 @@
+<app-page-header
+  [title]="'userManagement.roles'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <!-- Loading indicator -->
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">{{ 'common.loading' | translate }}</span>
+        </div>
+        <p class="mt-3 text-muted">{{ 'common.loading' | translate }} {{ 'common.roles' | translate }}...</p>
+      </div>
+
+      <!-- Roles Table -->
+      <div class="card shadow" *ngIf="!loading">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>{{ 'common.name' | translate }}</th>
+                  <th>{{ 'common.description' | translate }}</th>
+                  <th>{{ 'userManagement.userCount' | translate }}</th>
+                  <th>{{ 'common.status' | translate }}</th>
+                  <th>{{ 'common.actions' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let role of roles">
+                  <td>
+                    <strong>{{ role.name }}</strong>
+                    <span class="badge bg-info ml-2" *ngIf="isSystemRole(role)">{{ 'userManagement.systemRole' | translate }}</span>
+                  </td>
+                  <td>{{ role.description || '-' }}</td>
+                  <td>
+                    <span class="badge bg-primary">{{ role.userCount || 0 }}</span>
+                  </td>
+                  <td>
+                    <span class="badge bg-success">{{ 'common.active' | translate }}</span>
+                  </td>
+                  <td>
+                    <div class="dropdown">
+                      <button class="btn btn-sm btn-outline-secondary" type="button" data-toggle="dropdown">
+                        <i class="fe fe-more-vertical"></i>
+                      </button>
+                      <div class="dropdown-menu dropdown-menu-right">
+                        <a class="dropdown-item" href="javascript:void(0)" (click)="viewRole(role.id)">
+                          <i class="fe fe-eye mr-2"></i>
+                          {{ 'common.view' | translate }}
+                        </a>
+                        <a class="dropdown-item" href="javascript:void(0)" (click)="editRole(role.id)" *ngIf="!isSystemRole(role)">
+                          <i class="fe fe-edit mr-2"></i>
+                          {{ 'common.edit' | translate }}
+                        </a>
+                        <div class="dropdown-divider" *ngIf="!isSystemRole(role)"></div>
+                        <a class="dropdown-item text-danger" href="javascript:void(0)" (click)="deleteRole(role.id, role.name)" *ngIf="!isSystemRole(role)">
+                          <i class="fe fe-trash mr-2"></i>
+                          {{ 'common.delete' | translate }}
+                        </a>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="roles.length === 0">
+                  <td colspan="5" class="text-center text-muted">
+                    {{ 'userManagement.noRolesFound' | translate }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <app-pagination
+            [currentPage]="currentPage"
+            [pageSize]="pageSize"
+            [totalCount]="totalCount"
+            (pageChange)="goToPage($event)">
+          </app-pagination>
+        </div>
+      </div>
+
+      <!-- No data message -->
+      <div class="card shadow text-center py-5" *ngIf="!loading && roles.length === 0">
+        <div class="card-body">
+          <i class="fe fe-shield" style="font-size: 4rem; opacity: 0.3;"></i>
+          <h4 class="mt-3">{{ 'userManagement.noRolesFound' | translate }}</h4>
+          <p class="text-muted">{{ 'userManagement.noRolesDescription' | translate }}</p>
+          <button class="btn btn-primary" (click)="createRole()">
+            <i class="fe fe-plus mr-2"></i>
+            {{ 'userManagement.createFirstRole' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

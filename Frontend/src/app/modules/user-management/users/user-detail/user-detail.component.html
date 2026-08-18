@@ -1,0 +1,159 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+<app-page-header
+  [title]="'userManagement.userDetails'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="text-center py-5" *ngIf="loading">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">Loading...</span>
+  </div>
+  <p class="mt-3 text-muted">Loading user details...</p>
+</div>
+
+<div class="container-fluid" *ngIf="!loading && user">
+  <div class="row">
+    <!-- User Information Card -->
+    <div class="col-md-8">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">{{ 'userManagement.personalInformation' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4 text-center">
+              <div class="avatar avatar-xl mb-3">
+                <div class="avatar-title rounded-circle bg-primary">
+                  {{ user.fullName | initials }}
+                </div>
+              </div>
+              <h5>{{ user.fullName }}</h5>
+              <p class="text-muted mb-3">{{ user.email }}</p>
+              <span class="badge" [ngClass]="getStatusClass()">
+                {{ getStatusText() }}
+              </span>
+            </div>
+
+            <div class="col-md-8">
+              <table class="table table-sm">
+                <tbody>
+                  <tr>
+                    <th>{{ 'common.email' | translate }}:</th>
+                    <td>{{ user.email }}</td>
+                  </tr>
+                  <tr>
+                    <th>{{ 'common.phoneNumber' | translate }}:</th>
+                    <td>{{ user.phoneNumber || '-' }}</td>
+                  </tr>
+                  <tr>
+                    <th>{{ 'common.status' | translate }}:</th>
+                    <td>
+                      <span class="badge" [ngClass]="getStatusClass()">
+                        {{ getStatusText() }}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>{{ 'common.createdDate' | translate }}:</th>
+                    <td>{{ user.createdOn | appDate }}</td>
+                  </tr>
+                  <tr>
+                    <th>{{ 'common.modifiedDate' | translate }}:</th>
+                    <td>{{ user.updatedOn ? (user.updatedOn | appDate) : '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Card -->
+    <div class="col-md-4">
+      <div class="card shadow">
+        <div class="card-header bg-warning">
+          <h5 class="mb-0">{{ 'common.actions' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button class="btn btn-outline-primary" (click)="manageRoles()">
+              <i class="fe fe-shield"></i>
+              <span class="ml-2">{{ 'userManagement.manageRoles' | translate }}</span>
+            </button>
+            <button class="btn btn-outline-info" (click)="manageClaims()">
+              <i class="fe fe-key"></i>
+              <span class="ml-2">{{ 'userManagement.manageClaims' | translate }}</span>
+            </button>
+            <button class="btn btn-outline-secondary" (click)="viewActivity()">
+              <i class="fe fe-activity"></i>
+              <span class="ml-2">{{ 'userManagement.viewActivity' | translate }}</span>
+            </button>
+            <button class="btn btn-outline-warning" (click)="resetPassword()">
+              <i class="fe fe-refresh-cw"></i>
+              <span class="ml-2">{{ 'userManagement.resetPassword' | translate }}</span>
+            </button>
+            <button class="btn" [ngClass]="user!.isActive ? 'btn-outline-danger' : 'btn-outline-success'"
+                    (click)="toggleUserStatus()">
+              <i class="fe" [ngClass]="user!.isActive ? 'fe-lock' : 'fe-unlock'"></i>
+              <span class="ml-2">
+                {{ (user!.isActive ? 'userManagement.deactivate' : 'userManagement.activate') | translate }}
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Roles Card -->
+      <div class="card shadow mt-3">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0">{{ 'userManagement.roles' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex flex-wrap gap-2">
+            <span class="badge badge-primary" *ngFor="let role of user?.roles">
+              {{ role }}
+            </span>
+            <span class="text-muted" *ngIf="!user?.roles || user!.roles!.length === 0">
+              {{ 'userManagement.noRolesAssigned' | translate }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity Log Section -->
+  <div class="row mt-4" *ngIf="showActivityLog">
+    <div class="col-12">
+      <div class="card shadow">
+        <div class="card-header bg-secondary text-white">
+          <h5 class="mb-0">{{ 'userManagement.activityLog' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-info">
+            <i class="fe fe-info"></i>
+            {{ 'userManagement.activityLogNotImplemented' | translate }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Claims Management Section -->
+  <div class="row mt-4" *ngIf="showClaims">
+    <div class="col-12">
+      <div class="card shadow">
+        <div class="card-header bg-secondary text-white">
+          <h5 class="mb-0">{{ 'userManagement.claimsManagement' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-info">
+            <i class="fe fe-info"></i>
+            {{ 'userManagement.claimsManagementNotImplemented' | translate }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

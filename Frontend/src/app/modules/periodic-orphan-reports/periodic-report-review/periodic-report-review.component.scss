@@ -1,0 +1,46 @@
+// Periodic Report Review Styles
+.periodic-report-review {
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--bs-gray-100);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .label {
+      font-weight: 500;
+      color: var(--bs-secondary);
+      min-width: 150px;
+    }
+
+    .value {
+      color: var(--bs-gray-900);
+      text-align: right;
+
+      &.fw-bold {
+        font-weight: 700;
+      }
+
+      &.fst-italic {
+        font-style: italic;
+        color: var(--bs-gray-600);
+      }
+    }
+  }
+
+  .section {
+    &:not(:last-child) {
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--bs-gray-200);
+    }
+  }
+
+  .sticky-top {
+    position: sticky;
+    top: 1rem;
+  }
+}

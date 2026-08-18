@@ -1,0 +1,165 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+<app-page-header
+  [title]="'incomingOutgoing.addOutgoingLetter' | translate"
+  [subtitle]="'incomingOutgoing.fillOutgoingLetterDetails' | translate"
+  [icon]="'fe fe-send'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="card" *ngIf="!loading">
+  <div class="card-body">
+    <form [formGroup]="letterForm" (ngSubmit)="onSubmit()">
+      <div class="row">
+        <!-- Subject (Required) -->
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="letterForm"
+            fcn="subject"
+            [label]="'incomingOutgoing.subject'"
+            [placeholder]="'incomingOutgoing.subjectPlaceholder' | translate"
+            [required]="true">
+          </app-input-text>
+        </div>
+
+        <!-- Outgoing ID (Required) -->
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="letterForm"
+            fcn="outGoingId"
+            [label]="'incomingOutgoing.outGoingId'"
+            [placeholder]="'incomingOutgoing.outGoingIdPlaceholder' | translate"
+            [required]="true">
+          </app-input-text>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- Outgoing Number -->
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="letterForm"
+            fcn="outGoingNumber"
+            [label]="'incomingOutgoing.outGoingNumber'"
+            [placeholder]="'incomingOutgoing.outGoingNumberPlaceholder' | translate">
+          </app-input-text>
+        </div>
+
+        <!-- Date -->
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="letterForm"
+            fcn="date"
+            [label]="'incomingOutgoing.date'"
+            type="date">
+          </app-input-text>
+        </div>
+
+        <!-- Year -->
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="letterForm"
+            fcn="year"
+            [label]="'incomingOutgoing.year'"
+            type="number"
+            [placeholder]="'incomingOutgoing.yearPlaceholder' | translate">
+          </app-input-text>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- Department -->
+        <div class="col-md-6">
+          <app-drop-down
+            [fg]="letterForm"
+            fcn="fkDepartmentId"
+            [label]="'incomingOutgoing.department'"
+            [placeholder]="'incomingOutgoing.selectDepartment' | translate"
+            [initialData]="allDepartments"
+            (onDropDownChanged)="onDepartmentDropDownChanged($event)">
+          </app-drop-down>
+        </div>
+
+        <!-- Category -->
+        <div class="col-md-6">
+          <app-drop-down
+            [fg]="letterForm"
+            fcn="outgoingCategoryId"
+            [label]="'incomingOutgoing.category'"
+            [placeholder]="'incomingOutgoing.selectCategory' | translate"
+            [initialData]="categoryOptions"
+            (onDropDownChanged)="onCategoryDropDownChanged($event)">
+          </app-drop-down>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- Reply To Incoming -->
+        <div class="col-md-12">
+          <app-drop-down
+            [fg]="letterForm"
+            fcn="incomingId"
+            [label]="'incomingOutgoing.replyToIncoming'"
+            [placeholder]="'incomingOutgoing.selectIncomingLetter' | translate"
+            [initialData]="incomingLetterOptions"
+            (onDropDownChanged)="onIncomingDropDownChanged($event)">
+          </app-drop-down>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="row">
+        <div class="col-md-12">
+          <app-input-text
+            [fg]="letterForm"
+            fcn="body"
+            [label]="'incomingOutgoing.body'"
+            [placeholder]="'incomingOutgoing.bodyPlaceholder' | translate"
+            type="textarea"
+            [rows]="6">
+          </app-input-text>
+        </div>
+      </div>
+
+      <!-- File Attachment -->
+      <div class="row">
+        <div class="col-md-12">
+          <label class="form-label">
+            {{ 'incomingOutgoing.attachedFile' | translate }}
+          </label>
+          <app-attachment-input
+            [fileType]="attachmentFileType.Document"
+            [existingFileId]="attachmentFileId"
+            (fileIdChange)="onAttachmentChange($event)"
+            [acceptedFileTypes]="[attachmentFileType.Document]">
+          </app-attachment-input>
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="row mt-4">
+        <div class="col-md-12">
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-secondary" (click)="cancel()">
+              <i class="fe fe-x mr-1"></i>
+              {{ 'common.cancel' | translate }}
+            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="saving">
+              <i class="fe fe-save mr-1" *ngIf="!saving"></i>
+              <i class="fe fe-spinner fe-spin mr-1" *ngIf="saving"></i>
+              {{ saving ? ('common.saving' | translate) : ('common.save' | translate) }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div class="card" *ngIf="loading">
+  <div class="card-body text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">{{ 'common.loading' | translate }}</span>
+    </div>
+  </div>
+</div>

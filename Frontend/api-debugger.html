@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connection Debugger</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #007bff;
+            margin-top: 0;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success {
+            background: #28a745;
+        }
+        .error {
+            background: #dc3545;
+        }
+        .warning {
+            background: #ffc107;
+            color: #000;
+        }
+        #results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .result-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-left: 4px solid #007bff;
+        }
+        .result-item.success {
+            border-left-color: #28a745;
+        }
+        .result-item.error {
+            border-left-color: #dc3545;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Frontend-Backend API Debugger</h1>
+
+    <div class="info">
+        <strong>📋 Frontend Configuration:</strong><br>
+        • Frontend URL: http://localhost:4200<br>
+        • Proxy Config: /api/* → https://localhost:60960<br>
+        • Expected Endpoint: GET /api/usermanagement<br>
+        • Expected Response: JSON with items, totalCount, pageNumber, etc.
+    </div>
+
+    <div class="container">
+        <h2>Step 1: Test Backend Connectivity</h2>
+        <p>Check if your backend server is running and accessible:</p>
+        <button onclick="testBackendBase()">Test Base URL</button>
+        <button onclick="testHealthEndpoint()">Test Health Endpoint</button>
+    </div>
+
+    <div class="container">
+        <h2>Step 2: Test User Management Endpoint</h2>
+        <p>Test the exact endpoint that the frontend is calling:</p>
+        <button onclick="testUsersEndpoint()">Test /api/usermanagement</button>
+        <button onclick="testWithAuth()">Test with Auth Token</button>
+    </div>
+
+    <div class="container">
+        <h2>Step 3: Test Different Endpoint Patterns</h2>
+        <p>Try alternative endpoint patterns if /api/usermanagement doesn't work:</p>
+        <button onclick="testAlternateEndpoints()">Test Common Patterns</button>
+    </div>
+
+    <div class="container">
+        <h2>📊 Test Results</h2>
+        <div id="results">Waiting for test results...</div>
+    </div>
+
+    <script>
+        const BASE_URL = 'https://localhost:60960';
+
+        function log(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'warning';
+
+            resultsDiv.innerHTML = `<div class="result-item ${className}">
+                <strong>[${timestamp}]</strong> ${message}
+            </div>` + resultsDiv.innerHTML;
+        }
+
+        function testBackendBase() {
+            log('Testing base URL: https://localhost:60960', 'info');
+
+            fetch(BASE_URL)
+                .then(response => {
+                    log(`✅ Server is reachable! Status: ${response.status}`, 'success');
+                })
+                .catch(error => {
+                    log(`❌ Cannot connect to server: ${error.message}`, 'error');
+                    log('Make sure your backend is running on https://localhost:60960', 'info');
+                });
+        }
+
+        function testHealthEndpoint() {
+            log('Testing health endpoint...', 'info');
+
+            fetch(`${BASE_URL}/health`)
+                .then(response => {
+                    log(`✅ Health endpoint found! Status: ${response.status}`, 'success');
+                    return response.json();
+                })
+                .then(data => {
+                    log(`Health check response: ${JSON.stringify(data)}`, 'success');
+                })
+                .catch(error => {
+                    log(`❌ Health endpoint not found: ${error.message}`, 'error');
+                });
+        }
+
+        function testUsersEndpoint() {
+            const url = `${BASE_URL}/api/usermanagement?pageNumber=1&pageSize=10`;
+            log(`Testing users endpoint: ${url}`, 'info');
+
+            fetch(url)
+                .then(response => {
+                    if (response.ok) {
+                        log(`✅ Users endpoint working! Status: ${response.status}`, 'success');
+                        return response.json();
+                    } else {
+                        log(`❌ Users endpoint returned error: ${response.status} ${response.statusText}`, 'error');
+                        return response.text();
+                    }
+                })
+                .then(data => {
+                    if (typeof data === 'object') {
+                        log(`✅ Got user data: ${JSON.stringify(data, null, 2)}`, 'success');
+                    } else {
+                        log(`Response: ${data}`, 'info');
+                    }
+                })
+                .catch(error => {
+                    log(`❌ Request failed: ${error.message}`, 'error');
+                });
+        }
+
+        function testWithAuth() {
+            const token = prompt('Enter your JWT token (optional):');
+            const url = `${BASE_URL}/api/usermanagement?pageNumber=1&pageSize=10`;
+
+            log(`Testing with auth token...`, 'info');
+
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            fetch(url, { headers })
+                .then(response => {
+                    log(`Response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                    return response.text();
+                })
+                .then(text => {
+                    log(`Response: ${text}`, 'info');
+                })
+                .catch(error => {
+                    log(`Error: ${error.message}`, 'error');
+                });
+        }
+
+        function testAlternateEndpoints() {
+            const patterns = [
+                '/api/users',
+                '/api/UserManagement',
+                '/users',
+                '/usermanagement',
+                '/api/user',
+                '/user'
+            ];
+
+            log('Testing alternate endpoint patterns...', 'info');
+
+            patterns.forEach(pattern => {
+                const url = `${BASE_URL}${pattern}`;
+
+                fetch(url)
+                    .then(response => {
+                        if (response.status !== 404) {
+                            log(`✅ Found working endpoint: ${pattern} (Status: ${response.status})`, 'success');
+                        }
+                    })
+                    .catch(error => {
+                        // Ignore connection errors for this test
+                    });
+            });
+        }
+
+        // Run initial tests
+        window.onload = function() {
+            log('🚀 API Debugger loaded! Click buttons to test your backend.', 'info');
+            log('📝 Current frontend expects: GET /api/usermanagement', 'info');
+        };
+    </script>
+</body>
+</html>

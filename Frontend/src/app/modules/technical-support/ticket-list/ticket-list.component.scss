@@ -1,0 +1,65 @@
+.ticket-row {
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: rgba(var(--primary-rgb), 0.05);
+  }
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    background-color: rgba(var(--primary-rgb), 0.05);
+  }
+
+  .sort-icon {
+    opacity: 0.3;
+    transition: opacity 0.2s;
+  }
+
+  &:hover .sort-icon {
+    opacity: 0.7;
+  }
+}
+
+.page-size-select {
+  width: 70px;
+}
+
+.empty-state {
+  padding: 3rem 0;
+
+  i {
+    display: block;
+    margin: 0 auto 1rem;
+  }
+
+  p {
+    font-size: 1.1rem;
+  }
+}
+
+// RTL Support
+[dir='rtl'] {
+  .sort-icon {
+    margin-right: 0;
+    margin-left: 0.25rem;
+  }
+
+  .ml-1 {
+    margin-left: 0 !important;
+    margin-right: 0.25rem !important;
+  }
+
+  .mr-1 {
+    margin-right: 0 !important;
+    margin-left: 0.25rem !important;
+  }
+
+  .text-right {
+    text-align: left !important;
+  }
+}

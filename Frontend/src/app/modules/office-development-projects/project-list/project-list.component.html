@@ -1,0 +1,251 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'officeDevelopmentProjects.title' | translate"
+  [subtitle]="'officeDevelopmentProjects.manageProjects' | translate"
+  [icon]="'fe fe-grid'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="card">
+  <div class="card-body">
+    <!-- Filters -->
+    <form [formGroup]="filterForm">
+      <div class="row mb-3">
+        <!-- Search -->
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="filterForm"
+            fcn="searchValue"
+            [label]="'common.search'"
+            [placeholder]="'officeDevelopmentProjects.searchPlaceholder' | translate">
+          </app-input-text>
+        </div>
+
+        <!-- Project Type -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="projectType"
+            [label]="'officeDevelopmentProjects.projectType'"
+            [initialData]="allProjectTypes"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onProjectTypeChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- Country -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="country"
+            [label]="'officeDevelopmentProjects.country'"
+            [initialData]="allCountries"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onCountryChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- Region -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="region"
+            [label]="'officeDevelopmentProjects.region'"
+            [initialData]="allRegions"
+            [hasDefaultValue]="true"
+            [disabled]="!filterForm.get('country')?.value"
+            (onDropDownChanged)="onRegionChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- Center -->
+        <div class="col-md-3">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="center"
+            [label]="'officeDevelopmentProjects.center'"
+            [initialData]="allCenters"
+            [hasDefaultValue]="true"
+            [disabled]="!filterForm.get('region')?.value"
+            (onDropDownChanged)="onCenterChange()">
+          </app-drop-down>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <!-- Charity -->
+        <div class="col-md-3">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="charity"
+            [label]="'officeDevelopmentProjects.charity'"
+            [initialData]="allCharities"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onCharityChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- Status -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="status"
+            [label]="'officeDevelopmentProjects.status'"
+            [initialData]="statusOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onStatusChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- Date From -->
+        <div class="col-md-2">
+          <app-input-text
+            [fg]="filterForm"
+            fcn="dateFrom"
+            [label]="'officeDevelopmentProjects.dateFrom'"
+            type="date"
+            (change)="onDateChange()">
+          </app-input-text>
+        </div>
+
+        <!-- Date To -->
+        <div class="col-md-2">
+          <app-input-text
+            [fg]="filterForm"
+            fcn="dateTo"
+            [label]="'officeDevelopmentProjects.dateTo'"
+            type="date"
+            (change)="onDateChange()">
+          </app-input-text>
+        </div>
+
+        <!-- Clear Filters Button -->
+        <div class="col-md-3 d-flex align-items-end" *ngIf="hasActiveFilters()">
+          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+            <i class="fe fe-x mr-1"></i>
+            {{ 'common.clearFilters' | translate }}
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Projects Table -->
+    <div *ngIf="!loading" class="table-responsive">
+      <table class="table table-hover table-striped">
+        <thead>
+          <tr>
+            <th>{{ 'officeDevelopmentProjects.projectName' | translate }}</th>
+            <th>{{ 'officeDevelopmentProjects.projectType' | translate }}</th>
+            <th>{{ 'officeDevelopmentProjects.region' | translate }}</th>
+            <th>{{ 'officeDevelopmentProjects.center' | translate }}</th>
+            <th>{{ 'officeDevelopmentProjects.villageName' | translate }}</th>
+            <th>{{ 'officeDevelopmentProjects.projectCost' | translate }}</th>
+            <th>{{ 'officeDevelopmentProjects.beneficiariesCount' | translate }}</th>
+            <th>{{ 'officeDevelopmentProjects.donorName' | translate }}</th>
+            <th>{{ 'officeDevelopmentProjects.status' | translate }}</th>
+            <th>{{ 'officeDevelopmentProjects.assignedCharity' | translate }}</th>
+            <th>{{ 'common.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let project of paginatedProjects">
+            <td>
+              <a [routerLink]="['/office-development-projects', project.id]" class="text-primary">
+                <strong>{{ project.projectName }}</strong>
+              </a>
+            </td>
+            <td>{{ project.officeProjectType || '-' }}</td>
+            <td>{{ project.regionName || '-' }}</td>
+            <td>{{ project.centerName || '-' }}</td>
+            <td>{{ project.villageName || '-' }}</td>
+            <td>
+              <div *ngIf="project.projectCostEGP">{{ formatCurrency(project.projectCostEGP) }} EGP</div>
+              <div *ngIf="project.projectCostSAR" class="text-muted small">{{ formatCurrency(project.projectCostSAR) }} SAR</div>
+              <div *ngIf="!project.projectCostEGP && !project.projectCostSAR">-</div>
+            </td>
+            <td>{{ project.beneficiariesCount || '-' }}</td>
+            <td>{{ project.donorName || '-' }}</td>
+            <td>
+              <span [class]="project.isFinished ? 'badge badge-success' : 'badge badge-warning'">
+                {{ (project.isFinished ? 'officeDevelopmentProjects.completed' : 'officeDevelopmentProjects.ongoing') | translate }}
+              </span>
+            </td>
+            <td>{{ project.assignedCharityName || '-' }}</td>
+            <td>
+              <div class="btn-group">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light"
+                  [title]="'common.view' | translate"
+                  (click)="viewProject(project.id)">
+                  <i class="fe fe-eye"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light"
+                  [title]="'common.edit' | translate"
+                  [disabled]="project.isFinished"
+                  (click)="editProject(project.id)">
+                  <i class="fe fe-edit"></i>
+                </button>
+                <div class="dropdown">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-light dropdown-toggle"
+                    data-toggle="dropdown"
+                    [disabled]="project.isFinished">
+                    <i class="fe fe-more-vertical"></i>
+                  </button>
+                  <div class="dropdown-menu dropdown-menu-right">
+                    <a
+                      class="dropdown-item"
+                      href="javascript:void(0)"
+                      [class.disabled]="project.isFinished"
+                      (click)="project.isFinished ? null : markAsCompleted(project.id)">
+                      <i class="fe fe-check-circle mr-2"></i>
+                      {{ 'officeDevelopmentProjects.markAsCompleted' | translate }}
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a
+                      class="dropdown-item text-danger"
+                      href="javascript:void(0)"
+                      (click)="deleteProject(project.id)">
+                      <i class="fe fe-trash mr-2"></i>
+                      {{ 'common.delete' | translate }}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="paginatedProjects.length === 0">
+            <td colspan="11" class="text-center py-5">
+              <div class="empty-state">
+                <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+                <p class="text-muted">{{ 'officeDevelopmentProjects.noProjectsFound' | translate }}</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <app-pagination
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
+  </div>
+</div>

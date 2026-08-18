@@ -1,0 +1,445 @@
+<div class="page-header">
+  <app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+  <div class="page-header-content">
+    <h2>
+      <i class="fe fe-check-square"></i>
+      {{ 'generalChecks.checkDetails' | translate }}
+    </h2>
+    <div class="page-actions">
+      <button
+        class="btn btn-secondary"
+        (click)="onBack()">
+        <i class="fe fe-arrow-left"></i> {{ 'common.back' | translate }}
+      </button>
+      <button
+        class="btn btn-primary"
+        *ngIf="canEdit()"
+        (click)="onEdit()">
+        <i class="fe fe-edit"></i> {{ 'common.edit' | translate }}
+      </button>
+      <button
+        class="btn btn-success"
+        *ngIf="canMarkAsCleared()"
+        (click)="openClearModal()">
+        <i class="fe fe-check"></i> {{ 'generalChecks.markAsCleared' | translate }}
+      </button>
+      <button
+        class="btn btn-danger"
+        *ngIf="canVoid()"
+        (click)="openVoidModal()">
+        <i class="fe fe-trash-2"></i> {{ 'generalChecks.voidCheck' | translate }}
+      </button>
+      <button
+        class="btn btn-danger"
+        (click)="onDelete()">
+        <i class="fe fe-trash"></i> {{ 'common.delete' | translate }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div *ngIf="loading" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">{{ 'common.loading' | translate }}</span>
+  </div>
+</div>
+
+<!-- Error State -->
+<div *ngIf="error && !loading" class="alert alert-danger">
+  {{ error }}
+</div>
+
+<!-- Check Details -->
+<div *ngIf="check && !loading">
+  <div class="row">
+    <!-- Check Information -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'generalChecks.checkInformation' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.checkNumber' | translate }}</label>
+                <span>{{ check.checkNumber }}</span>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.checkDate' | translate }}</label>
+                <span>{{ formatDate(check.checkDate) }}</span>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.dueDate' | translate }}</label>
+                <span>{{ formatDate(check.dueDate) }}</span>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.currency' | translate }}</label>
+                <span>{{ check.currency }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Beneficiary Information -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'generalChecks.beneficiaryInformation' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.beneficiaryName' | translate }}</label>
+                <span>{{ check.beneficiaryName }}</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.beneficiaryType' | translate }}</label>
+                <span>{{ getBeneficiaryTypeLabel(check.beneficiaryType) | translate }}</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.idPassportNumber' | translate }}</label>
+                <span>{{ check.idNumber || '-' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-4">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.beneficiaryAddress' | translate }}</label>
+                <span>{{ check.beneficiaryAddress || '-' }}</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.beneficiaryPhone' | translate }}</label>
+                <span>{{ check.beneficiaryPhone || '-' }}</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.beneficiaryEmail' | translate }}</label>
+                <span>{{ check.beneficiaryEmail || '-' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial Information -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'generalChecks.financialInformation' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.amount' | translate }}</label>
+                <span>{{ formatCurrency(check.amount) }} {{ check.currency }}</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.amountInWords' | translate }}</label>
+                <span>{{ check.amountInWords || '-' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.paymentReason' | translate }}</label>
+                <span>{{ getPaymentReasonLabel(check.paymentReason) | translate }}</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.paymentDescription' | translate }}</label>
+                <span>{{ check.paymentDescription || '-' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bank Information -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'generalChecks.bankInformation' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.bank' | translate }}</label>
+                <span>{{ check.bankName }}</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.branch' | translate }}</label>
+                <span>{{ check.branch || '-' }}</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.accountNumber' | translate }}</label>
+                <span>{{ check.accountNumber || '-' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Information -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'generalChecks.statusInformation' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.checkStatus' | translate }}</label>
+                <span [class]="getStatusClass(check.checkStatus)">
+                  {{ getCheckStatusLabel(check.checkStatus) | translate }}
+                </span>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.issueDate' | translate }}</label>
+                <span>{{ formatDate(check.issueDate) }}</span>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.clearanceDate' | translate }}</label>
+                <span>{{ formatDate(check.clearanceDate) }}</span>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.bankReference' | translate }}</label>
+                <span>{{ check.bankReference || '-' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="row" *ngIf="check.checkStatus === 'Void'">
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.voidReason' | translate }}</label>
+                <span>{{ getVoidReasonLabel(check.voidReason!) | translate }}</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.voidDate' | translate }}</label>
+                <span>{{ formatDate(check.voidDate) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit Trail -->
+    <div class="col-md-12">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5>{{ 'generalChecks.auditTrail' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.createdOn' | translate }}</label>
+                <span>{{ formatDate(check.createdAt) }}</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'generalChecks.modifiedOn' | translate }}</label>
+                <span>{{ formatDate(check.modifiedAt) }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'common.createdBy' | translate }}</label>
+                <span>{{ check.createdBy || '-' }}</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="detail-item">
+                <label>{{ 'common.modifiedBy' | translate }}</label>
+                <span>{{ check.modifiedBy || '-' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Clearance Modal -->
+<div class="modal" [class.show]="showClearModal" [style.display]="showClearModal ? 'block' : 'none'" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ 'generalChecks.markAsCleared' | translate }}</h5>
+        <button type="button" class="close" (click)="closeClearModal()">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="clearanceForm">
+          <div class="form-group">
+            <label for="clearanceDate" class="required-field">
+              {{ 'generalChecks.clearanceDate' | translate }}
+            </label>
+            <input
+              type="date"
+              class="form-control"
+              id="clearanceDate"
+              formControlName="clearanceDate">
+            <div
+              class="invalid-feedback d-block"
+              *ngIf="clearanceForm.get('clearanceDate')?.invalid && clearanceForm.get('clearanceDate')?.touched">
+              This field is required
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bankReference">
+              {{ 'generalChecks.bankReference' | translate }}
+            </label>
+            <input
+              type="text"
+              class="form-control"
+              id="bankReference"
+              formControlName="bankReference">
+          </div>
+          <div class="form-group">
+            <label for="clearanceNotes">
+              {{ 'generalChecks.clearanceNotes' | translate }}
+            </label>
+            <textarea
+              class="form-control"
+              id="clearanceNotes"
+              formControlName="clearanceNotes"
+              rows="3"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeClearModal()">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button type="button" class="btn btn-success" (click)="onMarkAsCleared()">
+          {{ 'generalChecks.confirmMatch' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Void Modal -->
+<div class="modal" [class.show]="showVoidModal" [style.display]="showVoidModal ? 'block' : 'none'" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ 'generalChecks.voidCheck' | translate }}</h5>
+        <button type="button" class="close" (click)="closeVoidModal()">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="voidForm">
+          <div class="form-group">
+            <label for="voidReason" class="required-field">
+              {{ 'generalChecks.voidReason' | translate }}
+            </label>
+            <select
+              class="form-control"
+              id="voidReason"
+              formControlName="voidReason">
+              <option value="" disabled>
+                {{ 'generalChecks.selectVoidReason' | translate }}
+              </option>
+              <option *ngFor="let reason of voidReasons" [value]="reason">
+                {{ getVoidReasonLabel(reason) | translate }}
+              </option>
+            </select>
+            <div
+              class="invalid-feedback d-block"
+              *ngIf="voidForm.get('voidReason')?.invalid && voidForm.get('voidReason')?.touched">
+              This field is required
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="voidDate" class="required-field">
+              {{ 'generalChecks.voidDate' | translate }}
+            </label>
+            <input
+              type="date"
+              class="form-control"
+              id="voidDate"
+              formControlName="voidDate">
+            <div
+              class="invalid-feedback d-block"
+              *ngIf="voidForm.get('voidDate')?.invalid && voidForm.get('voidDate')?.touched">
+              This field is required
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="voidNotes" class="required-field">
+              {{ 'generalChecks.voidNotes' | translate }}
+            </label>
+            <textarea
+              class="form-control"
+              id="voidNotes"
+              formControlName="voidNotes"
+              rows="3"
+              [placeholder]="'generalChecks.enterVoidNotes' | translate"></textarea>
+            <div
+              class="invalid-feedback d-block"
+              *ngIf="voidForm.get('voidNotes')?.invalid && voidForm.get('voidNotes')?.touched">
+              This field is required
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeVoidModal()">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button type="button" class="btn btn-danger" (click)="onVoidCheck()">
+          {{ 'common.confirm' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

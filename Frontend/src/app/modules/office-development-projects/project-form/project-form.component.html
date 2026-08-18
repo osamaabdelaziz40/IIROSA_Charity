@@ -1,0 +1,323 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="isEditMode ? 'officeDevelopmentProjects.editProject' : 'officeDevelopmentProjects.addProject'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow" *ngIf="!loading">
+        <div class="card-body">
+          <form [formGroup]="projectForm" (ngSubmit)="onSubmit()">
+            <!-- Basic Information Section -->
+            <div class="form-section">
+              <h5 class="form-section-title">
+                <i class="fe fe-info"></i>
+                {{ 'officeDevelopmentProjects.basicInformation' | translate }}
+              </h5>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <app-input-text
+                    [fg]="projectForm"
+                    fcn="projectName"
+                    [label]="'officeDevelopmentProjects.projectName'"
+                    [placeholder]="'officeDevelopmentProjects.enterProjectName' | translate">
+                  </app-input-text>
+                </div>
+                <div class="col-md-6">
+                  <app-input-text
+                    [fg]="projectForm"
+                    fcn="projectDate"
+                    [label]="'officeDevelopmentProjects.projectDate'"
+                    type="date-picker">
+                  </app-input-text>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-12">
+                  <app-input-text
+                    [fg]="projectForm"
+                    fcn="projectHint"
+                    [label]="'officeDevelopmentProjects.projectHint'"
+                    type="textarea"
+                    [rows]="3"
+                    [placeholder]="'officeDevelopmentProjects.enterProjectDescription' | translate">
+                  </app-input-text>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <app-input-text
+                    [fg]="projectForm"
+                    fcn="projectEndDate"
+                    [label]="'officeDevelopmentProjects.projectEndDate'"
+                    type="date-picker">
+                  </app-input-text>
+                </div>
+              </div>
+            </div>
+
+            <!-- Project Classification Section -->
+            <div class="form-section">
+              <h5 class="form-section-title">
+                <i class="fe fe-layers"></i>
+                {{ 'officeDevelopmentProjects.projectClassification' | translate }}
+              </h5>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <app-drop-down
+                    [fg]="projectForm"
+                    fcn="officeProjectTypeId"
+                    [label]="'officeDevelopmentProjects.officeProjectType'"
+                    [initialData]="projectTypeOptions"
+                    (onDropDownChanged)="onProjectTypeDropDownChanged($event)">
+                  </app-drop-down>
+                </div>
+              </div>
+            </div>
+
+            <!-- Location Section -->
+            <div class="form-section">
+              <h5 class="form-section-title">
+                <i class="fe fe-map-pin"></i>
+                {{ 'officeDevelopmentProjects.location' | translate }}
+              </h5>
+
+              <div class="row">
+                <div class="col-md-3">
+                  <app-drop-down
+                    [fg]="projectForm"
+                    fcn="countryId"
+                    [label]="'officeDevelopmentProjects.country'"
+                    [initialData]="countryOptions"
+                    (onDropDownChanged)="onCountryDropDownChanged($event)">
+                  </app-drop-down>
+                </div>
+                <div class="col-md-3">
+                  <app-drop-down
+                    [fg]="projectForm"
+                    fcn="regionId"
+                    [label]="'officeDevelopmentProjects.region'"
+                    [initialData]="filteredRegions"
+                    [disabled]="!projectForm.get('countryId')?.value || filteredRegions.length === 0"
+                    (onDropDownChanged)="onRegionDropDownChanged($event)">
+                  </app-drop-down>
+                </div>
+                <div class="col-md-3">
+                  <app-drop-down
+                    [fg]="projectForm"
+                    fcn="centerId"
+                    [label]="'officeDevelopmentProjects.center'"
+                    [initialData]="filteredCenters"
+                    [disabled]="!projectForm.get('regionId')?.value || filteredCenters.length === 0">
+                  </app-drop-down>
+                </div>
+                <div class="col-md-3">
+                  <app-input-text
+                    [fg]="projectForm"
+                    fcn="villageName"
+                    [label]="'officeDevelopmentProjects.villageName'"
+                    [placeholder]="'officeDevelopmentProjects.enterVillageName' | translate">
+                  </app-input-text>
+                </div>
+              </div>
+            </div>
+
+            <!-- Financial Information Section -->
+            <div class="form-section">
+              <h5 class="form-section-title">
+                <i class="fe fe-dollar-sign"></i>
+                {{ 'officeDevelopmentProjects.financialInformation' | translate }}
+              </h5>
+
+              <div class="row">
+                <div class="col-md-4">
+                  <app-input-text
+                    [fg]="projectForm"
+                    fcn="projectCostEGP"
+                    [label]="'officeDevelopmentProjects.projectCostEGP'"
+                    type="number"
+                    [min]="0"
+                    [step]="0.01"
+                    [placeholder]="'officeDevelopmentProjects.enterCostEGP' | translate">
+                  </app-input-text>
+                </div>
+                <div class="col-md-4">
+                  <app-input-text
+                    [fg]="projectForm"
+                    fcn="projectCostSAR"
+                    [label]="'officeDevelopmentProjects.projectCostSAR'"
+                    type="number"
+                    [min]="0"
+                    [step]="0.01"
+                    [placeholder]="'officeDevelopmentProjects.enterCostSAR' | translate">
+                  </app-input-text>
+                </div>
+                <div class="col-md-4">
+                  <app-input-text
+                    [fg]="projectForm"
+                    fcn="donorName"
+                    [label]="'officeDevelopmentProjects.donorName'"
+                    [placeholder]="'officeDevelopmentProjects.enterDonorName' | translate">
+                  </app-input-text>
+                </div>
+              </div>
+            </div>
+
+            <!-- Beneficiaries Section -->
+            <div class="form-section">
+              <h5 class="form-section-title">
+                <i class="fe fe-users"></i>
+                {{ 'officeDevelopmentProjects.beneficiaries' | translate }}
+              </h5>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <app-input-text
+                    [fg]="projectForm"
+                    fcn="beneficiariesCount"
+                    [label]="'officeDevelopmentProjects.beneficiariesCount'"
+                    type="number"
+                    [min]="1"
+                    [placeholder]="'officeDevelopmentProjects.enterBeneficiariesCount' | translate">
+                  </app-input-text>
+                </div>
+                <div class="col-md-6">
+                  <app-drop-down
+                    [fg]="projectForm"
+                    fcn="beneficiariesType"
+                    [label]="'officeDevelopmentProjects.beneficiariesType'"
+                    [initialData]="beneficiaryTypeOptions"
+                    (onDropDownChanged)="onBeneficiaryTypeDropDownChanged($event)">
+                  </app-drop-down>
+                </div>
+              </div>
+            </div>
+
+            <!-- Charity Assignment Section -->
+            <div class="form-section">
+              <h5 class="form-section-title">
+                <i class="fe fe-link"></i>
+                {{ 'officeDevelopmentProjects.charityAssignment' | translate }}
+              </h5>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <app-drop-down
+                    [fg]="projectForm"
+                    fcn="assignedCharityId"
+                    [label]="'officeDevelopmentProjects.assignedCharity'"
+                    [initialData]="charityOptions"
+                    (onDropDownChanged)="onCharityDropDownChanged($event)">
+                  </app-drop-down>
+                </div>
+              </div>
+            </div>
+
+            <!-- Documents Section -->
+            <div class="form-section">
+              <h5 class="form-section-title">
+                <i class="fe fe-file-text"></i>
+                {{ 'officeDevelopmentProjects.documents' | translate }}
+              </h5>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <app-attachment-input
+                    [labelKey]="'officeDevelopmentProjects.attachedFile'"
+                    [controls]="'document_Attach'"
+                    [acceptedFileTypes]="[attachmentFileType.Document]"
+                    [languageSelection]="false"
+                    [descriptionEnable]="false"
+                    [attachments]="documentAttachList"
+                    [displayDiscription]="false"
+                    [viewOnly]="false"
+                    [isRequired]="false"
+                    [maxFilesNumber]="5"
+                    [form]="projectForm"
+                    (attachmentsChange)="onDocumentAttachmentChange($event)">
+                  </app-attachment-input>
+                </div>
+                <div class="col-md-6">
+                  <app-attachment-input
+                    [labelKey]="'officeDevelopmentProjects.projectReportFile'"
+                    [controls]="'report_Attach'"
+                    [acceptedFileTypes]="[attachmentFileType.Document]"
+                    [languageSelection]="false"
+                    [descriptionEnable]="false"
+                    [attachments]="reportAttachList"
+                    [displayDiscription]="false"
+                    [viewOnly]="false"
+                    [isRequired]="false"
+                    [maxFilesNumber]="5"
+                    [form]="projectForm"
+                    (attachmentsChange)="onReportAttachmentChange($event)">
+                  </app-attachment-input>
+                </div>
+              </div>
+            </div>
+
+            <!-- Status Section -->
+            <div class="form-section">
+              <h5 class="form-section-title">
+                <i class="fe fe-check-circle"></i>
+                {{ 'officeDevelopmentProjects.status' | translate }}
+              </h5>
+
+              <div class="row">
+                <div class="col-md-12">
+                  <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="isFinished" formControlName="isFinished">
+                    <label class="form-check-label" for="isFinished">
+                      {{ 'officeDevelopmentProjects.isFinished' | translate }}
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row mt-3">
+                <div class="col-md-12">
+                  <app-input-text
+                    [fg]="projectForm"
+                    fcn="notes"
+                    [label]="'officeDevelopmentProjects.notes'"
+                    type="textarea"
+                    [rows]="3"
+                    [placeholder]="'officeDevelopmentProjects.enterNotes' | translate">
+                  </app-input-text>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" [disabled]="saving">
+                <i class="fe fe-save mr-1" *ngIf="!saving"></i>
+                <span class="spinner-border spinner-border-sm mr-1" *ngIf="saving"></span>
+                {{ (isEditMode ? ('common.save' | translate) : ('common.create' | translate)) }}
+              </button>
+              <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="saving">
+                <i class="fe fe-x mr-1"></i>
+                {{ 'common.cancel' | translate }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">{{ 'common.loading' | translate }}</span>
+        </div>
+        <p class="mt-3 text-muted">{{ 'common.loading' | translate }}...</p>
+      </div>
+    </div>
+  </div>
+</div>

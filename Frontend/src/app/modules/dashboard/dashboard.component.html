@@ -1,0 +1,210 @@
+<div class="page-header">
+  <div class="row align-items-center">
+    <div class="col">
+      <h3 class="page-title">{{ 'dashboard.title' | translate }}</h3>
+      <app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+    </div>
+  </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row">
+  <div class="col-12 col-sm-6 col-xl-3 mb-4">
+    <div class="card shadow">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="text-uppercase text-muted mb-2">{{ 'dashboard.totalCharities' | translate }}</h6>
+            <span class="h2 mb-0">{{ stats.totalCharities }}</span>
+          </div>
+          <div class="col-auto">
+            <i class="fe fe-home fe-3x text-primary"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3 mb-4">
+    <div class="card shadow">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="text-uppercase text-muted mb-2">{{ 'dashboard.totalOrphans' | translate }}</h6>
+            <span class="h2 mb-0">{{ stats.totalOrphans }}</span>
+          </div>
+          <div class="col-auto">
+            <i class="fe fe-users fe-3x text-success"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3 mb-4">
+    <div class="card shadow">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="text-uppercase text-muted mb-2">{{ 'dashboard.totalFamilies' | translate }}</h6>
+            <span class="h2 mb-0">{{ stats.totalFamilies }}</span>
+          </div>
+          <div class="col-auto">
+            <i class="fe fe-users fe-3x text-info"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3 mb-4">
+    <div class="card shadow">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="text-uppercase text-muted mb-2">{{ 'dashboard.activeMissions' | translate }}</h6>
+            <span class="h2 mb-0">{{ stats.activeMissions }}</span>
+          </div>
+          <div class="col-auto">
+            <i class="fe fe-activity fe-3x text-warning"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row">
+  <div class="col-12 col-lg-6 mb-4">
+    <div class="card shadow">
+      <div class="card-header">
+        <strong class="card-title mb-0">Monthly Statistics</strong>
+      </div>
+      <div class="card-body">
+        <app-apex-chart
+          chartType="column"
+          [series]="chartSeries"
+          [categories]="chartCategories"
+          [height]="350">
+        </app-apex-chart>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6 mb-4">
+    <div class="card shadow">
+      <div class="card-header">
+        <strong class="card-title mb-0">Financial Overview</strong>
+      </div>
+      <div class="card-body">
+        <app-apex-chart
+          chartType="line"
+          [series]="lineChartSeries"
+          [categories]="chartCategories"
+          [height]="350">
+        </app-apex-chart>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-lg-6 mb-4">
+    <div class="card shadow">
+      <div class="card-header">
+        <strong class="card-title mb-0">Family Growth</strong>
+      </div>
+      <div class="card-body">
+        <app-apex-chart
+          chartType="area"
+          [series]="areaChartSeries"
+          [categories]="chartCategories"
+          [height]="350">
+        </app-apex-chart>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-3 mb-4">
+    <div class="card shadow">
+      <div class="card-header">
+        <strong class="card-title mb-0">Budget Allocation</strong>
+      </div>
+      <div class="card-body text-center">
+        <app-apex-chart
+          chartType="donut"
+          [series]="donutChartSeries"
+          [labels]="donutChartLabels"
+          [height]="350">
+        </app-apex-chart>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-3 mb-4">
+    <div class="card shadow">
+      <div class="card-header">
+        <strong class="card-title mb-0">Performance</strong>
+      </div>
+      <div class="card-body">
+        <app-apex-chart
+          chartType="radar"
+          [series]="radarChartSeries"
+          [categories]="radarChartCategories"
+          [height]="350">
+        </app-apex-chart>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Activities -->
+<div class="row">
+  <div class="col-12 col-lg-6 mb-4">
+    <div class="card shadow">
+      <div class="card-header">
+        <strong class="card-title mb-0">{{ 'dashboard.recentActivities' | translate }}</strong>
+      </div>
+      <div class="card-body">
+    <div class="list-group list-group-flush" *ngIf="recentActivities.length > 0; else noActivities">
+      <div class="list-group-item" *ngFor="let activity of recentActivities">
+        <div class="d-flex align-items-center">
+          <div class="mr-3">
+            <span class="badge badge-{{ activity.type }}">{{ activity.type }}</span>
+          </div>
+          <div class="flex-fill">
+            <p class="mb-1">{{ activity.text }}</p>
+            <small class="text-muted">{{ activity.time }}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ng-template #noActivities>
+      <p class="text-muted text-center py-3">{{ 'dashboard.noRecentActivities' | translate }}</p>
+    </ng-template>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upcoming Events -->
+  <div class="col-12 col-lg-6 mb-4">
+    <div class="card shadow">
+      <div class="card-header">
+        <strong class="card-title mb-0">{{ 'dashboard.upcomingEvents' | translate }}</strong>
+      </div>
+      <div class="card-body">
+    <div class="list-group list-group-flush" *ngIf="upcomingEvents.length > 0; else noEvents">
+      <div class="list-group-item" *ngFor="let event of upcomingEvents">
+        <div class="d-flex align-items-center">
+          <div class="mr-3">
+            <i class="fe fe-calendar fe-2x text-primary"></i>
+          </div>
+          <div class="flex-fill">
+            <h6 class="mb-1">{{ event.title }}</h6>
+            <small class="text-muted">{{ event.date }} at {{ event.time }}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ng-template #noEvents>
+      <p class="text-muted text-center py-3">{{ 'dashboard.noUpcomingEvents' | translate }}</p>
+    </ng-template>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,144 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'orphanPayments.title' | translate"
+  [subtitle]="'orphanPayments.subtitle' | translate"
+  [icon]="'fe fe-users'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="card">
+  <div class="card-body">
+    <!-- Filter Section -->
+    <form [formGroup]="filterForm">
+      <div class="row mb-3">
+        <!-- Search -->
+        <div class="col-md-3">
+          <label class="form-label">{{ 'common.search' | translate }}</label>
+          <div class="input-group">
+            <input type="text"
+                   class="form-control"
+                   [placeholder]="'orphanPayments.searchPlaceholder' | translate"
+                   formControlName="searchValue"
+                   (keyup.enter)="onSearch()">
+            <div class="input-group-append">
+              <button class="btn btn-outline-secondary" type="button" (click)="onSearch()">
+                <i class="fe fe-search"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Date Range Filters -->
+        <div class="col-md-3">
+          <label class="form-label">{{ 'orphanPayments.paymentPeriodFrom' | translate }}</label>
+          <input type="date"
+                 class="form-control"
+                 formControlName="paymentPeriodFrom">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">{{ 'orphanPayments.paymentPeriodTo' | translate }}</label>
+          <input type="date"
+                 class="form-control"
+                 formControlName="paymentPeriodTo">
+        </div>
+
+        <!-- Status Filter -->
+        <div class="col-md-3">
+          <label class="form-label">{{ 'orphanPayments.uploadStatus' | translate }}</label>
+          <select class="form-control" formControlName="isBatchUploaded">
+            <option [ngValue]="null">{{ 'common.all' | translate }}</option>
+            <option [ngValue]="true">{{ 'orphanPayments.uploaded' | translate }}</option>
+            <option [ngValue]="false">{{ 'orphanPayments.pending' | translate }}</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Filter Actions -->
+      <div class="row mb-3" *ngIf="hasActiveFilters()">
+        <div class="col-12">
+          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+            <i class="fe fe-x mr-1"></i>
+            {{ 'common.clearFilters' | translate }}
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Payment Groups Table -->
+    <div *ngIf="!loading" class="table-responsive">
+      <table class="table table-hover table-striped">
+        <thead>
+          <tr>
+            <th>{{ 'orphanPayments.batchNumber' | translate }}</th>
+            <th>{{ 'orphanPayments.groupName' | translate }}</th>
+            <th>{{ 'orphanPayments.paymentPeriod' | translate }}</th>
+            <th>{{ 'orphanPayments.orphanCount' | translate }}</th>
+            <th>{{ 'orphanPayments.exchangeRate' | translate }}</th>
+            <th>{{ 'orphanPayments.currency' | translate }}</th>
+            <th>{{ 'orphanPayments.isUploaded' | translate }}</th>
+            <th>{{ 'orphanPayments.groupDate' | translate }}</th>
+            <th>{{ 'common.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let group of paymentGroups">
+            <td><strong>{{ group.batchNo || '-' }}</strong></td>
+            <td>{{ group.groupName }}</td>
+            <td>
+              <small>{{ formatDate(group.paymentPeriodFrom) }} - {{ formatDate(group.paymentPeriodTo) }}</small>
+            </td>
+            <td>
+              <span class="badge badge-info">{{ group.orphanCount }}</span>
+            </td>
+            <td>{{ group.exchangeRate || '-' }}</td>
+            <td>{{ group.currency || '-' }}</td>
+            <td>
+              <span [class]="'badge ' + getStatusBadgeClass(group.isBatchUploaded)">
+                {{ getStatusText(group.isBatchUploaded) }}
+              </span>
+            </td>
+            <td>{{ formatDate(group.groupDate) }}</td>
+            <td>
+              <div class="btn-group">
+                <button *ngFor="let action of rowActions"
+                        type="button"
+                        class="btn btn-sm btn-light"
+                        [title]="action.label | translate"
+                        [disabled]="action.show && !action.show(group)"
+                        (click)="onAction({item: group, action: action.key})">
+                  <i [class]="action.icon"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="!paymentGroups || paymentGroups.length === 0">
+            <td colspan="9" class="text-center py-5">
+              <div class="empty-state">
+                <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+                <p class="text-muted">{{ 'orphanPayments.noPaymentsFound' | translate }}</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <app-pagination
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalCount]="totalRecords"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
+  </div>
+</div>

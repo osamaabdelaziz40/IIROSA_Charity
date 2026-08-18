@@ -1,0 +1,46 @@
+<ng-container *ngIf="currentStatus && currentStatus.isImpersonating">
+  <div [class]="getBannerClass()" role="alert" aria-live="polite">
+    <div class="banner-container">
+      <div class="banner-content">
+        <!-- Warning Icon -->
+        <div class="banner-icon">
+          <i class="fas fa-user-shield"></i>
+        </div>
+
+        <!-- Main Message -->
+        <div class="banner-message">
+          <strong>IMPERSONATION MODE</strong>
+          <span class="divider">|</span>
+          <span>You are logged in as <strong>{{ currentStatus.currentUser?.fullName || currentStatus.currentUser?.username }}</strong></span>
+          <span class="user-badge" [ngClass]="'role-' + getFirstRole()">
+            {{ getFirstRole() }}
+          </span>
+        </div>
+
+        <!-- Session Info -->
+        <div class="session-info">
+          <span class="session-duration">
+            <i class="far fa-clock"></i>
+            {{ getFormattedDuration() }}
+          </span>
+
+          <span *ngIf="getWarningMessage()" class="expiry-warning">
+            {{ getWarningMessage() }}
+          </span>
+
+          <span class="original-user">
+            Original: {{ currentStatus.originalUserName }}
+          </span>
+        </div>
+
+        <!-- Action Button -->
+        <div class="banner-actions">
+          <button class="btn btn-sm btn-outline-light" (click)="endImpersonation()">
+            <i class="fas fa-sign-out-alt"></i>
+            Return to Admin Account
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-container>

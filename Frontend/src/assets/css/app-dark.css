@@ -1,0 +1,13 @@
+/* Dark theme styles */
+:root {
+    --dark-bg-primary: #1a1a1a;
+    --dark-bg-secondary: #2d2d2d;
+    --dark-text-primary: #ffffff;
+    --dark-text-secondary: #b0b0b0;
+}
+
+/* Dark mode specific styles */
+body.dark-theme {
+    background-color: var(--dark-bg-primary);
+    color: var(--dark-text-primary);
+}

@@ -1,0 +1,242 @@
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="page-header mb-4">
+    <button class="btn btn-outline-secondary btn-sm mb-2" (click)="onBackToCampaign()">
+      <i class="fe fe-arrow-left mr-1"></i>
+      {{ 'common.back' | translate }}
+    </button>
+    <h2 class="page-title">
+      <i class="fe fe-package mr-2"></i>
+      {{ 'seasonalAid.recordDistribution' | translate }}
+    </h2>
+    <p class="text-muted" *ngIf="campaign">{{ campaign.campaignName }}</p>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">{{ 'common.loading' | translate }}</span>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!loading && campaign">
+    <!-- Distribution Summary -->
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card summary-card">
+          <div class="card-body">
+            <div class="summary-icon bg-primary">
+              <i class="fe fe-users"></i>
+            </div>
+            <div class="summary-details">
+              <h6 class="summary-title">{{ 'seasonalAid.pendingBeneficiaries' | translate }}</h6>
+              <h3 class="summary-value">{{ getPendingBeneficiaries().length }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card summary-card">
+          <div class="card-body">
+            <div class="summary-icon bg-success">
+              <i class="fe fe-check-circle"></i>
+            </div>
+            <div class="summary-details">
+              <h6 class="summary-title">{{ 'seasonalAid.distributedBeneficiaries' | translate }}</h6>
+              <h3 class="summary-value">{{ getDistributedBeneficiaries().length }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card summary-card">
+          <div class="card-body">
+            <div class="summary-icon bg-info">
+              <i class="fe fe-dollar-sign"></i>
+            </div>
+            <div class="summary-details">
+              <h6 class="summary-title">{{ 'seasonalAid.totalDistributed' | translate }}</h6>
+              <h3 class="summary-value">{{ getTotalDistributed() | number }} {{ campaign.budgetCurrency }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="distribution-progress">
+          <div class="progress-labels">
+            <span>{{ 'seasonalAid.distributionProgress' | translate }}</span>
+            <span>{{ getDistributionProgress() | number:'.1' }}%</span>
+          </div>
+          <div class="progress">
+            <div class="progress-bar bg-success"
+                 role="progressbar"
+                 [style.width.%]="getDistributionProgress()"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Pending Beneficiaries -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title">{{ 'seasonalAid.pendingDistribution' | translate }}</h5>
+            <span class="badge badge-warning">{{ getPendingBeneficiaries().length }}</span>
+          </div>
+          <div class="card-body">
+            <div class="beneficiary-list">
+              <div class="beneficiary-item"
+                   *ngFor="let beneficiary of getPendingBeneficiaries()">
+                <div class="beneficiary-info">
+                  <div class="beneficiary-code">{{ beneficiary.familyCode }}</div>
+                  <div class="beneficiary-details">
+                    <i class="fe fe-map-pin"></i> {{ beneficiary.familyAddress }}
+                  </div>
+                  <div class="beneficiary-details">
+                    <i class="fe fe-users"></i> {{ beneficiary.orphanCount }} {{ 'seasonalAid.orphans' | translate }}
+                  </div>
+                  <div class="beneficiary-amount">
+                    {{ beneficiary.allocatedAmount | number }} {{ campaign.budgetCurrency }}
+                  </div>
+                </div>
+                <div class="beneficiary-actions">
+                  <button class="btn btn-sm btn-success"
+                          [title]="'seasonalAid.recordDistribution' | translate"
+                          (click)="onRecordDistribution(beneficiary)">
+                    <i class="fe fe-check"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="text-center py-4" *ngIf="getPendingBeneficiaries().length === 0">
+                <i class="fe fe-check-circle fe-2x text-success mb-2"></i>
+                <p class="text-muted">{{ 'seasonalAid.allDistributionsComplete' | translate }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Distributions -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title">{{ 'seasonalAid.recentDistributions' | translate }}</h5>
+            <span class="badge badge-success">{{ distributions.length }}</span>
+          </div>
+          <div class="card-body">
+            <div class="distribution-list">
+              <div class="distribution-item" *ngFor="let distribution of distributions">
+                <div class="distribution-info">
+                  <div class="distribution-code">{{ distribution.familyCode }}</div>
+                  <div class="distribution-details">
+                    <i class="fe fe-calendar"></i> {{ distribution.distributionDate | date:'mediumDate' }}
+                  </div>
+                  <div class="distribution-details">
+                    <i class="fe fe-user"></i> {{ distribution.receivedBy }}
+                  </div>
+                  <div class="distribution-amount">
+                    {{ distribution.amountDistributed | number }} {{ campaign.budgetCurrency }}
+                  </div>
+                </div>
+                <div class="distribution-status">
+                  <span class="badge badge-success">{{ 'seasonalAid.distributed' | translate }}</span>
+                </div>
+              </div>
+
+              <div class="text-center py-4" *ngIf="distributions.length === 0">
+                <i class="fe fe-inbox fe-2x text-muted mb-2"></i>
+                <p class="text-muted">{{ 'seasonalAid.noDistributionsRecorded' | translate }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Distribution Form Modal -->
+    <div class="modal-backdrop" *ngIf="showDistributionForm" (click)="onCancelDistribution()"></div>
+    <div class="modal-dialog" *ngIf="showDistributionForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ 'seasonalAid.recordDistribution' | translate }}</h5>
+          <button type="button" class="close" (click)="onCancelDistribution()">
+            <span>&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form [formGroup]="distributionForm" (ngSubmit)="onSubmitDistribution()">
+            <!-- Beneficiary Info -->
+            <div class="alert alert-info" *ngIf="currentBeneficiary">
+              <strong>{{ currentBeneficiary.familyCode }}</strong><br>
+              {{ currentBeneficiary.familyAddress }}<br>
+              {{ 'seasonalAid.allocation' | translate }}: {{ currentBeneficiary.allocatedAmount | number }} {{ campaign.budgetCurrency }}
+            </div>
+
+            <!-- Distribution Date -->
+            <app-input-text
+              [fg]="distributionForm"
+              fcn="distributionDate"
+              [label]="'seasonalAid.distributionDate'"
+              type="date"
+              [required]="true">
+            </app-input-text>
+
+            <!-- Amount Distributed -->
+            <app-input-text
+              [fg]="distributionForm"
+              fcn="amountDistributed"
+              [label]="'seasonalAid.amountDistributed'"
+              type="number"
+              [min]="0"
+              [step]="0.01"
+              [required]="true">
+            </app-input-text>
+
+            <!-- Received By -->
+            <app-input-text
+              [fg]="distributionForm"
+              fcn="receivedBy"
+              [label]="'seasonalAid.receivedBy'"
+              [placeholder]="'seasonalAid.receivedByPlaceholder' | translate"
+              [required]="true">
+            </app-input-text>
+
+            <!-- Notes -->
+            <app-input-text
+              [fg]="distributionForm"
+              fcn="notes"
+              [label]="'seasonalAid.notes'"
+              type="textarea"
+              [rows]="3"
+              [placeholder]="'seasonalAid.notesPlaceholder' | translate">
+            </app-input-text>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button type="submit"
+                      class="btn btn-success"
+                      [disabled]="saving">
+                <i class="fe fe-check mr-2" *ngIf="!saving"></i>
+                <span class="spinner-border spinner-border-sm mr-2" *ngIf="saving"></span>
+                {{ 'seasonalAid.recordDistribution' | translate }}
+              </button>
+              <button type="button"
+                      class="btn btn-secondary"
+                      (click)="onCancelDistribution()"
+                      [disabled]="saving">
+                {{ 'common.cancel' | translate }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,305 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="isEditMode ? ('families.editFamily' | translate) : ('families.addFamily' | translate)"
+  [subtitle]="'families.familyInfo' | translate"
+  [icon]="'fe fe-users'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div *ngIf="loading" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">{{ 'common.loading' | translate }}</span>
+  </div>
+</div>
+
+<div *ngIf="!loading" class="row">
+  <div class="col-12">
+    <form [formGroup]="familyForm">
+      <!-- Family Information Section -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h4 class="mb-0">{{ 'families.familyInformation' | translate }}</h4>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <app-input-text
+                [fg]="familyForm"
+                fcn="code"
+                [label]="'families.familyCode'"
+                [placeholder]="'families.familyCodePlaceholder' | translate">
+              </app-input-text>
+            </div>
+            <div class="col-md-6">
+              <app-input-text
+                [fg]="familyForm"
+                fcn="registrationDate"
+                type="date"
+                [label]="'families.registrationDate'">
+              </app-input-text>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-12">
+              <app-input-text
+                [fg]="familyForm"
+                fcn="address"
+                [label]="'families.address'"
+                [required]="true"
+                [placeholder]="'families.addressPlaceholder' | translate">
+              </app-input-text>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4">
+              <app-input-text
+                [fg]="familyForm"
+                fcn="city"
+                [label]="'families.city'"
+                [placeholder]="'families.cityPlaceholder' | translate">
+              </app-input-text>
+            </div>
+            <div class="col-md-4">
+              <app-input-text
+                [fg]="familyForm"
+                fcn="village"
+                [label]="'families.village'"
+                [placeholder]="'families.villagePlaceholder' | translate">
+              </app-input-text>
+            </div>
+            <div class="col-md-4">
+              <app-input-text
+                [fg]="familyForm"
+                fcn="district"
+                [label]="'families.district'"
+                [placeholder]="'families.districtPlaceholder' | translate">
+              </app-input-text>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4">
+              <app-input-text
+                [fg]="familyForm"
+                fcn="phone"
+                [label]="'families.phone'"
+                [placeholder]="'families.phonePlaceholder' | translate">
+              </app-input-text>
+            </div>
+            <div class="col-md-4">
+              <app-drop-down
+                [fg]="familyForm"
+                fcn="livingCondition"
+                [label]="'families.livingCondition'"
+                [initialData]="livingConditionOptions"
+                [hasDefaultValue]="true">
+              </app-drop-down>
+            </div>
+            <div class="col-md-4">
+              <app-drop-down
+                [fg]="familyForm"
+                fcn="housingType"
+                [label]="'families.housingType'"
+                [initialData]="housingTypeOptions"
+                [hasDefaultValue]="true">
+              </app-drop-down>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-12">
+              <app-input-text
+                [fg]="familyForm"
+                fcn="notes"
+                type="textarea"
+                [label]="'families.notes'"
+                [rows]="3">
+              </app-input-text>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Provider Type Section -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h4 class="mb-0">{{ 'families.providerType' | translate }}</h4>
+        </div>
+        <div class="card-body">
+          <app-drop-down
+            [fg]="familyForm"
+            fcn="providerType"
+            [label]="'families.providerType'"
+            [initialData]="providerTypeOptions"
+            (onDropDownChanged)="onProviderTypeChange()">
+          </app-drop-down>
+        </div>
+      </div>
+
+      <!-- Father Section (MANDATORY) -->
+      <app-father-form
+        [fatherForm]="fatherForm"
+        [educationLevelOptions]="educationLevelOptions"
+        [healthStatusOptions]="healthStatusOptions"
+        [familyId]="familyId"
+        (save)="saveFather()">
+      </app-father-form>
+
+      <!-- Mother Section (MANDATORY) -->
+      <app-mother-form
+        [motherForm]="motherForm"
+        [educationLevelOptions]="educationLevelOptions"
+        [healthStatusOptions]="healthStatusOptions"
+        [familyId]="familyId"
+        (save)="saveMother()">
+      </app-mother-form>
+
+      <!-- Other Provider Section -->
+      <div class="card mb-3" *ngIf="showProviderType('other') || hasProvider()">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h4 class="mb-0">{{ 'families.providerInformation' | translate }}</h4>
+          <button type="button" class="btn btn-sm btn-primary" *ngIf="familyId" (click)="saveProvider()">
+            <i class="fe fe-save mr-1"></i>
+            {{ 'common.save' | translate }}
+          </button>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="providerForm">
+            <div class="row">
+              <div class="col-md-6">
+                <app-input-text
+                  [fg]="providerForm"
+                  fcn="fullName"
+                  [label]="'families.fullName'"
+                  [placeholder]="'families.fullNamePlaceholder' | translate">
+                </app-input-text>
+              </div>
+              <div class="col-md-6">
+                <app-drop-down
+                  [fg]="providerForm"
+                  fcn="relationship"
+                  [label]="'families.relationship'"
+                  [initialData]="relationshipOptions"
+                  [hasDefaultValue]="true">
+                </app-drop-down>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-4">
+                <app-input-text
+                  [fg]="providerForm"
+                  fcn="nationalId"
+                  [label]="'families.nationalId'"
+                  [placeholder]="'families.nationalIdPlaceholder' | translate">
+                </app-input-text>
+              </div>
+              <div class="col-md-4">
+                <app-input-text
+                  [fg]="providerForm"
+                  fcn="phone"
+                  [label]="'families.phone'"
+                  [placeholder]="'families.phonePlaceholder' | translate">
+                </app-input-text>
+              </div>
+              <div class="col-md-4">
+                <app-input-text
+                  [fg]="providerForm"
+                  fcn="job"
+                  [label]="'families.job'"
+                  [placeholder]="'families.jobPlaceholder' | translate">
+                </app-input-text>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-8">
+                <app-input-text
+                  [fg]="providerForm"
+                  fcn="address"
+                  [label]="'families.address'"
+                  [placeholder]="'families.addressPlaceholder' | translate">
+                </app-input-text>
+              </div>
+              <div class="col-md-4">
+                <app-input-text
+                  [fg]="providerForm"
+                  fcn="monthlyIncome"
+                  type="number"
+                  [label]="'families.monthlyIncome'">
+                </app-input-text>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-12">
+                <app-input-text
+                  [fg]="providerForm"
+                  fcn="notes"
+                  type="textarea"
+                  [label]="'families.notes'"
+                  [rows]="2">
+                </app-input-text>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Relatives Section (Optional) -->
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h4 class="mb-0">{{ 'families.relativesInformation' | translate }}</h4>
+          <span class="badge badge-secondary">{{ getRelativesCount() }} {{ 'families.relatives' | translate }}</span>
+        </div>
+        <div class="card-body">
+          <!-- Add Relative Form -->
+          <app-relatives-form
+            [relativesForm]="relativesForm"
+            [educationLevelOptions]="educationLevelOptions"
+            [healthStatusOptions]="healthStatusOptions"
+            [relationshipOptions]="relationshipOptions"
+            [relativesCount]="getRelativesCount()"
+            (addRelative)="onRelativeAdded($event)">
+          </app-relatives-form>
+
+          <!-- Relatives List -->
+          <app-relatives-list
+            [relatives]="relatives"
+            (removeRelative)="removeRelative($event)">
+          </app-relatives-list>
+        </div>
+      </div>
+
+      <!-- Attachments Section -->
+      <div class="card mb-3" *ngIf="isEditMode">
+        <div class="card-header">
+          <h4 class="mb-0">{{ 'families.attachments' | translate }}</h4>
+        </div>
+        <div class="card-body">
+          <app-attachment-input
+            [attachments]="familyAttachments"
+            [fileType]="attachmentFileType.Image"
+            (attachmentsChange)="onFamilyAttachmentChange($event)">
+          </app-attachment-input>
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="form-group text-right">
+        <button type="button" class="btn btn-secondary mr-2" (click)="cancel()">
+          <i class="fe fe-x mr-1"></i>
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button type="submit" class="btn btn-primary" (click)="onSubmit()" [disabled]="saving">
+          <i class="fe fe-save mr-1" *ngIf="!saving"></i>
+          <i class="fe fe-loader mr-1" *ngIf="saving"></i>
+          {{ saving ? ('common.saving' | translate) : ('common.save' | translate) }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

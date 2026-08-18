@@ -1,0 +1,211 @@
+/* Impersonation Banner Styles */
+.impersonation-banner {
+  width: 100%;
+  z-index: 9999;
+  position: sticky;
+  top: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+  &.warning {
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+    animation: pulse-warning 2s ease-in-out infinite;
+  }
+
+  &.critical {
+    background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+    animation: pulse-critical 1s ease-in-out infinite;
+  }
+
+  &:not(.warning):not(.critical) {
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  }
+
+  .banner-container {
+    padding: 0;
+    margin: 0;
+  }
+
+  .banner-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    color: white;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+  }
+
+  .banner-icon {
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+  }
+
+  .banner-message {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+      flex-wrap: wrap;
+    }
+
+    strong {
+      font-weight: 600;
+    }
+
+    .divider {
+      opacity: 0.7;
+    }
+
+    .user-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+
+      &.role-super {
+        &.admin,
+        &.admin {
+          background: rgba(211, 47, 47, 0.3);
+          border-color: rgba(211, 47, 47, 0.6);
+        }
+
+        &.charity {
+          background: rgba(76, 175, 80, 0.3);
+          border-color: rgba(76, 175, 80, 0.6);
+        }
+
+        &.accountant {
+          background: rgba(33, 150, 243, 0.3);
+          border-color: rgba(33, 150, 243, 0.6);
+        }
+
+        &.financial {
+          &.officer,
+          &.officer {
+          background: rgba(156, 39, 176, 0.3);
+          border-color: rgba(156, 39, 176, 0.6);
+          }
+        }
+      }
+    }
+  }
+
+  .session-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.875rem;
+    opacity: 0.95;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .session-duration {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+
+      i {
+        opacity: 0.8;
+      }
+    }
+
+    .expiry-warning {
+      font-weight: 600;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    .original-user {
+      opacity: 0.85;
+      padding-left: 1rem;
+      border-left: 1px solid rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  .banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    @media (max-width: 768px) {
+      width: 100%;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-1px);
+      }
+    }
+  }
+}
+
+/* RTL Support */
+[dir='rtl'] {
+  .impersonation-banner {
+    .banner-content {
+      flex-direction: row-reverse;
+    }
+
+    .session-info {
+      .original-user {
+        padding-left: 0;
+        padding-right: 1rem;
+        border-left: none;
+        border-right: 1px solid rgba(255, 255, 255, 0.3);
+      }
+    }
+  }
+}
+
+/* Animations */
+@keyframes pulse-warning {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 2px 16px rgba(255, 152, 0, 0.5);
+  }
+}
+
+@keyframes pulse-critical {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.4);
+  }
+  50% {
+    box-shadow: 0 2px 20px rgba(244, 67, 54, 0.7);
+  }
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}

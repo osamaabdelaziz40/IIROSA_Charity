@@ -1,0 +1,49 @@
+<!-- Relatives List -->
+<div *ngIf="relatives.length > 0">
+  <h6 class="font-weight-bold mb-3">{{ 'families.addedRelatives' | translate }}</h6>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover">
+      <thead>
+        <tr>
+          <th>{{ 'families.fullName' | translate }}</th>
+          <th>{{ 'families.relationshipType' | translate }}</th>
+          <th>{{ 'families.gender' | translate }}</th>
+          <th>{{ 'families.age' | translate }}</th>
+          <th>{{ 'families.phone' | translate }}</th>
+          <th>{{ 'families.livingWithFamily' | translate }}</th>
+          <th>{{ 'common.actions' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let relative of relatives; let i = index">
+          <td>{{ relative.fullName }}</td>
+          <td>
+            <span class="badge badge-info">{{ relative.relationshipType }}</span>
+          </td>
+          <td>
+            <span class="badge badge-pill" [ngClass]="relative.gender === 'male' ? 'badge-primary' : 'badge-info'">
+              {{ relative.gender === 'male' ? ('families.male' | translate) : ('families.female' | translate) }}
+            </span>
+          </td>
+          <td>{{ calculateAge(relative.dateOfBirth) }}</td>
+          <td>{{ relative.phone || '-' }}</td>
+          <td>
+            <span [class]="relative.isLivingWithFamily ? 'text-success' : 'text-muted'">
+              <i [class]="relative.isLivingWithFamily ? 'fe fe-check-circle' : 'fe fe-x-circle'"></i>
+            </span>
+          </td>
+          <td>
+            <button type="button" class="btn btn-sm btn-danger" (click)="onRemoveRelative(i)">
+              <i class="fe fe-trash"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div *ngIf="relatives.length === 0" class="text-center text-muted py-3">
+  <i class="fe fe-users fe-2x mb-2"></i>
+  <p>{{ 'families.noRelativesAdded' | translate }}</p>
+</div>

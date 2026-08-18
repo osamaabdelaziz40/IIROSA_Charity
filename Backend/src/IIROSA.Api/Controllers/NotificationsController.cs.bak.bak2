@@ -1,0 +1,133 @@
+using Microsoft.AspNetCore.Mvc;
+using Framework.Core.Notifications;
+using Framework.Core.SharedServices.Dto;
+using Framework.Core.SharedServices.Services;
+using Framework.Core.Globalization;
+
+namespace IIROSA.Api.Controllers;
+
+/// <summary>
+/// Notifications controller - Uses Framework.Core NotificationsManager & AppSettingsService
+/// </summary>
+[Route("api/[controller]")]
+[ApiController]
+public class NotificationsController : ApiController
+{
+    private readonly NotificationsManager _notificationsManager;
+    private readonly AppSettingsService _appSettingsService;
+    private readonly NotificationLogAppService _notificationLogAppService;
+
+    public NotificationsController(
+        NotificationsManager notificationsManager,
+        AppSettingsService appSettingsService,
+        NotificationLogAppService notificationLogAppService)
+    {
+        _notificationsManager = notificationsManager;
+        _appSettingsService = appSettingsService;
+        _notificationLogAppService = notificationLogAppService;
+    }
+
+    /// <summary>
+    /// Send email notification
+    /// </summary>
+    [HttpPost("send-email")]
+    public async Task<IActionResult> SendEmail([FromBody] EmailNotificationRequest request)
+    {
+        var message = new EmailMessage
+        {
+            To = request.To,
+            TemplateName = request.TemplateName,
+            TemplateData = request.TemplateData ?? new Dictionary<string, string>()
+        };
+
+        await _notificationsManager.EnqueueEmailAsync(message,
+            CultureHelper.IsArabic ? NotificationLanguage.Ar : NotificationLanguage.En);
+
+        return Ok(new { message = "Email queued successfully" });
+    }
+
+    /// <summary>
+    /// Send SMS notification
+    /// </summary>
+    [HttpPost("send-sms")]
+    public async Task<IActionResult> SendSms([FromBody] SmsNotificationRequest request)
+    {
+        var message = new SmsMessage
+        {
+            To = request.To,
+            TemplateName = request.TemplateName,
+            TemplateData = request.TemplateData ?? new Dictionary<string, string>()
+        };
+
+        await _notificationsManager.EnqueueSmsAsync(message);
+
+        return Ok(new { message = "SMS queued successfully" });
+    }
+
+    /// <summary>
+    /// Send mobile notification
+    /// </summary>
+    [HttpPost("send-mobile")]
+    public async Task<IActionResult> SendMobile([FromBody] MobileNotificationRequest request)
+    {
+        var message = new MobileNotification
+        {
+            UserId = request.UserId,
+            TemplateName = request.TemplateName,
+            TemplateData = request.TemplateData ?? new Dictionary<string, string>()
+        };
+
+        await _notificationsManager.EnqueueMobileNotificationAsync(message);
+
+        return Ok(new { message = "Mobile notification queued successfully" });
+    }
+
+    /// <summary>
+    /// Get notification settings
+    /// </summary>
+    [HttpGet("settings")]
+    public IActionResult GetNotificationSettings()
+    {
+        var settings = _notificationsManager.LoadNotificationsSettings();
+        return Ok(settings);
+    }
+
+    /// <summary>
+    /// Update notification settings
+    /// </summary>
+    [HttpPost("settings")]
+    public async Task<IActionResult> UpdateNotificationSettings([FromBody] NotificationSettingsUpdateDto settings)
+    {
+        var updateSettings = new List<SettingsDto>
+        {
+            new() { Name = "EmailFromAddress", Value = settings.EmailFromAddress, GroupName = "Notification" },
+            new() { Name = "EmailFromName", Value = settings.EmailFromName, GroupName = "Notification" },
+            new() { Name = "SmtpServer", Value = settings.SmtpServer, GroupName = "Notification" },
+            new() { Name = "SmtpPort", Value = settings.SmtpPort?.ToString(), GroupName = "Notification" },
+            new() { Name = "SmtpUserName", Value = settings.SmtpUserName, GroupName = "Notification" },
+            new() { Name = "SmtpPassword", Value = settings.SmtpPassword, GroupName = "Notification" },
+            new() { Name = "SmtpEnableSSL", Value = settings.SmtpEnableSSL?.ToString(), GroupName = "Notification" }
+        };
+
+        foreach (var setting in updateSettings)
+        {
+            _appSettingsService.UpdateSetting(setting);
+        }
+
+        return Ok(new { message = "Notification settings updated successfully" });
+    }
+}
+
+public record EmailNotificationRequest(string To, string TemplateName, Dictionary<string, string>? TemplateData);
+public record SmsNotificationRequest(string To, string TemplateName, Dictionary<string, string>? TemplateData);
+public record MobileNotificationRequest(string UserId, string TemplateName, Dictionary<string, string>? TemplateData);
+public record NotificationSettingsUpdateDto
+{
+    public string? EmailFromAddress { get; set; }
+    public string? EmailFromName { get; set; }
+    public string? SmtpServer { get; set; }
+    public int? SmtpPort { get; set; }
+    public string? SmtpUserName { get; set; }
+    public string? SmtpPassword { get; set; }
+    public bool? SmtpEnableSSL { get; set; }
+};

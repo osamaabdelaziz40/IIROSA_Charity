@@ -1,0 +1,216 @@
+<div class="schedule-report">
+  <app-breadcrumb
+    [title]="'orphanReports.schedule' | translate"
+    [subtitle]="'orphanReports.scheduleSubtitle' | translate">
+  </app-breadcrumb>
+
+  <div class="row">
+    <!-- Schedule Form - UC-6.8 -->
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-clock me-2"></i>
+            <span translate>orphanReports.scheduleNewReport</span>
+          </h5>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="scheduleForm" (ngSubmit)="saveSchedule()">
+            <!-- Basic Information - UC-6.8 -->
+            <div class="mb-3">
+              <label class="form-label">{{ 'orphanReports.reportName' | translate }} *</label>
+              <input type="text" class="form-control" formControlName="reportName" required
+                     [placeholder]="'orphanReports.reportNamePlaceholder' | translate">
+            </div>
+
+            <!-- Frequency - UC-6.8 -->
+            <div class="mb-3">
+              <label class="form-label">{{ 'orphanReports.frequency' | translate }} *</label>
+              <select class="form-select" formControlName="frequency" required>
+                <option *ngFor="let freq of frequencies" [value]="freq.value">
+                  {{ freq.label | translate }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Day of Month - UC-6.8 (for monthly frequency) -->
+            <div class="mb-3" *ngIf="showDayOfMonth">
+              <label class="form-label">{{ 'orphanReports.dayOfMonth' | translate }} *</label>
+              <select class="form-select" formControlName="dayOfMonth" required>
+                <option *ngFor="let day of daysOfMonth" [value]="day">{{ day }}</option>
+              </select>
+              <small class="text-muted">{{ 'orphanReports.dayOfMonthHint' | translate }}</small>
+            </div>
+
+            <!-- Email Recipients - UC-6.8 -->
+            <div class="mb-3">
+              <label class="form-label">{{ 'orphanReports.emailRecipients' | translate }} *</label>
+              <input type="text" class="form-control" formControlName="emailRecipients" required
+                     [placeholder]="'orphanReports.emailRecipientsPlaceholder' | translate">
+              <small class="text-muted">{{ 'orphanReports.emailRecipientsHint' | translate }}</small>
+            </div>
+
+            <!-- Active Status -->
+            <div class="mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" formControlName="active" id="active" checked>
+                <label class="form-check-label" for="active">
+                  {{ 'orphanReports.active' | translate }}
+                </label>
+              </div>
+            </div>
+
+            <!-- Filters Section - UC-6.8 -->
+            <div class="section mb-3">
+              <h6 class="section-title text-primary mb-3">
+                <i class="fas fa-filter me-2"></i>
+                <span translate>orphanReports.reportFilters</span>
+              </h6>
+
+              <div formGroupName="filters">
+                <!-- Sponsorship Status -->
+                <div class="mb-3">
+                  <label class="form-label">{{ 'orphanReports.sponsorshipStatus' | translate }}</label>
+                  <select class="form-select" formControlName="sponsorshipStatus">
+                    <option value="All">{{ 'orphanReports.all' | translate }}</option>
+                    <option value="Sponsored">{{ 'orphanReports.sponsored' | translate }}</option>
+                    <option value="Unsponsored">{{ 'orphanReports.unsponsored' | translate }}</option>
+                    <option value="Pending">{{ 'orphanReports.pending' | translate }}</option>
+                  </select>
+                </div>
+
+                <!-- Age Range -->
+                <div class="row mb-3">
+                  <div class="col-6">
+                    <label class="form-label">{{ 'orphanReports.ageFrom' | translate }}</label>
+                    <input type="number" class="form-control" formControlName="ageFrom" min="0" max="30">
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label">{{ 'orphanReports.ageTo' | translate }}</label>
+                    <input type="number" class="form-control" formControlName="ageTo" min="0" max="30">
+                  </div>
+                </div>
+
+                <!-- Gender -->
+                <div class="mb-3">
+                  <label class="form-label">{{ 'orphanReports.gender' | translate }}</label>
+                  <select class="form-select" formControlName="gender">
+                    <option value="All">{{ 'orphanReports.all' | translate }}</option>
+                    <option value="Male">{{ 'orphanReports.male' | translate }}</option>
+                    <option value="Female">{{ 'orphanReports.female' | translate }}</option>
+                  </select>
+                </div>
+
+                <!-- Report Options -->
+                <div class="mb-2">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" formControlName="includeFamilyDetails" id="includeFamilyDetails">
+                    <label class="form-check-label" for="includeFamilyDetails">
+                      {{ 'orphanReports.includeFamilyDetails' | translate }}
+                    </label>
+                  </div>
+                </div>
+                <div class="mb-2">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" formControlName="includeEducationDetails" id="includeEducationDetails">
+                    <label class="form-check-label" for="includeEducationDetails">
+                      {{ 'orphanReports.includeEducationDetails' | translate }}
+                    </label>
+                  </div>
+                </div>
+                <div class="mb-2">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" formControlName="includeHealthDetails" id="includeHealthDetails">
+                    <label class="form-check-label" for="includeHealthDetails">
+                      {{ 'orphanReports.includeHealthDetails' | translate }}
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="saving">
+                <i class="fas fa-save me-2" *ngIf="!saving"></i>
+                <i class="fas fa-spinner fa-spin me-2" *ngIf="saving"></i>
+                <span translate>common.save</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scheduled Reports List - UC-6.8 -->
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>
+            <span translate>orphanReports.scheduledReports</span>
+            <span class="badge bg-primary ms-2">{{ scheduledReports.length }}</span>
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <app-loading *ngIf="loading"></app-loading>
+
+          <div class="table-responsive" *ngIf="!loading">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th translate>orphanReports.reportName</th>
+                  <th translate>orphanReports.frequency</th>
+                  <th translate>orphanReports.nextRun</th>
+                  <th translate>orphanReports.recipients</th>
+                  <th translate>orphanReports.status</th>
+                  <th translate>common.actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let schedule of scheduledReports">
+                  <td>
+                    <div class="fw-bold">{{ schedule.reportName }}</div>
+                    <small class="text-muted">{{ 'orphanReports.createdOn' | translate }}: {{ schedule.createdOn | date:'shortDate' }}</small>
+                  </td>
+                  <td>
+                    <span class="badge bg-info">{{ getFrequencyLabel(schedule.frequency) | translate }}</span>
+                    <div *ngIf="schedule.dayOfMonth" class="text-muted small">
+                      {{ 'orphanReports.day' | translate }}: {{ schedule.dayOfMonth }}
+                    </div>
+                  </td>
+                  <td>{{ getNextRunDisplay(schedule) }}</td>
+                  <td>
+                    <small>{{ formatEmails(schedule.emailRecipients) }}</small>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="schedule.isActive ? 'bg-success' : 'bg-secondary'">
+                      {{ schedule.isActive ? ('orphanReports.active' | translate) : ('orphanReports.inactive' | translate) }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-light" [title]="'orphanReports.toggleActive' | translate" (click)="toggleActive(schedule)">
+                        <i class="fas" [ngClass]="schedule.isActive ? 'fa-pause' : 'fa-play'"></i>
+                      </button>
+                      <button class="btn btn-danger" [title]="'common.delete' | translate" (click)="deleteSchedule(schedule.scheduleId, schedule.reportName)">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Empty State -->
+            <div class="text-center py-5" *ngIf="scheduledReports.length === 0">
+              <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+              <h5>{{ 'orphanReports.noScheduledReports' | translate }}</h5>
+              <p class="text-muted">{{ 'orphanReports.noScheduledReportsMessage' | translate }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

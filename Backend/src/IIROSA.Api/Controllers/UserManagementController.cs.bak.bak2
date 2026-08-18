@@ -1,0 +1,332 @@
+using Microsoft.AspNetCore.Mvc;
+using IIROSA.Application.Services.UserManagement;
+using IIROSA.Application.DTOs.UserManagement;
+using Framework.Core;
+
+namespace IIROSA.Api.Controllers;
+
+/// <summary>
+/// User Management Controller - Handles all user and role management operations
+/// Controllers should be THIN - only call Application services
+/// </summary>
+[Route("api/[controller]")]
+[ApiController]
+public class UserManagementController : ApiController
+{
+    private readonly IUserManagementService _userManagementService;
+
+    public UserManagementController(
+        IUserManagementService userManagementService,
+        ILogger<UserManagementController> logger) : base(logger)
+    {
+        _userManagementService = userManagementService;
+    }
+
+    #region User CRUD
+
+    /// <summary>
+    /// Get all users with pagination and filtering (UC-1.8)
+    /// </summary>
+    [HttpGet("users")]
+    public async Task<IActionResult> GetUsers([FromQuery] UserSearchDto search)
+    {
+        var result = await _userManagementService.GetUsersAsync(search);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get user by ID
+    /// </summary>
+    [HttpGet("users/{id}")]
+    public async Task<IActionResult> GetUserById(Guid id)
+    {
+        var result = await _userManagementService.GetUserByIdAsync(id);
+        if (result == null)
+            return NotFound(new ApiResponse { Success = false, Message = "User not found" });
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Create new user (UC-1.1)
+    /// </summary>
+    [HttpPost("users")]
+    public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var result = await _userManagementService.CreateUserAsync(dto);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Update existing user (UC-1.2)
+    /// </summary>
+    [HttpPut("users/{id}")]
+    public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var result = await _userManagementService.UpdateUserAsync(id, dto);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Deactivate user account (UC-1.3)
+    /// </summary>
+    [HttpPost("users/{id}/deactivate")]
+    public async Task<IActionResult> DeactivateUser(Guid id)
+    {
+        var result = await _userManagementService.DeactivateUserAsync(id);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Activate user account
+    /// </summary>
+    [HttpPost("users/{id}/activate")]
+    public async Task<IActionResult> ActivateUser(Guid id)
+    {
+        var result = await _userManagementService.ActivateUserAsync(id);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Delete user account
+    /// </summary>
+    [HttpDelete("users/{id}")]
+    public async Task<IActionResult> DeleteUser(Guid id)
+    {
+        var result = await _userManagementService.DeleteUserAsync(id);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Reset user password (UC-1.4)
+    /// </summary>
+    [HttpPost("users/{id}/reset-password")]
+    public async Task<IActionResult> ResetPassword(Guid id, [FromBody] ResetPasswordDto dto)
+    {
+        var result = await _userManagementService.ResetPasswordAsync(id, dto.NewPassword);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        // TODO: Send email with new password if dto.SendEmail is true
+
+        return Ok(new ApiResponse<string> { Success = true, Value = result.Value, Message = "Password reset successfully" });
+    }
+
+    /// <summary>
+    /// Export users to Excel (UC-1.8)
+    /// </summary>
+    [HttpPost("users/export")]
+    public async Task<IActionResult> ExportUsers([FromBody] UserSearchDto search)
+    {
+        var excelBytes = await _userManagementService.ExportUsersToExcelAsync(search);
+
+        return File(excelBytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"users_{DateTime.UtcNow:yyyyMMddHHmmss}.csv");
+    }
+
+    #endregion
+
+    #region Role Assignment
+
+    /// <summary>
+    /// Get user roles (UC-1.5)
+    /// </summary>
+    [HttpGet("users/{id}/roles")]
+    public async Task<IActionResult> GetUserRoles(Guid id)
+    {
+        var roles = await _userManagementService.GetUserRolesAsync(id);
+        return Ok(roles);
+    }
+
+    /// <summary>
+    /// Assign roles to user (UC-1.5)
+    /// </summary>
+    [HttpPost("users/{id}/roles")]
+    public async Task<IActionResult> AssignRoles(Guid id, [FromBody] List<string> roleNames)
+    {
+        if (roleNames == null || roleNames.Count == 0)
+            return BadRequest(new ApiResponse { Success = false, Message = "At least one role must be assigned" });
+
+        var result = await _userManagementService.AssignRolesAsync(id, roleNames);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    #endregion
+
+    #region Claims Management
+
+    /// <summary>
+    /// Get user claims (UC-1.10)
+    /// </summary>
+    [HttpGet("users/{id}/claims")]
+    public async Task<IActionResult> GetUserClaims(Guid id)
+    {
+        var claims = await _userManagementService.GetUserClaimsAsync(id);
+        return Ok(claims);
+    }
+
+    /// <summary>
+    /// Add claim to user (UC-1.10)
+    /// </summary>
+    [HttpPost("users/{id}/claims")]
+    public async Task<IActionResult> AddClaim(Guid id, [FromBody] UserClaimDto claim)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var result = await _userManagementService.AddClaimAsync(id, claim);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Remove claim from user (UC-1.10)
+    /// </summary>
+    [HttpDelete("users/{id}/claims/{claimType}")]
+    public async Task<IActionResult> RemoveClaim(Guid id, string claimType)
+    {
+        var result = await _userManagementService.RemoveClaimAsync(id, claimType);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    #endregion
+
+    #region Role Management
+
+    /// <summary>
+    /// Get all roles with pagination
+    /// </summary>
+    [HttpGet("roles")]
+    public async Task<IActionResult> GetRoles([FromQuery] RoleSearchDto search)
+    {
+        var result = await _userManagementService.GetRolesAsync(search);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get role by ID
+    /// </summary>
+    [HttpGet("roles/{id}")]
+    public async Task<IActionResult> GetRoleById(Guid id)
+    {
+        var result = await _userManagementService.GetRoleByIdAsync(id);
+        if (result == null)
+            return NotFound(new ApiResponse { Success = false, Message = "Role not found" });
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get all roles for dropdown (no pagination)
+    /// </summary>
+    [HttpGet("roles/all")]
+    public async Task<IActionResult> GetAllRoles()
+    {
+        var roles = await _userManagementService.GetAllRolesAsync();
+        return Ok(roles);
+    }
+
+    /// <summary>
+    /// Create new role (UC-1.6)
+    /// </summary>
+    [HttpPost("roles")]
+    public async Task<IActionResult> CreateRole([FromBody] CreateRoleDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var result = await _userManagementService.CreateRoleAsync(dto);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Update role permissions (UC-1.7)
+    /// </summary>
+    [HttpPut("roles/{id}")]
+    public async Task<IActionResult> UpdateRole(Guid id, [FromBody] UpdateRoleDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var result = await _userManagementService.UpdateRoleAsync(id, dto);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Delete role
+    /// </summary>
+    [HttpDelete("roles/{id}")]
+    public async Task<IActionResult> DeleteRole(Guid id)
+    {
+        var result = await _userManagementService.DeleteRoleAsync(id);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    #endregion
+
+    #region Activity Log
+
+    /// <summary>
+    /// Get user activity log (UC-1.9)
+    /// </summary>
+    [HttpGet("users/{id}/activity")]
+    public async Task<IActionResult> GetUserActivity(Guid id, [FromQuery] ActivitySearchDto search)
+    {
+        search.UserId = id;
+        // TODO: Implement activity logging
+        return Ok(new PagedResult<UserActivityDto>());
+    }
+
+    #endregion
+}

@@ -1,0 +1,199 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'families.title' | translate"
+  [subtitle]="'families.manageFamilies' | translate"
+  [icon]="'fe fe-users'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="card">
+  <div class="card-body">
+    <!-- Filters -->
+    <form [formGroup]="filterForm">
+      <div class="row mb-3">
+        <!-- Search -->
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="filterForm"
+            fcn="searchValue"
+            [label]="'common.search'"
+            [placeholder]="'families.searchPlaceholder' | translate">
+          </app-input-text>
+        </div>
+
+        <!-- Provider Type -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="providerType"
+            [label]="'families.providerType'"
+            [initialData]="providerTypeOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onProviderTypeChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- Living Condition -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="livingCondition"
+            [label]="'families.livingCondition'"
+            [initialData]="livingConditionOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onLivingConditionChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- Housing Type -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="housingType"
+            [label]="'families.housingType'"
+            [initialData]="housingTypeOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onHousingTypeChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- Status -->
+        <div class="col-md-3">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="status"
+            [label]="'common.status'"
+            [initialData]="statusOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onStatusChange()">
+          </app-drop-down>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <!-- Orphan Count Range -->
+        <div class="col-md-3">
+          <label class="form-label">{{ 'families.orphanCountRange' | translate }}</label>
+          <div class="input-group">
+            <input type="number" class="form-control" [placeholder]="'common.min' | translate"
+                   formControlName="orphanCountMin" (input)="onSearch()">
+            <span class="input-group-text">-</span>
+            <input type="number" class="form-control" [placeholder]="'common.max' | translate"
+                   formControlName="orphanCountMax" (input)="onSearch()">
+          </div>
+        </div>
+      </div>
+
+      <div class="row mb-3" *ngIf="hasActiveFilters()">
+        <div class="col-12">
+          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+            <i class="fe fe-x mr-1"></i>
+            {{ 'common.clearFilters' | translate }}
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Families Table -->
+    <div *ngIf="!loading" class="table-responsive">
+      <table class="table table-hover table-striped">
+        <thead>
+          <tr>
+            <th>{{ 'families.familyCode' | translate }}</th>
+            <th>{{ 'families.address' | translate }}</th>
+            <th>{{ 'families.fatherName' | translate }}</th>
+            <th>{{ 'families.motherName' | translate }}</th>
+            <th>{{ 'families.providerType' | translate }}</th>
+            <th>{{ 'families.orphansCount' | translate }}</th>
+            <th>{{ 'families.livingCondition' | translate }}</th>
+            <th>{{ 'common.status' | translate }}</th>
+            <th>{{ 'common.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let family of families">
+            <td><strong>{{ family.code || '-' }}</strong></td>
+            <td>
+              <div>{{ family.address }}</div>
+              <small class="text-muted" *ngIf="family.city || family.village">
+                {{ family.city || '' }}{{ family.city && family.village ? ', ' : '' }}{{ family.village || '' }}
+              </small>
+            </td>
+            <td>{{ family.father?.fullName || '-' }}</td>
+            <td>{{ family.mother?.fullName || '-' }}</td>
+            <td>
+              <span [class]="'badge ' + getProviderTypeBadgeClass(family.providerType)">
+                {{ getProviderTypeText(family.providerType) }}
+              </span>
+            </td>
+            <td>
+              <span class="badge badge-pill badge-primary">{{ family.orphanCount || 0 }}</span>
+            </td>
+            <td>{{ getLivingConditionText(family.livingCondition) }}</td>
+            <td>
+              <span [class]="'badge ' + getStatusBadgeClass(family)">
+                {{ family.isActive ? ('common.active' | translate) : ('common.inactive' | translate) }}
+              </span>
+            </td>
+            <td>
+              <div class="btn-group">
+                <button type="button" class="btn btn-sm btn-light" [title]="'common.view' | translate" (click)="viewFamily(family.id)">
+                  <i class="fe fe-eye"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-light" [title]="'common.edit' | translate" (click)="editFamily(family.id)">
+                  <i class="fe fe-edit"></i>
+                </button>
+                <div class="dropdown">
+                  <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown">
+                    <i class="fe fe-more-vertical"></i>
+                  </button>
+                  <div class="dropdown-menu dropdown-menu-right">
+                    <a class="dropdown-item" href="javascript:void(0)" (click)="toggleFamilyStatus(family)">
+                      <i class="fe fe-power mr-2" [ngClass]="family.isActive ? 'fe-alert-circle' : 'fe-check-circle'"></i>
+                      {{ family.isActive ? ('families.deactivate' | translate) : ('families.activate' | translate) }}
+                    </a>
+                    <a class="dropdown-item" href="javascript:void(0)" routerLink="/families/{{ family.id }}/orphans">
+                      <i class="fe fe-user mr-2"></i>
+                      {{ 'families.manageOrphans' | translate }}
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item text-danger" href="javascript:void(0)" (click)="deleteFamily(family)">
+                      <i class="fe fe-trash mr-2"></i>
+                      {{ 'common.delete' | translate }}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="families.length === 0">
+            <td colspan="9" class="text-center py-5">
+              <div class="empty-state">
+                <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+                <p class="text-muted">{{ 'families.noFamiliesFound' | translate }}</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <app-pagination
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
+  </div>
+</div>

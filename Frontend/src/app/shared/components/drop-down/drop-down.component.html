@@ -1,0 +1,52 @@
+<ng-container [formGroup]="fg">
+  <div class="form-group">
+    <!-- Label -->
+    <label [attr.for]="id || fcn" *ngIf="label" class="form-label">
+      {{ label | translate }}
+      <span class="text-danger" *ngIf="isRequired">*</span>
+    </label>
+
+    <!-- Native Select with Select2 class - jQuery Select2 will transform this -->
+    <select
+      [id]="id || fcn"
+      (change)="dropDownChanged($event)"
+      [formControlName]="fcn"
+      class="form-control select2"
+      [multiple]="multiple"
+      [ngClass]="{
+        'is-invalid': isFieldInvalid(),
+        'is-valid': isFieldValid()
+      }">
+      <option *ngIf="hasDefaultValue" [attr.value]="" disabled>
+        {{ placeholder || ('common.select' | translate) }}
+      </option>
+      <ng-container *ngFor="let group of groupedData">
+        <optgroup *ngIf="group.group" [label]="group.group">
+          <option *ngFor="let item of group.items" [attr.value]="item?.id" [disabled]="item.disabled">
+            {{ getItemValue(item) }}
+          </option>
+        </optgroup>
+        <ng-container *ngIf="!group.group">
+          <option *ngFor="let item of group.items" [attr.value]="item?.id" [disabled]="item.disabled">
+            {{ getItemValue(item) }}
+          </option>
+        </ng-container>
+      </ng-container>
+    </select>
+
+    <!-- Validation Error Messages -->
+    <div class="invalid-feedback" *ngIf="isFieldInvalid()">
+      {{ getErrorMessage() | translate }}
+    </div>
+
+    <!-- Valid Feedback -->
+    <div class="valid-feedback" *ngIf="isFieldValid()">
+      {{ 'validation.looksGood' | translate }}
+    </div>
+
+    <!-- Help Text -->
+    <small [ngClass]="helpTextClass || 'form-text text-muted'" *ngIf="helpText">
+      <i class="fe fe-info"></i> {{ helpText | translate }}
+    </small>
+  </div>
+</ng-container>

@@ -1,0 +1,256 @@
+<div class="page-header">
+  <div class="row align-items-center mb-3">
+    <div class="col">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item">
+            <a routerLink="/orphan-payments">{{ 'orphanPayments.title' | translate }}</a>
+          </li>
+          <li class="breadcrumb-item" *ngIf="paymentGroup">
+            <a [routerLink]="['/orphan-payments', paymentGroup.id]">
+              {{ paymentGroup.groupName }}
+            </a>
+          </li>
+          <li class="breadcrumb-item active">
+            {{ 'orphanPayments.addOrphans' | translate }}
+          </li>
+        </ol>
+      </nav>
+      <h2 class="page-title">
+        <i class="fe fe-user-plus mr-2"></i>
+        {{ 'orphanPayments.addOrphansToGroup' | translate }}
+      </h2>
+      <p class="text-muted" *ngIf="paymentGroup">
+        {{ paymentGroup.groupName }} ({{ paymentGroup.batchNo || '-' }})
+      </p>
+    </div>
+    <div class="col-auto">
+      <div class="btn-group">
+        <button class="btn btn-outline-secondary" (click)="onCancel()">
+          <i class="fe fe-x mr-1"></i>
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button class="btn btn-primary" (click)="onAddSelectedOrphans()" [disabled]="adding || selectedOrphans.size === 0">
+          <i class="fe fe-check mr-1" *ngIf="!adding"></i>
+          <i class="fe fe-spinner fe-spin mr-1" *ngIf="adding"></i>
+          {{ 'orphanPayments.addSelectedOrphans' | translate }} ({{ getSelectedCount() }})
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div class="text-center py-5" *ngIf="loading">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">{{ 'common.loading' | translate }}</span>
+  </div>
+</div>
+
+<!-- Content -->
+<div class="row" *ngIf="!loading">
+  <!-- Filters Column -->
+  <div class="col-lg-3 mb-3">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">{{ 'orphanPayments.filterOrphans' | translate }}</h5>
+      </div>
+      <div class="card-body">
+        <!-- Search -->
+        <div class="form-group mb-3">
+          <label class="form-label">{{ 'common.search' | translate }}</label>
+          <input type="text"
+                 class="form-control"
+                 [(ngModel)]="filter.searchTerm"
+                 (keyup.enter)="onSearch()"
+                 [placeholder]="'orphanPayments.searchOrphanPlaceholder' | translate">
+        </div>
+
+        <!-- Charity -->
+        <div class="form-group mb-3">
+          <label class="form-label">{{ 'orphanPayments.charity' | translate }}</label>
+          <select class="form-control" [(ngModel)]="filter.charityId" (change)="onSearch()">
+            <option [ngValue]="null">{{ 'common.all' | translate }}</option>
+            <option *ngFor="let charity of availableCharities"
+                    [ngValue]="charity.id">{{ charity.name }}</option>
+          </select>
+        </div>
+
+        <!-- Region -->
+        <div class="form-group mb-3">
+          <label class="form-label">{{ 'orphanPayments.region' | translate }}</label>
+          <select class="form-control" [(ngModel)]="filter.regionId" (change)="onSearch()">
+            <option [ngValue]="null">{{ 'common.all' | translate }}</option>
+            <option *ngFor="let region of availableRegions"
+                    [ngValue]="region.id">{{ region.name }}</option>
+          </select>
+        </div>
+
+        <!-- Center -->
+        <div class="form-group mb-3">
+          <label class="form-label">{{ 'orphanPayments.center' | translate }}</label>
+          <select class="form-control" [(ngModel)]="filter.centerId" (change)="onSearch()">
+            <option [ngValue]="null">{{ 'common.all' | translate }}</option>
+            <option *ngFor="let center of availableCenters"
+                    [ngValue]="center.id">{{ center.name }}</option>
+          </select>
+        </div>
+
+        <!-- Sponsorship Status -->
+        <div class="form-group mb-3">
+          <label class="form-label">{{ 'orphanPayments.sponsorshipStatus' | translate }}</label>
+          <select class="form-control" [(ngModel)]="filter.sponsorshipStatus" (change)="onSearch()">
+            <option *ngFor="let status of sponsorshipStatusOptions"
+                    [ngValue]="status.value">{{ status.label | translate }}</option>
+          </select>
+        </div>
+
+        <!-- Gender -->
+        <div class="form-group mb-3">
+          <label class="form-label">{{ 'orphanPayments.gender' | translate }}</label>
+          <select class="form-control" [(ngModel)]="filter.gender" (change)="onSearch()">
+            <option *ngFor="let gender of genderOptions"
+                    [ngValue]="gender.value">{{ gender.label | translate }}</option>
+          </select>
+        </div>
+
+        <!-- Age Range -->
+        <div class="form-group mb-3">
+          <label class="form-label">{{ 'orphanPayments.ageRange' | translate }}</label>
+          <div class="row">
+            <div class="col-6">
+              <input type="number"
+                     class="form-control"
+                     [(ngModel)]="filter.ageFrom"
+                     [placeholder]="'orphanPayments.from' | translate">
+            </div>
+            <div class="col-6">
+              <input type="number"
+                     class="form-control"
+                     [(ngModel)]="filter.ageTo"
+                     [placeholder]="'orphanPayments.to' | translate">
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Actions -->
+        <div class="d-flex flex-column gap-2">
+          <button class="btn btn-primary" (click)="onSearch()">
+            <i class="fe fe-search mr-1"></i>
+            {{ 'common.search' | translate }}
+          </button>
+          <button class="btn btn-outline-secondary" (click)="onResetFilters()">
+            <i class="fe fe-x mr-1"></i>
+            {{ 'common.clear' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Orphans List Column -->
+  <div class="col-lg-9">
+    <!-- Summary Card -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="row text-center">
+          <div class="col-md-4">
+            <div class="display-4 font-weight-bold text-primary">{{ getAvailableCount() }}</div>
+            <div class="text-muted small">{{ 'orphanPayments.availableOrphans' | translate }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="display-4 font-weight-bold text-success">{{ getSelectedCount() }}</div>
+            <div class="text-muted small">{{ 'orphanPayments.selectedOrphans' | translate }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="display-4 font-weight-bold text-muted">{{ getAlreadyInGroupCount() }}</div>
+            <div class="text-muted small">{{ 'orphanPayments.alreadyInGroup' | translate }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Orphans List Card -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">{{ 'orphanPayments.orphansList' | translate }}</h5>
+        <div class="form-check mb-0">
+          <input class="form-check-input"
+                 type="checkbox"
+                 id="selectAll"
+                 [(ngModel)]="selectAll"
+                 (change)="onToggleSelectAll()">
+          <label class="form-check-label" for="selectAll">
+            {{ 'common.selectAll' | translate }}
+          </label>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <!-- Loading Orphans -->
+        <div class="text-center py-4" *ngIf="loadingOrphans">
+          <div class="spinner-border spinner-border-sm text-primary"></div>
+        </div>
+
+        <!-- Orphans Table -->
+        <div class="table-responsive" *ngIf="!loadingOrphans">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th width="50"></th>
+                <th>{{ 'orphanPayments.orphanName' | translate }}</th>
+                <th>{{ 'orphanPayments.familyName' | translate }}</th>
+                <th>{{ 'orphanPayments.charity' | translate }}</th>
+                <th>{{ 'orphanPayments.region' | translate }}</th>
+                <th>{{ 'orphanPayments.age' | translate }}</th>
+                <th>{{ 'orphanPayments.gender' | translate }}</th>
+                <th>{{ 'orphanPayments.sponsorshipStatus' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let orphan of availableOrphans; trackBy: trackOrphan"
+                  [class.table-light]="orphan.isAlreadyInGroup">
+                <td>
+                  <input type="checkbox"
+                         class="form-check-input"
+                         [checked]="isOrphanSelected(orphan.orphanId)"
+                         [disabled]="isOrphanDisabled(orphan)"
+                         (change)="onToggleOrphan(orphan.orphanId)">
+                </td>
+                <td>
+                  <a routerLink="/orphans/{{orphan.orphanId}}"
+                     class="text-primary"
+                     *ngIf="!orphan.isAlreadyInGroup">
+                    {{ orphan.orphanName }}
+                  </a>
+                  <span *ngIf="orphan.isAlreadyInGroup" class="text-muted">
+                    {{ orphan.orphanName }}
+                  </span>
+                </td>
+                <td>{{ orphan.familyName }}</td>
+                <td>{{ orphan.charityName }}</td>
+                <td>{{ orphan.regionName || '-' }}</td>
+                <td>{{ orphan.age }}</td>
+                <td>
+                  <span class="badge" [ngClass]="getGenderBadgeClass(orphan.gender)">
+                    {{ orphan.gender }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge" [ngClass]="getSponsorshipBadgeClass(orphan.sponsorshipStatus)">
+                    {{ orphan.sponsorshipStatus }}
+                  </span>
+                </td>
+              </tr>
+              <tr *ngIf="availableOrphans.length === 0">
+                <td colspan="8" class="text-center py-4 text-muted">
+                  <i class="fe fe-inbox fe-2x mb-2 d-block"></i>
+                  {{ 'orphanPayments.noOrphansFound' | translate }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,230 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'generalChecks.title' | translate"
+  [subtitle]="'generalChecks.manageChecks' | translate"
+  [icon]="'fe fe-check-square'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="card">
+  <div class="card-body">
+    <!-- Filters using shared components -->
+    <form [formGroup]="filterForm">
+      <div class="row mb-3">
+        <!-- Search -->
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="filterForm"
+            fcn="searchValue"
+            [label]="'common.search'"
+            [placeholder]="'generalChecks.searchPlaceholder' | translate">
+          </app-input-text>
+        </div>
+
+        <!-- Status -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="checkStatus"
+            [label]="'generalChecks.status'"
+            [initialData]="statusOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onStatusDropDownChanged($event)">
+          </app-drop-down>
+        </div>
+
+        <!-- Bank -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="bankId"
+            [label]="'generalChecks.bank'"
+            [initialData]="allBanks"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onBankDropDownChanged($event)">
+          </app-drop-down>
+        </div>
+
+        <!-- Currency -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="currency"
+            [label]="'generalChecks.currency'"
+            [initialData]="currencyOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onCurrencyDropDownChanged($event)">
+          </app-drop-down>
+        </div>
+
+        <!-- Date From -->
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="filterForm"
+            fcn="dateFrom"
+            [label]="'generalChecks.dateFrom'"
+            type="date">
+          </app-input-text>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <!-- Date To -->
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="filterForm"
+            fcn="dateTo"
+            [label]="'generalChecks.dateTo'"
+            type="date">
+          </app-input-text>
+        </div>
+
+        <!-- Amount From -->
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="filterForm"
+            fcn="amountFrom"
+            [label]="'generalChecks.amountFrom'"
+            type="number"
+            [min]="0"
+            [step]="0.01">
+          </app-input-text>
+        </div>
+
+        <!-- Amount To -->
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="filterForm"
+            fcn="amountTo"
+            [label]="'generalChecks.amountTo'"
+            type="number"
+            [min]="0"
+            [step]="0.01">
+          </app-input-text>
+        </div>
+
+        <!-- Search Button -->
+        <div class="col-md-3 d-flex align-items-end">
+          <button type="button" class="btn btn-primary w-100" (click)="onSearch()">
+            <i class="fe fe-search mr-1"></i>
+            {{ 'common.search' | translate }}
+          </button>
+        </div>
+      </div>
+
+      <div class="row mb-3" *ngIf="hasActiveFilters()">
+        <div class="col-12">
+          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+            <i class="fe fe-x mr-1"></i>
+            {{ 'common.clearFilters' | translate }}
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Checks Table -->
+    <div *ngIf="!loading" class="table-responsive">
+      <table class="table table-hover table-striped">
+        <thead>
+          <tr>
+            <th>{{ 'generalChecks.checkNumber' | translate }}</th>
+            <th>{{ 'generalChecks.checkDate' | translate }}</th>
+            <th>{{ 'generalChecks.dueDate' | translate }}</th>
+            <th>{{ 'generalChecks.beneficiaryName' | translate }}</th>
+            <th>{{ 'generalChecks.amount' | translate }}</th>
+            <th>{{ 'generalChecks.currency' | translate }}</th>
+            <th>{{ 'generalChecks.checkStatus' | translate }}</th>
+            <th>{{ 'generalChecks.bank' | translate }}</th>
+            <th>{{ 'common.createdBy' | translate }}</th>
+            <th>{{ 'common.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let check of paginatedChecks">
+            <td>
+              <a [routerLink]="['/general-checks', check.id]" class="text-primary">
+                <strong>{{ check.checkNumber }}</strong>
+              </a>
+            </td>
+            <td>{{ formatDate(check.checkDate) }}</td>
+            <td>{{ formatDate(check.dueDate) }}</td>
+            <td>{{ check.beneficiaryName }}</td>
+            <td>{{ formatCurrency(check.amount) }}</td>
+            <td>{{ check.currency }}</td>
+            <td>
+              <span [class]="getStatusClass(check.checkStatus)">
+                {{ getStatusLabel(check.checkStatus) | translate }}
+              </span>
+            </td>
+            <td>{{ check.bankName }}</td>
+            <td>{{ check.createdBy }}</td>
+            <td>
+              <div class="btn-group">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light"
+                  [title]="'common.view' | translate"
+                  (click)="viewCheck(check.id)">
+                  <i class="fe fe-eye"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light"
+                  [title]="'common.edit' | translate"
+                  [disabled]="!canEditCheck(check.checkStatus)"
+                  (click)="editCheck(check.id)">
+                  <i class="fe fe-edit"></i>
+                </button>
+                <div class="dropdown">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-light dropdown-toggle"
+                    data-toggle="dropdown"
+                    [disabled]="!canVoidCheck(check.checkStatus)">
+                    <i class="fe fe-more-vertical"></i>
+                  </button>
+                  <div class="dropdown-menu dropdown-menu-right">
+                    <a
+                      class="dropdown-item"
+                      href="javascript:void(0)"
+                      (click)="deleteCheck(check.id)"
+                      [class.disabled]="!canVoidCheck(check.checkStatus)">
+                      <i class="fe fe-trash-2 mr-2 text-danger"></i>
+                      {{ 'generalChecks.voidCheck' | translate }}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="paginatedChecks.length === 0">
+            <td colspan="10" class="text-center py-5">
+              <div class="empty-state">
+                <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+                <p class="text-muted">{{ 'generalChecks.noChecksFound' | translate }}</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <app-pagination
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
+  </div>
+</div>

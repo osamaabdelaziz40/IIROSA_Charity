@@ -1,0 +1,388 @@
+/**
+ * My Missions Component Styles
+ * Inherits styles from Mission List Component
+ */
+
+.my-missions-page {
+  padding: 1.5rem;
+
+  .page-header {
+    margin-bottom: 2rem;
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--text-color);
+    }
+
+    .text-muted {
+      color: var(--text-muted) !important;
+      margin-bottom: 0;
+    }
+
+    .btn-group {
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        font-weight: 500;
+
+        i {
+          font-size: 1rem;
+        }
+      }
+    }
+  }
+
+  .status-dashboard {
+    .status-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: all 0.3s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+      }
+
+      .status-icon {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+
+        i {
+          color: #fff;
+        }
+      }
+
+      .status-info {
+        flex: 1;
+
+        h3 {
+          font-size: 1.75rem;
+          font-weight: 700;
+          margin-bottom: 0.25rem;
+        }
+
+        p {
+          margin-bottom: 0;
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+      }
+
+      &.pending {
+        .status-icon {
+          background: linear-gradient(135deg, #f5b921 0%, #f7c948 100%);
+        }
+        h3 {
+          color: #f5b921;
+        }
+      }
+
+      &.progress {
+        .status-icon {
+          background: linear-gradient(135deg, #38adf9 0%, #5bc0de 100%);
+        }
+        h3 {
+          color: #38adf9;
+        }
+      }
+
+      &.completed {
+        .status-icon {
+          background: linear-gradient(135deg, #3cc09a 0%, #5cd69b 100%);
+        }
+        h3 {
+          color: #3cc09a;
+        }
+      }
+
+      &.overdue {
+        .status-icon {
+          background: linear-gradient(135deg, #e55b6b 0%, #f07887 100%);
+        }
+        h3 {
+          color: #e55b6b;
+        }
+      }
+    }
+  }
+
+  .filters-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+
+    .form-group {
+      margin-bottom: 0;
+
+      .form-control {
+        background-color: var(--body-bg);
+        border-color: var(--border-color);
+        color: var(--text-color);
+
+        &:focus {
+          background-color: var(--body-bg);
+          border-color: var(--primary);
+          color: var(--text-color);
+          box-shadow: 0 0 0 2px rgba(77, 124, 254, 0.25);
+        }
+
+        &::placeholder {
+          color: var(--text-muted);
+        }
+      }
+
+      select.form-control {
+        cursor: pointer;
+      }
+    }
+
+    .btn-group {
+      flex-wrap: wrap;
+
+      .btn {
+        flex: 1;
+        min-width: 100px;
+      }
+    }
+  }
+
+  .missions-table {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    overflow: hidden;
+
+    .table-responsive {
+      .table {
+        margin-bottom: 0;
+
+        thead {
+          th {
+            border-top: none;
+            border-bottom: 2px solid var(--border-color);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            cursor: pointer;
+            user-select: none;
+            padding: 1rem;
+            background-color: transparent;
+            transition: all 0.2s ease;
+
+            &:hover {
+              background-color: rgba(77, 124, 254, 0.05);
+              color: var(--text-color);
+            }
+
+            &.sorted {
+              color: var(--primary);
+            }
+
+            i {
+              font-size: 0.75rem;
+              margin-left: 0.25rem;
+            }
+          }
+        }
+
+        tbody {
+          tr {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+
+            &:hover {
+              background-color: rgba(77, 124, 254, 0.05);
+            }
+
+            &.completed {
+              opacity: 0.7;
+            }
+
+            &.overdue {
+              background-color: rgba(229, 91, 107, 0.05);
+            }
+
+            td {
+              padding: 1rem;
+              vertical-align: middle;
+              border-bottom: 1px solid var(--border-color);
+
+              strong {
+                color: var(--text-color);
+                font-weight: 600;
+              }
+
+              .text-muted {
+                color: var(--text-muted) !important;
+                font-size: 0.875rem;
+              }
+
+              .badge {
+                font-size: 0.75rem;
+                font-weight: 600;
+                padding: 0.375rem 0.75rem;
+                border-radius: 0.25rem;
+
+                &.badge-light {
+                  background-color: rgba(77, 124, 254, 0.1);
+                  color: var(--primary);
+                }
+
+                &.badge-success {
+                  background-color: rgba(60, 192, 154, 0.1);
+                  color: #3cc09a;
+                }
+
+                &.badge-warning {
+                  background-color: rgba(245, 185, 33, 0.1);
+                  color: #f5b921;
+                }
+
+                &.badge-danger {
+                  background-color: rgba(229, 91, 107, 0.1);
+                  color: #e55b6b;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .pagination-section {
+      border-top: 1px solid var(--border-color);
+      background-color: transparent;
+      padding: 1rem;
+
+      .text-muted {
+        color: var(--text-muted) !important;
+        font-size: 0.875rem;
+      }
+
+      .pagination {
+        margin-bottom: 0;
+
+        .page-link {
+          background-color: var(--body-bg);
+          border-color: var(--border-color);
+          color: var(--text-color);
+          padding: 0.375rem 0.75rem;
+          font-size: 0.875rem;
+
+          &:hover {
+            background-color: rgba(77, 124, 254, 0.1);
+            border-color: var(--primary);
+            color: var(--primary);
+          }
+
+          &:focus {
+            box-shadow: 0 0 0 2px rgba(77, 124, 254, 0.25);
+          }
+        }
+
+        .page-item {
+          &.active .page-link {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+          }
+
+          &.disabled .page-link {
+            background-color: var(--body-bg);
+            border-color: var(--border-color);
+            color: var(--text-muted);
+            pointer-events: none;
+          }
+        }
+      }
+
+      .page-size-select {
+        width: 70px;
+        background-color: var(--body-bg);
+        border-color: var(--border-color);
+        color: var(--text-color);
+        font-size: 0.875rem;
+
+        &:focus {
+          background-color: var(--body-bg);
+          border-color: var(--primary);
+          color: var(--text-color);
+          box-shadow: 0 0 0 2px rgba(77, 124, 254, 0.25);
+        }
+      }
+    }
+  }
+
+  // RTL Support
+  [dir="rtl"] & {
+    .page-header {
+      text-align: right;
+
+      .btn-group {
+        .btn {
+          i {
+            margin-left: 0;
+            margin-right: 0.5rem;
+          }
+        }
+      }
+    }
+
+    .status-dashboard {
+      .status-card {
+        .status-icon {
+          margin-left: 0;
+          margin-right: 1rem;
+        }
+      }
+    }
+
+    .filters-section {
+      .btn-group {
+        .btn {
+          i {
+            margin-left: 0;
+            margin-right: 0.5rem;
+          }
+        }
+      }
+    }
+
+    .missions-table {
+      .table-responsive {
+        .table {
+          thead {
+            th {
+              text-align: right;
+
+              i {
+                margin-left: 0;
+                margin-right: 0.25rem;
+              }
+            }
+          }
+
+          tbody {
+            td {
+              text-align: right;
+            }
+          }
+        }
+      }
+    }
+  }
+}

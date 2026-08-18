@@ -1,0 +1,306 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<!-- Loading State -->
+
+
+<!-- Project Details -->
+<div *ngIf="!loading && housingProject" class="housing-project-detail">
+  <!-- Overview Tab -->
+  <div class="card mb-3" [ngClass]="{'d-none': activeTab !== 'overview'}">
+    <div class="card-body">
+      <!-- Basic Information Section -->
+      <h5 class="card-title mb-3">
+        <i class="fe fe-info mr-2"></i>
+        {{ 'housingProjects.basicInformation' | translate }}
+      </h5>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="detail-item">
+            <label>{{ 'housingProjects.projectName' | translate }}</label>
+            <div>{{ housingProject.projectName }}</div>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'housingProjects.projectType' | translate }}</label>
+            <div>{{ getProjectTypeName(housingProject.projectType) | translate }}</div>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'housingProjects.projectStatus' | translate }}</label>
+            <div>
+              <span [class]="'badge ' + getStatusBadgeClass(housingProject.projectStatus)">
+                {{ getProjectStatusName(housingProject.projectStatus) | translate }}
+              </span>
+            </div>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'housingProjects.completionPercentage' | translate }}</label>
+            <div class="d-flex align-items-center">
+              <div class="progress flex-grow-1 mr-2" style="height: 8px;">
+                <div
+                  class="progress-bar"
+                  role="progressbar"
+                  [ngClass]="getProgressBarColor()"
+                  [style.width.%]="housingProject.completionPercentage">
+                </div>
+              </div>
+              <span class="font-weight-semibold">{{ housingProject.completionPercentage }}%</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="detail-item">
+            <label>{{ 'housingProjects.startDate' | translate }}</label>
+            <div>{{ formatDate(housingProject.startDate) }}</div>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'housingProjects.expectedEndDate' | translate }}</label>
+            <div>{{ formatDate(housingProject.expectedEndDate) }}</div>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'housingProjects.actualEndDate' | translate }}</label>
+            <div>{{ formatDate(housingProject.actualEndDate) }}</div>
+          </div>
+          <div class="detail-item" *ngIf="housingProject.currentStage">
+            <label>{{ 'housingProjects.currentStage' | translate }}</label>
+            <div>{{ getProjectStageName(housingProject.currentStage) | translate }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="detail-item" *ngIf="housingProject.projectDescription">
+        <label>{{ 'housingProjects.description' | translate }}</label>
+        <div>{{ housingProject.projectDescription }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Location Section -->
+  <div class="card mb-3" [ngClass]="{'d-none': activeTab !== 'overview'}">
+    <div class="card-body">
+      <h5 class="card-title mb-3">
+        <i class="fe fe-map-pin mr-2"></i>
+        {{ 'housingProjects.location' | translate }}
+      </h5>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="detail-item">
+            <label>{{ 'housingProjects.country' | translate }}</label>
+            <div>{{ housingProject.countryName || '-' }}</div>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'housingProjects.region' | translate }}</label>
+            <div>{{ housingProject.regionName || '-' }}</div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="detail-item">
+            <label>{{ 'housingProjects.center' | translate }}</label>
+            <div>{{ housingProject.centerName || '-' }}</div>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'housingProjects.address' | translate }}</label>
+            <div>{{ housingProject.address || housingProject.village || '-' }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="detail-item" *ngIf="housingProject.gpsCoordinates">
+        <label>{{ 'housingProjects.gpsCoordinates' | translate }}</label>
+        <div>{{ housingProject.gpsCoordinates }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Specifications Section -->
+  <div class="card mb-3" [ngClass]="{'d-none': activeTab !== 'overview'}">
+    <div class="card-body">
+      <h5 class="card-title mb-3">
+        <i class="fe fe-layers mr-2"></i>
+        {{ 'housingProjects.specifications' | translate }}
+      </h5>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="detail-item">
+            <label>{{ 'housingProjects.housingType' | translate }}</label>
+            <div>{{ getHousingTypeName(housingProject.housingType) | translate }}</div>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'housingProjects.numberOfUnits' | translate }}</label>
+            <div>{{ housingProject.numberOfUnits || '-' }}</div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="detail-item">
+            <label>{{ 'housingProjects.areaPerUnit' | translate }}</label>
+            <div>{{ housingProject.areaPerUnit ? housingProject.areaPerUnit + ' m²' : '-' }}</div>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'housingProjects.totalArea' | translate }}</label>
+            <div>{{ housingProject.totalArea ? housingProject.totalArea + ' m²' : '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Financial Information Section -->
+  <div class="card mb-3" [ngClass]="{'d-none': activeTab !== 'overview'}">
+    <div class="card-body">
+      <h5 class="card-title mb-3">
+        <i class="fe fe-dollar-sign mr-2"></i>
+        {{ 'housingProjects.financialInformation' | translate }}
+      </h5>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="detail-item">
+            <label>{{ 'housingProjects.totalBudget' | translate }}</label>
+            <div class="font-weight-semibold">
+              {{ formatCurrency(housingProject.totalBudget, housingProject.budgetCurrency) }}
+            </div>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'housingProjects.donorName' | translate }}</label>
+            <div>{{ housingProject.donorName || '-' }}</div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="detail-item">
+            <label>{{ 'housingProjects.finalCost' | translate }}</label>
+            <div class="font-weight-semibold">
+              {{ formatCurrency(housingProject.finalCost, housingProject.budgetCurrency) }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Beneficiary Assignment Section -->
+  <div class="card mb-3" [ngClass]="{'d-none': activeTab !== 'overview'}">
+    <div class="card-body">
+      <h5 class="card-title mb-3">
+        <i class="fe fe-users mr-2"></i>
+        {{ 'housingProjects.beneficiaryAssignment' | translate }}
+      </h5>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="detail-item">
+            <label>{{ 'housingProjects.assignedCharity' | translate }}</label>
+            <div>{{ housingProject.assignedCharityName || '-' }}</div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="detail-item">
+            <label>{{ 'housingProjects.assignedFamily' | translate }}</label>
+            <div>{{ housingProject.assignedFamilyName || '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Update Form -->
+  <div class="card mb-3" *ngIf="showProgressForm && !isProjectCompleted(housingProject)">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">
+        <i class="fe fe-trending-up mr-2"></i>
+        {{ 'housingProjects.updateProgress' | translate }}
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="form-group">
+        <label>{{ 'housingProjects.progressNotes' | translate }}</label>
+        <textarea
+          class="form-control"
+          rows="3"
+          [(ngModel)]="progressNotes"
+          [placeholder]="'housingProjects.progressNotesPlaceholder' | translate">
+        </textarea>
+      </div>
+      <div class="btn-group">
+        <button
+          class="btn btn-primary"
+          (click)="updateProgress()"
+          [disabled]="updatingProgress || !progressNotes.trim()">
+          <i class="fe fe-save mr-1"></i>
+          {{ 'common.save' | translate }}
+        </button>
+        <button
+          class="btn btn-secondary"
+          (click)="toggleProgressForm()"
+          [disabled]="updatingProgress">
+          <i class="fe fe-x mr-1"></i>
+          {{ 'common.cancel' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Completion Form -->
+  <div class="card mb-3" *ngIf="showCompletionForm && !isProjectCompleted(housingProject)">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">
+        <i class="fe fe-check-circle mr-2"></i>
+        {{ 'housingProjects.markProjectCompleted' | translate }}
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-info">
+        <i class="fe fe-info mr-2"></i>
+        {{ 'housingProjects.completionWarning' | translate }}
+      </div>
+      <div class="form-group">
+        <label>{{ 'housingProjects.finalCost' | translate }}</label>
+        <input
+          type="number"
+          class="form-control"
+          [(ngModel)]="finalCost"
+          [placeholder]="'housingProjects.finalCostPlaceholder' | translate">
+      </div>
+      <div class="form-group">
+        <label>{{ 'housingProjects.completionNotes' | translate }}</label>
+        <textarea
+          class="form-control"
+          rows="3"
+          [(ngModel)]="completionNotes"
+          [placeholder]="'housingProjects.completionNotesPlaceholder' | translate">
+        </textarea>
+      </div>
+      <div class="btn-group">
+        <button
+          class="btn btn-success"
+          (click)="markAsCompleted()"
+          [disabled]="completing">
+          <i class="fe fe-check mr-1"></i>
+          {{ 'housingProjects.confirmComplete' | translate }}
+        </button>
+        <button
+          class="btn btn-secondary"
+          (click)="toggleCompletionForm()"
+          [disabled]="completing">
+          <i class="fe fe-x mr-1"></i>
+          {{ 'common.cancel' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Audit Information -->
+<div class="card mt-3" *ngIf="!loading && housingProject">
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="detail-item">
+          <label>{{ 'common.createdDate' | translate }}</label>
+          <div>{{ formatDate(housingProject.createdOn) }}</div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="detail-item">
+          <label>{{ 'common.modifiedDate' | translate }}</label>
+          <div>{{ formatDate(housingProject.modifiedOn) }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

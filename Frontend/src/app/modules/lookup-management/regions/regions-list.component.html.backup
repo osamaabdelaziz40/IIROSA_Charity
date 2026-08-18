@@ -1,0 +1,386 @@
+<div class="page-header">
+  <div class="row align-items-center">
+    <div class="col-6">
+      <h3 class="page-title">{{ 'lookupManagement.regions.title' | translate }}</h3>
+      <nav aria-label="breadcrumb" class="mt-2">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a routerLink="/lookup-management">{{ 'lookupManagement.title' | translate }}</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{ 'lookupManagement.regions.title' | translate }}</li>
+        </ol>
+      </nav>
+    </div>
+    <div class="col-6 text-end">
+      <button class="btn btn-primary" (click)="openCreateModal()">
+        <i class="fe fe-plus"></i>
+        {{ 'lookupManagement.addRegion' | translate }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Filter and Search Section -->
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row align-items-end">
+      <!-- Search -->
+      <div class="col-md-4">
+        <label class="form-label">{{ 'common.search' | translate }}</label>
+        <div class="input-group">
+          <input type="text"
+                 class="form-control"
+                 [placeholder]="'lookupManagement.searchPlaceholder' | translate"
+                 [(ngModel)]="searchText"
+                 (keyup.enter)="onSearch()">
+          <div class="input-group-append">
+            <span class="input-group-text"><i class="fe fe-search"></i></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter by Country -->
+      <div class="col-md-3">
+        <label class="form-label">{{ 'lookupManagement.fields.country' | translate }}</label>
+        <select class="form-control"
+                [(ngModel)]="filterCountryId"
+                (change)="onFilter()">
+          <option value="">{{ 'lookupManagement.all' | translate }}</option>
+          <option *ngFor="let country of countries" [ngValue]="country.id">
+            {{ country.name }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Filter by Status -->
+      <div class="col-md-2">
+        <label class="form-label">{{ 'common.status' | translate }}</label>
+        <select class="form-control"
+                [(ngModel)]="filterIsActive"
+                (change)="onFilter()">
+          <option value="">{{ 'lookupManagement.all' | translate }}</option>
+          <option [ngValue]="true">{{ 'common.active' | translate }}</option>
+          <option [ngValue]="false">{{ 'common.inactive' | translate }}</option>
+        </select>
+      </div>
+
+      <!-- Page Size -->
+      <div class="col-md-3 text-end">
+        <select class="form-control d-inline-block w-auto"
+                [(ngModel)]="pageSize"
+                (change)="onPageSizeChange(pageSize)">
+          <option value="10">10</option>
+          <option value="20">20</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <button class="btn btn-outline-secondary me-2"
+                (click)="clearFilters()"
+                [disabled]="!searchText && filterIsActive === undefined && !filterCountryId">
+          <i class="fe fa-x-circle"></i>
+          {{ 'common.clear' | translate }}
+        </button>
+        <button class="btn btn-success"
+                (click)="exportRegions()">
+          <i class="fe fa-download"></i>
+          {{ 'common.exportToExcel' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Regions Table -->
+<div class="card">
+  <div class="card-body p-0">
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive" *ngIf="!loading">
+      <table class="table table-hover table-striped mb-0"
+             *ngIf="filteredRegions.length > 0; else emptyStateTemplate">
+        <thead>
+          <tr>
+            <th>{{ 'lookupManagement.fields.name' | translate }}</th>
+            <th>{{ 'lookupManagement.fields.regionCode' | translate }}</th>
+            <th>{{ 'lookupManagement.fields.country' | translate }}</th>
+            <th>{{ 'lookupManagement.fields.active' | translate }}</th>
+            <th>{{ 'lookupManagement.fields.sortOrder' | translate }}</th>
+            <th class="text-end">{{ 'common.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let region of filteredRegions"
+              class="table-row"
+              [class]="{'table-row-inactive': !region.isActive}"
+              (click)="openViewModal(region)">
+            <td>
+              <div>
+                <div class="fw-bold">{{ region.name }}</div>
+                <small class="text-muted" *ngIf="region.nameAr">{{ region.nameAr }}</small>
+              </div>
+            </td>
+            <td>{{ region.regionCode || '-' }}</td>
+            <td>
+              <span class="badge bg-light text-dark">
+                {{ region.countryName || '-' }}
+              </span>
+            </td>
+            <td>
+              <span class="badge"
+                    [class]="region.isActive ? 'bg-success' : 'bg-warning'">
+                {{ region.isActive ? ('common.active' | translate) : ('common.inactive' | translate) }}
+              </span>
+            </td>
+            <td>{{ region.sortOrder }}</td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-sm btn-outline-primary"
+                        [title]="'common.view' | translate"
+                        (click)="openViewModal(region); $event.stopPropagation()">
+                  <i class="fe fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary"
+                        [title]="'common.edit' | translate"
+                        (click)="openEditModal(region); $event.stopPropagation()">
+                  <i class="fe fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-success"
+                        [title]="region.isActive ? ('lookupManagement.deactivate' | translate) : ('lookupManagement.activate' | translate)"
+                        (click)="toggleActiveStatus(region); $event.stopPropagation()">
+                  <i [class]="region.isActive ? 'fe fa-toggle-on' : 'fe fa-toggle-off'"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger"
+                        [title]="'common.delete' | translate"
+                        (click)="deleteRegion(region); $event.stopPropagation()">
+                  <i class="fe fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Empty State -->
+      <ng-template #emptyStateTemplate>
+        <div class="text-center py-5" *ngIf="filteredRegions.length === 0">
+          <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+          <p class="text-muted">{{ 'lookupManagement.noRegionsFound' | translate }}</p>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="card-footer" *ngIf="!loading && filteredRegions.length > 0">
+    <div class="row align-items-center">
+      <div class="col-md-6">
+        <small class="text-muted">
+          {{ 'common.showing' | translate }} {{ (currentPage - 1) * pageSize + 1 }}
+          {{ 'common.to' | translate }} {{ getMinValue(currentPage * pageSize, totalCount) }}
+          {{ 'common.of' | translate }} {{ totalCount }}
+        </small>
+      </div>
+      <div class="col-md-6">
+        <nav class="d-flex justify-content-end">
+          <ul class="pagination pagination-sm mb-0">
+            <li class="page-item" [class]="{disabled: currentPage === 1}">
+              <a class="page-link" href="javascript:void(0)" (click)="onPageChange(1)">
+                <i class="fe fe-chevrons-left"></i>
+              </a>
+            </li>
+            <li class="page-item" [class]="{disabled: currentPage === 1}">
+              <a class="page-link" href="javascript:void(0)" (click)="onPageChange(currentPage - 1)">
+                <i class="fe fe-chevron-left"></i>
+              </a>
+            </li>
+            <li class="page-item" *ngFor="let page of getPageRange()" [class]="{active: page === currentPage}">
+              <a class="page-link" href="javascript:void(0)" (click)="onPageChange(page)">{{ page }}</a>
+            </li>
+            <li class="page-item" [class]="{disabled: currentPage === totalPages}">
+              <a class="page-link" href="javascript:void(0)" (click)="onPageChange(currentPage + 1)">
+                <i class="fe fe-chevron-right"></i>
+              </a>
+            </li>
+            <li class="page-item" [class]="{disabled: currentPage === totalPages}">
+              <a class="page-link" href="javascript:void(0)" (click)="onPageChange(totalPages)">
+                <i class="fe fe-chevrons-right"></i>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create/Edit/View Modal -->
+<div class="modal fade"
+     [class]="'show'"
+     [style]="showModal ? 'display: block;' : 'display: none;'"
+     tabindex="-1"
+     [attr.aria-hidden]="!showModal">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fe me-2"
+             [class]="modalMode === 'create' ? 'fe-plus' :
+                     modalMode === 'edit' ? 'fe-edit' :
+                     'fe-eye'"></i>
+          <span [ngSwitch]="modalMode">
+            <span *ngSwitchCase="'create'">{{ 'lookupManagement.addRegion' | translate }}</span>
+            <span *ngSwitchCase="'edit'">{{ 'lookupManagement.editRegion' | translate }}</span>
+            <span *ngSwitchCase="'view'">{{ 'lookupManagement.regionDetails' | translate }}</span>
+          </span>
+        </h5>
+        <button type="button" class="btn-close" (click)="closeModal()" data-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form [formGroup]="regionForm" *ngIf="modalMode !== 'view'">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label required">{{ 'lookupManagement.fields.name' | translate }}</label>
+                <input type="text"
+                       class="form-control"
+                       formControlName="name"
+                       [placeholder]="'lookupManagement.placeholders.name' | translate">
+                <div *ngIf="regionForm.get('name')?.invalid && regionForm.get('name')?.touched"
+                     class="invalid-feedback">
+                  {{ 'validation.required' | translate }}
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">{{ 'lookupManagement.fields.nameAr' | translate }}</label>
+                <input type="text"
+                       class="form-control"
+                       formControlName="nameAr"
+                       [placeholder]="'lookupManagement.placeholders.nameAr' | translate">
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">{{ 'lookupManagement.fields.regionCode' | translate }}</label>
+                <input type="text"
+                       class="form-control"
+                       formControlName="regionCode"
+                       [placeholder]="'lookupManagement.placeholders.regionCode' | translate">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label required">{{ 'lookupManagement.fields.country' | translate }}</label>
+                <select class="form-control"
+                        formControlName="countryId">
+                  <option value="">{{ 'lookupManagement.selectCountry' | translate }}</option>
+                  <option *ngFor="let country of countries" [ngValue]="country.id">
+                    {{ country.name }}
+                  </option>
+                </select>
+                <div *ngIf="regionForm.get('countryId')?.invalid && regionForm.get('countryId')?.touched"
+                     class="invalid-feedback">
+                  {{ 'validation.required' | translate }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">{{ 'lookupManagement.fields.sortOrder' | translate }}</label>
+                <input type="number"
+                       class="form-control"
+                       formControlName="sortOrder"
+                       [placeholder]="'lookupManagement.placeholders.sortOrder' | translate"
+                       min="0">
+                <div *ngIf="regionForm.get('sortOrder')?.invalid && regionForm.get('sortOrder')?.touched"
+                     class="invalid-feedback">
+                  {{ 'validation.required' | translate }}
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check form-switch mt-4">
+                <input type="checkbox"
+                       class="form-check-input"
+                       formControlName="isActive"
+                       id="regionActive">
+                <label class="form-check-label" for="regionActive">
+                  {{ 'lookupManagement.fields.isActive' | translate }}
+                </label>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <!-- View Mode Details -->
+        <div *ngIf="modalMode === 'view' && selectedRegion">
+          <div class="row">
+            <div class="col-md-6">
+              <dl class="row">
+                <dt class="col-sm-5">{{ 'lookupManagement.fields.name' | translate }}:</dt>
+                <dd class="col-sm-7">{{ selectedRegion.name }}</dd>
+
+                <dt class="col-sm-5">{{ 'lookupManagement.fields.nameAr' | translate }}:</dt>
+                <dd class="col-sm-7">{{ selectedRegion.nameAr || '-' }}</dd>
+
+                <dt class="col-sm-5">{{ 'lookupManagement.fields.regionCode' | translate }}:</dt>
+                <dd class="col-sm-7">{{ selectedRegion.regionCode || '-' }}</dd>
+
+                <dt class="col-sm-5">{{ 'lookupManagement.fields.country' | translate }}:</dt>
+                <dd class="col-sm-7">{{ selectedRegion.countryName || '-' }}</dd>
+
+                <dt class="col-sm-5">{{ 'lookupManagement.fields.sortOrder' | translate }}:</dt>
+                <dd class="col-sm-7">{{ selectedRegion.sortOrder }}</dd>
+
+                <dt class="col-sm-5">{{ 'lookupManagement.fields.isActive' | translate }}:</dt>
+                <dd class="col-sm-7">
+                  <span class="badge"
+                        [class]="selectedRegion.isActive ? 'bg-success' : 'bg-warning'">
+                    {{ selectedRegion.isActive ? ('common.active' | translate) : ('common.inactive' | translate) }}
+                  </span>
+                </dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button"
+                class="btn btn-secondary"
+                (click)="closeModal()"
+                data-dismiss="modal">
+          <i class="fe fa-x"></i>
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button type="button"
+                class="btn btn-primary"
+                *ngIf="modalMode !== 'view'"
+                (click)="modalMode === 'create' ? createRegion() : updateRegion()"
+                [disabled]="regionForm.invalid">
+          <i class="fe fa-save"></i>
+          {{ modalMode === 'create' ? ('common.create' | translate) : ('common.save' | translate) }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.table-row-inactive {
+  opacity: 0.6;
+  background-color: rgba(var(--warning-rgb), 0.05);
+}
+</style>

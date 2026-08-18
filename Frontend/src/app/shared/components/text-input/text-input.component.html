@@ -1,0 +1,135 @@
+<ng-container [formGroup]="fg" *ngIf="show">
+  <div class="form-group">
+    <!-- Label -->
+    <label [attr.for]="id || fcn" *ngIf="label" class="form-label">
+      {{ label | translate }}
+      <span class="text-danger" *ngIf="isRequired">*</span>
+    </label>
+
+    <!-- List Type - Uses ng-content for custom options (select dropdowns) -->
+    <ng-container *ngIf="type === 'list'">
+      <ng-content></ng-content>
+    </ng-container>
+
+    <!-- Textarea -->
+    <ng-container *ngIf="type === 'textarea'">
+      <textarea
+        [id]="id || fcn"
+        [ngClass]="{
+          'is-invalid': isFieldInvalid(),
+          'is-valid': isFieldValid()
+        }"
+        [class]="className || 'form-control'"
+        [formControlName]="fcn"
+        [rows]="rows"
+        [placeholder]="placeholder || ''"
+        [readonly]="readonly"
+        (input)="onInput($event)"
+        (change)="onChange($event)"
+        (focus)="onFocus($event)"
+        (blur)="onBlur($event)"></textarea>
+    </ng-container>
+
+    <!-- Date Picker (Bootstrap) with Icon -->
+    <ng-container *ngIf="type === 'date-picker'">
+      <div class="input-group">
+        <input
+          bsDatepicker
+          [bsConfig]="getBsConfig()"
+          [id]="id || fcn"
+          [class]="'form-control drgpicker'"
+          [ngClass]="{
+            'is-invalid': isFieldInvalid(),
+            'is-valid': isFieldValid()
+          }"
+          [formControlName]="fcn"
+          type="text"
+          [placeholder]="placeholder || 'MM/DD/YYYY'"
+          [minDate]="minDate"
+          [maxDate]="maxDate"
+          (bsValueChange)="onDateValueChange($event)"
+          (input)="onInput($event)"
+          (change)="onChange($event)"
+          (focus)="onFocus($event)"
+          (blur)="onBlur($event)">
+        <div class="input-group-append">
+          <div class="input-group-text bg-light" (click)="openDatePicker()">
+            <span class="fe fe-calendar mx-2"></span>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Standard HTML5 Inputs -->
+    <ng-container *ngIf="isStandardInput()">
+      <!-- With autoComplete -->
+      <input
+        (focus)="onClick(); onFocus($event)"
+        (click)="onClick()"
+        (blur)="onBlur($event)"
+        (change)="onChange($event)"
+        (input)="onInput($event)"
+        *ngIf="autoComplete"
+        [autocomplete]="autoComplete"
+        [id]="id || fcn"
+        [class]="className || 'form-control'"
+        [ngClass]="{
+          'is-invalid': isFieldInvalid(),
+          'is-valid': isFieldValid()
+        }"
+        [formControlName]="fcn"
+        [type]="getInputType()"
+        [placeholder]="placeholder || ''"
+        [readonly]="readonly"
+        [min]="min"
+        [max]="max"
+        [step]="step"
+        [pattern]="pattern"
+        [inputMode]="inputMode"
+        [multiple]="multiple"
+        [accept]="accept">
+
+      <!-- Without autoComplete -->
+      <input
+        (focus)="onClick(); onFocus($event)"
+        (click)="onClick()"
+        (blur)="onBlur($event)"
+        (change)="onChange($event)"
+        (input)="onInput($event)"
+        *ngIf="!autoComplete"
+        [id]="id || fcn"
+        autocomplete="off"
+        [class]="className || 'form-control'"
+        [ngClass]="{
+          'is-invalid': isFieldInvalid(),
+          'is-valid': isFieldValid()
+        }"
+        [formControlName]="fcn"
+        [type]="getInputType()"
+        [placeholder]="placeholder || ''"
+        [readonly]="readonly"
+        [min]="min"
+        [max]="max"
+        [step]="step"
+        [pattern]="pattern"
+        [inputMode]="inputMode"
+        [multiple]="multiple"
+        [accept]="accept">
+    </ng-container>
+
+    <!-- Validation Error Messages -->
+    <div class="invalid-feedback" *ngIf="isFieldInvalid()">
+      {{ getErrorMessage() }}
+    </div>
+
+    <!-- Valid Feedback -->
+    <div class="valid-feedback" *ngIf="isFieldValid()">
+      {{ 'validation.looksGood' | translate }}
+    </div>
+
+    <!-- Help Text -->
+    <small [ngClass]="helpTextClass || 'form-text text-muted'" *ngIf="helpText">
+      <i class="fe fe-info"></i> {{ helpText | translate }}
+    </small>
+  </div>
+</ng-container>

@@ -1,0 +1,33 @@
+/* Sidebar Collapse Styles */
+.wrapper.sidebar-collapsed {
+  .sidebar-left {
+    margin-left: -250px; /* Hide sidebar */
+    transition: margin-left 0.3s ease;
+  }
+}
+
+.sidebar-left.collapsed {
+  margin-left: -250px;
+  width: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+/* Ensure smooth transitions */
+.sidebar-left {
+  transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+/* Responsive sidebar toggle */
+@media (max-width: 991px) {
+  .sidebar-left {
+    position: fixed;
+    z-index: 1000;
+    height: 100vh;
+    margin-left: -250px;
+  }
+
+  .sidebar-left:not(.collapsed) {
+    margin-left: 0;
+  }
+}

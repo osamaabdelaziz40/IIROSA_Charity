@@ -1,0 +1,317 @@
+<div class="periodic-report-form">
+  <app-breadcrumb
+    [title]="isEditMode ? 'periodicReports.editReport' : 'periodicReports.createReport' | translate">
+  </app-breadcrumb>
+
+  <div class="card">
+    <div class="card-header">
+      <h4 class="mb-0">
+        <i class="fas fa-file-alt me-2"></i>
+        <span *ngIf="isEditMode" translate>periodicReports.editReport</span>
+        <span *ngIf="!isEditMode" translate>periodicReports.createReport</span>
+      </h4>
+    </div>
+
+    <div class="card-body">
+      <app-loading *ngIf="loading"></app-loading>
+
+      <form *ngIf="!loading" [formGroup]="reportForm" (ngSubmit)="save()">
+        <!-- Basic Information Section -->
+        <div class="section mb-4">
+          <h5 class="section-title">
+            <i class="fas fa-info-circle me-2"></i>
+            <span translate>periodicReports.form.sections.basicInfo</span>
+          </h5>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">{{ 'periodicReports.form.orphan' | translate }} *</label>
+              <select class="form-select" formControlName="orphanId" required>
+                <option value="">Select Orphan</option>
+                <option *ngFor="let orphan of orphans" [value]="orphan.id">
+                  {{ orphan.code }} - {{ orphan.name }}
+                </option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">{{ 'periodicReports.form.reportDate' | translate }} *</label>
+              <input type="date" class="form-control" formControlName="reportDate" required>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.reportPeriodFrom' | translate }}</label>
+              <input type="date" class="form-control" formControlName="reportPeriodFrom">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.reportPeriodTo' | translate }}</label>
+              <input type="date" class="form-control" formControlName="reportPeriodTo">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.reportNo' | translate }}</label>
+              <input type="text" class="form-control" formControlName="reportNo" readonly>
+            </div>
+          </div>
+        </div>
+
+        <!-- Religious & Behavioral Section - UC-6.11 -->
+        <div class="section mb-4">
+          <h5 class="section-title">
+            <i class="fas fa-pray me-2"></i>
+            <span translate>periodicReports.form.sections.religious</span>
+          </h5>
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.prayerStatus' | translate }}</label>
+              <input type="text" class="form-control" formControlName="prayerStatus">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.mannersStatus' | translate }}</label>
+              <input type="text" class="form-control" formControlName="mannersStatus">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.hadeethStatus' | translate }}</label>
+              <input type="text" class="form-control" formControlName="hadeethStatus">
+            </div>
+          </div>
+        </div>
+
+        <!-- Quran Education Section - UC-6.11 -->
+        <div class="section mb-4">
+          <h5 class="section-title">
+            <i class="fas fa-book-quran me-2"></i>
+            <span translate>periodicReports.form.sections.quran</span>
+          </h5>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">{{ 'periodicReports.form.quranParts' | translate }}</label>
+              <input type="text" class="form-control" formControlName="quranParts">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">{{ 'periodicReports.form.quranVerses' | translate }}</label>
+              <input type="text" class="form-control" formControlName="quranVerses">
+            </div>
+          </div>
+        </div>
+
+        <!-- Health & Medical Section - UC-6.11 -->
+        <div class="section mb-4">
+          <h5 class="section-title">
+            <i class="fas fa-heartbeat me-2"></i>
+            <span translate>periodicReports.form.sections.health</span>
+          </h5>
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.medicalStatus' | translate }}</label>
+              <input type="text" class="form-control" formControlName="medicalStatus">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.disease' | translate }}</label>
+              <input type="text" class="form-control" formControlName="disease">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.disability' | translate }}</label>
+              <input type="text" class="form-control" formControlName="disability">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">{{ 'periodicReports.form.disabilityDescription' | translate }}</label>
+              <textarea class="form-control" rows="2" formControlName="disabilityDescription"></textarea>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">{{ 'periodicReports.form.diseaseDescription' | translate }}</label>
+              <textarea class="form-control" rows="2" formControlName="diseaseDescription"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Personal Development Section - UC-6.11 -->
+        <div class="section mb-4">
+          <h5 class="section-title">
+            <i class="fas fa-user-graduate me-2"></i>
+            <span translate>periodicReports.form.sections.personalDevelopment</span>
+          </h5>
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.hobby' | translate }}</label>
+              <input type="text" class="form-control" formControlName="hobby">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.course' | translate }}</label>
+              <input type="text" class="form-control" formControlName="course">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.sportName' | translate }}</label>
+              <input type="text" class="form-control" formControlName="sportName">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">{{ 'periodicReports.form.achievement' | translate }}</label>
+              <textarea class="form-control" rows="2" formControlName="achievement"></textarea>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">{{ 'periodicReports.form.wish' | translate }}</label>
+              <textarea class="form-control" rows="2" formControlName="wish"></textarea>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">{{ 'periodicReports.form.orphanMessage' | translate }}</label>
+              <textarea class="form-control" rows="3" formControlName="orphanMessage"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Education Details Section - UC-6.11 -->
+        <div class="section mb-4">
+          <h5 class="section-title">
+            <i class="fas fa-graduation-cap me-2"></i>
+            <span translate>periodicReports.form.sections.education</span>
+          </h5>
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.school' | translate }}</label>
+              <input type="text" class="form-control" formControlName="school">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.grade' | translate }}</label>
+              <input type="text" class="form-control" formControlName="grade">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.schoolType' | translate }}</label>
+              <input type="text" class="form-control" formControlName="schoolType">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.faculty' | translate }}</label>
+              <input type="text" class="form-control" formControlName="faculty">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.department' | translate }}</label>
+              <input type="text" class="form-control" formControlName="department">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.specialization' | translate }}</label>
+              <input type="text" class="form-control" formControlName="specialization">
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">{{ 'periodicReports.form.isOrphanStudent' | translate }}</label>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" formControlName="isOrphanStudent" id="isOrphanStudent">
+                <label class="form-check-label" for="isOrphanStudent">
+                  {{ 'common.yes' | translate }}
+                </label>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">{{ 'periodicReports.form.dropOut' | translate }}</label>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" formControlName="dropOut" id="dropOut">
+                <label class="form-check-label" for="dropOut">
+                  {{ 'common.yes' | translate }}
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Life Events Section - UC-6.11 -->
+        <div class="section mb-4">
+          <h5 class="section-title">
+            <i class="fas fa-heart me-2"></i>
+            <span translate>periodicReports.form.sections.lifeEvents</span>
+          </h5>
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" formControlName="married" id="married">
+                <label class="form-check-label" for="married">
+                  {{ 'periodicReports.form.married' | translate }}
+                </label>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.marriageDate' | translate }}</label>
+              <input type="date" class="form-control" formControlName="marriageDate">
+            </div>
+
+            <div class="col-md-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" formControlName="dead" id="dead">
+                <label class="form-check-label" for="dead">
+                  {{ 'periodicReports.form.dead' | translate }}
+                </label>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.deathDate' | translate }}</label>
+              <input type="date" class="form-control" formControlName="deathDate">
+            </div>
+          </div>
+        </div>
+
+        <!-- Attachments Section - UC-6.11 -->
+        <div class="section mb-4">
+          <h5 class="section-title">
+            <i class="fas fa-paperclip me-2"></i>
+            <span translate>periodicReports.form.sections.attachments</span>
+          </h5>
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" formControlName="missingDocuments" id="missingDocuments">
+                <label class="form-check-label" for="missingDocuments">
+                  {{ 'periodicReports.form.missingDocuments' | translate }}
+                </label>
+              </div>
+            </div>
+
+            <div class="col-md-8">
+              <label class="form-label">{{ 'periodicReports.form.missingDocumentsName' | translate }}</label>
+              <input type="text" class="form-control" formControlName="missingDocumentsName">
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="d-flex justify-content-between">
+          <button type="button" class="btn btn-secondary" (click)="cancel()">
+            <i class="fas fa-times me-2"></i>
+            <span translate>common.cancel</span>
+          </button>
+
+          <button type="submit" class="btn btn-primary" [disabled]="saving">
+            <i class="fas fa-save me-2" *ngIf="!saving"></i>
+            <i class="fas fa-spinner fa-spin me-2" *ngIf="saving"></i>
+            <span translate>common.save</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

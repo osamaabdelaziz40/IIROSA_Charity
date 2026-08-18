@@ -1,0 +1,137 @@
+using System.Net;
+using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
+
+namespace IIROSA.Api.Middleware;
+
+/// <summary>
+/// Global exception handling middleware
+/// Catches all unhandled exceptions and returns structured error responses
+/// </summary>
+public class ExceptionMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly ILogger<ExceptionMiddleware> _logger;
+    private readonly IHostEnvironment _env;
+
+    public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger, IHostEnvironment env)
+    {
+        _next = next;
+        _logger = logger;
+        _env = env;
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        try
+        {
+            await _next(context);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception occurred. Request: {Method} {Path}",
+                context.Request.Method,
+                context.Request.Path);
+
+            await HandleExceptionAsync(context, ex);
+        }
+    }
+
+    private async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    {
+        context.Response.ContentType = "application/json";
+
+        var response = new ErrorResponse
+        {
+            Message = exception.Message,
+            Status = HttpStatusCode.InternalServerError,
+            TraceId = context.TraceIdentifier
+        };
+
+        // Include stack trace in development
+        if (_env.IsDevelopment())
+        {
+            response.StackTrace = exception.StackTrace;
+            response.InnerException = exception.InnerException?.Message;
+            response.Details = new Dictionary<string, string>
+            {
+                { "ExceptionType", exception.GetType().Name },
+                { "Source", exception.Source ?? string.Empty }
+            };
+        }
+
+        // Handle specific exception types
+        switch (exception)
+        {
+            case UnauthorizedAccessException:
+                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                response.Status = HttpStatusCode.Unauthorized;
+                response.Message = "You are not authorized to access this resource";
+                break;
+
+            case KeyNotFoundException:
+            case InvalidOperationException:
+                context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                response.Status = HttpStatusCode.NotFound;
+                break;
+
+            case ArgumentException:
+            case BadHttpRequestException:
+                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                response.Status = HttpStatusCode.BadRequest;
+                break;
+
+            default:
+                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                break;
+        }
+
+        // Log additional details
+        _logger.LogError("Exception Details: {ExceptionType} | Message: {Message} | Path: {Path}",
+            exception.GetType().Name,
+            exception.Message,
+            context.Request.Path);
+
+        // Check if user is authenticated
+        var user = context.User;
+        if (user?.Identity?.IsAuthenticated == true)
+        {
+            _logger.LogError("Authenticated User: {UserName} | Email: {Email} | Roles: {Roles}",
+                user.Identity.Name,
+                user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value,
+                string.Join(", ", user.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value)));
+        }
+
+        var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        });
+
+        await context.Response.WriteAsync(json);
+    }
+}
+
+/// <summary>
+/// Standard error response structure
+/// </summary>
+public class ErrorResponse
+{
+    public string Message { get; set; } = string.Empty;
+    public HttpStatusCode Status { get; set; }
+    public string TraceId { get; set; } = string.Empty;
+    public string? StackTrace { get; set; }
+    public string? InnerException { get; set; }
+    public Dictionary<string, string>? Details { get; set; }
+}
+
+/// <summary>
+/// Extension method to register the exception middleware
+/// </summary>
+public static class ExceptionMiddlewareExtensions
+{
+    public static IApplicationBuilder UseExceptionMiddleware(this IApplicationBuilder builder)
+    {
+        return builder.UseMiddleware<ExceptionMiddleware>();
+    }
+}

@@ -1,0 +1,221 @@
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="page-header mb-4">
+    <button class="btn btn-outline-secondary btn-sm mb-2" (click)="onCancel()">
+      <i class="fe fe-arrow-left mr-1"></i>
+      {{ 'common.back' | translate }}
+    </button>
+    <h2 class="page-title">
+      <i class="fe fe-users mr-2"></i>
+      {{ 'seasonalAid.manageBeneficiaries' | translate }}
+    </h2>
+    <p class="text-muted" *ngIf="campaign">{{ campaign.campaignName }}</p>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">{{ 'common.loading' | translate }}</span>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!loading && campaign">
+    <!-- Budget Summary Card -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-3">
+            <div class="budget-summary">
+              <label>{{ 'seasonalAid.totalBudget' | translate }}</label>
+              <div class="budget-value">{{ campaign.totalBudget | number }} {{ campaign.budgetCurrency }}</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="budget-summary">
+              <label>{{ 'seasonalAid.registeredBeneficiaries' | translate }}</label>
+              <div class="budget-value">{{ registeredBeneficiaries.length }}</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="budget-summary">
+              <label>{{ 'seasonalAid.allocatedAmount' | translate }}</label>
+              <div class="budget-value">
+                {{ (registeredBeneficiaries.length * campaign.perFamilyAllocation) | number }} {{ campaign.budgetCurrency }}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="budget-summary">
+              <label>{{ 'seasonalAid.remainingBudget' | translate }}</label>
+              <div class="budget-value" [ngClass]="getRemainingBudget() < campaign.totalBudget * 0.1 ? 'text-danger' : 'text-success'">
+                {{ getRemainingBudget() | number }} {{ campaign.budgetCurrency }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Available Beneficiaries Panel -->
+      <div class="col-md-7">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title">{{ 'seasonalAid.availableBeneficiaries' | translate }}</h5>
+            <div class="header-actions">
+              <input type="checkbox"
+                     class="form-check-input mr-2"
+                     [(ngModel)]="selectAll"
+                     (change)="toggleSelectAll()">
+              <label class="form-check-label mr-3">{{ 'common.selectAll' | translate }}</label>
+              <span class="badge badge-primary">{{ getSelectedBeneficiaries().length }} {{ 'common.selected' | translate }}</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <!-- Filters -->
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <input type="text"
+                       class="form-control"
+                       [placeholder]="'common.search' | translate"
+                       [(ngModel)]="searchTerm"
+                       (input)="onSearchChange()">
+              </div>
+              <div class="col-md-3">
+                <select class="form-control" [(ngModel)]="filter.charityId" (change)="onFilterChange()">
+                  <option value="">{{ 'seasonalAid.allCharities' | translate }}</option>
+                  <option *ngFor="let charity of charities" [value]="charity.id">
+                    {{ charity.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <select class="form-control" [(ngModel)]="filter.region" (change)="onFilterChange()">
+                  <option value="">{{ 'seasonalAid.allRegions' | translate }}</option>
+                  <option *ngFor="let region of regions" [value]="region">
+                    {{ region }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <select class="form-control" [(ngModel)]="filter.familyType" (change)="onFilterChange()">
+                  <option value="">{{ 'seasonalAid.allTypes' | translate }}</option>
+                  <option *ngFor="let type of familyTypes" [value]="type">
+                    {{ 'seasonalAid.familyTypes.' + type | translate }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Selection Summary -->
+            <div class="selection-summary mb-3" *ngIf="getSelectedBeneficiaries().length > 0">
+              <div class="alert alert-info">
+                <i class="fe fe-info mr-2"></i>
+                {{ getSelectedBeneficiaries().length }} {{ 'seasonalAid.familiesSelected' | translate }}
+                ({{ getTotalAllocation() | number }} {{ campaign.budgetCurrency }})
+                <span *ngIf="!canAddMoreBeneficiaries()" class="text-danger ml-2">
+                  <i class="fe fe-alert-circle mr-1"></i>
+                  {{ 'seasonalAid.exceedsBudget' | translate }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Available Beneficiaries Table -->
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th width="40"></th>
+                    <th>{{ 'seasonalAid.familyCode' | translate }}</th>
+                    <th>{{ 'seasonalAid.address' | translate }}</th>
+                    <th>{{ 'seasonalAid.charity' | translate }}</th>
+                    <th>{{ 'seasonalAid.orphanCount' | translate }}</th>
+                    <th>{{ 'seasonalAid.allocation' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let beneficiary of availableBeneficiaries"
+                      [class.table-active]="beneficiary.isSelected">
+                    <td>
+                      <input type="checkbox"
+                             class="form-check-input"
+                             [checked]="beneficiary.isSelected"
+                             (change)="onBeneficiaryToggle(beneficiary)">
+                    </td>
+                    <td>{{ beneficiary.familyCode }}</td>
+                    <td>{{ beneficiary.familyAddress }}</td>
+                    <td>{{ beneficiary.charityName }}</td>
+                    <td>{{ beneficiary.orphanCount }}</td>
+                    <td>{{ campaign.perFamilyAllocation | number }} {{ campaign.budgetCurrency }}</td>
+                  </tr>
+                  <tr *ngIf="availableBeneficiaries.length === 0">
+                    <td colspan="6" class="text-center py-4">
+                      <i class="fe fe-inbox fe-2x text-muted mb-2"></i>
+                      <p class="text-muted">{{ 'seasonalAid.noAvailableBeneficiaries' | translate }}</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Actions -->
+            <div class="action-bar mt-3">
+              <button class="btn btn-primary"
+                      [disabled]="getSelectedBeneficiaries().length === 0 || saving || !canAddMoreBeneficiaries()"
+                      (click)="onAddBeneficiaries()">
+                <i class="fe fe-plus mr-2" *ngIf="!saving"></i>
+                <span class="spinner-border spinner-border-sm mr-2" *ngIf="saving"></span>
+                {{ 'seasonalAid.addSelectedBeneficiaries' | translate }} ({{ getSelectedBeneficiaries().length }})
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Registered Beneficiaries Panel -->
+      <div class="col-md-5">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title">{{ 'seasonalAid.registeredBeneficiaries' | translate }}</h5>
+            <span class="badge badge-success">{{ registeredBeneficiaries.length }}</span>
+          </div>
+          <div class="card-body">
+            <div class="registered-list">
+              <div class="registered-item"
+                   *ngFor="let beneficiary of registeredBeneficiaries">
+                <div class="registered-info">
+                  <div class="registered-name">{{ beneficiary.familyCode }}</div>
+                  <div class="registered-details">
+                    <i class="fe fe-map-pin"></i> {{ beneficiary.familyAddress }}
+                  </div>
+                  <div class="registered-details">
+                    <i class="fe fe-users"></i> {{ beneficiary.orphanCount }} {{ 'seasonalAid.orphans' | translate }}
+                  </div>
+                </div>
+                <div class="registered-actions">
+                  <button class="btn btn-sm btn-outline-danger"
+                          [title]="'common.remove' | translate"
+                          (click)="onRemoveBeneficiary(beneficiary)">
+                    <i class="fe fe-trash"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="text-center py-4" *ngIf="registeredBeneficiaries.length === 0">
+                <i class="fe fe-inbox fe-2x text-muted mb-2"></i>
+                <p class="text-muted">{{ 'seasonalAid.noRegisteredBeneficiaries' | translate }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-success btn-block" (click)="onContinueToDistribution()">
+              <i class="fe fe-arrow-right mr-2"></i>
+              {{ 'seasonalAid.continueToDistribution' | translate }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,70 @@
+<div class="attachment-input-container" [class.view-only]="viewOnly">
+  <label *ngIf="labelKey" class="form-label">
+    {{ labelKey | translate }}
+    <span class="text-danger" *ngIf="isRequired">*</span>
+  </label>
+
+  <!-- Display only mode -->
+  <div *ngIf="viewOnly" class="attachment-list">
+    <div *ngFor="let attachment of value" class="attachment-item">
+      <i class="fe fe-file"></i>
+      <span>{{ attachment.fileName }}</span>
+    </div>
+    <div *ngIf="!value || value.length === 0" class="text-muted">
+      {{ 'common.noAttachment' | translate }}
+    </div>
+  </div>
+
+  <!-- Edit mode -->
+  <div *ngIf="!viewOnly">
+    <!-- Drop zone -->
+    <div
+      class="drop-zone"
+      [class.drag-over]="isDragging"
+      [class.disabled]="disabled || (maxFilesNumber > 0 && activeFilesCount >= maxFilesNumber)"
+      *ngIf="!disabled && (!maxFilesNumber || activeFilesCount < maxFilesNumber)"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)">
+      <div class="drop-zone-content">
+        <i class="fe fe-upload-cloud fe-2x mb-2"></i>
+        <p class="mb-1">{{ 'common.dragDrop' | translate }}</p>
+        <p class="text-muted small mb-2">{{ 'common.or' | translate }}</p>
+        <label class="btn btn-sm btn-outline-primary">
+          <i class="fe fe-folder mr-1"></i>
+          {{ 'common.browse' | translate }}
+          <input
+            type="file"
+            class="d-none"
+            [accept]="acceptedFileTypesString"
+            [multiple]="maxFilesNumber !== 1"
+            [disabled]="disabled"
+            (change)="onFileSelected($event)">
+        </label>
+      </div>
+    </div>
+
+    <!-- Attached files list -->
+    <div *ngIf="activeFilesCount > 0" class="attachment-list mt-2">
+      <div *ngFor="let attachment of activeAttachments" class="attachment-item">
+        <div class="attachment-info clickable" (click)="previewFile(attachment)">
+          <i class="fe fe-file"></i>
+          <span class="file-name">{{ attachment.fileName }}</span>
+          <span *ngIf="attachment.size" class="file-size">({{ formatFileSize(attachment.size) }})</span>
+        </div>
+        <button
+          *ngIf="!disabled"
+          type="button"
+          class="btn btn-sm btn-icon btn-danger"
+          (click)="removeAttachment(attachment)">
+          <i class="fe fe-trash"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Validation error -->
+    <div *ngIf="validationError" class="invalid-feedback d-block">
+      {{ validationError }}
+    </div>
+  </div>
+</div>

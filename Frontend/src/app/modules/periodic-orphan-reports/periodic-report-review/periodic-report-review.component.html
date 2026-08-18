@@ -1,0 +1,362 @@
+<div class="periodic-report-review">
+  <app-breadcrumb
+    [title]="'periodicReports.reviewReport' | translate">
+  </app-breadcrumb>
+
+  <app-loading *ngIf="loading"></app-loading>
+
+  <div class="row" *ngIf="!loading && report">
+    <!-- Report Details - UC-6.13 -->
+    <div class="col-lg-8">
+      <div class="card mb-3">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-file-alt me-2"></i>
+            <span translate>periodicReports.reportDetails</span>
+          </h5>
+        </div>
+        <div class="card-body">
+          <!-- Orphan Information -->
+          <div class="section mb-4">
+            <h6 class="text-primary">
+              <i class="fas fa-child me-2"></i>
+              <span translate>periodicReports.orphanInformation</span>
+            </h6>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.orphanCode' | translate }}:</span>
+                  <span class="value">{{ report.orphanCode || '-' }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.orphanName' | translate }}:</span>
+                  <span class="value fw-bold">{{ report.orphanName }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.charity' | translate }}:</span>
+                  <span class="value">{{ report.charityName || '-' }}</span>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.reportDate' | translate }}:</span>
+                  <span class="value">{{ report.reportDate | date:'mediumDate' }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.reportNo' | translate }}:</span>
+                  <span class="value">{{ report.reportNo || '-' }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.reportPeriod' | translate }}:</span>
+                  <span class="value">
+                    {{ report.reportPeriodFrom | date:'shortDate' }} - {{ report.reportPeriodTo | date:'shortDate' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Religious & Behavioral - UC-6.11 -->
+          <div class="section mb-4">
+            <h6 class="text-primary">
+              <i class="fas fa-pray me-2"></i>
+              <span translate>periodicReports.religiousBehavioral</span>
+            </h6>
+            <div class="row">
+              <div class="col-md-4">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.prayerStatus' | translate }}:</span>
+                  <span class="value">{{ report.prayerStatus || '-' }}</span>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.mannersStatus' | translate }}:</span>
+                  <span class="value">{{ report.mannersStatus || '-' }}</span>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.hadeethStatus' | translate }}:</span>
+                  <span class="value">{{ report.hadeethStatus || '-' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quran Education - UC-6.11 -->
+          <div class="section mb-4">
+            <h6 class="text-primary">
+              <i class="fas fa-book-quran me-2"></i>
+              <span translate>periodicReports.quranEducation</span>
+            </h6>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.quranParts' | translate }}:</span>
+                  <span class="value">{{ report.quranParts || '-' }}</span>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.quranVerses' | translate }}:</span>
+                  <span class="value">{{ report.quranVerses || '-' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Health & Medical - UC-6.11 -->
+          <div class="section mb-4">
+            <h6 class="text-primary">
+              <i class="fas fa-heartbeat me-2"></i>
+              <span translate>periodicReports.healthMedical</span>
+            </h6>
+            <div class="row">
+              <div class="col-md-4">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.medicalStatus' | translate }}:</span>
+                  <span class="value">{{ report.medicalStatus || '-' }}</span>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.disease' | translate }}:</span>
+                  <span class="value">{{ report.disease || '-' }}</span>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.disability' | translate }}:</span>
+                  <span class="value">{{ report.disability || '-' }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="row mt-2" *ngIf="report.disabilityDescription || report.diseaseDescription">
+              <div class="col-md-6" *ngIf="report.disabilityDescription">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.disabilityDescription' | translate }}:</span>
+                  <span class="value">{{ report.disabilityDescription }}</span>
+                </div>
+              </div>
+              <div class="col-md-6" *ngIf="report.diseaseDescription">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.diseaseDescription' | translate }}:</span>
+                  <span class="value">{{ report.diseaseDescription }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Education - UC-6.11 -->
+          <div class="section mb-4">
+            <h6 class="text-primary">
+              <i class="fas fa-graduation-cap me-2"></i>
+              <span translate>periodicReports.educationDetails</span>
+            </h6>
+            <div class="row">
+              <div class="col-md-4">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.educationalLevel' | translate }}:</span>
+                  <span class="value">{{ report.educationalLevelName || '-' }}</span>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.school' | translate }}:</span>
+                  <span class="value">{{ report.school || '-' }}</span>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.grade' | translate }}:</span>
+                  <span class="value">{{ report.grade || '-' }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-4">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.isOrphanStudent' | translate }}:</span>
+                  <span class="value">
+                    <i class="fas" [ngClass]="report.isOrphanStudent ? 'fa-check-circle text-success' : 'fa-times-circle text-muted']"></i>
+                  </span>
+                </div>
+              </div>
+              <div class="col-md-4" *ngIf="report.dropOut">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.dropOut' | translate }}:</span>
+                  <span class="value badge bg-warning">{{ 'periodicReports.yes' | translate }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Life Events - UC-6.11 -->
+          <div class="section mb-4">
+            <h6 class="text-primary">
+              <i class="fas fa-heart me-2"></i>
+              <span translate>periodicReports.lifeEvents</span>
+            </h6>
+            <div class="row">
+              <div class="col-md-6" *ngIf="report.married">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.married' | translate }}:</span>
+                  <span class="value badge bg-success">{{ 'periodicReports.yes' | translate }}</span>
+                  <span class="value ms-2">{{ report.marriageDate | date:'shortDate' }}</span>
+                </div>
+              </div>
+              <div class="col-md-6" *ngIf="report.dead">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.deceased' | translate }}:</span>
+                  <span class="value badge bg-danger">{{ 'periodicReports.yes' | translate }}</span>
+                  <span class="value ms-2">{{ report.deathDate | date:'shortDate' }}</span>
+                </div>
+              </div>
+            </div>
+            <div *ngIf="!report.married && !report.dead" class="text-muted">
+              <em>{{ 'periodicReports.noLifeEvents' | translate }}</em>
+            </div>
+          </div>
+
+          <!-- Personal Development - UC-6.11 -->
+          <div class="section mb-4">
+            <h6 class="text-primary">
+              <i class="fas fa-user-graduate me-2"></i>
+              <span translate>periodicReports.personalDevelopment</span>
+            </h6>
+            <div class="row">
+              <div class="col-md-4" *ngIf="report.hobby">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.hobby' | translate }}:</span>
+                  <span class="value">{{ report.hobby }}</span>
+                </div>
+              </div>
+              <div class="col-md-4" *ngIf="report.sportName">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.sport' | translate }}:</span>
+                  <span class="value">{{ report.sportName }}</span>
+                </div>
+              </div>
+              <div class="col-md-4" *ngIf="report.achievement">
+                <div class="info-row">
+                  <span class="label">{{ 'periodicReports.achievement' | translate }}:</span>
+                  <span class="value">{{ report.achievement }}</span>
+                </div>
+              </div>
+            </div>
+            <div *ngIf="report.orphanMessage" class="mt-2">
+              <div class="info-row">
+                <span class="label">{{ 'periodicReports.orphanMessage' | translate }}:</span>
+                <span class="value fst-italic">{{ report.orphanMessage }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attachments - UC-6.11 -->
+          <div class="section mb-4" *ngIf="report.medicalReportImageUrl || report.orphanCertificateImageUrl || report.orphanImageUrl">
+            <h6 class="text-primary">
+              <i class="fas fa-paperclip me-2"></i>
+              <span translate>periodicReports.attachments</span>
+            </h6>
+            <div class="row">
+              <div class="col-md-4" *ngIf="report.medicalReportImageUrl">
+                <a [href]="report.medicalReportImageUrl" target="_blank" class="btn btn-sm btn-outline-primary">
+                  <i class="fas fa-file-medical me-1"></i>
+                  {{ 'periodicReports.medicalReport' | translate }}
+                </a>
+              </div>
+              <div class="col-md-4" *ngIf="report.orphanCertificateImageUrl">
+                <a [href]="report.orphanCertificateImageUrl" target="_blank" class="btn btn-sm btn-outline-primary">
+                  <i class="fas fa-certificate me-1"></i>
+                  {{ 'periodicReports.certificate' | translate }}
+                </a>
+              </div>
+              <div class="col-md-4" *ngIf="report.orphanImageUrl">
+                <a [href]="report.orphanImageUrl" target="_blank" class="btn btn-sm btn-outline-primary">
+                  <i class="fas fa-image me-1"></i>
+                  {{ 'periodicReports.orphanPhoto' | translate }}
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Report Metadata -->
+          <div class="section border-top pt-3">
+            <div class="row text-muted small">
+              <div class="col-md-6">
+                <div>{{ 'periodicReports.createdBy' | translate }}: {{ report.createdByName || '-' }}</div>
+                <div>{{ 'periodicReports.createdOn' | translate }}: {{ report.createdOn | date:'medium' }}</div>
+              </div>
+              <div class="col-md-6">
+                <div>{{ 'periodicReports.updatedBy' | translate }}: {{ report.updatedByName || '-' }}</div>
+                <div>{{ 'periodicReports.updatedOn' | translate }}: {{ report.updatedOn | date:'medium' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Review Actions - UC-6.13 -->
+    <div class="col-lg-4">
+      <div class="card mb-3 sticky-top" style="top: 1rem;">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0">
+            <i class="fas fa-clipboard-check me-2"></i>
+            <span translate>periodicReports.reviewActions</span>
+          </h5>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="reviewForm">
+            <!-- Decision Selection - UC-6.13 -->
+            <div class="mb-3">
+              <label class="form-label">{{ 'periodicReports.reviewDecision' | translate }} *</label>
+              <div class="d-grid gap-2">
+                <button type="button" class="btn btn-success" (click)="approveReport()">
+                  <i class="fas fa-check-circle me-2"></i>
+                  <span translate>periodicReports.approveReport</span>
+                </button>
+                <button type="button" class="btn btn-danger" (click)="rejectReport()">
+                  <i class="fas fa-times-circle me-2"></i>
+                  <span translate>periodicReports.rejectReport</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Refusal Reason - UC-6.13 (Required if rejecting) -->
+            <div class="mb-3" *ngIf="refuseReasonRequired">
+              <label class="form-label text-danger">{{ 'periodicReports.refuseReason' | translate }} *</label>
+              <select class="form-select" formControlName="refuseReasonId">
+                <option value="">{{ 'periodicReports.selectReason' | translate }}</option>
+                <option *ngFor="let reason of refusalReasons" [value]="reason.id">
+                  {{ reason.name }}
+                </option>
+              </select>
+            </div>
+
+            <div class="mb-3" *ngIf="refuseReasonRequired">
+              <textarea class="form-control" rows="3" formControlName="refuseReason"
+                        [placeholder]="'periodicReports.refuseReasonPlaceholder' | translate"></textarea>
+            </div>
+
+            <!-- Review Comments (Optional) -->
+            <div class="mb-3">
+              <label class="form-label">{{ 'periodicReports.reviewComments' | translate }}</label>
+              <textarea class="form-control" rows="3" formControlName="reviewComments"
+                        [placeholder]="'periodicReports.reviewCommentsPlaceholder' | translate"></textarea>
+            </div>
+
+            <!-- Cancel Button -->
+            <div class="d-grid">
+              <button type="button" class="btn btn-secondary" (click)="cancel()">
+                <i class="fas fa-times me-2"></i>
+                <span translate>common.cancel</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

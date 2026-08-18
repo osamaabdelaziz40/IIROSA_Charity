@@ -1,0 +1,51 @@
+// Styles for Incoming Letter Form
+// Based on charity-form.component.scss styles
+
+.form-label {
+  font-weight: 500;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+
+  &.required::after {
+    content: ' *';
+    color: var(--danger);
+  }
+}
+
+.btn {
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  i {
+    vertical-align: middle;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.card {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+
+  .card-body {
+    padding: 1.5rem;
+  }
+}
+
+// RTL Support
+[dir="rtl"] {
+  .mr-1 {
+    margin-right: 0 !important;
+    margin-left: 0.25rem !important;
+  }
+
+  .d-flex {
+    &.justify-content-end {
+      justify-content: flex-start !important;
+    }
+  }
+}

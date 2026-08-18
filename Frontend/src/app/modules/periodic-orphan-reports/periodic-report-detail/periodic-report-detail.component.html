@@ -1,0 +1,129 @@
+<div class="periodic-report-detail">
+  <app-breadcrumb
+    [title]="'periodicReports.reportDetails' | translate">
+  </app-breadcrumb>
+
+  <app-loading *ngIf="loading"></app-loading>
+
+  <div *ngIf="!loading && report">
+    <!-- Header Card -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-0">
+              <i class="fas fa-file-alt me-2"></i>
+              {{ report.reportNo || ('periodicReports.untitledReport' | translate) }}
+            </h5>
+            <small class="text-muted">{{ report.orphanCode }} - {{ report.orphanName }}</small>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-primary" *ngIf="canEdit" (click)="editReport()">
+              <i class="fas fa-edit me-2"></i>
+              <span translate>common.edit</span>
+            </button>
+            <button class="btn btn-danger" *ngIf="canDelete" (click)="deleteReport()">
+              <i class="fas fa-trash me-2"></i>
+              <span translate>common.delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-3">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.reportDate' | translate }}:</span>
+              <span class="value">{{ report.reportDate | date:'mediumDate' }}</span>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.status' | translate }}:</span>
+              <span class="value">
+                <span class="badge" [ngClass]="getStatusClass(report.reviewStatus)">
+                  {{ 'periodicReports.status.' + report.reviewStatus.toLowerCase() | translate }}
+                </span>
+              </span>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.charity' | translate }}:</span>
+              <span class="value">{{ report.charityName || '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.createdBy' | translate }}:</span>
+              <span class="value">{{ report.createdByName || '-' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Report Sections (similar to review component but read-only) -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <p class="text-muted text-center">
+          <em>{{ 'periodicReports.detailedViewPlaceholder' | translate }}</em>
+        </p>
+        <p class="text-center">
+          <a class="btn btn-outline-primary" [routerLink]="['../' + report.id + 'review']" *ngIf="!report.reviewed">
+            <i class="fas fa-clipboard-check me-2"></i>
+            <span translate>periodicReports.reviewReport</span>
+          </a>
+        </p>
+      </div>
+    </div>
+
+    <!-- Audit Trail -->
+    <div class="card">
+      <div class="card-header">
+        <h6 class="mb-0">
+          <i class="fas fa-history me-2"></i>
+          <span translate>periodicReports.auditTrail</span>
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row text-sm">
+          <div class="col-md-6">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.createdOn' | translate }}:</span>
+              <span class="value">{{ report.createdOn | date:'medium' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.createdBy' | translate }}:</span>
+              <span class="value">{{ report.createdByName || '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.updatedOn' | translate }}:</span>
+              <span class="value">{{ report.updatedOn | date:'medium' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.updatedBy' | translate }}:</span>
+              <span class="value">{{ report.updatedByName || '-' }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="row" *ngIf="report.reviewed">
+          <div class="col-md-6">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.reviewedOn' | translate }}:</span>
+              <span class="value">{{ report.reviewedDate | date:'medium' }}</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.reviewedBy' | translate }}:</span>
+              <span class="value">{{ report.reviewerName || '-' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

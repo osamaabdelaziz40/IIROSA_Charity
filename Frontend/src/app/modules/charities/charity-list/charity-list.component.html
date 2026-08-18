@@ -1,0 +1,201 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'charities.title' | translate"
+  [subtitle]="'charities.manageCharities' | translate"
+  [icon]="'fe fe-heart'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="card">
+  <div class="card-body">
+    <!-- Filters using shared components -->
+    <form [formGroup]="filterForm">
+      <div class="row mb-3">
+        <!-- Search -->
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="filterForm"
+            fcn="searchValue"
+            [label]="'common.search'"
+            [placeholder]="'charities.searchPlaceholder' | translate">
+          </app-input-text>
+        </div>
+
+        <!-- Country -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="country"
+            [label]="'charities.country'"
+            [initialData]="allCountries"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onCountryChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- Region -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="region"
+            [label]="'charities.region'"
+            [initialData]="allRegions"
+            [hasDefaultValue]="true"
+            [disabled]="!filterForm.get('country')?.value"
+            (onDropDownChanged)="onRegionChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- Center -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="center"
+            [label]="'charities.center'"
+            [initialData]="allCenters"
+            [hasDefaultValue]="true"
+            [disabled]="!filterForm.get('region')?.value"
+            (onDropDownChanged)="onCenterChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- Status -->
+        <div class="col-md-3">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="status"
+            [label]="'common.status'"
+            [initialData]="statusOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onStatusChange()">
+          </app-drop-down>
+        </div>
+      </div>
+
+      <div class="row mb-3" *ngIf="hasActiveFilters()">
+        <div class="col-12">
+          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+            <i class="fe fe-x mr-1"></i>
+            {{ 'common.clearFilters' | translate }}
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Charities Table -->
+    <div *ngIf="!loading" class="table-responsive">
+      <table class="table table-hover table-striped">
+        <thead>
+          <tr>
+            <th>{{ 'charities.charityCode' | translate }}</th>
+            <th>{{ 'charities.charityName' | translate }}</th>
+            <th>{{ 'charities.region' | translate }}</th>
+            <th>{{ 'charities.center' | translate }}</th>
+            <th>{{ 'charities.contactPhone' | translate }}</th>
+            <th>{{ 'charities.contactEmail' | translate }}</th>
+            <th>{{ 'common.status' | translate }}</th>
+            <th>{{ 'charities.addRights' | translate }}</th>
+            <th>{{ 'charities.updateRights' | translate }}</th>
+            <th>{{ 'common.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let charity of charities">
+            <td><strong>{{ charity.code || '-' }}</strong></td>
+            <td>
+              <div>{{ charity.name }}</div>
+              <small class="text-muted">{{ charity.ngoType || '' }}</small>
+            </td>
+            <td>{{ charity.regionName || '-' }}</td>
+            <td>{{ charity.centerName || '-' }}</td>
+            <td>{{ charity.phone }}</td>
+            <td>{{ charity.email }}</td>
+            <td>
+              <span [class]="'badge ' + getStatusBadgeClass(charity)">
+                {{ getStatusText(charity) }}
+              </span>
+            </td>
+            <td>
+              <span [class]="'badge ' + (charity.isAddEnabled ? 'badge-success' : 'badge-secondary')">
+                {{ charity.isAddEnabled ? ('common.enabled' | translate) : ('common.disabled' | translate) }}
+              </span>
+            </td>
+            <td>
+              <span [class]="'badge ' + (charity.isUpdateEnabled ? 'badge-success' : 'badge-secondary')">
+                {{ charity.isUpdateEnabled ? ('common.enabled' | translate) : ('common.disabled' | translate) }}
+              </span>
+            </td>
+            <td>
+              <div class="btn-group">
+                <button type="button" class="btn btn-sm btn-light" [title]="'common.view' | translate" (click)="viewCharity(charity.id)">
+                  <i class="fe fe-eye"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-light" [title]="'common.edit' | translate" (click)="editCharity(charity.id)">
+                  <i class="fe fe-edit"></i>
+                </button>
+                <div class="dropdown">
+                  <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown">
+                    <i class="fe fe-more-vertical"></i>
+                  </button>
+                  <div class="dropdown-menu dropdown-menu-right">
+                    <a class="dropdown-item" href="javascript:void(0)" (click)="toggleCharityStatus(charity)">
+                      <i class="fe fe-power mr-2" [ngClass]="charity.isActive ? 'fe-alert-circle' : 'fe-check-circle'"></i>
+                      {{ charity.isActive ? ('charities.deactivate' | translate) : ('charities.activate' | translate) }}
+                    </a>
+                    <a class="dropdown-item" href="javascript:void(0)" (click)="toggleCharityLock(charity)">
+                      <i class="fe fe-lock mr-2" [ngClass]="charity.isLocked ? 'fe-unlock' : 'fe-lock'"></i>
+                      {{ charity.isLocked ? ('charities.unlock' | translate) : ('charities.lock' | translate) }}
+                    </a>
+                    <a class="dropdown-item" href="javascript:void(0)" (click)="toggleAddRights(charity)">
+                      <i class="fe fe-plus-circle mr-2"></i>
+                      {{ charity.isAddEnabled ? ('charities.disableAddRights' | translate) : ('charities.enableAddRights' | translate) }}
+                    </a>
+                    <a class="dropdown-item" href="javascript:void(0)" (click)="toggleUpdateRights(charity)">
+                      <i class="fe fe-edit-2 mr-2"></i>
+                      {{ charity.isUpdateEnabled ? ('charities.disableUpdateRights' | translate) : ('charities.enableUpdateRights' | translate) }}
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="javascript:void(0)" (click)="resetPassword(charity)">
+                      <i class="fe fe-refresh-cw mr-2"></i>
+                      {{ 'charities.resetPassword' | translate }}
+                    </a>
+                    <a class="dropdown-item text-danger" href="javascript:void(0)" (click)="deleteCharity(charity)">
+                      <i class="fe fe-trash mr-2"></i>
+                      {{ 'common.delete' | translate }}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="charities.length === 0">
+            <td colspan="10" class="text-center py-5">
+              <div class="empty-state">
+                <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+                <p class="text-muted">{{ 'charities.noCharitiesFound' | translate }}</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <app-pagination
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
+  </div>
+</div>

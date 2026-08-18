@@ -1,0 +1,40 @@
+<div class="file-viewer" [class]="options.class" [style.width]="options.width" [style.height]="options.height">
+  <!-- Loading State -->
+  <div *ngIf="loading" class="file-viewer-loading">
+    <div class="spinner-border spinner-border-sm text-primary" role="status">
+      <span class="sr-only">Loading...</span>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="hasError && !loading" class="file-viewer-error">
+    <i class="fe fe-alert-circle"></i>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- Image Preview -->
+  <ng-container *ngIf="!loading && !hasError && isImage">
+    <img
+      [src]="safeUrl"
+      [alt]="alt"
+      class="file-viewer-image"
+      (error)="onImageError($event)"
+      (load)="onImageLoad($event)">
+  </ng-container>
+
+  <!-- PDF Preview (embed) -->
+  <ng-container *ngIf="!loading && !hasError && isPdf">
+    <embed [src]="safeUrl" type="application/pdf" class="file-viewer-pdf" />
+  </ng-container>
+
+  <!-- File Icon with Download Link (for non-previewable files) -->
+  <ng-container *ngIf="!loading && !hasError && !isImage && !isPdf">
+    <div class="file-viewer-file">
+      <a [href]="downloadUrl" target="_blank" rel="noopener" class="file-link">
+        <i [class]="getFileIcon()"></i>
+        <span class="file-name">{{ fileName || 'Download File' }}</span>
+        <i class="fe fe-download"></i>
+      </a>
+    </div>
+  </ng-container>
+</div>

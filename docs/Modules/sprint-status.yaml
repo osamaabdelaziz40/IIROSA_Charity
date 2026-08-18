@@ -1,0 +1,23 @@
+# IIROSA Charities — delivery board POINTER (not the board itself)
+#
+# The authoritative delivery board is:
+#
+#     _bmad-output/implementation-artifacts/sprint-status.yaml
+#
+# This file used to hold a second, older copy of the board that imported every story at `done`,
+# describing the legacy WAR.IIROSA system as the baseline. That contradicted the approved
+# re-platform baseline, in which all 232 stories are open at `backlog` because none of the scope
+# has been delivered on the .NET 8 + Angular 18 stack yet.
+#
+# Rather than keep two boards that disagree, this one is retired. Read and update only the file
+# named above. BMAD skills (/bmad-sprint-status, /bmad-create-story, /bmad-dev-story) already point
+# there via _bmad/bmm/config.yaml.
+#
+# Related documents:
+#   docs/Modules/00-INDEX-Module-Documentation-Set.md  — the module specification set
+#   _bmad-output/planning-artifacts/epics.md           — acceptance criteria per story
+#   _bmad-output/planning-artifacts/architecture.md    — authoritative architecture
+#
+# retired: 2026-08-18
+
+superseded_by: _bmad-output/implementation-artifacts/sprint-status.yaml

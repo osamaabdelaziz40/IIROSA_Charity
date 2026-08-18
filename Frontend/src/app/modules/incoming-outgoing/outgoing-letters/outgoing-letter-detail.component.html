@@ -1,0 +1,215 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+<app-page-header
+  [title]="letter?.subject || ('incomingOutgoing.outgoingLetterDetails' | translate)"
+  [subtitle]="'incomingOutgoing.viewOutgoingLetterDetails' | translate"
+  [icon]="'fe fe-send'"
+  [actions]="pageActions">
+</app-page-header>
+
+<!-- Loading State -->
+<div class="card" *ngIf="loading">
+  <div class="card-body text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">{{ 'common.loading' | translate }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- Letter Details -->
+<div class="row" *ngIf="!loading && letter">
+  <!-- Main Details Card -->
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">{{ 'incomingOutgoing.letterInformation' | translate }}</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- Serial -->
+          <div class="col-md-4 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.serial' | translate }}</label>
+            <div class="font-weight-semibold">{{ letter.serial || '-' }}</div>
+          </div>
+
+          <!-- Category -->
+          <div class="col-md-4 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.category' | translate }}</label>
+            <div>
+              <span class="badge" [ngClass]="getCategoryBadgeClass()">
+                {{ letter.outgoingCategoryName || '-' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Year -->
+          <div class="col-md-4 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.year' | translate }}</label>
+            <div class="font-weight-semibold">{{ letter.year || '-' }}</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <!-- Subject -->
+          <div class="col-md-12 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.subject' | translate }}</label>
+            <div class="font-weight-semibold h5">{{ letter.subject }}</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <!-- Outgoing ID -->
+          <div class="col-md-4 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.outGoingId' | translate }}</label>
+            <div class="font-weight-semibold">{{ letter.outGoingId }}</div>
+          </div>
+
+          <!-- Outgoing Number -->
+          <div class="col-md-4 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.outGoingNumber' | translate }}</label>
+            <div class="font-weight-semibold">{{ letter.outGoingNumber || '-' }}</div>
+          </div>
+
+          <!-- Date -->
+          <div class="col-md-4 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.date' | translate }}</label>
+            <div class="font-weight-semibold">{{ formatDate(letter.date) }}</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <!-- Department -->
+          <div class="col-md-6 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.department' | translate }}</label>
+            <div class="font-weight-semibold">{{ letter.departmentName || '-' }}</div>
+          </div>
+
+          <!-- Has Reply Indicator -->
+          <div class="col-md-6 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.hasReply' | translate }}</label>
+            <div>
+              <span class="badge" [ngClass]="hasChildLetters() ? 'badge-success' : 'badge-secondary'">
+                {{ hasChildLetters() ? ('common.yes' | translate) : ('common.no' | translate) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="row" *ngIf="letter.body">
+          <div class="col-md-12 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.body' | translate }}</label>
+            <div class="p-3 bg-light rounded">{{ letter.body }}</div>
+          </div>
+        </div>
+
+        <!-- Attached File -->
+        <div class="row" *ngIf="letter.uploadedFile">
+          <div class="col-md-12 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.attachedFile' | translate }}</label>
+            <div>
+              <app-file-viewer [attachmentId]="letter.uploadedFile" [fileName]="letter.fileName || ''"></app-file-viewer>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reply To Incoming Letter -->
+        <div class="row" *ngIf="relatedIncomingLetter">
+          <div class="col-md-12 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.replyToIncoming' | translate }}</label>
+            <div>
+              <a [routerLink]="['/incoming-outgoing/incoming', relatedIncomingLetter.id]" class="btn btn-sm btn-outline-primary">
+                <i class="fe fe-external-link mr-1"></i>
+                {{ relatedIncomingLetter.subject }}
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Child Follow-up Letters -->
+        <div class="row" *ngIf="hasChildLetters()">
+          <div class="col-md-12 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.followUpLetters' | translate }}</label>
+            <div class="list-group">
+              <a *ngFor="let child of letter.childOutgoings"
+                 [routerLink]="['/incoming-outgoing/outgoing', child.id]"
+                 class="list-group-item list-group-item-action">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>{{ child.subject }}</strong>
+                    <small class="d-block text-muted">{{ child.outGoingId }}</small>
+                  </div>
+                  <i class="fe fe-chevron-right"></i>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meta Information Card -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">{{ 'common.metaInformation' | translate }}</h5>
+      </div>
+      <div class="card-body">
+        <!-- Created By -->
+        <div class="mb-3">
+          <label class="text-muted small mb-1">{{ 'common.createdBy' | translate }}</label>
+          <div class="font-weight-semibold">{{ letter.createdBy || '-' }}</div>
+        </div>
+
+        <!-- Created On -->
+        <div class="mb-3">
+          <label class="text-muted small mb-1">{{ 'common.createdOn' | translate }}</label>
+          <div class="font-weight-semibold">{{ formatDateTime(letter.createdOn) }}</div>
+        </div>
+
+        <!-- Modified By -->
+        <div class="mb-3" *ngIf="letter.modifiedBy">
+          <label class="text-muted small mb-1">{{ 'common.modifiedBy' | translate }}</label>
+          <div class="font-weight-semibold">{{ letter.modifiedBy }}</div>
+        </div>
+
+        <!-- Modified On -->
+        <div class="mb-3" *ngIf="letter.modifiedOn">
+          <label class="text-muted small mb-1">{{ 'common.modifiedOn' | translate }}</label>
+          <div class="font-weight-semibold">{{ formatDateTime(letter.modifiedOn) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Card -->
+    <div class="card mt-3">
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <button type="button" class="btn btn-primary" (click)="editLetter()">
+            <i class="fe fe-edit mr-1"></i>
+            {{ 'common.edit' | translate }}
+          </button>
+          <button type="button" class="btn btn-outline-danger" (click)="deleteLetter()">
+            <i class="fe fe-trash mr-1"></i>
+            {{ 'common.delete' | translate }}
+          </button>
+          <button type="button" class="btn btn-outline-secondary" (click)="goBack()">
+            <i class="fe fe-arrow-left mr-1"></i>
+            {{ 'common.back' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Not Found State -->
+<div class="card" *ngIf="!loading && !letter">
+  <div class="card-body text-center py-5">
+    <i class="fe fe-alert-circle fe-3x text-warning mb-3"></i>
+    <h5>{{ 'incomingOutgoing.letterNotFound' | translate }}</h5>
+    <button type="button" class="btn btn-primary mt-3" (click)="goBack()">
+      {{ 'common.back' | translate }}
+    </button>
+  </div>
+</div>

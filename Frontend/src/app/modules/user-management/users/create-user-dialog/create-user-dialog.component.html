@@ -1,0 +1,76 @@
+<div class="create-user-dialog">
+  <h2 mat-dialog-title>Create New User</h2>
+
+  <mat-dialog-content>
+    <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+      <!-- Email -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Email</mat-label>
+        <input matInput formControlName="email" type="email" placeholder="user@example.com" />
+        <mat-error>{{ getErrorMessage('email') }}</mat-error>
+      </mat-form-field>
+
+      <!-- Full Name -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Full Name</mat-label>
+        <input matInput formControlName="fullName" placeholder="John Doe" />
+        <mat-error>{{ getErrorMessage('fullName') }}</mat-error>
+      </mat-form-field>
+
+      <!-- Phone Number -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Phone Number</mat-label>
+        <input matInput formControlName="phoneNumber" placeholder="+1 234 567 8900" />
+      </mat-form-field>
+
+      <!-- Roles -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Roles</mat-label>
+        <mat-select formControlName="roles" multiple [disabled]="loadingRoles">
+          <mat-option *ngFor="let role of availableRoles" [value]="role.name">
+            {{ role.name }}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="userForm.get('roles')?.errors?.['required']">
+          At least one role must be selected
+        </mat-error>
+        <mat-hint *ngIf="loadingRoles">Loading roles...</mat-hint>
+      </mat-form-field>
+
+      <!-- Password (Optional) -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Password (Optional)</mat-label>
+        <input
+          matInput
+          [type]="hidePassword ? 'password' : 'text'"
+          formControlName="password"
+          placeholder="Leave blank for default password"
+        />
+        <button
+          mat-button
+          matSuffix
+          type="button"
+          (click)="togglePasswordVisibility()"
+          [attr.aria-label]="'Hide password'"
+        >
+          <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        <mat-hint>Default password: P@ssw0rd@2022</mat-hint>
+      </mat-form-field>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()" [disabled]="loading">Cancel</button>
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="onSubmit()"
+      [disabled]="loading || userForm.invalid"
+    >
+      <mat-spinner *ngIf="loading" diameter="20" class="button-spinner"></mat-spinner>
+      <span *ngIf="!loading">Create User</span>
+      <span *ngIf="loading">Creating...</span>
+    </button>
+  </mat-dialog-actions>
+</div>

@@ -1,0 +1,615 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<!-- Loading State -->
+<div *ngIf="loading" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">{{ 'common.loading' | translate }}</span>
+  </div>
+</div>
+
+<!-- Charity Details -->
+<div *ngIf="!loading && charity" class="container-fluid">
+  <!-- Page Title -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h3 page-title">{{ charity.name }}</h2>
+    <div class="btn-group" *ngIf="canEdit">
+      <button type="button" class="btn btn-primary" (click)="editCharity()">
+        <i class="fe fe-edit mr-1"></i> {{ 'common.edit' | translate }}
+      </button>
+      <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown">
+        <span class="sr-only">Toggle Dropdown</span>
+      </button>
+      <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item" href="#" (click)="activateCharity()" *ngIf="!charity.isActive">
+          <i class="fe fe-check-circle mr-2"></i>{{ 'charities.activate' | translate }}
+        </a>
+        <a class="dropdown-item" href="#" (click)="deactivateCharity()" *ngIf="charity.isActive">
+          <i class="fe fe-x-circle mr-2"></i>{{ 'charities.deactivate' | translate }}
+        </a>
+        <a class="dropdown-item" href="#" (click)="lockCharity()" *ngIf="!charity.isLocked">
+          <i class="fe fe-lock mr-2"></i>{{ 'charities.lock' | translate }}
+        </a>
+        <a class="dropdown-item" href="#" (click)="unlockCharity()" *ngIf="charity.isLocked">
+          <i class="fe fe-unlock mr-2"></i>{{ 'charities.unlock' | translate }}
+        </a>
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item" href="#" (click)="toggleAddRights()">
+          <i class="fe fe-plus-circle mr-2"></i>{{ charity.isAddEnabled ? ('charities.disableAddRights' | translate) : ('charities.enableAddRights' | translate) }}
+        </a>
+        <a class="dropdown-item" href="#" (click)="toggleUpdateRights()">
+          <i class="fe fe-edit-2 mr-2"></i>{{ charity.isUpdateEnabled ? ('charities.disableUpdateRights' | translate) : ('charities.enableUpdateRights' | translate) }}
+        </a>
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item" href="#" (click)="resetPassword()">
+          <i class="fe fe-refresh-cw mr-2"></i>{{ 'charities.resetPassword' | translate }}
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Header Section -->
+  <div class="row align-items-center mb-5">
+    <div class="col-lg-2 col-md-3 text-center mb-4 mb-md-0">
+      <div class="avatar avatar-xl">
+        <ng-container *ngIf="getIconAttachment()">
+          <app-file-viewer
+            [attachmentId]="getIconAttachment().id"
+            [contentType]="getIconAttachment().contentType"
+            [alt]="charity.name"
+            [options]="{ class: 'avatar-img rounded-circle' }">
+          </app-file-viewer>
+        </ng-container>
+        <ng-container *ngIf="!getIconAttachment()">
+          <img
+            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'%3E%3C/path%3E%3C/svg%3E"
+            [alt]="charity.name"
+            class="avatar-img rounded-circle">
+        </ng-container>
+      </div>
+    </div>
+    <div class="col">
+      <div class="row align-items-center">
+        <div class="col-md-7">
+          <h4 class="mb-1">{{ charity.name }}</h4>
+          <p class="small mb-3">
+            <span class="badge mr-2" [ngClass]="getStatusBadgeClass()">{{ getStatusText() }}</span>
+            <span class="badge badge-dark">{{ charity.countryName || '-' }}</span>
+          </p>
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-7">
+          <p class="text-muted mb-2" *ngIf="charity.notes">
+            <i class="fe fe-align-left mr-2"></i>{{ charity.notes }}
+          </p>
+          <p class="text-muted mb-2">
+            <i class="fe fe-map-pin mr-2"></i>{{ charity.address }}, {{ charity.city }}, {{ charity.countryName }}
+          </p>
+          <p class="text-muted mb-0">
+            <i class="fe fe-mail mr-2"></i>
+            <a [href]="'mailto:' + charity.email">{{ charity.email }}</a>
+            <span class="mx-2">|</span>
+            <i class="fe fe-phone mr-2"></i>
+            <a [href]="'tel:' + charity.phone">{{ charity.phone }}</a>
+          </p>
+        </div>
+        <div class="col-md-5">
+          <p class="small mb-1 text-muted">
+            <i class="fe fe-hash mr-1"></i>{{ 'charities.charityCode' | translate }}: <strong>{{ charity.code }}</strong>
+          </p>
+          <p class="small mb-1 text-muted">
+            <i class="fe fe-compass mr-1"></i>{{ 'charities.ngoType' | translate }}: <strong>{{ charity.ngoType }}</strong>
+          </p>
+          <p class="small mb-0 text-muted">
+            <i class="fe fe-globe mr-1"></i>{{ 'charities.center' | translate }}: <strong>{{ charity.centerName || '-' }}</strong>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Stats Cards -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card mb-4 shadow-sm">
+        <div class="card-body py-3">
+          <div class="row align-items-center">
+            <div class="col-3 text-center">
+              <span class="circle circle-lg bg-light">
+                <i class="fe fe-users fe-24 text-primary"></i>
+              </span>
+            </div>
+            <div class="col">
+              <h3 class="h5 mb-1">{{ 'charities.totalFamilies' | translate }}</h3>
+              <p class="text-muted mb-0">{{ charity.familyCount || 0 }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card mb-4 shadow-sm">
+        <div class="card-body py-3">
+          <div class="row align-items-center">
+            <div class="col-3 text-center">
+              <span class="circle circle-lg bg-light">
+                <i class="fe fe-smile fe-24 text-success"></i>
+              </span>
+            </div>
+            <div class="col">
+              <h3 class="h5 mb-1">{{ 'charities.totalOrphans' | translate }}</h3>
+              <p class="text-muted mb-0">{{ charity.orphanCount || 0 }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card mb-4 shadow-sm">
+        <div class="card-body py-3">
+          <div class="row align-items-center">
+            <div class="col-3 text-center">
+              <span class="circle circle-lg bg-light">
+                <i class="fe fe-activity fe-24" [ngClass]="charity.isActive ? 'text-success' : 'text-warning'"></i>
+              </span>
+            </div>
+            <div class="col">
+              <h3 class="h5 mb-1">{{ 'common.status' | translate }}</h3>
+              <p class="text-muted mb-0">
+                <span class="dot dot-lg mr-2" [ngClass]="charity.isActive ? 'bg-success' : 'bg-warning'"></span>
+                {{ getStatusText() }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Details Cards Row -->
+  <div class="row mb-4">
+    <!-- Contact Information Card -->
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fe fe-map-pin mr-2"></i>{{ 'charities.contactInformation' | translate }}
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="list-group list-group-flush">
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-home text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.address' | translate }}</small>
+                  <p class="mb-0">{{ charity.address || '-' }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-phone text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.phone' | translate }}</small>
+                  <p class="mb-0"><a [href]="'tel:' + charity.phone">{{ charity.phone }}</a></p>
+                </div>
+              </div>
+            </div>
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-phone-call text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.phone2' | translate }}</small>
+                  <p class="mb-0">
+                    <span *ngIf="charity.phone2"><a [href]="'tel:' + charity.phone2">{{ charity.phone2 }}</a></span>
+                    <span *ngIf="!charity.phone2">-</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-mail text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.email' | translate }}</small>
+                  <p class="mb-0"><a [href]="'mailto:' + charity.email">{{ charity.email }}</a></p>
+                </div>
+              </div>
+            </div>
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-printer text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.fax' | translate }}</small>
+                  <p class="mb-0">{{ charity.fax || '-' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Location Card -->
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fe fe-globe mr-2"></i>{{ 'charities.location' | translate }}
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="list-group list-group-flush">
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-flag text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.country' | translate }}</small>
+                  <p class="mb-0">{{ charity.countryName || '-' }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-map text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.region' | translate }}</small>
+                  <p class="mb-0">{{ charity.regionName || '-' }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-compass text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.center' | translate }}</small>
+                  <p class="mb-0">{{ charity.centerName || '-' }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-navigation text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.mapLocation' | translate }}</small>
+                  <p class="mb-0" *ngIf="charity.ngoMapLocation">
+                    <a [href]="charity.ngoMapLocation" target="_blank" rel="noopener">
+                      <i class="fe fe-map-pin"></i> {{ 'charities.viewOnMap' | translate }}
+                    </a>
+                    <span *ngIf="!charity.ngoMapLocation">-</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <!-- <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-home text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.city' | translate }}</small>
+                  <p class="mb-0">{{ charity.city || '-' }}</p>
+                </div>
+              </div>
+            </div> -->
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-inbox text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.mailBox' | translate }}</small>
+                  <p class="mb-0">{{ charity.mailBox || '-' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Banking & Management Cards Row -->
+  <div class="row mb-4">
+    <!-- Banking Information Card -->
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fe fe-credit-card mr-2"></i>{{ 'charities.bankingDetails' | translate }}
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="list-group list-group-flush">
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-link text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.bank' | translate }}</small>
+                  <p class="mb-0">{{ charity.bankName || '-' }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-credit-card text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.bankAccount' | translate }}</small>
+                  <p class="mb-0"><code>{{ charity.bankAccount || '-' }}</code></p>
+                </div>
+              </div>
+            </div>
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-database text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.iban' | translate }}</small>
+                  <p class="mb-0"><code>{{ charity.iban || '-' }}</code></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Management Contacts Card -->
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fe fe-users mr-2"></i>{{ 'charities.managementContacts' | translate }}
+          </h6>
+        </div>
+        <div class="card-body">
+          <!-- Boss Section -->
+          <div class="mb-4">
+            <small class="text-muted text-uppercase" style="font-size: 11px;">{{ 'charities.bossDetails' | translate }}</small>
+            <div class="mt-2">
+              <div class="row align-items-center mb-2">
+                <div class="col-auto">
+                  <i class="fe fe-user text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.bossName' | translate }}</small>
+                  <p class="mb-0 small">{{ charity.bossName || '-' }}</p>
+                </div>
+              </div>
+              <div class="row align-items-center mb-2">
+                <div class="col-auto">
+                  <i class="fe fe-briefcase text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.bossJobName' | translate }}</small>
+                  <p class="mb-0 small">{{ charity.bossJobName || '-' }}</p>
+                </div>
+              </div>
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-phone text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.bossPhone' | translate }}</small>
+                  <p class="mb-0 small">
+                    {{ charity.bossPhone1 || '-' }}
+                    <span *ngIf="charity.bossPhone2" class="ml-2">/ {{ charity.bossPhone2 }}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <hr class="my-3">
+          <!-- Responsible Section -->
+          <div>
+            <small class="text-muted text-uppercase" style="font-size: 11px;">{{ 'charities.responsibleDetails' | translate }}</small>
+            <div class="mt-2">
+              <div class="row align-items-center mb-2">
+                <div class="col-auto">
+                  <i class="fe fe-user text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.responsibleJobName' | translate }}</small>
+                  <p class="mb-0 small">{{ charity.responsibleJobName || '-' }}</p>
+                </div>
+              </div>
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-phone text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.responsiblePhone' | translate }}</small>
+                  <p class="mb-0 small">
+                    {{ charity.responsiblePhone1 || '-' }}
+                    <span *ngIf="charity.responsiblePhone2" class="ml-2">/ {{ charity.responsiblePhone2 }}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Account & Settings Card -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <!-- User Account Card -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fe fe-user mr-2"></i>{{ 'charities.userAccount' | translate }}
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="list-group list-group-flush">
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-at-sign text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.username' | translate }}</small>
+                  <p class="mb-0">{{ charity.username || '-' }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-clock text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'common.lastLogin' | translate }}</small>
+                  <p class="mb-0">{{ charity.lastLogin | date:'medium' : '-' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer" *ngIf="canEdit">
+          <button class="btn btn-sm btn-outline-primary" (click)="resetPassword()">
+            <i class="fe fe-refresh-cw mr-1"></i>{{ 'charities.resetPassword' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <!-- Settings Card -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fe fe-settings mr-2"></i>{{ 'charities.settings' | translate }}
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="list-group list-group-flush">
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-check-circle text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.receivingDonations' | translate }}</small>
+                  <p class="mb-0">
+                    <span class="dot dot-lg mr-2" [ngClass]="charity.receivingDonations ? 'bg-success' : 'bg-secondary'"></span>
+                    {{ charity.receivingDonations ? ('common.yes' | translate) : ('common.no' | translate) }}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-power text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.addRights' | translate }}</small>
+                  <p class="mb-0">
+                    <span class="dot dot-lg mr-2" [ngClass]="charity.isAddEnabled ? 'bg-success' : 'bg-secondary'"></span>
+                    {{ charity.isAddEnabled ? ('common.enabled' | translate) : ('common.disabled' | translate) }}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="list-group-item px-0">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <i class="fe fe-edit-2 text-muted"></i>
+                </div>
+                <div class="col">
+                  <small class="text-muted">{{ 'charities.updateRights' | translate }}</small>
+                  <p class="mb-0">
+                    <span class="dot dot-lg mr-2" [ngClass]="charity.isUpdateEnabled ? 'bg-success' : 'bg-secondary'"></span>
+                    {{ charity.isUpdateEnabled ? ('common.enabled' | translate) : ('common.disabled' | translate) }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <small class="text-muted">
+            <i class="fe fe-calendar mr-1"></i>{{ 'common.createdDate' | translate }}: {{ charity.createdOn | date:'medium' }}
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Additional Information -->
+  <div class="row mb-5">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fe fe-info mr-2"></i>{{ 'charities.additionalInformation' | translate }}
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <!-- <div class="col-md-4 mb-3">
+              <small class="text-muted">{{ 'charities.nameArabic' | translate }}</small>
+              <p class="mb-0">{{ charity.nameAr || '-' }}</p>
+            </div>
+            <div class="col-md-4 mb-3">
+              <small class="text-muted">{{ 'charities.nameEnglish' | translate }}</small>
+              <p class="mb-0">{{ charity.nameEn || '-' }}</p>
+            </div> -->
+            <div class="col-md-4 mb-3">
+              <small class="text-muted">{{ 'charities.streetName' | translate }}</small>
+              <p class="mb-0">{{ charity.streetName || '-' }}</p>
+            </div>
+            <div class="col-md-4 mb-3">
+              <small class="text-muted">{{ 'charities.village' | translate }}</small>
+              <p class="mb-0">{{ charity.village || '-' }}</p>
+            </div>
+            <div class="col-md-4 mb-3">
+              <small class="text-muted">{{ 'charities.postalCode' | translate }}</small>
+              <p class="mb-0">{{ charity.postalCode || '-' }}</p>
+            </div>
+            <div class="col-md-4 mb-3">
+              <small class="text-muted">{{ 'charities.homePhone' | translate }}</small>
+              <p class="mb-0">{{ charity.homePhone || '-' }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Back Button -->
+  <div class="row mb-5">
+    <div class="col-12">
+      <button class="btn btn-outline-secondary" (click)="goBack()">
+        <i class="fe fe-arrow-left mr-2"></i>{{ 'common.back' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

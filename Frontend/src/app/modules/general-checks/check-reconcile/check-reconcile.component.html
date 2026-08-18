@@ -1,0 +1,281 @@
+<app-page-header
+  [title]="'generalChecks.reconciliation' | translate"
+  [subtitle]="'generalChecks.manageChecks' | translate"
+  [icon]="'fe fe-refresh-cw'">
+</app-page-header>
+
+<div class="page-actions mb-3">
+  <button class="btn btn-secondary" (click)="onBack()">
+    <i class="fe fe-arrow-left"></i> {{ 'common.back' | translate }}
+  </button>
+</div>
+
+<!-- Loading State -->
+<div *ngIf="loading && !reconciliationSummary" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">{{ 'common.loading' | translate }}</span>
+  </div>
+</div>
+
+<!-- Reconciliation Content -->
+<div *ngIf="!loading">
+  <!-- Summary Statistics -->
+  <div class="row mb-4" *ngIf="reconciliationSummary">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title mb-3">{{ 'generalChecks.reconciliationSummary' | translate }}</h5>
+          <div class="row text-center">
+            <div class="col-md-3">
+              <div class="stat-item">
+                <div class="stat-value">{{ reconciliationSummary.totalChecks }}</div>
+                <div class="stat-label">{{ 'generalChecks.totalChecks' | translate }}</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="stat-item">
+                <div class="stat-item">
+                  <div class="stat-value">{{ totalChecksReconciled }}</div>
+                  <div class="stat-label">{{ 'generalChecks.totalChecksReconciled' | translate }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="stat-item">
+                <div class="stat-value">{{ formatCurrency(totalAmount) }}</div>
+                <div class="stat-label">{{ 'generalChecks.totalAmount' | translate }}</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="stat-item">
+                <div class="stat-value">{{ formatCurrency(reconciledAmount) }}</div>
+                <div class="stat-label">{{ 'generalChecks.reconcileSuccess' | translate }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="row">
+    <div class="col-md-12">
+      <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            [class.active]="activeTab === 'manual'"
+            (click)="activeTab = 'manual'"
+            href="javascript:void(0)">
+            {{ 'generalChecks.manualMatching' | translate }}
+          </a>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            [class.active]="activeTab === 'import'"
+            (click)="activeTab = 'import'"
+            href="javascript:void(0)">
+            {{ 'generalChecks.bankStatementImport' | translate }}
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Manual Matching Tab -->
+  <div *ngIf="activeTab === 'manual'" class="tab-content mt-3">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header">
+            <h5>{{ 'generalChecks.unreconciledChecks' | translate }}</h5>
+          </div>
+          <div class="card-body">
+            <!-- Manual Reconciliation Form -->
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="checkSelect">{{ 'generalChecks.unreconciledChecks' | translate }}</label>
+                  <select
+                    class="form-control"
+                    id="checkSelect"
+                    [(ngModel)]="selectedCheckId">
+                    <option [value]="null">{{ 'common.select' | translate }}</option>
+                    <option *ngFor="let check of unreconciledChecks" [value]="check.checkId">
+                      {{ check.checkNumber }} - {{ check.beneficiaryName }} - {{ formatCurrency(check.amount) }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="bankReference">{{ 'generalChecks.enterBankReference' | translate }}</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="bankReference"
+                    [(ngModel)]="bankReference"
+                    [placeholder]="'generalChecks.bankReference' | translate">
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="clearanceDate">{{ 'generalChecks.clearanceDate' | translate }}</label>
+                  <input
+                    type="date"
+                    class="form-control"
+                    id="clearanceDate"
+                    [(ngModel)]="clearanceDate">
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-12">
+                <button
+                  class="btn btn-success"
+                  (click)="onManualReconcile()"
+                  [disabled]="!selectedCheckId || !bankReference">
+                  <i class="fe fe-check"></i>
+                  {{ 'generalChecks.confirmMatch' | translate }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Unreconciled Checks List -->
+            <div class="table-responsive mt-3" *ngIf="unreconciledChecks.length > 0">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>{{ 'generalChecks.checkNumber' | translate }}</th>
+                    <th>{{ 'generalChecks.beneficiaryName' | translate }}</th>
+                    <th>{{ 'generalChecks.amount' | translate }}</th>
+                    <th>{{ 'generalChecks.currency' | translate }}</th>
+                    <th>{{ 'generalChecks.checkDate' | translate }}</th>
+                    <th>{{ 'generalChecks.bank' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let check of unreconciledChecks">
+                    <td>{{ check.checkNumber }}</td>
+                    <td>{{ check.beneficiaryName }}</td>
+                    <td>{{ formatCurrency(check.amount) }}</td>
+                    <td>{{ check.currency }}</td>
+                    <td>{{ formatDate(check.checkDate) }}</td>
+                    <td>{{ check.bankName }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div *ngIf="unreconciledChecks.length === 0" class="text-center py-5">
+              <i class="fe fe-check-circle fe-3x text-muted mb-3"></i>
+              <p class="text-muted">{{ 'generalChecks.noChecksFound' | translate }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Tab -->
+  <div *ngIf="activeTab === 'import'" class="tab-content mt-3">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header">
+            <h5>{{ 'generalChecks.bankStatementImport' | translate }}</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="statementFile">{{ 'common.select' | translate }} {{ 'common.file' | translate }}</label>
+                  <input
+                    type="file"
+                    class="form-control-file"
+                    id="statementFile"
+                    (change)="onFileSelected($event)"
+                    accept=".xlsx,.xls,.csv">
+                  <small class="form-text text-muted">
+                    Supported formats: Excel (.xlsx, .xls) and CSV (.csv)
+                  </small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <button
+                    class="btn btn-primary"
+                    (click)="onImportBankStatement()"
+                    [disabled]="!selectedFile || uploading">
+                    <i class="fe fe-upload" *ngIf="!uploading"></i>
+                    <i class="fe fa-spinner fa-spin" *ngIf="uploading"></i>
+                    {{ uploading ? 'Importing...' : 'generalChecks.bankStatementImport' | translate }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Import Instructions -->
+            <div class="alert alert-info mt-3">
+              <h6><i class="fe fe-info"></i> {{ 'common.info' | translate }}</h6>
+              <p class="mb-0">
+                The bank statement file should contain the following columns:
+                <strong>Check Number, Amount, Currency, Date, Bank Reference</strong>
+              </p>
+              <p class="mb-0">
+                The system will automatically match checks based on:
+                <strong>Check Number, Amount, and Date</strong>
+              </p>
+            </div>
+
+            <!-- Loading State -->
+            <div *ngIf="uploading" class="text-center py-3">
+              <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">{{ 'common.loading' | translate }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reconciled Checks -->
+  <div class="row mt-4" *ngIf="reconciledChecks.length > 0">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header">
+          <h5>{{ 'generalChecks.clearedChecks' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>{{ 'generalChecks.checkNumber' | translate }}</th>
+                  <th>{{ 'generalChecks.beneficiaryName' | translate }}</th>
+                  <th>{{ 'generalChecks.amount' | translate }}</th>
+                  <th>{{ 'generalChecks.currency' | translate }}</th>
+                  <th>{{ 'generalChecks.bankReference' | translate }}</th>
+                  <th>{{ 'generalChecks.clearanceDate' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let check of reconciledChecks">
+                  <td>{{ check.checkNumber }}</td>
+                  <td>{{ check.beneficiaryName }}</td>
+                  <td>{{ formatCurrency(check.amount) }}</td>
+                  <td>{{ check.currency }}</td>
+                  <td>{{ check.bankReference || '-' }}</td>
+                  <td>{{ formatDate(check.clearanceDate!) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

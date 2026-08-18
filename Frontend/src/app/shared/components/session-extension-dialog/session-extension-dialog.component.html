@@ -1,0 +1,69 @@
+<div class="modal fade show d-block" [class.show]="visible" [style.display]="visible ? 'block' : 'none'" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content shadow-lg border-0">
+      <!-- Header -->
+      <div class="modal-header bg-gradient-danger pb-3 border-0">
+        <h5 class="modal-title text-white">
+          <i class="fe fe-alert-circle me-2"></i>
+          {{ 'sessionExtension.SESSION_EXPIRING' | translate }}
+        </h5>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body pt-5 pb-4">
+        <div class="text-center mb-4">
+          <!-- Countdown Circle -->
+          <div class="countdown-circle-wrapper mx-auto mb-4">
+            <div class="countdown-circle" [ngClass]="getCountdownClass()">
+              <div class="countdown-inner">
+                <span class="countdown-number">{{ countdown }}</span>
+                <span class="countdown-label">{{ 'sessionExtension.SECONDS' | translate }}</span>
+              </div>
+              <div class="countdown-progress" [style.width.%]="((60 - countdown) / 60 * 100)"></div>
+            </div>
+          </div>
+
+          <!-- Message -->
+          <p class="lead mb-2">{{ 'sessionExtension.SESSION_EXPIRING_MESSAGE' | translate }}</p>
+          <p class="text-muted small">{{ 'sessionExtension.SESSION_EXPIRING_DESCRIPTION' | translate }}</p>
+        </div>
+
+        <!-- Error Alert -->
+        <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
+          <i class="fe me-2" [ngClass]="refreshFailed ? 'fe-alert-triangle' : 'fe-info'"></i>
+          <span *ngIf="refreshFailed">{{ 'sessionExtension.REFRESH_FAILED' | translate }}</span>
+          <span *ngIf="!refreshFailed">{{ errorMessage }}</span>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div *ngIf="isRefreshing" class="text-center py-3">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">{{ 'common.LOADING' | translate }}</span>
+          </div>
+          <p class="mt-2 text-muted">{{ 'sessionExtension.REFRESHING_SESSION' | translate }}</p>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer pt-3 border-0 bg-light">
+        <button
+          type="button"
+          class="btn btn-outline-danger"
+          (click)="onLogout()"
+          [disabled]="isRefreshing">
+          <i class="fe fe-log-out me-2"></i>
+          {{ 'sessionExtension.LOGOUT' | translate }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary px-4"
+          (click)="onExtendSession()"
+          [disabled]="isRefreshing">
+          <i class="fe me-2" [ngClass]="isRefreshing ? 'fe-spinner fa-spin' : 'fe-refresh-cw'"></i>
+          {{ 'sessionExtension.EXTEND_SESSION' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="visible"></div>

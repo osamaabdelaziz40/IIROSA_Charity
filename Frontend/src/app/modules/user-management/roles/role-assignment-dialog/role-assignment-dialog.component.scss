@@ -1,0 +1,99 @@
+.modal-dialog {
+  max-width: 800px;
+  margin: 30px auto;
+}
+
+.modal-content {
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+
+  .close {
+    color: white;
+    opacity: 0.8;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+.modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.card {
+  margin-bottom: 1rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  .card-header {
+    border-bottom: 1px solid #e9ecef;
+    padding: 0.75rem 1rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .form-check {
+    margin-bottom: 0.5rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-check-input {
+      margin-top: 0.25rem;
+    }
+
+    .form-check-label {
+      cursor: pointer;
+
+      small {
+        font-size: 0.75rem;
+        line-height: 1.2;
+      }
+    }
+  }
+
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+
+    i {
+      margin-right: 0.25rem;
+    }
+  }
+}
+
+.form-check-input:disabled {
+  cursor: not-allowed;
+}
+
+.form-check-label {
+  opacity: 1;
+
+  &[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.badge {
+  &.badge-primary {
+    background-color: #007bff;
+  }
+
+  &.bg-info {
+    background-color: #17a2b8;
+  }
+}

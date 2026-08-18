@@ -1,0 +1,158 @@
+<div class="periodic-reports-list">
+  <app-page-header
+    [title]="'periodicReports.title' | translate"
+    [subtitle]="'periodicReports.subtitle' | translate"
+    [showAdd]="true"
+    addRoute="create"
+  ></app-page-header>
+
+  <!-- Tabs - UC-6.14, UC-6.15 -->
+  <ul class="nav nav-tabs mb-3">
+    <li class="nav-item" [class.active]="activeTab === 'all'">
+      <a class="nav-link" [class.active]="activeTab === 'all'" (click)="onTabChange('all')">
+        <i class="fas fa-list me-2"></i>
+        <span translate>periodicReports.tabs.all</span>
+      </a>
+    </li>
+    <li class="nav-item" [class.active]="activeTab === 'pending'">
+      <a class="nav-link" [class.active]="activeTab === 'pending'" (click)="onTabChange('pending')">
+        <i class="fas fa-clock me-2"></i>
+        <span translate>periodicReports.tabs.pending</span>
+      </a>
+    </li>
+    <li class="nav-item" [class.active]="activeTab === 'approved'">
+      <a class="nav-link" [class.active]="activeTab === 'approved'" (click)="onTabChange('approved')">
+        <i class="fas fa-check-circle me-2"></i>
+        <span translate>periodicReports.tabs.approved</span>
+      </a>
+    </li>
+    <li class="nav-item" [class.active]="activeTab === 'rejected'">
+      <a class="nav-link" [class.active]="activeTab === 'rejected'" (click)="onTabChange('rejected')">
+        <i class="fas fa-times-circle me-2"></i>
+        <span translate>periodicReports.tabs.rejected</span>
+      </a>
+    </li>
+  </ul>
+
+  <!-- Filters -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-3">
+        <!-- Search - UC-6.16 -->
+        <div class="col-md-4">
+          <div class="input-group">
+            <input type="text" class="form-control"
+                   [placeholder]="'periodicReports.searchPlaceholder' | translate"
+                   [(ngModel)]="searchTerm"
+                   (keyup.enter)="onSearch()">
+            <button class="btn btn-outline-secondary" type="button" (click)="onSearch()">
+              <i class="fas fa-search"></i>
+            </button>
+            <button class="btn btn-outline-secondary" type="button" (click)="clearSearch()" *ngIf="searchTerm">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Export - UC-6.17 -->
+        <div class="col-md-8 text-end">
+          <button class="btn btn-success me-2" (click)="exportReports('excel')">
+            <i class="fas fa-file-excel me-2"></i>
+            <span translate>common.exportExcel</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <app-loading *ngIf="loading"></app-loading>
+
+  <!-- Reports Table -->
+  <div class="card" *ngIf="!loading">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th translate>periodicReports.reportNo</th>
+              <th translate>periodicReports.orphan</th>
+              <th translate>periodicReports.reportDate</th>
+              <th translate>periodicReports.status</th>
+              <th translate>periodicReports.prayerStatus</th>
+              <th translate>periodicReports.education</th>
+              <th translate>periodicReports.medical</th>
+              <th translate>periodicReports.reviewer</th>
+              <th translate>common.actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let report of reports">
+              <td>{{ report.reportNo || '-' }}</td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="flex-shrink-0">
+                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center">
+                      {{ report.orphanCode?.substring(0, 2) || '?' }}
+                    </div>
+                  </div>
+                  <div class="ms-2">
+                    <div class="fw-bold">{{ report.orphanName }}</div>
+                    <small class="text-muted">{{ report.orphanCode }}</small>
+                  </div>
+                </div>
+              </td>
+              <td>{{ report.reportDate | date:'mediumDate' }}</td>
+              <td>
+                <span class="badge" [ngClass]="getStatusClass(report.reviewStatus)">
+                  {{ 'periodicReports.status.' + report.reviewStatus.toLowerCase() | translate }}
+                </span>
+              </td>
+              <td>{{ report.prayerStatus || '-' }}</td>
+              <td>{{ report.educationalLevelName || '-' }}</td>
+              <td>{{ report.medicalStatus || '-' }}</td>
+              <td>{{ report.reviewerName || '-' }}</td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  <a class="btn btn-light" [routerLink]="[report.id]" [title]="'common.view' | translate">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                  <button class="btn btn-light"
+                          *ngIf="canEditReport(report)"
+                          [routerLink]="[report.id, 'edit']"
+                          [title]="'common.edit' | translate">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-warning"
+                          *ngIf="!report.reviewed && canReview"
+                          [routerLink]="[report.id, 'review']"
+                          [title]="'periodicReports.review' | translate">
+                    <i class="fas fa-check"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State -->
+      <app-empty-state
+        *ngIf="reports.length === 0"
+        [icon]="'fas fa-file-alt'"
+        [title]="'periodicReports.noReports' | translate"
+        [message]="'periodicReports.noReportsMessage' | translate">
+      </app-empty-state>
+    </div>
+
+    <!-- Pagination -->
+    <div class="card-footer" *ngIf="totalCount > 0">
+      <app-pagination
+        [totalCount]="totalCount"
+        [pageSize]="filter.pageSize"
+        [currentPage]="filter.pageNumber || 1"
+        (pageChange)="onPageChange($event)">
+      </app-pagination>
+    </div>
+  </div>
+</div>

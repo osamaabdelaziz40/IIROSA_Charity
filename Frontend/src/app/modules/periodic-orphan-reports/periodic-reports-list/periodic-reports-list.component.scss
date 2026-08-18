@@ -1,0 +1,42 @@
+// Periodic Reports List Styles
+.periodic-reports-list {
+  .nav-tabs {
+    .nav-link {
+      cursor: pointer;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--bs-body-color);
+      padding: 0.75rem 1rem;
+      margin-right: 0.25rem;
+
+      &.active {
+        border-bottom-color: var(--bs-primary);
+        background-color: transparent;
+      }
+
+      &:hover {
+        background-color: rgba(var(--bs-primary-rgb), 0.1);
+      }
+    }
+  }
+
+  .avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+
+  .section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--bs-primary);
+    margin-bottom: 1rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+    text-align: center;
+    border-radius: 0.5rem;
+    background-color: var(--bs-gray-100);
+  }
+}

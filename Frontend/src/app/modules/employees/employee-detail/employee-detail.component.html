@@ -1,0 +1,171 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'employees.employeeDetails'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <!-- Loading State -->
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">{{ 'common.loading' | translate }}</span>
+        </div>
+        <p class="mt-3 text-muted">{{ 'common.loading' | translate }} {{ 'common.employee' | translate }}...</p>
+      </div>
+
+      <!-- Employee Details -->
+      <div *ngIf="!loading && employee">
+        <!-- Personal Information Card -->
+        <div class="card shadow mb-4">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+              <i class="fe fe-user mr-2"></i>
+              {{ 'employees.personalInformation' | translate }}
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <table class="table table-sm table-borderless">
+                  <tr>
+                    <th>{{ 'employees.employeeCode' | translate }}:</th>
+                    <td>{{ employee.employeeCode || '-' }}</td>
+                  </tr>
+                  <tr>
+                    <th>{{ 'employees.fullName' | translate }}:</th>
+                    <td>{{ employee.fullName }}</td>
+                  </tr>
+                  <tr>
+                    <th>{{ 'employees.email' | translate }}:</th>
+                    <td>{{ employee.email }}</td>
+                  </tr>
+                  <tr>
+                    <th>{{ 'employees.phoneNumber' | translate }}:</th>
+                    <td>{{ employee.phoneNumber || '-' }}</td>
+                  </tr>
+                  <tr>
+                    <th>{{ 'employees.nationalId' | translate }}:</th>
+                    <td>{{ employee.nationalId || '-' }}</td>
+                  </tr>
+                </table>
+              </div>
+              <div class="col-md-6">
+                <table class="table table-sm table-borderless">
+                  <tr>
+                    <th>{{ 'employees.dateOfBirth' | translate }}:</th>
+                    <td>{{ employee.dateOfBirth ? (employee.dateOfBirth | appDate) : '-' }}</td>
+                  </tr>
+                  <tr>
+                    <th>{{ 'employees.gender' | translate }}:</th>
+                    <td>
+                      <span *ngIf="employee.gender === 'Male'">{{ 'employees.male' | translate }}</span>
+                      <span *ngIf="employee.gender === 'Female'">{{ 'employees.female' | translate }}</span>
+                      <span *ngIf="!employee.gender">-</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>{{ 'employees.address' | translate }}:</th>
+                    <td>{{ employee.address || '-' }}</td>
+                  </tr>
+                  <tr>
+                    <th>{{ 'common.status' | translate }}:</th>
+                    <td>
+                      <span class="badge" [ngClass]="employee.isActive ? 'badge-success' : 'badge-danger'">
+                        {{ employee.isActive ? ('common.active' | translate) : ('common.inactive' | translate) }}
+                      </span>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Employment Information Card -->
+        <div class="card shadow mb-4">
+          <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+              <i class="fe fe-briefcase mr-2"></i>
+              {{ 'employees.employmentInformation' | translate }}
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <table class="table table-sm table-borderless">
+                  <tr>
+                    <th>{{ 'employees.position' | translate }}:</th>
+                    <td>{{ employee.position }}</td>
+                  </tr>
+                  <tr>
+                    <th>{{ 'employees.department' | translate }}:</th>
+                    <td>{{ employee.department || '-' }}</td>
+                  </tr>
+                  <tr>
+                    <th>{{ 'employees.hireDate' | translate }}:</th>
+                    <td>{{ employee.hireDate | appDate }}</td>
+                  </tr>
+                  <tr>
+                    <th>{{ 'employees.salary' | translate }}:</th>
+                    <td>{{ employee.salary ? (employee.salary | currency:'USD') : '-' }}</td>
+                  </tr>
+                </table>
+              </div>
+              <div class="col-md-6">
+                <h6>{{ 'employees.assignedRole' | translate }}:</h6>
+                <div class="mt-2">
+                  <span class="badge badge-primary mr-1" *ngFor="let role of employee.roles">
+                    {{ role }}
+                  </span>
+                  <span *ngIf="!employee.roles || employee.roles.length === 0" class="text-muted">
+                    {{ 'userManagement.noRolesAssigned' | translate }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <hr *ngIf="employee.notes">
+
+            <div *ngIf="employee.notes">
+              <h6>{{ 'employees.notes' | translate }}:</h6>
+              <p>{{ employee.notes }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions Card -->
+        <div class="card shadow mb-4">
+          <div class="card-header bg-warning">
+            <h5 class="mb-0">
+              <i class="fe fe-settings mr-2"></i>
+              {{ 'common.actions' | translate }}
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="btn-group btn-group-sm mr-2">
+              <button class="btn btn-outline-primary" (click)="toggleEmployeeStatus()">
+                <i class="fe" [ngClass]="employee.isActive ? 'fe-lock' : 'fe-unlock'"></i>
+                {{ employee.isActive ? ('userManagement.deactivate' | translate) : ('userManagement.activate' | translate) }}
+              </button>
+              <button class="btn btn-outline-warning" (click)="resetPassword()">
+                <i class="fe fe-refresh-cw"></i>
+                {{ 'userManagement.resetPassword' | translate }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div class="card shadow" *ngIf="!loading && !employee">
+        <div class="card-body text-center py-5">
+          <i class="fe fe-user" style="font-size: 4rem; opacity: 0.3;"></i>
+          <h5 class="mt-3">{{ 'employees.noEmployeesFound' | translate }}</h5>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

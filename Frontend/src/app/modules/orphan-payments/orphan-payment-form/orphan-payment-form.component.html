@@ -1,0 +1,261 @@
+<div class="page-header">
+  <div class="row align-items-center mb-3">
+    <div class="col">
+      <h2 class="page-title">
+        <i class="fe fe-users mr-2"></i>
+        {{ getTitle() }}
+      </h2>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div class="text-center py-5" *ngIf="loading">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">{{ 'common.loading' | translate }}</span>
+  </div>
+</div>
+
+<!-- Form -->
+<form [formGroup]="form" *ngIf="!loading" (ngSubmit)="onSubmit()">
+  <div class="row">
+    <!-- Main Form -->
+    <div class="col-lg-8">
+      <!-- Basic Information Card -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5 class="card-title mb-0">{{ 'orphanPayments.basicInformation' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <!-- Group Name -->
+            <div class="col-md-6 mb-3">
+              <label class="form-label required-field">
+                {{ 'orphanPayments.groupName' | translate }}
+              </label>
+              <input type="text"
+                     class="form-control"
+                     formControlName="groupName"
+                     [placeholder]="'orphanPayments.groupNamePlaceholder' | translate">
+              <div class="invalid-feedback d-block" *ngIf="hasError('groupName', 'required')">
+                {{ 'validation.required' | translate }}
+              </div>
+            </div>
+
+            <!-- Batch Number -->
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ 'orphanPayments.batchNumber' | translate }}</label>
+              <div class="input-group" *ngIf="showBatchNumberInput || form.get('batchNo')?.value">
+                <input type="text"
+                       class="form-control"
+                       formControlName="batchNo"
+                       [placeholder]="'orphanPayments.batchNumberPlaceholder' | translate">
+                <div class="input-group-append">
+                  <button type="button" class="btn btn-outline-secondary" (click)="generateNextBatchNumber()">
+                    <i class="fe fe-refresh-cw"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="input-group" *ngIf="!showBatchNumberInput && !form.get('batchNo')?.value">
+                <button type="button" class="btn btn-outline-secondary btn-block" (click="toggleBatchNumberInput()">
+                  <i class="fe fe-plus mr-1"></i>
+                  {{ 'orphanPayments.addBatchNumber' | translate }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="col-md-12 mb-3">
+              <label class="form-label">{{ 'orphanPayments.description' | translate }}</label>
+              <textarea class="form-control"
+                        formControlName="description"
+                        rows="2"
+                        [placeholder]="'orphanPayments.descriptionPlaceholder' | translate"></textarea>
+            </div>
+
+            <!-- Payment Period -->
+            <div class="col-md-4 mb-3">
+              <label class="form-label required-field">
+                {{ 'orphanPayments.paymentPeriodFrom' | translate }}
+              </label>
+              <input type="date" class="form-control" formControlName="paymentPeriodFrom">
+              <div class="invalid-feedback d-block" *ngIf="hasError('paymentPeriodFrom', 'required')">
+                {{ 'validation.required' | translate }}
+              </div>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label required-field">
+                {{ 'orphanPayments.paymentPeriodTo' | translate }}
+              </label>
+              <input type="date" class="form-control" formControlName="paymentPeriodTo">
+              <div class="invalid-feedback d-block" *ngIf="hasError('paymentPeriodTo', 'required')">
+                {{ 'validation.required' | translate }}
+              </div>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label required-field">
+                {{ 'orphanPayments.groupDate' | translate }}
+              </label>
+              <input type="date" class="form-control" formControlName="groupDate">
+              <div class="invalid-feedback d-block" *ngIf="hasError('groupDate', 'required')">
+                {{ 'validation.required' | translate }}
+              </div>
+            </div>
+
+            <!-- Date Range Error -->
+            <div class="col-12" *ngIf="hasError('dateRangeInvalid', 'dateRangeInvalid')">
+              <div class="alert alert-danger">
+                <i class="fe fe-alert-circle mr-2"></i>
+                {{ 'orphanPayments.dateRangeInvalid' | translate }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtering Options Card -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5 class="card-title mb-0">{{ 'orphanPayments.filteringOptions' | translate }}</h5>
+          <small class="text-muted">{{ 'orphanPayments.filteringOptionsHelp' | translate }}</small>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <!-- Charity -->
+            <div class="col-md-4 mb-3">
+              <label class="form-label">{{ 'orphanPayments.charity' | translate }}</label>
+              <select class="form-control" formControlName="charityId">
+                <option [ngValue]="null">{{ 'common.all' | translate }}</option>
+                <option *ngFor="let charity of availableCharities"
+                        [ngValue]="charity.id">{{ charity.name }}</option>
+              </select>
+            </div>
+
+            <!-- Region -->
+            <div class="col-md-4 mb-3">
+              <label class="form-label">{{ 'orphanPayments.region' | translate }}</label>
+              <select class="form-control" formControlName="regionId">
+                <option [ngValue]="null">{{ 'common.all' | translate }}</option>
+                <option *ngFor="let region of availableRegions"
+                        [ngValue]="region.id">{{ region.name }}</option>
+              </select>
+            </div>
+
+            <!-- Center -->
+            <div class="col-md-4 mb-3">
+              <label class="form-label">{{ 'orphanPayments.center' | translate }}</label>
+              <select class="form-control" formControlName="centerId">
+                <option [ngValue]="null">{{ 'common.all' | translate }}</option>
+                <option *ngFor="let center of availableCenters"
+                        [ngValue]="center.id">{{ center.name }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Card -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5 class="card-title mb-0">{{ 'orphanPayments.settings' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <!-- Show Order -->
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ 'orphanPayments.showOrder' | translate }}</label>
+              <input type="number" class="form-control" formControlName="showOrder">
+            </div>
+
+            <!-- Notes -->
+            <div class="col-md-12 mb-3">
+              <label class="form-label">{{ 'common.notes' | translate }}</label>
+              <textarea class="form-control"
+                        formControlName="notes"
+                        rows="3"
+                        [placeholder]="'orphanPayments.notesPlaceholder' | translate"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <!-- Financial Information Card -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5 class="card-title mb-0">{{ 'orphanPayments.financialInformation' | translate }}</h5>
+        </div>
+        <div class="card-body">
+          <!-- Exchange Rate -->
+          <div class="mb-3">
+            <label class="form-label">{{ 'orphanPayments.exchangeRate' | translate }}</label>
+            <div class="input-group">
+              <input type="number"
+                     class="form-control"
+                     formControlName="exchangeRate"
+                     [placeholder]="'orphanPayments.exchangeRatePlaceholder' | translate"
+                     step="0.01"
+                     [disabled]="isExchangeRateLocked()">
+              <div class="input-group-append">
+                <span class="input-group-text">
+                  <i class="fe fe-info-circle" [title]="'orphanPayments.exchangeRateHelp' | translate"></i>
+                </span>
+              </div>
+            </div>
+            <small class="text-muted">{{ 'orphanPayments.exchangeRateHelpText' | translate }}</small>
+          </div>
+
+          <!-- Currency -->
+          <div class="mb-3">
+            <label class="form-label">{{ 'orphanPayments.currency' | translate }}</label>
+            <select class="form-control"
+                    formControlName="currency"
+                    [disabled]="isExchangeRateLocked()">
+              <option *ngFor="let currency of currencyOptions"
+                      [ngValue]="currency.value">{{ currency.label }}</option>
+            </select>
+          </div>
+
+          <!-- Don't Remove Rate -->
+          <div class="form-check">
+            <input class="form-check-input"
+                   type="checkbox"
+                   id="dontRemoveRate"
+                   formControlName="dontRemoveRate"
+                   (change)="onDontRemoveRateChange(form.get('dontRemoveRate')?.value)">
+            <label class="form-check-label" for="dontRemoveRate">
+              {{ 'orphanPayments.dontRemoveRate' | translate }}
+            </label>
+            <small class="d-block text-muted mt-1">
+              {{ 'orphanPayments.dontRemoveRateHelp' | translate }}
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions Card -->
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex flex-column gap-2">
+            <button type="submit"
+                    class="btn btn-primary"
+                    [disabled]="saving || form.invalid">
+              <i class="fe fe-save mr-1" *ngIf="!saving"></i>
+              <i class="fe fe-spinner fe-spin mr-1" *ngIf="saving"></i>
+              {{ 'common.save' | translate }}
+            </button>
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    (click)="onCancel()"
+                    [disabled]="saving">
+              <i class="fe fe-x mr-1"></i>
+              {{ 'common.cancel' | translate }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>

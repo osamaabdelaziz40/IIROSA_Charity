@@ -1,0 +1,202 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'seasonalAid.title' | translate"
+  [subtitle]="'seasonalAid.subtitle' | translate"
+  [icon]="'fe fe-sun'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="card">
+  <div class="card-body">
+    <!-- Filters using shared components -->
+    <form [formGroup]="filterForm">
+      <div class="row mb-3">
+        <!-- Search -->
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="filterForm"
+            fcn="searchValue"
+            [label]="'common.search'"
+            [placeholder]="'seasonalAid.searchPlaceholder' | translate">
+          </app-input-text>
+        </div>
+
+        <!-- Campaign Type -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="campaignType"
+            [label]="'seasonalAid.campaignType'"
+            [initialData]="campaignTypeOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onFilterChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- Status -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="status"
+            [label]="'seasonalAid.status'"
+            [initialData]="statusOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onFilterChange()">
+          </app-drop-down>
+        </div>
+      </div>
+
+      <div class="row mb-3" *ngIf="hasActiveFilters()">
+        <div class="col-12">
+          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+            <i class="fe fe-x mr-1"></i>
+            {{ 'common.clearFilters' | translate }}
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Campaigns Table -->
+    <div *ngIf="!loading" class="table-responsive">
+      <table class="table table-hover table-striped">
+        <thead>
+          <tr>
+            <th>{{ 'seasonalAid.campaignName' | translate }}</th>
+            <th>{{ 'seasonalAid.campaignType' | translate }}</th>
+            <th>{{ 'seasonalAid.period' | translate }}</th>
+            <th>{{ 'seasonalAid.budget' | translate }}</th>
+            <th>{{ 'seasonalAid.beneficiaries' | translate }}</th>
+            <th>{{ 'seasonalAid.assignedCharity' | translate }}</th>
+            <th>{{ 'seasonalAid.status' | translate }}</th>
+            <th>{{ 'common.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let campaign of paginatedCampaigns">
+            <td>
+              <a [routerLink]="['/seasonal-aid', campaign.id]" class="text-primary">
+                <strong>{{ campaign.campaignName }}</strong>
+              </a>
+              <div *ngIf="campaign.description" class="small text-muted">{{ campaign.description | slice:0:50 }}...</div>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="getCampaignTypeClass(campaign.campaignType)">
+                {{ 'seasonalAid.campaignTypes.' + campaign.campaignType | translate }}
+              </span>
+            </td>
+            <td>
+              <div class="small">
+                <div>{{ campaign.startDate | date:'mediumDate' }}</div>
+                <div class="text-muted">{{ campaign.endDate | date:'mediumDate' }}</div>
+              </div>
+            </td>
+            <td>
+              <div>
+                <strong>{{ campaign.totalBudget | number }}</strong> {{ campaign.budgetCurrency }}
+              </div>
+              <div class="small text-muted">
+                {{ 'seasonalAid.perFamily' | translate }}: {{ campaign.perFamilyAllocation | number }}
+              </div>
+            </td>
+            <td>
+              <div class="text-center">
+                <span class="badge badge-primary">0</span>
+              </div>
+            </td>
+            <td>
+              <div *ngIf="campaign.assignedCharityName; else noCharity">
+                {{ campaign.assignedCharityName }}
+              </div>
+              <ng-template #noCharity>
+                <span class="text-muted">{{ 'seasonalAid.allCharities' | translate }}</span>
+              </ng-template>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="getStatusBadgeClass(campaign)">
+                {{ getStatusText(campaign) }}
+              </span>
+            </td>
+            <td>
+              <div class="btn-group">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light"
+                  [title]="'common.view' | translate"
+                  [routerLink]="['/seasonal-aid', campaign.id]">
+                  <i class="fe fe-eye"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light"
+                  [title]="'common.edit' | translate"
+                  [routerLink]="['/seasonal-aid', campaign.id, 'edit']"
+                  [disabled]="campaign.isClosed">
+                  <i class="fe fe-edit"></i>
+                </button>
+                <div class="dropdown">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-light dropdown-toggle"
+                    data-toggle="dropdown">
+                    <i class="fe fe-more-vertical"></i>
+                  </button>
+                  <div class="dropdown-menu dropdown-menu-right">
+                    <a
+                      class="dropdown-item"
+                      href="javascript:void(0)"
+                      [routerLink]="['/seasonal-aid', campaign.id, 'beneficiaries']"
+                      [class.disabled]="campaign.isClosed">
+                      <i class="fe fe-users mr-2"></i>
+                      {{ 'seasonalAid.beneficiaries' | translate }}
+                    </a>
+                    <a
+                      class="dropdown-item"
+                      href="javascript:void(0)"
+                      [routerLink]="['/seasonal-aid', campaign.id, 'distribution']"
+                      [class.disabled]="campaign.isClosed">
+                      <i class="fe fe-package mr-2"></i>
+                      {{ 'seasonalAid.distribution' | translate }}
+                    </a>
+                    <a
+                      class="dropdown-item"
+                      href="javascript:void(0)"
+                      [routerLink]="['/seasonal-aid', campaign.id, 'report']">
+                      <i class="fe fe-file-text mr-2"></i>
+                      {{ 'seasonalAid.report' | translate }}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="paginatedCampaigns.length === 0">
+            <td colspan="8" class="text-center py-5">
+              <div class="empty-state">
+                <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+                <p class="text-muted">{{ 'seasonalAid.noCampaigns' | translate }}</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <app-pagination
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalCount]="filteredCampaigns.length"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
+  </div>
+</div>

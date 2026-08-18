@@ -1,0 +1,42 @@
+// Centers List Component Styles
+
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.table-row {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: rgba(var(--primary-rgb), 0.05);
+  }
+}
+
+.table-row-inactive {
+  opacity: 0.6;
+  background-color: rgba(var(--warning-rgb), 0.05);
+
+  &:hover {
+    background-color: rgba(var(--warning-rgb), 0.1);
+  }
+}
+
+.btn-group-sm {
+  .btn {
+    margin-right: 0.25rem;
+
+    &:last-child {
+      margin-right: 0;
+    }
+  }
+}
+
+.invalid-feedback {
+  display: block;
+}
+
+.required::after {
+  content: ' *';
+  color: var(--danger);
+}

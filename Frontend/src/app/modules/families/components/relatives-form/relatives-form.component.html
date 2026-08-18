@@ -1,0 +1,152 @@
+<!-- Add Relative Form -->
+<div class="border-bottom pb-3 mb-3">
+  <h6 class="font-weight-bold mb-3">{{ 'families.addNewRelative' | translate }}</h6>
+  <form [formGroup]="relativesForm">
+    <div class="row">
+      <div class="col-md-4">
+        <app-input-text
+          [fg]="relativesForm"
+          fcn="fullName"
+          [label]="'families.fullName'"
+          [required]="true"
+          [placeholder]="'families.fullNamePlaceholder' | translate">
+        </app-input-text>
+      </div>
+      <div class="col-md-4">
+        <app-drop-down
+          [fg]="relativesForm"
+          fcn="relationshipType"
+          [label]="'families.relationshipType'"
+          [required]="true"
+          [initialData]="relationshipOptions"
+          [hasDefaultValue]="false">
+        </app-drop-down>
+      </div>
+      <div class="col-md-4">
+        <app-drop-down
+          [fg]="relativesForm"
+          fcn="gender"
+          [label]="'families.gender'"
+          [required]="true"
+          [initialData]="[
+            {id: 'male', name: 'families.male'},
+            {id: 'female', name: 'families.female'}
+          ]"
+          [hasDefaultValue]="false">
+        </app-drop-down>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-3">
+        <app-input-text
+          [fg]="relativesForm"
+          fcn="dateOfBirth"
+          type="date"
+          [label]="'families.dateOfBirth'"
+          [required]="true">
+        </app-input-text>
+      </div>
+      <div class="col-md-3">
+        <app-input-text
+          [fg]="relativesForm"
+          fcn="nationalId"
+          [label]="'families.nationalId'"
+          [placeholder]="'families.nationalIdPlaceholder' | translate">
+        </app-input-text>
+      </div>
+      <div class="col-md-3">
+        <app-drop-down
+          [fg]="relativesForm"
+          fcn="educationLevel"
+          [label]="'families.educationLevel'"
+          [initialData]="educationLevelOptions"
+          [hasDefaultValue]="true">
+        </app-drop-down>
+      </div>
+      <div class="col-md-3">
+        <app-input-text
+          [fg]="relativesForm"
+          fcn="phone"
+          [label]="'families.phone'"
+          [placeholder]="'families.phonePlaceholder' | translate">
+        </app-input-text>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-3">
+        <app-input-text
+          [fg]="relativesForm"
+          fcn="job"
+          [label]="'families.job'"
+          [placeholder]="'families.jobPlaceholder' | translate">
+        </app-input-text>
+      </div>
+      <div class="col-md-3">
+        <app-input-text
+          [fg]="relativesForm"
+          fcn="monthlyIncome"
+          type="number"
+          [label]="'families.monthlyIncome'">
+        </app-input-text>
+      </div>
+      <div class="col-md-3">
+        <app-drop-down
+          [fg]="relativesForm"
+          fcn="healthStatus"
+          [label]="'families.healthStatus'"
+          [initialData]="healthStatusOptions"
+          [hasDefaultValue]="true">
+        </app-drop-down>
+      </div>
+      <div class="col-md-3 d-flex align-items-center">
+        <div class="custom-control custom-checkbox mr-3">
+          <input type="checkbox" class="custom-control-input" id="relativeIsAlive" formControlName="isAlive">
+          <label class="custom-control-label" for="relativeIsAlive">{{ 'families.isAlive' | translate }}</label>
+        </div>
+        <div class="custom-control custom-checkbox">
+          <input type="checkbox" class="custom-control-input" id="relativeIsLivingWithFamily" formControlName="isLivingWithFamily">
+          <label class="custom-control-label" for="relativeIsLivingWithFamily">{{ 'families.livingWithFamily' | translate }}</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <app-input-text
+          [fg]="relativesForm"
+          fcn="address"
+          [label]="'families.address'"
+          [placeholder]="'families.addressPlaceholder' | translate">
+        </app-input-text>
+      </div>
+      <div class="col-md-3">
+        <app-input-text
+          [fg]="relativesForm"
+          fcn="deathDate"
+          type="date"
+          [label]="'families.deathDate'">
+        </app-input-text>
+      </div>
+      <div class="col-md-3 text-right">
+        <button type="button" class="btn btn-success" (click)="onAddRelative()">
+          <i class="fe fe-plus mr-1"></i>
+          {{ 'families.addRelative' | translate }}
+        </button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <app-input-text
+          [fg]="relativesForm"
+          fcn="notes"
+          type="textarea"
+          [label]="'families.notes'"
+          [rows]="2">
+        </app-input-text>
+      </div>
+    </div>
+  </form>
+</div>

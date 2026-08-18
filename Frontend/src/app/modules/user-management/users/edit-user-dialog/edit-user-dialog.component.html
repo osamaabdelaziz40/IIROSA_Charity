@@ -1,0 +1,60 @@
+<div class="edit-user-dialog">
+  <h2 mat-dialog-title>Edit User</h2>
+
+  <mat-dialog-content>
+    <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+      <!-- Email -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Email</mat-label>
+        <input matInput formControlName="email" type="email" placeholder="user@example.com" />
+        <mat-error>{{ getErrorMessage('email') }}</mat-error>
+      </mat-form-field>
+
+      <!-- Full Name -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Full Name</mat-label>
+        <input matInput formControlName="fullName" placeholder="John Doe" />
+        <mat-error>{{ getErrorMessage('fullName') }}</mat-error>
+      </mat-form-field>
+
+      <!-- Phone Number -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Phone Number</mat-label>
+        <input matInput formControlName="phoneNumber" placeholder="+1 234 567 8900" />
+      </mat-form-field>
+
+      <!-- Roles -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Roles</mat-label>
+        <mat-select formControlName="roles" multiple [compareWith]="compareRoles" [disabled]="loadingRoles">
+          <mat-option *ngFor="let role of availableRoles" [value]="role.name">
+            {{ role.name }}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="userForm.get('roles')?.errors?.['required']">
+          At least one role must be selected
+        </mat-error>
+        <mat-hint *ngIf="loadingRoles">Loading roles...</mat-hint>
+      </mat-form-field>
+
+      <!-- Active Status -->
+      <mat-checkbox formControlName="isActive" class="status-checkbox">
+        Active User
+      </mat-checkbox>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()" [disabled]="loading">Cancel</button>
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="onSubmit()"
+      [disabled]="loading || userForm.invalid"
+    >
+      <mat-spinner *ngIf="loading" diameter="20" class="button-spinner"></mat-spinner>
+      <span *ngIf="!loading">Update User</span>
+      <span *ngIf="loading">Updating...</span>
+    </button>
+  </mat-dialog-actions>
+</div>

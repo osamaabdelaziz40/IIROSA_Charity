@@ -1,0 +1,541 @@
+<div class="wrapper">
+  <!-- Session Timeout Handler -->
+  <app-session-timeout-handler></app-session-timeout-handler>
+
+  <!-- SignalR Real-time Notifications -->
+  <app-signalr-toast></app-signalr-toast>
+
+  <!-- Impersonation Banner (shown when in impersonation mode) -->
+  <app-impersonation-banner></app-impersonation-banner>
+
+  <!-- Top Navigation -->
+  <nav class="topnav navbar navbar-light">
+    <button type="button" class="navbar-toggler text-muted mt-2 p-0 mr-3 collapseSidebar">
+      <i class="fe fe-menu navbar-toggler-icon"></i>
+    </button>
+
+    <ul class="nav">
+      <!-- Language Switcher -->
+      <li class="dropdown dropdown-language nav-item"><a class="dropdown-toggle nav-link" id="dropdown-flag" href="#"
+        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="padding: 15px;"><i
+          class="fe fe-flag fe-16"></i><span class="selected-language">{{ currentLang === 'ar' ? 'العربية' : 'English' }}</span></a>
+        <div class="dropdown-menu" aria-labelledby="dropdown-flag">
+          <a class="dropdown-item" (click)="changeLanguage('en')" routerLink="/"><span class="mr-2">🇬🇧</span>
+            English</a>
+          <a class="dropdown-item" (click)="changeLanguage('ar')" routerLink="/"><span class="mr-2">🇸🇦</span>
+            عربي</a>
+        </div>
+      </li>
+
+      <!-- Theme Switcher -->
+      <li class="nav-item">
+        <a class="nav-link text-muted my-2" href="#" id="modeSwitcher" data-mode="light">
+          <i class="fe fe-moon fe-16"></i>
+        </a>
+      </li>
+
+      <!-- Notifications -->
+      <li class="nav-item nav-notif">
+        <a class="nav-link text-muted my-2" href="./#" (click)="showNotifications()">
+          <span class="fe fe-bell fe-16"></span>
+          <span class="dot dot-md bg-success"></span>
+        </a>
+      </li>
+
+      <!-- User Menu -->
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle text-muted pr-0" href="#" id="navbarDropdownMenuLink" role="button"
+          data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <span class="avatar avatar-sm mt-2">
+            {{ 'shared.welcome' | translate }} <span class="name">{{ fullName }}</span>
+            <img *ngIf="employeeImg" [src]="employeeImg" alt="..." class="avatar-img rounded-circle" />
+            <img *ngIf="!employeeImg" src="../../../../assets/tinydash/assets/avatars/face-2.jpg" alt="..."
+              class="avatar-img rounded-circle" />
+          </span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+
+          <a class="dropdown-item" routerLink="/user-management/users"><i class="ft-user"></i>
+            {{ 'common.profile' | translate }}</a>
+
+          <div class="dropdown-divider" *ngIf="canImpersonate"></div>
+
+          <!-- Quick Impersonation (Admin only) -->
+          <a class="dropdown-item" (click)="openQuickImpersonation()" *ngIf="canImpersonate">
+            <i class="fas fa-user-secret"></i>
+            Quick Impersonation
+          </a>
+
+          <!-- Active Sessions (Super Admin only) -->
+          <a class="dropdown-item" routerLink="/admin/impersonation/sessions" *ngIf="isSuperAdmin">
+            <i class="fas fa-users-cog"></i>
+            Active Sessions
+          </a>
+
+          <!-- Impersonation History (Super Admin only) -->
+          <a class="dropdown-item" routerLink="/admin/impersonation/history" *ngIf="isSuperAdmin">
+            <i class="fas fa-history"></i>
+            Impersonation History
+          </a>
+
+          <div class="dropdown-divider" *ngIf="canImpersonate"></div>
+
+          <a class="dropdown-item" (click)="logout()"><i class="ft-power"></i> {{ "shared.logout" | translate }}</a>
+        </div>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Sidebar -->
+  <aside class="sidebar-left border-right bg-white shadow" id="leftSidebar" data-simplebar>
+    <a href="#" class="btn collapseSidebar toggle-btn d-lg-none text-muted ml-2 mt-3"
+       data-toggle="toggle">
+      <i class="fe fe-x"><span class="sr-only"></span></i>
+    </a>
+
+    <nav class="vertnav navbar navbar-light">
+      <!-- Logo -->
+      <div class="w-100 mb-4 d-flex">
+        <a class="navbar-brand mx-auto mt-2 flex-fill text-center" routerLink="/">
+          <img src="../../../../assets/tinydash/images/logo.svg"
+               style="width: 206px;" alt="IIROSA Logo" />
+        </a>
+      </div>
+
+      <!-- Navigation Menu -->
+      <p class="text-muted nav-heading mt-4 mb-1">
+        <span>{{'IIROSA.websiteElements' | translate}}</span>
+      </p>
+
+      <ul class="navbar-nav flex-fill w-100 mb-2">
+        <!-- Dashboard -->
+        <li class="nav-item dropdown" [class.show]="isActive('/') || isActive('')">
+          <a href="#dashboard" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-home fe-16"></i>
+            <span class="ml-3 item-text">{{ "breadCrumb.homePage" | translate }}</span>
+            <span class="sr-only">(current)</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/') || isActive('')"
+              id="dashboard">
+            <li routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
+                class="nav-item">
+              <a class="nav-link pl-3" routerLink="/">
+                <span class="ml-1 item-text">{{"breadCrumb.home" | translate}}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- User Management -->
+        <li *ngIf="hasPermission('users.view')" class="nav-item dropdown"
+            [class.show]="isActive('/user-management')">
+          <a href="#user-management" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-user fe-16"></i>
+            <span class="ml-3 item-text">{{"userManagement.users" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/user-management')"
+              id="user-management">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/user-management/users">
+                <span class="ml-1 item-text">{{ "userManagement.allUsers" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/user-management/users/create">
+                <span class="ml-1 item-text">{{ "userManagement.addUser" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Employees -->
+        <li class="nav-item dropdown" *ngIf="hasPermission('employees.view')"
+            [class.show]="isActive('/employees')">
+          <a href="#employees" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-users fe-16"></i>
+            <span class="ml-3 item-text">{{"IIROSA.employees" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/employees')"
+              id="employees">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/employees">
+                <span class="ml-1 item-text">{{ "IIROSA.allEmployees" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/employees/create">
+                <span class="ml-1 item-text">{{ "IIROSA.addEmployee" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Charities -->
+        <li class="nav-item dropdown" *ngIf="hasPermission('charities.view')"
+            [class.show]="isActive('/charities')">
+          <a href="#charities" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-heart fe-16"></i>
+            <span class="ml-3 item-text">{{"IIROSA.nGOs" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/charities')"
+              id="charities">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/charities">
+                <span class="ml-1 item-text">{{ "IIROSA.allNGOs" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/charities/create">
+                <span class="ml-1 item-text">{{ "IIROSA.addNGO" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Office Development Projects (Admin/SuperAdmin only) -->
+        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
+            [class.show]="isActive('/office-development-projects')">
+          <a href="#office-development-projects" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-grid fe-16"></i>
+            <span class="ml-3 item-text">{{"IIROSA.officeProjects" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/office-development-projects')"
+              id="office-development-projects">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/office-development-projects">
+                <span class="ml-1 item-text">{{ "IIROSA.allOfficeProjects" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/office-development-projects/create">
+                <span class="ml-1 item-text">{{ "IIROSA.addOfficeProjects" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+        
+        <!-- Housing Projects (Admin/SuperAdmin only) -->
+        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
+            [class.show]="isActive('/housing-projects')">
+          <a href="#housing-projects" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-home fe-16"></i>
+            <span class="ml-3 item-text">{{"IIROSA.housingProjects" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/housing-projects')"
+              id="housing-projects">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/housing-projects">
+                <span class="ml-1 item-text">{{ "IIROSA.allHousingProjects" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/housing-projects/create">
+                <span class="ml-1 item-text">{{ "IIROSA.addHousingProject" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Seasonal Aid (Admin/SuperAdmin only) -->
+        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
+            [class.show]="isActive('/seasonal-aid')">
+          <a href="#seasonal-aid" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-sun fe-16"></i>
+            <span class="ml-3 item-text">{{"IIROSA.seasonalAid" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/seasonal-aid')"
+              id="seasonal-aid">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/seasonal-aid">
+                <span class="ml-1 item-text">{{ "IIROSA.allSeasonalAid" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/seasonal-aid/create">
+                <span class="ml-1 item-text">{{ "IIROSA.addSeasonalAid" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+         <!-- Incoming & Outgoing Correspondence (Admin/SuperAdmin/Accountant/Employee only, NOT Charity) -->
+        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Accountant', 'Employee'])"
+            [class.show]="isActive('/incoming-outgoing')">
+          <a href="#incoming-outgoing" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-inbox fe-16"></i>
+            <span class="ml-3 item-text">{{"IIROSA.importExport" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/incoming-outgoing')"
+              id="incoming-outgoing">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/incoming-outgoing/incoming">
+                <span class="ml-1 item-text">{{ "incomingOutgoing.incomingLetters" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/incoming-outgoing/outgoing">
+                <span class="ml-1 item-text">{{ "incomingOutgoing.outgoingLetters" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/incoming-outgoing/import/incoming">
+                <span class="ml-1 item-text">{{ "IIROSA.importData" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/incoming-outgoing/export/incoming">
+                <span class="ml-1 item-text">{{ "IIROSA.exportData" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/incoming-outgoing/history">
+                <span class="ml-1 item-text">{{ "IIROSA.importExportHistory" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+        
+        <!-- Orphan Payments (Admin/SuperAdmin only) -->
+        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
+            [class.show]="isActive('/orphan-payments')">
+          <a href="#orphan-payments" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-credit-card fe-16"></i>
+            <span class="ml-3 item-text">{{"orphanPayments.title" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/orphan-payments')"
+              id="orphan-payments">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/orphan-payments">
+                <span class="ml-1 item-text">{{ "orphanPayments.manageGroups" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/orphan-payments/create">
+                <span class="ml-1 item-text">{{ "orphanPayments.addNewGroup" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Families -->
+        <li class="nav-item dropdown" *ngIf="hasPermission('families.view')"
+            [class.show]="isActive('/families')">
+          <a href="#families" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-users fe-16"></i>
+            <span class="ml-3 item-text">{{"IIROSA.families" | translate}}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/families')"
+              id="families">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/families">
+                <span class="ml-1 item-text">{{ "IIROSA.allFamilies" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/families/create">
+                <span class="ml-1 item-text">{{ "IIROSA.addFamily" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        
+
+
+        
+
+        <!-- General Checks (Admin/SuperAdmin/Accountant only) -->
+        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Accountant'])"
+            [class.show]="isActive('/general-checks')">
+          <a href="#general-checks" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-check-square fe-16"></i>
+            <span class="ml-3 item-text">{{"generalChecks.title" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/general-checks')"
+              id="general-checks">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/general-checks">
+                <span class="ml-1 item-text">{{ "generalChecks.manageChecks" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/general-checks/create">
+                <span class="ml-1 item-text">{{ "generalChecks.createCheck" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/general-checks/reconcile">
+                <span class="ml-1 item-text">{{ "generalChecks.reconciliation" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+
+        
+       
+
+        <!-- Missions (Admin/SuperAdmin only) -->
+        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
+            [class.show]="isActive('/missions')">
+          <a href="#missions" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-briefcase fe-16"></i>
+            <span class="ml-3 item-text">{{"IIROSA.mission" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/missions')"
+              id="missions">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/missions">
+                <span class="ml-1 item-text">{{ "IIROSA.allMission" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/missions/create">
+                <span class="ml-1 item-text">{{ "IIROSA.addMission" |translate }}</span>
+              </a>
+            </li>   
+          </ul>
+        </li>
+        
+
+        
+        <!-- Technical Support (All Users) -->
+        <li class="nav-item dropdown" [class.show]="isActive('/technical-support')">
+          <a href="#technical-support" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-life-buoy fe-16"></i>
+            <span class="ml-3 item-text">{{"technicalSupport.title" | translate}}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/technical-support')"
+              id="technical-support">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/technical-support">
+                <span class="ml-1 item-text">{{ "technicalSupport.myTickets" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/technical-support/create">
+                <span class="ml-1 item-text">{{ "technicalSupport.newTicket" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/technical-support/all-tickets">
+                <span class="ml-1 item-text">{{ "technicalSupport.allTickets" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/technical-support/reports">
+                <span class="ml-1 item-text">{{ "technicalSupport.reports.title" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Lookup Management -->
+        <li class="nav-item dropdown" *ngIf="hasPermission('lookups.view')"
+            [class.show]="isActive('/lookup-management')">
+          <a href="#lookup-management" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-database fe-16"></i>
+            <span class="ml-3 item-text">{{"IIROSA.lookupManagement" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/lookup-management')"
+              id="lookup-management">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/lookup-management">
+                <span class="ml-1 item-text">{{ "IIROSA.allLookups" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/lookup-management/create">
+                <span class="ml-1 item-text">{{ "IIROSA.addLookup" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content" role="main">
+    <div class="container-fluid">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-12 col-md-6">
+          <p class="mb-0">© {{ currentYear }} IIROSA. {{ 'layout.allRightsReserved' | translate }}</p>
+        </div>
+        <div class="col-12 col-md-6 text-md-right">
+          <p class="mb-0">{{ 'layout.version' | translate }} {{ appVersion }}</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>

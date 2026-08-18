@@ -1,0 +1,479 @@
+<div class="page-header">
+  <div class="row align-items-center">
+    <div class="col">
+      <h3 class="page-title">
+        <i class="fe fe-life-buoy mr-2"></i>
+        {{ 'technicalSupport.ticketDetails' | translate }}
+        <span class="badge badge-primary ml-2" *ngIf="ticket">
+          #{{ ticket.id }}
+        </span>
+      </h3>
+      <app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div class="row" *ngIf="loading">
+  <div class="col-12">
+    <div class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Ticket Content -->
+<div class="row" *ngIf="!loading && ticket && canViewTicket()">
+  <!-- Main Ticket Details -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <div class="row align-items-center">
+          <div class="col">
+            <h4 class="card-title mb-0">{{ ticket.title }}</h4>
+          </div>
+          <div class="col-auto">
+            <span class="badge" [ngClass]="getPriorityClass(ticket.priority)">
+              {{ getPriorityTranslation(ticket.priority) }}
+            </span>
+            <span class="badge ml-1" [ngClass]="getStatusClass(ticket.status)">
+              {{ getStatusTranslation(ticket.status) }}
+            </span>
+            <span class="badge badge-success ml-1" *ngIf="ticket.isSolved">
+              <i class="fe fe-check-circle"></i>
+              {{ 'technicalSupport.isSolved' | translate }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Ticket Information -->
+        <div class="ticket-info mb-4">
+          <div class="row">
+            <div class="col-md-6">
+              <dl class="row">
+                <dt class="col-sm-4">{{ 'technicalSupport.ticketId' | translate }}</dt>
+                <dd class="col-sm-8">{{ ticket.id }}</dd>
+
+                <dt class="col-sm-4">{{ 'technicalSupport.category' | translate }}</dt>
+                <dd class="col-sm-8">
+                  <span class="badge badge-light">{{ getCategoryTranslation(ticket.category) }}</span>
+                </dd>
+
+                <dt class="col-sm-4">{{ 'technicalSupport.priority' | translate }}</dt>
+                <dd class="col-sm-8">
+                  <span class="badge" [ngClass]="getPriorityClass(ticket.priority)">
+                    {{ getPriorityTranslation(ticket.priority) }}
+                  </span>
+                </dd>
+              </dl>
+            </div>
+
+            <div class="col-md-6">
+              <dl class="row">
+                <dt class="col-sm-4">{{ 'technicalSupport.status' | translate }}</dt>
+                <dd class="col-sm-8">
+                  <span class="badge" [ngClass]="getStatusClass(ticket.status)">
+                    {{ getStatusTranslation(ticket.status) }}
+                  </span>
+                </dd>
+
+                <dt class="col-sm-4">{{ 'technicalSupport.createdDate' | translate }}</dt>
+                <dd class="col-sm-8">{{ ticket.createdDate | date:'medium' }}</dd>
+
+                <dt class="col-sm-4">{{ 'technicalSupport.lastUpdated' | translate }}</dt>
+                <dd class="col-sm-8">{{ ticket.lastUpdated | date:'medium' }}</dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+
+        <!-- Creator Information -->
+        <div class="ticket-creator mb-4">
+          <h6 class="mb-3">
+            <i class="fe fe-user mr-2"></i>
+            {{ 'technicalSupport.createdBy' | translate }}
+          </h6>
+          <div class="row">
+            <div class="col-md-6">
+              <dl class="row">
+                <dt class="col-sm-4">{{ 'employees.fullName' | translate }}</dt>
+                <dd class="col-sm-8">{{ ticket.userName }}</dd>
+
+                <dt class="col-sm-4">{{ 'userManagement.users.email' | translate }}</dt>
+                <dd class="col-sm-8">{{ ticket.userEmail }}</dd>
+              </dl>
+            </div>
+            <div class="col-md-6">
+              <dl class="row">
+                <dt class="col-sm-4">{{ 'userManagement.roles' | translate }}</dt>
+                <dd class="col-sm-8">{{ ticket.userRole }}</dd>
+
+                <dt class="col-sm-4" *ngIf="isAdmin">{{ 'technicalSupport.assignedTo' | translate }}</dt>
+                <dd class="col-sm-8" *ngIf="isAdmin">
+                  <span *ngIf="ticket.assignedToName" class="badge badge-info">
+                    <i class="fe fe-user"></i>
+                    {{ ticket.assignedToName }}
+                  </span>
+                  <span *ngIf="!ticket.assignedToName" class="text-muted">
+                    <em>{{ 'common.select' | translate }}</em>
+                  </span>
+                </dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+
+        <!-- Original Message -->
+        <div class="ticket-message mb-4">
+          <h6 class="mb-3">
+            <i class="fe fe-message-square mr-2"></i>
+            {{ 'technicalSupport.description' | translate }}
+          </h6>
+          <div class="message-content">
+            <p class="text-pre-wrap">{{ ticket.message }}</p>
+          </div>
+
+          <!-- Original Attachment -->
+          <div class="attachment-section mt-3" *ngIf="ticket.attachedFileName">
+            <h6>{{ 'technicalSupport.attachFile' | translate }}</h6>
+            <div class="attachment-item">
+              <i class="fe fe-file mr-2"></i>
+              <a href="javascript:void(0)"
+                 (click)="downloadAttachment(ticket.attachedFile!, ticket.attachedFileName!)">
+                {{ ticket.attachedFileName }}
+              </a>
+            </div>
+          </div>
+
+          <!-- System Information -->
+          <div class="system-info mt-3" *ngIf="ticket.browserInfo || ticket.pageUrl">
+            <h6>{{ 'technicalSupport.browserInfo' | translate }}</h6>
+            <dl class="row">
+              <dt class="col-sm-3" *ngIf="ticket.browserInfo">{{ 'technicalSupport.browserInfo' | translate }}</dt>
+              <dd class="col-sm-9" *ngIf="ticket.browserInfo">{{ ticket.browserInfo }}</dd>
+
+              <dt class="col-sm-3" *ngIf="ticket.pageUrl">{{ 'technicalSupport.pageUrl' | translate }}</dt>
+              <dd class="col-sm-9" *ngIf="ticket.pageUrl">
+                <a [href]="ticket.pageUrl" target="_blank" rel="noopener">{{ ticket.pageUrl }}</a>
+              </dd>
+
+              <dt class="col-sm-3" *ngIf="ticket.userAction">{{ 'technicalSupport.userAction' | translate }}</dt>
+              <dd class="col-sm-9" *ngIf="ticket.userAction">{{ ticket.userAction }}</dd>
+            </dl>
+          </div>
+        </div>
+
+        <!-- Resolution Information -->
+        <div class="ticket-resolution mb-4" *ngIf="ticket.isSolved && ticket.resolutionDescription">
+          <div class="alert alert-success">
+            <h6 class="alert-heading">
+              <i class="fe fe-check-circle mr-2"></i>
+              {{ 'technicalSupport.resolution' | translate }}
+            </h6>
+            <p class="mb-2">{{ ticket.resolutionDescription }}</p>
+            <div *ngIf="ticket.resolutionDate" class="small text-muted">
+              <em>{{ 'technicalSupport.resolutionDate' | translate }}: {{ ticket.resolutionDate | date:'medium' }}</em>
+            </div>
+          </div>
+        </div>
+
+        <!-- Response History -->
+        <div class="ticket-responses">
+          <h6 class="mb-3">
+            <i class="fe fe-message-circle mr-2"></i>
+            {{ 'technicalSupport.responseHistory' | translate }}
+            <span class="badge badge-secondary">{{ ticket.responses?.length || 0 }}</span>
+          </h6>
+
+          <!-- Add Response Button -->
+          <button class="btn btn-primary btn-sm mb-3"
+                  *ngIf="canPerformActions() || isOwner"
+                  (click)="toggleResponseForm()">
+            <i class="fe fe-plus mr-1"></i>
+            {{ 'technicalSupport.addResponse' | translate }}
+          </button>
+
+          <!-- Response Form -->
+          <div class="response-form mb-4" *ngIf="showResponseForm">
+            <div class="card">
+              <div class="card-body">
+                <form [formGroup]="responseForm" (ngSubmit)="submitResponse()">
+                  <!-- Internal Note Checkbox (Admin Only) -->
+                  <div class="form-group" *ngIf="isAdmin">
+                    <div class="custom-control custom-checkbox">
+                      <input type="checkbox"
+                             class="custom-control-input"
+                             id="isInternalNote"
+                             [(ngModel)]="isInternalNote">
+                      <label class="custom-control-label" for="isInternalNote">
+                        {{ 'technicalSupport.internalNote' | translate }}
+                      </label>
+                    </div>
+                    <small class="form-text text-muted">
+                      {{ 'technicalSupport.messages.internalNoteWarning' | translate }}
+                    </small>
+                  </div>
+
+                  <!-- Response Text -->
+                  <div class="form-group">
+                    <label for="responseText">
+                      {{ 'technicalSupport.message' | translate }}
+                      <span class="text-danger">*</span>
+                    </label>
+                    <textarea
+                      class="form-control"
+                      [class.is-invalid]="isResponseFieldInvalid('responseText')"
+                      id="responseText"
+                      formControlName="responseText"
+                      rows="4"
+                      [placeholder]="'technicalSupport.placeholders.response' | translate"></textarea>
+                    <div class="invalid-feedback" *ngIf="isResponseFieldInvalid('responseText')">
+                      {{ getResponseErrorMessage('responseText') }}
+                    </div>
+                  </div>
+
+                  <!-- Attachment -->
+                  <div class="form-group">
+                    <label for="responseFile">{{ 'technicalSupport.attachFile' | translate }}</label>
+                    <input
+                      type="file"
+                      class="form-control-file"
+                      id="responseFile"
+                      accept="image/*,.pdf,.doc,.docx"
+                      (change)="onResponseFileSelected($event)">
+                    <small class="form-text text-muted" *ngIf="responseFile">
+                      {{ getResponseFileName() }}
+                    </small>
+                  </div>
+
+                  <!-- Form Actions -->
+                  <div class="form-actions">
+                    <button
+                      type="submit"
+                      class="btn btn-primary"
+                      [disabled]="submitting || responseForm.invalid">
+                      <i class="fe fe-send mr-1" *ngIf="!submitting"></i>
+                      <i class="fe fe-loader fe-spin mr-1" *ngIf="submitting"></i>
+                      {{ 'common.submit' | translate }}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      (click)="toggleResponseForm()"
+                      [disabled]="submitting">
+                      {{ 'common.cancel' | translate }}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- Responses List -->
+          <div class="responses-list">
+            <div *ngIf="!ticket.responses || ticket.responses.length === 0" class="text-muted">
+              <em>{{ 'technicalSupport.messages.noResponses' | translate }}</em>
+            </div>
+
+            <div *ngFor="let response of ticket.responses" class="response-item">
+              <div class="card" [class.internal-note]="response.isInternal">
+                <div class="card-body">
+                  <div class="response-header mb-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div>
+                        <strong>{{ response.respondedByName || ('technicalSupport.unknownUser' | translate) }}</strong>
+                        <span class="badge badge-warning ml-2" *ngIf="response.isInternal">
+                          <i class="fe fe-lock"></i>
+                          {{ 'technicalSupport.internalNote' | translate }}
+                        </span>
+                      </div>
+                      <small class="text-muted">
+                        {{ response.responseDate | date:'medium' }}
+                      </small>
+                    </div>
+                  </div>
+
+                  <div class="response-content mb-2">
+                    <p class="text-pre-wrap mb-0">{{ response.responseText }}</p>
+                  </div>
+
+                  <div class="response-attachment" *ngIf="response.attachmentName">
+                    <a href="javascript:void(0)"
+                       (click)="downloadAttachment(response.attachment!, response.attachmentName!)">
+                      <i class="fe fa-paperclip mr-1"></i>
+                      {{ response.attachmentName }}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar Actions (Admin Only) -->
+  <div class="col-lg-4" *ngIf="canPerformActions()">
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-title">
+          <i class="fe fe-settings mr-2"></i>
+          {{ 'common.actions' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <!-- Update Status -->
+        <div class="action-section mb-4">
+          <h6>{{ 'technicalSupport.updateStatus' | translate }}</h6>
+          <div *ngIf="!updatingStatus">
+            <p class="text-muted">
+              {{ 'technicalSupport.status' | translate }}:
+              <span class="badge" [ngClass]="getStatusClass(ticket.status)">
+                {{ getStatusTranslation(ticket.status) }}
+              </span>
+            </p>
+            <button class="btn btn-outline-primary btn-sm"
+                    (click)="toggleStatusUpdate()">
+              <i class="fe fe-edit mr-1"></i>
+              {{ 'technicalSupport.updateStatus' | translate }}
+            </button>
+          </div>
+          <div *ngIf="updatingStatus">
+            <select class="form-control mb-2"
+                    [(ngModel)]="selectedStatus">
+              <option value="Open">{{ 'technicalSupport.statuses.Open' | translate }}</option>
+              <option value="InProgress">{{ 'technicalSupport.statuses.InProgress' | translate }}</option>
+              <option value="Resolved">{{ 'technicalSupport.statuses.Resolved' | translate }}</option>
+              <option value="Closed">{{ 'technicalSupport.statuses.Closed' | translate }}</option>
+            </select>
+            <div class="btn-group">
+              <button class="btn btn-primary btn-sm"
+                      (click)="updateTicketStatus()"
+                      [disabled]="!selectedStatus">
+                {{ 'common.save' | translate }}
+              </button>
+              <button class="btn btn-secondary btn-sm"
+                      (click)="toggleStatusUpdate()">
+                {{ 'common.cancel' | translate }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mark as Solved -->
+        <div class="action-section mb-4" *ngIf="!ticket.isSolved && ticket.status !== 'Closed'">
+          <h6>{{ 'technicalSupport.markAsSolved' | translate }}</h6>
+          <div *ngIf="!showSolveForm">
+            <button class="btn btn-success btn-sm btn-block"
+                    (click)="toggleSolveForm()">
+              <i class="fe fe-check-circle mr-1"></i>
+              {{ 'technicalSupport.markAsSolved' | translate }}
+            </button>
+          </div>
+          <div *ngIf="showSolveForm">
+            <form [formGroup]="solveForm" (ngSubmit)="markAsSolved()">
+              <div class="form-group">
+                <label>
+                  {{ 'technicalSupport.resolutionDescription' | translate }}
+                  <span class="text-danger">*</span>
+                </label>
+                <textarea
+                  class="form-control"
+                  [class.is-invalid]="isSolveFieldInvalid('resolutionDescription')"
+                  formControlName="resolutionDescription"
+                  rows="3"
+                  [placeholder]="'technicalSupport.placeholders.resolution' | translate"></textarea>
+                <div class="invalid-feedback" *ngIf="isSolveFieldInvalid('resolutionDescription')">
+                  {{ getSolveErrorMessage('resolutionDescription') }}
+                </div>
+              </div>
+              <div class="form-group">
+                <label>{{ 'technicalSupport.solutionSteps' | translate }}</label>
+                <textarea
+                  class="form-control"
+                  formControlName="solutionSteps"
+                  rows="3"
+                  [placeholder]="'technicalSupport.placeholders.solutionSteps' | translate"></textarea>
+              </div>
+              <div class="btn-group">
+                <button type="submit"
+                        class="btn btn-success btn-sm"
+                        [disabled]="submitting || solveForm.invalid">
+                  <i class="fe fe-check mr-1"></i>
+                  {{ 'technicalSupport.markAsSolved' | translate }}
+                </button>
+                <button type="button"
+                        class="btn btn-secondary btn-sm"
+                        (click)="toggleSolveForm()">
+                  {{ 'common.cancel' | translate }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Close Ticket -->
+        <div class="action-section mb-4" *ngIf="ticket.status !== 'Closed'">
+          <h6>{{ 'technicalSupport.closeTicket' | translate }}</h6>
+          <button class="btn btn-danger btn-sm btn-block"
+                  (click)="closeTicket()">
+            <i class="fe fe-x-circle mr-1"></i>
+            {{ 'technicalSupport.closeTicket' | translate }}
+          </button>
+        </div>
+
+        <!-- Assignment -->
+        <div class="action-section">
+          <h6>{{ 'technicalSupport.assignedTo' | translate }}</h6>
+          <div *ngIf="ticket.assignedToName">
+            <p class="text-muted">
+              <i class="fe fe-user mr-1"></i>
+              {{ ticket.assignedToName }}
+            </p>
+            <button class="btn btn-outline-warning btn-sm btn-block"
+                    (click)="unassignTicket()">
+              <i class="fe fe-user-minus mr-1"></i>
+              {{ 'technicalSupport.unassign' | translate }}
+            </button>
+          </div>
+          <div *ngIf="!ticket.assignedToName">
+            <p class="text-muted">
+              <em>{{ 'common.select' | translate }}</em>
+            </p>
+            <button class="btn btn-outline-primary btn-sm btn-block"
+                    disabled>
+              <i class="fe fe-user-plus mr-1"></i>
+              {{ 'technicalSupport.assignTo' | translate }}
+            </button>
+            <small class="form-text text-muted">
+              {{ 'technicalSupport.assignmentComingSoon' | translate }}
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Access Denied -->
+<div class="row" *ngIf="!loading && (!ticket || !canViewTicket())">
+  <div class="col-12">
+    <div class="alert alert-danger">
+      <h4 class="alert-heading">
+        <i class="fe fe-alert-circle mr-2"></i>
+        {{ 'errors.forbidden' | translate }}
+      </h4>
+      <p>{{ 'errors.unauthorized' | translate }}</p>
+      <hr>
+      <button class="btn btn-outline-danger" routerLink="/technical-support">
+        <i class="fe fe-arrow-left mr-1"></i>
+        {{ 'common.back' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

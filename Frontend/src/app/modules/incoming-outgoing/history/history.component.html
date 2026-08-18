@@ -1,0 +1,120 @@
+<app-page-header
+  [title]="'incomingOutgoing.history' | translate"
+  [subtitle]="'incomingOutgoing.importExportHistory' | translate"
+  [icon]="'fe fe-clock'">
+</app-page-header>
+
+<div class="card">
+  <div class="card-body">
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4">
+      <li class="nav-item">
+        <a class="nav-link" [class.active]="activeTab === 'import'" href="javascript:void(0)" (click)="switchTab('import')">
+          <i class="fe fe-upload mr-1"></i>
+          {{ 'incomingOutgoing.importHistory' | translate }}
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" [class.active]="activeTab === 'export'" href="javascript:void(0)" (click)="switchTab('export')">
+          <i class="fe fe-download mr-1"></i>
+          {{ 'incomingOutgoing.exportHistory' | translate }}
+        </a>
+      </li>
+    </ul>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Import History Tab -->
+    <div *ngIf="activeTab === 'import' && !loading">
+      <div class="table-responsive">
+        <table class="table table-hover table-striped">
+          <thead>
+            <tr>
+              <th>{{ 'incomingOutgoing.importType' | translate }}</th>
+              <th>{{ 'incomingOutgoing.fileName' | translate }}</th>
+              <th>{{ 'incomingOutgoing.importDate' | translate }}</th>
+              <th>{{ 'incomingOutgoing.importedBy' | translate }}</th>
+              <th>{{ 'incomingOutgoing.totalRows' | translate }}</th>
+              <th>{{ 'incomingOutgoing.successfulRows' | translate }}</th>
+              <th>{{ 'incomingOutgoing.failedRows' | translate }}</th>
+              <th>{{ 'common.status' | translate }}</th>
+              <th>{{ 'common.actions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of importHistory">
+              <td>{{ item.importType }}</td>
+              <td>{{ item.fileName }}</td>
+              <td>{{ formatDate(item.importDate) }}</td>
+              <td>{{ item.importedBy }}</td>
+              <td>{{ item.totalRows }}</td>
+              <td>{{ item.successfulRows }}</td>
+              <td>{{ item.failedRows }}</td>
+              <td>
+                <span class="badge" [ngClass]="getStatusBadgeClass(item.status)">
+                  {{ item.status }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-warning"
+                        [title]="'incomingOutgoing.rollback' | translate"
+                        *ngIf="item.status !== 'RolledBack'"
+                        (click)="rollbackImport(item.id)">
+                  <i class="fe fe-rotate-ccw"></i>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="importHistory.length === 0">
+              <td colspan="9" class="text-center py-5">
+                <i class="fe fe-upload fe-3x text-muted mb-3"></i>
+                <p class="text-muted">{{ 'common.noData' | translate }}</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Export History Tab -->
+    <div *ngIf="activeTab === 'export' && !loading">
+      <div class="table-responsive">
+        <table class="table table-hover table-striped">
+          <thead>
+            <tr>
+              <th>{{ 'incomingOutgoing.exportType' | translate }}</th>
+              <th>{{ 'incomingOutgoing.exportDate' | translate }}</th>
+              <th>{{ 'incomingOutgoing.exportedBy' | translate }}</th>
+              <th>{{ 'incomingOutgoing.recordCount' | translate }}</th>
+              <th>{{ 'incomingOutgoing.fileFormat' | translate }}</th>
+              <th>{{ 'incomingOutgoing.fileSize' | translate }}</th>
+              <th>{{ 'incomingOutgoing.filtersApplied' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of exportHistory">
+              <td>{{ item.exportType }}</td>
+              <td>{{ formatDate(item.exportDate) }}</td>
+              <td>{{ item.exportedBy }}</td>
+              <td>{{ item.recordCount }}</td>
+              <td>{{ item.fileFormat }}</td>
+              <td>{{ formatFileSize(item.fileSize) }}</td>
+              <td>{{ item.filtersApplied }}</td>
+            </tr>
+            <tr *ngIf="exportHistory.length === 0">
+              <td colspan="7" class="text-center py-5">
+                <i class="fe fe-download fe-3x text-muted mb-3"></i>
+                <p class="text-muted">{{ 'common.noData' | translate }}</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>

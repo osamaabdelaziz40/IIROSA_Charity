@@ -1,0 +1,279 @@
+<div class="page-header">
+  <div class="row align-items-center">
+    <div class="col">
+      <h3 class="page-title">{{ 'technicalSupport.title' | translate }}</h3>
+      <app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-12">
+    <div class="card">
+      <div class="card-header">
+        <div class="row align-items-center">
+          <div class="col">
+            <!-- View Mode Tabs (for admins) -->
+            <ul class="nav nav-tabs card-header-tabs" *ngIf="isAdmin">
+              <li class="nav-item">
+                <a class="nav-link"
+                   [class.active]="viewMode === 'my-tickets'"
+                   (click)="onViewModeChange('my-tickets')">
+                  <i class="fe fe-user mr-1"></i>
+                  {{ 'technicalSupport.myTickets' | translate }}
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link"
+                   [class.active]="viewMode === 'all-tickets'"
+                   (click)="onViewModeChange('all-tickets')">
+                  <i class="fe fe-users mr-1"></i>
+                  {{ 'technicalSupport.allTickets' | translate }}
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Search and Filters -->
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <div class="input-group">
+              <input type="text"
+                     class="form-control"
+                     [placeholder]="'technicalSupport.search.placeholder' | translate"
+                     [(ngModel)]="searchTerm"
+                     (keyup.enter)="onSearch()">
+              <div class="input-group-append">
+                <button class="btn btn-primary"
+                        type="button"
+                        (click)="onSearch()">
+                  <i class="fe fe-search"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-2">
+            <select class="form-control"
+                    [(ngModel)]="selectedCategory"
+                    (change)="onSearch()">
+              <option value="">{{ 'technicalSupport.category' | translate }}</option>
+              <option *ngFor="let cat of categories" [value]="cat">
+                {{ getCategoryTranslation(cat) }}
+              </option>
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <select class="form-control"
+                    [(ngModel)]="selectedPriority"
+                    (change)="onSearch()">
+              <option value="">{{ 'technicalSupport.priority' | translate }}</option>
+              <option *ngFor="let pri of priorities" [value]="pri">
+                {{ getPriorityTranslation(pri) }}
+              </option>
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <select class="form-control"
+                    [(ngModel)]="selectedStatus"
+                    (change)="onSearch()">
+              <option value="">{{ 'technicalSupport.status' | translate }}</option>
+              <option *ngFor="let sta of statuses" [value]="sta">
+                {{ getStatusTranslation(sta) }}
+              </option>
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <button class="btn btn-outline-secondary btn-block"
+                    (click)="onClearFilters()">
+              <i class="fe fe-x mr-1"></i>
+              {{ 'technicalSupport.search.clearFilters' | translate }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Toolbar Actions -->
+        <div class="row mb-3">
+          <div class="col text-right">
+            <div class="btn-group">
+              <button *ngFor="let action of toolbarActions"
+                      class="btn btn-sm"
+                      [ngClass]="action.cssClass"
+                      (click)="onAction({ item: null, action: action.action })">
+                <i [class]="action.icon" *ngIf="action.icon"></i>
+                <span class="ml-1">{{ action.label | translate }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">{{ 'common.loading' | translate }}</span>
+          </div>
+        </div>
+
+        <!-- Tickets Table -->
+        <div class="table-responsive" *ngIf="!loading">
+          <table class="table table-hover table-striped">
+            <thead>
+              <tr>
+                <th *ngFor="let column of isAdmin ? adminColumns : columns"
+                    [style.width]="column.width"
+                    [class.sortable]="column.sortable"
+                    (click)="column.sortable && onSort(column.key, 'asc')">
+                  <div class="d-flex align-items-center">
+                    <span>{{ column.title | translate }}</span>
+                    <i *ngIf="column.sortable"
+                       class="fe fe-chevron-down ml-1 sort-icon">
+                    </i>
+                  </div>
+                </th>
+                <th *ngIf="isAdmin || viewMode === 'all-tickets'" class="text-right">
+                  {{ 'common.actions' | translate }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let ticket of tickets"
+                  [routerLink]="['/technical-support', ticket.id]"
+                  class="ticket-row">
+                <td *ngIf="!isAdmin || viewMode === 'my-tickets'">{{ ticket.id }}</td>
+                <td *ngIf="isAdmin && viewMode === 'all-tickets'">{{ ticket.id }}</td>
+
+                <td>
+                  <strong>{{ ticket.title }}</strong>
+                </td>
+
+                <td>
+                  <span class="badge badge-light">{{ getCategoryTranslation(ticket.category) }}</span>
+                </td>
+
+                <td>
+                  <span class="badge" [ngClass]="getPriorityClass(ticket.priority)">
+                    {{ getPriorityTranslation(ticket.priority) }}
+                  </span>
+                </td>
+
+                <td>
+                  <span class="badge" [ngClass]="getStatusClass(ticket.status)">
+                    {{ getStatusTranslation(ticket.status) }}
+                  </span>
+                </td>
+
+                <td *ngIf="!isAdmin || viewMode === 'my-tickets'">
+                  <span *ngIf="ticket.isSolved" class="badge badge-success">
+                    <i class="fe fe-check-circle"></i>
+                    {{ 'common.yes' | translate }}
+                  </span>
+                  <span *ngIf="!ticket.isSolved" class="badge badge-secondary">
+                    <i class="fe fe-x-circle"></i>
+                    {{ 'common.no' | translate }}
+                  </span>
+                </td>
+
+                <td *ngIf="isAdmin && viewMode === 'all-tickets'">
+                  {{ ticket.userName }}
+                </td>
+
+                <td *ngIf="isAdmin && viewMode === 'all-tickets'">
+                  <span *ngIf="ticket.assignedToName" class="badge badge-info">
+                    <i class="fe fe-user"></i>
+                    {{ ticket.assignedToName }}
+                  </span>
+                  <span *ngIf="!ticket.assignedToName" class="text-muted">
+                    <em>{{ 'common.select' | translate }}</em>
+                  </span>
+                </td>
+
+                <td *ngIf="isAdmin && viewMode === 'all-tickets'">
+                  <span *ngIf="ticket.isSolved" class="badge badge-success">
+                    <i class="fe fe-check-circle"></i>
+                    {{ 'common.yes' | translate }}
+                  </span>
+                  <span *ngIf="!ticket.isSolved" class="badge badge-secondary">
+                    <i class="fe fe-x-circle"></i>
+                    {{ 'common.no' | translate }}
+                  </span>
+                </td>
+
+                <td>{{ ticket.createdDate | date:'mediumDate' }}</td>
+                <td>{{ ticket.lastUpdated | date:'medium' }}</td>
+
+                <td *ngIf="isAdmin || viewMode === 'all-tickets'" class="text-right">
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-icon btn-light"
+                            data-toggle="dropdown"
+                            (click)="$event.stopPropagation()">
+                      <i class="fe fe-more-vertical"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right">
+                      <a *ngFor="let action of adminActions"
+                         href="javascript:void(0)"
+                         class="dropdown-item"
+                         [style.display]="action.show ? (action.show(ticket) ? 'block' : 'none') : 'block'"
+                         (click)="$event.stopPropagation(); onAction({ item: ticket, action: action.key })">
+                        <i [class]="action.icon"></i>
+                        {{ action.label | translate }}
+                      </a>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Empty State -->
+              <tr *ngIf="tickets.length === 0">
+                <td [colSpan]="(isAdmin ? adminColumns.length : columns.length) + 1" class="text-center py-5">
+                  <div class="empty-state">
+                    <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+                    <p class="text-muted">
+                      {{ (viewMode === 'my-tickets' ?
+                          'technicalSupport.messages.myTicketsEmpty' :
+                          'technicalSupport.messages.allTicketsEmpty') | translate }}
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="row align-items-center" *ngIf="!loading && totalRecords > 0">
+          <div class="col-md-6">
+            <p class="text-muted mb-0">
+              {{ 'common.showing' | translate }} {{ (pageNumber - 1) * pageSize + 1 }}
+              {{ 'common.to' | translate }} {{ getDisplayEnd() }}
+              {{ 'common.of' | translate }} {{ totalRecords }} {{ 'common.records' | translate }}
+            </p>
+          </div>
+          <div class="col-md-6">
+            <div class="d-flex justify-content-md-end align-items-center">
+              <app-pagination
+                [currentPage]="pageNumber"
+                [pageSize]="pageSize"
+                [totalCount]="totalRecords"
+                (pageChange)="onPageChange($event)">
+              </app-pagination>
+              <select class="form-control form-control-sm page-size-select ml-3"
+                      [(ngModel)]="pageSize"
+                      (ngModelChange)="onPageSizeChange($event)">
+                <option [value]="10">10</option>
+                <option [value]="25">25</option>
+                <option [value]="50">50</option>
+                <option [value]="100">100</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

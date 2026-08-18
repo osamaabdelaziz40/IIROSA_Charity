@@ -1,0 +1,134 @@
+<app-breadcrumb [items]="breadcrumbsWithAction"></app-breadcrumb>
+
+<app-page-header
+  [title]="isEdit ? 'userManagement.editUser' : 'userManagement.addUser'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow" *ngIf="!loading">
+        <div class="card-body">
+          <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+            <!-- Basic Information Section -->
+            <div class="col-12">
+              <h5 class="mb-3">{{ 'userManagement.basicInformation' | translate }}</h5>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <app-input-text
+                  [fg]="userForm"
+                  fcn="fullName"
+                  [label]="'userManagement.fullName'"
+                  [required]="true">
+                </app-input-text>
+              </div>
+              <div class="col-md-6">
+                <app-input-text
+                  [fg]="userForm"
+                  fcn="email"
+                  [label]="'common.email'"
+                  type="email"
+                  [required]="true">
+                </app-input-text>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <app-input-text
+                  [fg]="userForm"
+                  fcn="phoneNumber"
+                  [label]="'common.phoneNumber'"
+                  type="tel"
+                  [helpText]="'userManagement.phoneOptional' | translate">
+                </app-input-text>
+              </div>
+              <div class="col-md-6" *ngIf="!isEdit">
+                <app-input-text
+                  [fg]="userForm"
+                  fcn="password"
+                  [label]="'userManagement.password'"
+                  type="password"
+                  [required]="true"
+                  [helpText]="'userManagement.passwordHelp' | translate"
+                  helpTextClass="text-info">
+                </app-input-text>
+              </div>
+            </div>
+
+            <!-- Roles Section -->
+            <div class="col-12 mt-4">
+              <h5 class="mb-3">{{ 'userManagement.rolesSection' | translate }}</h5>
+            </div>
+
+            <div class="row">
+              <div class="col-md-12">
+                <div *ngIf="loadingRoles" class="text-center py-3">
+                  <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="sr-only">Loading roles...</span>
+                  </div>
+                  <small class="text-muted ml-2">Loading roles...</small>
+                </div>
+                <app-drop-down
+                  *ngIf="!loadingRoles"
+                  [fg]="userForm"
+                  fcn="roles"
+                  [label]="'userManagement.roles'"
+                  [initialData]="rolesDropdownData"
+                  [placeholder]="'userManagement.selectRoles' | translate"
+                  [multiple]="true"
+                  [required]="true">
+                </app-drop-down>
+                <div class="alert alert-warning mt-2" *ngIf="!loadingRoles && rolesDropdownData.length === 0">
+                  {{ 'userManagement.noRolesAvailable' | translate }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div class="col-12 mt-4">
+              <h5 class="mb-3">{{ 'userManagement.settings' | translate }}</h5>
+            </div>
+
+            <div class="row">
+              <div class="col-md-12">
+                <div class="custom-control custom-checkbox">
+                  <input type="checkbox" class="custom-control-input" id="isActive" formControlName="isActive">
+                  <label class="custom-control-label" for="isActive">
+                    {{ 'userManagement.activeUser' | translate }}
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="col-12 mt-4">
+              <div class="form-group">
+                <button type="submit" class="btn btn-primary" [disabled]="submitting">
+                  <i class="fe fe-save mr-1" *ngIf="!submitting"></i>
+                  <span class="spinner-border spinner-border-sm mr-1" *ngIf="submitting"></span>
+                  {{ 'common.save' | translate }}
+                </button>
+                <button type="button" class="btn btn-secondary ml-2" (click)="cancel()" [disabled]="submitting">
+                  <i class="fe fe-x mr-1"></i>
+                  {{ 'common.cancel' | translate }}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">{{ 'common.loading' | translate }}</span>
+        </div>
+        <p class="mt-3 text-muted">{{ 'common.loading' | translate }}...</p>
+      </div>
+    </div>
+  </div>
+</div>

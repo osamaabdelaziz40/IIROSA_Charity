@@ -1,0 +1,88 @@
+using Microsoft.AspNetCore.Mvc;
+using Framework.Core.SharedServices.Services;
+using Framework.Core.SharedServices.Dto;
+
+namespace IIROSA.Api.Controllers;
+
+/// <summary>
+/// Settings controller - Uses Framework.Core AppSettingsService
+/// </summary>
+[Route("api/[controller]")]
+[ApiController]
+public class SettingsController : ApiController
+{
+    private readonly AppSettingsService _appSettingsService;
+
+    public SettingsController(AppSettingsService appSettingsService)
+    {
+        _appSettingsService = appSettingsService;
+    }
+
+    /// <summary>
+    /// Get all settings or filter by group
+    /// </summary>
+    [HttpGet]
+    public IActionResult GetAll([FromQuery] string? groupName)
+    {
+        var settings = string.IsNullOrEmpty(groupName)
+            ? _appSettingsService.GetAllSettingsCached().SelectMany(x => x.Value).ToList()
+            : _appSettingsService.GetSettingsByGroup(groupName);
+
+        return Ok(settings);
+    }
+
+    /// <summary>
+    /// Get setting by key
+    /// </summary>
+    [HttpGet("{key}")]
+    public IActionResult GetByKey(string key)
+    {
+        var setting = _appSettingsService.GetSetting(key);
+        if (setting == null)
+            return NotFound();
+
+        return Ok(setting);
+    }
+
+    /// <summary>
+    /// Get or update system setting
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> Set([FromBody] SettingsDto setting)
+    {
+        _appSettingsService.UpdateSetting(setting);
+        return Ok(new { message = "Setting updated successfully" });
+    }
+
+    /// <summary>
+    /// Get notification settings
+    /// </summary>
+    [HttpGet("notifications")]
+    public IActionResult GetNotificationSettings()
+    {
+        var settings = new
+        {
+            EmailFromAddress = _appSettingsService.EmailFromAddress,
+            EmailFromName = _appSettingsService.EmailFromName,
+            EmailSubjectAr = _appSettingsService.EmailSubjectAr,
+            EmailSubjectEn = _appSettingsService.EmailSubjectEn,
+            GoogleFCMSenderId = _appSettingsService.GoogleFCMSenderId,
+            GoogleFCMServerKey = _appSettingsService.GoogleFCMServerKey,
+            SmtpServer = _appSettingsService.SmtpServer,
+            SmtpPort = _appSettingsService.SmtpPort,
+            SmtpUserName = _appSettingsService.SmtpUserName,
+            SmtpPassword = _appSettingsService.SmtpPassword,
+            IsSmtpAuthenticated = _appSettingsService.IsSmtpAuthenticated,
+            SmtpEnableSSL = _appSettingsService.SmtpEnableSSL
+        };
+
+        return Ok(settings);
+    }
+}
+
+public class SettingsUpdateRequest
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Value { get; set; }
+    public string? GroupName { get; set; }
+}

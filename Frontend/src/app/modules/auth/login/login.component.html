@@ -1,0 +1,60 @@
+<div class="wrapper vh-100">
+  <!-- Language Switcher - Top Right -->
+  <div class="language-switcher-container position-absolute" style="top: 20px; right: 20px; z-index: 1000;">
+    <div class="dropdown dropdown-language" [class.show]="isLanguageDropdownOpen">
+      <button class="dropdown-toggle nav-link btn btn-outline-secondary btn-sm"
+              id="dropdown-flag-login" (click)="toggleLanguageDropdown(); $event.stopPropagation()" type="button">
+        <i class="fe fe-flag"></i>
+        <span class="selected-language ml-1">{{ getLanguageDisplay() }}</span>
+      </button>
+      <div [class.show]="isLanguageDropdownOpen" class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdown-flag-login">
+        <a class="dropdown-item" (click)="changeLanguage('en'); $event.stopPropagation()" href="javascript:void(0)">
+          <span class="mr-2">🇬🇧</span> English
+        </a>
+        <a class="dropdown-item" (click)="changeLanguage('ar'); $event.stopPropagation()" href="javascript:void(0)">
+          <span class="mr-2">🇸🇦</span> العربية
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="row align-items-center h-100">
+    <form class="col-lg-3 col-md-4 col-10 mx-auto text-center" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      <a class="navbar-brand mx-auto mt-2 flex-fill text-center" href="#">
+        <svg version="1.1" id="logo" class="navbar-brand-img brand-md" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 120 120" xml:space="preserve" width="60" height="60">
+          <g>
+            <polygon class="st0" points="78,105 15,105 24,87 87,87" style="fill: #4d7cfe"/>
+            <polygon class="st0" points="96,69 33,69 42,51 105,51" style="fill: #4d7cfe"/>
+            <polygon class="st0" points="78,33 15,33 24,15 87,15" style="fill: #4d7cfe"/>
+          </g>
+        </svg>
+      </a>
+      <h1 class="h6 mb-3">{{ 'auth.signIn' | translate }}</h1>
+      <div class="form-group">
+        <label for="inputEmail" class="sr-only">{{ 'auth.emailAddress' | translate }}</label>
+        <input type="email" id="inputEmail" class="form-control form-control-lg" [placeholder]="'auth.emailAddress' | translate" formControlName="email" [class.is-invalid]="submitted && f['email'].errors" required autofocus>
+        <div class="invalid-feedback" *ngIf="submitted && f['email'].errors?.['required']">
+          {{ 'auth.emailRequired' | translate }}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="inputPassword" class="sr-only">{{ 'auth.password' | translate }}</label>
+        <input type="password" id="inputPassword" class="form-control form-control-lg" [placeholder]="'auth.password' | translate" formControlName="password" [class.is-invalid]="submitted && f['password'].errors" required>
+        <div class="invalid-feedback" *ngIf="submitted && f['password'].errors?.['required']">
+          {{ 'auth.passwordRequired' | translate }}
+        </div>
+      </div>
+      <div class="checkbox mb-3">
+        <label>
+          <input type="checkbox" formControlName="rememberMe"> {{ 'auth.stayLoggedIn' | translate }}
+        </label>
+      </div>
+      <button class="btn btn-lg btn-primary btn-block" type="submit" [disabled]="loading">
+        <span *ngIf="!loading">{{ 'auth.letMeIn' | translate }}</span>
+        <span *ngIf="loading" class="spinner-border spinner-border-sm mr-2"></span>
+        <span *ngIf="loading">{{ 'auth.signingIn' | translate }}</span>
+      </button>
+      <p class="mt-5 mb-3 text-muted">{{ 'auth.copyright' | translate }}</p>
+    </form>
+  </div>
+</div>

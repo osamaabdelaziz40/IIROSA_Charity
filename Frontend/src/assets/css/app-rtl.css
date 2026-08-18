@@ -1,0 +1,27 @@
+/* RTL (Right-to-Left) support for Arabic and other RTL languages */
+[dir="rtl"] {
+    text-align: right;
+    direction: rtl;
+}
+
+/* RTL specific styles */
+[dir="rtl"] .row {
+    margin-left: 0;
+    margin-right: -15px;
+}
+
+[dir="rtl"] .col {
+    padding-left: 0;
+    padding-right: 15px;
+}
+
+/* RTL margin and padding utilities */
+[dir="rtl"] .ml-auto {
+    margin-left: auto !important;
+    margin-right: 0 !important;
+}
+
+[dir="rtl"] .mr-auto {
+    margin-right: auto !important;
+    margin-left: 0 !important;
+}

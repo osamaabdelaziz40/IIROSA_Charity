@@ -1,0 +1,329 @@
+<div class="orphan-report-comparison">
+  <app-breadcrumb
+    [title]="'orphanReports.compare' | translate"
+    [subtitle]="'orphanReports.compareSubtitle' | translate">
+  </app-breadcrumb>
+
+  <div class="row">
+    <!-- Comparison Selection - UC-6.10 -->
+    <div class="col-lg-4" *ngIf="!comparisonResult">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-balance-scale me-2"></i>
+            <span translate>orphanReports.selectReportsToCompare</span>
+          </h5>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="comparisonForm" (ngSubmit)="compareReports()">
+            <!-- Report 1 Selection - UC-6.10 -->
+            <div class="mb-3">
+              <label class="form-label">{{ 'orphanReports.report1' | translate }} *</label>
+              <select class="form-select" formControlName="report1Id" required>
+                <option value="">{{ 'orphanReports.selectReport' | translate }}</option>
+                <option *ngFor="let report of reportHistory" [value]="report.reportId">
+                  {{ report.reportName || ('orphanReports.untitledReport' | translate) }}
+                  ({{ report.reportFromDate | date:'shortDate' }} - {{ report.reportToDate | date:'shortDate' }})
+                  - {{ report.orphanCount }} orphans
+                </option>
+              </select>
+            </div>
+
+            <!-- Report 2 Selection - UC-6.10 -->
+            <div class="mb-3">
+              <label class="form-label">{{ 'orphanReports.report2' | translate }} *</label>
+              <select class="form-select" formControlName="report2Id" required>
+                <option value="">{{ 'orphanReports.selectReport' | translate }}</option>
+                <option *ngFor="let report of reportHistory" [value]="report.reportId">
+                  {{ report.reportName || ('orphanReports.untitledReport' | translate) }}
+                  ({{ report.reportFromDate | date:'shortDate' }} - {{ report.reportToDate | date:'shortDate' }})
+                  - {{ report.orphanCount }} orphans
+                </option>
+              </select>
+            </div>
+
+            <!-- Comparison Metrics - UC-6.10 -->
+            <div class="mb-3">
+              <label class="form-label">{{ 'orphanReports.comparisonMetrics' | translate }}</label>
+              <div class="metric-checkboxes">
+                <div class="form-check" *ngFor="let metric of comparisonMetrics">
+                  <input class="form-check-input" type="checkbox" [(ngModel)]="metric.checked" [id]="'metric-' + metric.key">
+                  <label class="form-check-label" [for]="'metric-' + metric.key">
+                    {{ metric.label | translate }}
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="comparing">
+                <i class="fas fa-balance-scale me-2" *ngIf="!comparing"></i>
+                <i class="fas fa-spinner fa-spin me-2" *ngIf="comparing"></i>
+                <span translate>orphanReports.compareReports</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison Results - UC-6.10 -->
+    <div class="col-lg-12" *ngIf="comparisonResult">
+      <div class="card mb-3">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="fas fa-chart-line me-2"></i>
+            <span translate>orphanReports.comparisonResults</span>
+          </h5>
+          <button class="btn btn-light btn-sm" (click)="resetComparison()">
+            <i class="fas fa-redo me-2"></i>
+            <span translate>common.reset</span>
+          </button>
+        </div>
+        <div class="card-body">
+          <!-- Report Headers -->
+          <div class="row mb-4">
+            <div class="col-md-4">
+              <div class="report-header text-center p-3 bg-light rounded">
+                <h6 class="text-muted mb-1">{{ 'orphanReports.report1' | translate }}</h6>
+                <div class="fw-bold">{{ comparisonResult.report1.fromDate | date:'mediumDate' }} - {{ comparisonResult.report1.toDate | date:'mediumDate' }}</div>
+              </div>
+            </div>
+            <div class="col-md-4 d-flex align-items-center justify-content-center">
+              <div class="vs-badge bg-primary text-white rounded-circle d-flex align-items-center justify-content-center">
+                VS
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="report-header text-center p-3 bg-light rounded">
+                <h6 class="text-muted mb-1">{{ 'orphanReports.report2' | translate }}</h6>
+                <div class="fw-bold">{{ comparisonResult.report2.fromDate | date:'mediumDate' }} - {{ comparisonResult.report2.toDate | date:'mediumDate' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overall Statistics Comparison - UC-6.10 -->
+          <h5 class="mb-3">
+            <i class="fas fa-chart-bar me-2"></i>
+            <span translate>orphanReports.overallStatistics</span>
+          </h5>
+
+          <div class="row mb-4" *ngIf="isMetricVisible('totalCount')">
+            <!-- Total Orphan Count -->
+            <div class="col-md-3">
+              <div class="stat-card text-center p-3 border rounded">
+                <small class="text-muted">{{ 'orphanReports.totalOrphans' | translate }}</small>
+                <div class="row mt-2">
+                  <div class="col-6">
+                    <h4 class="text-primary mb-0">{{ comparisonResult.report1.totalOrphans }}</h4>
+                  </div>
+                  <div class="col-6">
+                    <h4 class="text-success mb-0">{{ comparisonResult.report2.totalOrphans }}</h4>
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <span class="badge" [ngClass]="getChangeClass(comparisonResult.comparison.totalCountChange)">
+                    <i class="fas me-1" [ngClass]="getChangeIcon(comparisonResult.comparison.totalCountChange)"></i>
+                    {{ comparisonResult.comparison.totalCountChange > 0 ? '+' : '' }}{{ comparisonResult.comparison.totalCountChange }}
+                    ({{ formatPercent(comparisonResult.comparison.totalCountPercentChange) }})
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sponsored vs Unsponsored -->
+            <div class="col-md-9" *ngIf="isMetricVisible('sponsoredVsUnsponsored')">
+              <div class="row">
+                <!-- Sponsored -->
+                <div class="col-md-6">
+                  <div class="stat-card text-center p-3 border rounded">
+                    <small class="text-muted">{{ 'orphanReports.sponsored' | translate }}</small>
+                    <div class="row mt-2">
+                      <div class="col-6">
+                        <h4 class="text-success mb-0">{{ comparisonResult.report1.sponsoredCount }}</h4>
+                      </div>
+                      <div class="col-6">
+                        <h4 class="text-success mb-0">{{ comparisonResult.report2.sponsoredCount }}</h4>
+                      </div>
+                    </div>
+                    <div class="mt-2">
+                      <span class="badge" [ngClass]="getChangeClass(comparisonResult.comparison.sponsoredCountChange)">
+                        <i class="fas me-1" [ngClass]="getChangeIcon(comparisonResult.comparison.sponsoredCountChange)"></i>
+                        {{ comparisonResult.comparison.sponsoredCountChange > 0 ? '+' : '' }}{{ comparisonResult.comparison.sponsoredCountChange }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Unsponsored -->
+                <div class="col-md-6">
+                  <div class="stat-card text-center p-3 border rounded">
+                    <small class="text-muted">{{ 'orphanReports.unsponsored' | translate }}</small>
+                    <div class="row mt-2">
+                      <div class="col-6">
+                        <h4 class="text-warning mb-0">{{ comparisonResult.report1.unsponsoredCount }}</h4>
+                      </div>
+                      <div class="col-6">
+                        <h4 class="text-warning mb-0">{{ comparisonResult.report2.unsponsoredCount }}</h4>
+                      </div>
+                    </div>
+                    <div class="mt-2">
+                      <span class="badge" [ngClass]="getChangeClass(comparisonResult.comparison.unsponsoredCountChange)">
+                        <i class="fas me-1" [ngClass]="getChangeIcon(comparisonResult.comparison.unsponsoredCountChange)"></i>
+                        {{ comparisonResult.comparison.unsponsoredCountChange > 0 ? '+' : '' }}{{ comparisonResult.comparison.unsponsoredCountChange }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Age Distribution - UC-6.10 -->
+          <div class="mb-4" *ngIf="isMetricVisible('ageDistribution')">
+            <h6>{{ 'orphanReports.ageDistribution' | translate }}</h6>
+            <div class="row">
+              <div class="col-md-3">
+                <div class="age-group p-2 border rounded mb-2">
+                  <small>0-5 {{ 'orphanReports.years' | translate }}</small>
+                  <div class="d-flex justify-content-between mt-1">
+                    <span class="badge bg-primary">{{ comparisonResult.report1.age0To5Count }}</span>
+                    <span class="badge bg-success">{{ comparisonResult.report2.age0To5Count }}</span>
+                  </div>
+                  <small class="text-muted" [ngClass]="getChangeClass(comparisonResult.comparison.age0To5CountChange)">
+                    {{ comparisonResult.comparison.age0To5CountChange > 0 ? '+' : '' }}{{ comparisonResult.comparison.age0To5CountChange }}
+                  </small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="age-group p-2 border rounded mb-2">
+                  <small>6-12 {{ 'orphanReports.years' | translate }}</small>
+                  <div class="d-flex justify-content-between mt-1">
+                    <span class="badge bg-primary">{{ comparisonResult.report1.age6To12Count }}</span>
+                    <span class="badge bg-success">{{ comparisonResult.report2.age6To12Count }}</span>
+                  </div>
+                  <small class="text-muted" [ngClass]="getChangeClass(comparisonResult.comparison.age6To12CountChange)">
+                    {{ comparisonResult.comparison.age6To12CountChange > 0 ? '+' : '' }}{{ comparisonResult.comparison.age6To12CountChange }}
+                  </small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="age-group p-2 border rounded mb-2">
+                  <small>13-18 {{ 'orphanReports.years' | translate }}</small>
+                  <div class="d-flex justify-content-between mt-1">
+                    <span class="badge bg-primary">{{ comparisonResult.report1.age13To18Count }}</span>
+                    <span class="badge bg-success">{{ comparisonResult.report2.age13To18Count }}</span>
+                  </div>
+                  <small class="text-muted" [ngClass]="getChangeClass(comparisonResult.comparison.age13To18CountChange)">
+                    {{ comparisonResult.comparison.age13To18CountChange > 0 ? '+' : '' }}{{ comparisonResult.comparison.age13To18CountChange }}
+                  </small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="age-group p-2 border rounded mb-2">
+                  <small>19+ {{ 'orphanReports.years' | translate }}</small>
+                  <div class="d-flex justify-content-between mt-1">
+                    <span class="badge bg-primary">{{ comparisonResult.report1.age19PlusCount }}</span>
+                    <span class="badge bg-success">{{ comparisonResult.report2.age19PlusCount }}</span>
+                  </div>
+                  <small class="text-muted" [ngClass]="getChangeClass(comparisonResult.comparison.age19PlusCountChange)">
+                    {{ comparisonResult.comparison.age19PlusCountChange > 0 ? '+' : '' }}{{ comparisonResult.comparison.age19PlusCountChange }}
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gender Distribution - UC-6.10 -->
+          <div class="mb-4" *ngIf="isMetricVisible('genderDistribution')">
+            <h6>{{ 'orphanReports.genderDistribution' | translate }}</h6>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="gender-card p-3 border rounded mb-2">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <i class="fas fa-male text-primary fa-2x me-3"></i>
+                      <span>{{ 'orphanReports.male' | translate }}</span>
+                    </div>
+                    <div>
+                      <span class="badge bg-primary me-2">{{ comparisonResult.report1.maleCount }}</span>
+                      <span class="badge bg-success">{{ comparisonResult.report2.maleCount }}</span>
+                    </div>
+                  </div>
+                  <small class="text-muted mt-2 d-block" [ngClass]="getChangeClass(comparisonResult.comparison.maleCountChange)">
+                    {{ comparisonResult.comparison.maleCountChange > 0 ? '+' : '' }}{{ comparisonResult.comparison.maleCountChange }}
+                  </small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="gender-card p-3 border rounded mb-2">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <i class="fas fa-female text-danger fa-2x me-3"></i>
+                      <span>{{ 'orphanReports.female' | translate }}</span>
+                    </div>
+                    <div>
+                      <span class="badge bg-primary me-2">{{ comparisonResult.report1.femaleCount }}</span>
+                      <span class="badge bg-success">{{ comparisonResult.report2.femaleCount }}</span>
+                    </div>
+                  </div>
+                  <small class="text-muted mt-2 d-block" [ngClass]="getChangeClass(comparisonResult.comparison.femaleCountChange)">
+                    {{ comparisonResult.comparison.femaleCountChange > 0 ? '+' : '' }}{{ comparisonResult.comparison.femaleCountChange }}
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charity Distribution - UC-6.10 -->
+          <div class="mb-4" *ngIf="isMetricVisible('charityDistribution') && comparisonResult.comparison.charityComparison">
+            <h6>{{ 'orphanReports.charityDistribution' | translate }}</h6>
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th translate>orphanReports.charity</th>
+                    <th class="text-center">{{ 'orphanReports.report1' | translate }}</th>
+                    <th class="text-center">{{ 'orphanReports.report2' | translate }}</th>
+                    <th class="text-center">{{ 'orphanReports.change' | translate }}</th>
+                    <th class="text-center">{{ 'orphanReports.percentChange' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let charityComp of comparisonResult.comparison.charityComparison">
+                    <td>{{ charityComp.charityName }}</td>
+                    <td class="text-center">
+                      <span class="badge bg-primary">{{ charityComp.report1Count }}</span>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-success">{{ charityComp.report2Count }}</span>
+                    </td>
+                    <td class="text-center">
+                      <span [ngClass]="getChangeClass(charityComp.countChange)">
+                        {{ charityComp.countChange > 0 ? '+' : '' }}{{ charityComp.countChange }}
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge" [ngClass]="getChangeClass(charityComp.countChange)">
+                        {{ formatPercent(charityComp.percentChange) }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Export Comparison -->
+          <div class="text-center mt-4">
+            <button class="btn btn-outline-primary">
+              <i class="fas fa-download me-2"></i>
+              <span translate>orphanReports.exportComparison</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
