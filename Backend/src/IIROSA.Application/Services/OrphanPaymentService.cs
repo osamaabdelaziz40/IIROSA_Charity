@@ -14,6 +14,7 @@ namespace IIROSA.Application.Services;
 /// </summary>
 public class OrphanPaymentService : IOrphanPaymentService
 {
+    private readonly IIROSA.Application.Interfaces.ICharityWriteGuard _charityWriteGuard;
     private readonly IOrphanPaymentRepository _orphanPaymentRepository;
     private readonly IOrphanPaymentItemRepository _orphanPaymentItemRepository;
     private readonly IOrphanRepository _orphanRepository;
@@ -23,6 +24,7 @@ public class OrphanPaymentService : IOrphanPaymentService
     private readonly ILogger<OrphanPaymentService> _logger;
 
     public OrphanPaymentService(
+        IIROSA.Application.Interfaces.ICharityWriteGuard charityWriteGuard,
         IOrphanPaymentRepository orphanPaymentRepository,
         IOrphanPaymentItemRepository orphanPaymentItemRepository,
         IOrphanRepository orphanRepository,
@@ -31,6 +33,7 @@ public class OrphanPaymentService : IOrphanPaymentService
         IMapper mapper,
         ILogger<OrphanPaymentService> logger)
     {
+        _charityWriteGuard = charityWriteGuard;
         _orphanPaymentRepository = orphanPaymentRepository;
         _orphanPaymentItemRepository = orphanPaymentItemRepository;
         _orphanRepository = orphanRepository;
@@ -44,6 +47,9 @@ public class OrphanPaymentService : IOrphanPaymentService
 
     public async Task<OrphanPaymentDto> CreatePaymentGroupAsync(CreateOrphanPaymentDto dto)
     {
+        // UC-CHR-07/08/09: head office can lock a charity or withdraw its add/edit rights.
+        await _charityWriteGuard.EnsureCanAddAsync();
+
         _logger.LogInformation("Creating new orphan payment group: {GroupName}", dto.GroupName);
 
         // Validate date range (UC-5.1 Alternative Flow 8a)
@@ -230,6 +236,9 @@ public class OrphanPaymentService : IOrphanPaymentService
 
     public async Task<OrphanPaymentDto> UpdatePaymentGroupAsync(UpdateOrphanPaymentDto dto)
     {
+        // UC-CHR-07/08/09: head office can lock a charity or withdraw its add/edit rights.
+        await _charityWriteGuard.EnsureCanUpdateAsync();
+
         _logger.LogInformation("Updating payment group: {Id}", dto.Id);
 
         var paymentGroup = await _orphanPaymentRepository.GetByIdAsync(dto.Id);

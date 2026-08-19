@@ -268,6 +268,16 @@ export class InputTextComponent implements OnInit, OnDestroy, OnChanges {
     if (field.errors['url']) {
       return this.translate.instant('validation.url');
     }
+    // Raised by the async uniqueness validators (e.g. charity name, UC-CHR-02).
+    if (field.errors['nameTaken']) {
+      return this.translate.instant('validation.nameTaken');
+    }
+    // Set from a server 400 carrying per-field errors. The message is already the server's, so it
+    // is shown as-is rather than looked up — there is no translation key for a rule the client
+    // does not know about.
+    if (field.errors['server']) {
+      return field.errors['server'];
+    }
 
     return this.translate.instant('validation.invalid');
   }

@@ -478,6 +478,21 @@ public class ImpersonationService : Interfaces.IImpersonationService
             new Claim("IsImpersonating", "true")
         };
 
+        // Tenancy of the user being impersonated. Without these the impersonated session has no
+        // charity or country claim, and the application layer treats an unscopeable caller as
+        // having access to nothing — so impersonation would silently show an empty system.
+        // Claim names are duplicated from IIROSA.Application.IiroSaClaimTypes; Framework.Identity
+        // cannot reference the application layer.
+        if (targetUser.CharityId.HasValue)
+        {
+            claims.Add(new Claim("charityId", targetUser.CharityId.Value.ToString()));
+        }
+
+        if (targetUser.CountryId.HasValue)
+        {
+            claims.Add(new Claim("countryId", targetUser.CountryId.Value.ToString()));
+        }
+
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         var tokenDescriptor = new Microsoft.IdentityModel.Tokens.SecurityTokenDescriptor
@@ -516,6 +531,19 @@ public class ImpersonationService : Interfaces.IImpersonationService
             new Claim("FullName", user.FullName ?? string.Empty),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        // This method mints the token handed back when impersonation ENDS. Without tenancy the
+        // impersonator returns to a token with no charity/country: a country-pinned head-office
+        // user would silently widen to every country, and a charity-bound one would see nothing.
+        if (user.CharityId.HasValue)
+        {
+            claims.Add(new Claim("charityId", user.CharityId.Value.ToString()));
+        }
+
+        if (user.CountryId.HasValue)
+        {
+            claims.Add(new Claim("countryId", user.CountryId.Value.ToString()));
+        }
 
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 

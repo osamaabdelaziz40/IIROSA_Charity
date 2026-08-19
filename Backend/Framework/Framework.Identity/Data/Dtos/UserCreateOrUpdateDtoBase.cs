@@ -23,5 +23,17 @@ namespace Framework.Identity.Data.Dtos
 
         public string[] RoleNames { get; set; }
         public List<LookupBaseDto<string>> Roles { get; set; } = new List<LookupBaseDto<string>>();
+
+        /// <summary>
+        /// The charity this user belongs to. Null for head-office users. Set at creation time so
+        /// the account can be scoped server-side from its first login; an account created without
+        /// it cannot be tenancy-scoped at all.
+        /// </summary>
+        public Guid? CharityId { get; set; }
+
+        /// <summary>
+        /// The country this user operates in.
+        /// </summary>
+        public int? CountryId { get; set; }
     }
 }

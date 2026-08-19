@@ -10,7 +10,7 @@
 | Use case prefix | UC-FAM |
 | Chapter in master document | Chapter 10 |
 | Documented use cases | 14 |
-| Principal routes | `#/families`, `#/families/:id/edit`, `#/families/:id/members`, `#/families/provider-requests` |
+| Principal routes | `#/families`, `#/families/create`, `#/families/:id`, `#/families/:id/edit`, `#/families/:id/members` *(planned)*, `#/families/provider-requests` *(planned)* |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -47,8 +47,8 @@
 | --- | --- | --- | --- | --- |
 | UC-FAM-01 | List families of a charity قائمة الأسر | Charity, HQ roles | Displays a paged list of family files owned by the charity. A charity account sees only its own families; HQ roles pass the charity id to browse any charity. | Route `#/families` → GET /api/Families?charityId= |
 | UC-FAM-02 | Search families البحث عن أسرة | Charity, HQ roles | Filters the family list by a chosen criterion and value. Supported criteria are father name, mother name, orphan name, sponsor name, national ID, orphan code and phone number. Results remain paged and scoped to the charity. | GET /api/Families?charityId=&search= (SearchCriteria) |
-| UC-FAM-03 | Register a new family اضافة اسرة | Charity | The charity opens a new family file: housing and income data, the guardian with their national ID, and the children. On save the system creates the family, its parent record and all child records in one unit of work and returns the new family id. Pre-condition: the charity's add permission must be enabled. Alternate: a duplicate national ID is rejected (UC-SYS-05). | Route `#/families/:id/edit` → POST /api/Families |
-| UC-FAM-04 | View a family file عرض بيانات الأسرة | Charity, HQ roles | Loads a complete family file — guardian, children, housing, income and attachments — in read or edit mode depending on the route mode parameter. | Route `#/families/:id/edit` (mode v/e) → GET /api/Families/{id} |
+| UC-FAM-03 | Register a new family اضافة اسرة | Charity | The charity opens a new family file: housing and income data, the guardian with their national ID, and the children. On save the system creates the family, its parent record and all child records in one unit of work and returns the new family id. Pre-condition: the charity's add permission must be enabled. Alternate: a duplicate national ID is rejected (UC-SYS-05). | Route `#/families/create` → POST /api/Families |
+| UC-FAM-04 | View a family file عرض بيانات الأسرة | Charity, HQ roles | Loads a complete family file — guardian, children, housing, income and attachments — in read mode at `#/families/:id` or in edit mode at `#/families/:id/edit`; this project uses two routes rather than the legacy mode parameter. | Route `#/families/:id` (read) · `#/families/:id/edit` (edit) → GET /api/Families/{id} |
 | UC-FAM-05 | Update a family file تعديل بيانات الأسرة | Charity, HQ roles | Saves amendments to the family, its guardian and its members. Pre-condition: the charity's edit permission must be enabled (UC-CHR-09); HQ roles are not subject to this lock. | PUT /api/Families |
 | UC-FAM-06 | Transfer a family to another charity نقل الأسرة لجمعية أخرى | HQ roles | Reassigns the family file — and by cascade its guardian, orphans, reports and history — from its current charity to a new one, so that future reporting and payments are handled by the receiving charity. | PUT /api/Families/{id}/charity |
 | UC-FAM-07 | Move an orphan between families نقل يتيم بين الأسر | Gen. Director, Staff, Fin. Director | Corrects a mis-registered member. The operator either detaches the orphan into a newly created holding family (action 0, with a justification note appended to the orphan's notes) or attaches the orphan to an existing family (action 1). Pre-condition: caller role must be 0, 3 or 4; other roles are refused. | Route `#/families/:id/members` → POST /api/Families/{familyId}/members/{memberId}/control |
@@ -121,12 +121,12 @@ Commands on this screen:
 | (icon only) | GetNext() | always |
 | (icon only) | GetPrev() | always |
 
-#### 10.S.2  Screen `#/families/:id/edit`
+#### 10.S.2  Screen `#/families/create` · `#/families/:id/edit`
 
 
 | Property | Value |
 | --- | --- |
-| Angular route | `#/families/:id/edit` |
+| Angular route | `#/families/create` and `#/families/:id/edit` (one component, both routes) |
 | Feature module | `families` (lazy-loaded) |
 | Component | `FamilyFormComponent` |
 | Route status | implemented |
@@ -409,7 +409,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• The business layer returns «أحد المعيلين مكرر من قبل أكثر من مرة» and the operation is not applied.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • A new record exists, owned by the charity of the creating user, and appears in the list screen of the module. |
-| Realisation | Route `#/families/:id/edit` → `FamilyFormComponent`<br>`POST /api/Families` → `FamiliesController` → `IFamilyService` |
+| Realisation | Route `#/families/create` → `FamilyFormComponent`<br>`POST /api/Families` → `FamiliesController` → `IFamilyService` |
 
 #### 10.U.4  UC-FAM-04 — View a family file عرض بيانات الأسرة
 
@@ -629,6 +629,8 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
 | `#/families` | `families` | `FamilyListComponent` | implemented |
+| `#/families/create` | `families` | `FamilyFormComponent` | implemented |
+| `#/families/:id` | `families` | `FamilyDetailComponent` | implemented |
 | `#/families/:id/edit` | `families` | `FamilyFormComponent` | implemented |
 | `#/families/:id/members` | `families` | `FamilyMembersComponent` | planned |
 | `#/families/provider-requests` | `families` | `ProviderRequestListComponent` | planned |

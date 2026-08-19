@@ -17,6 +17,7 @@ namespace IIROSA.Application.Services;
 public class FamilyService : IFamilyService
 {
     private readonly IFamilyRepository _familyRepository;
+    private readonly IIROSA.Application.Interfaces.ICharityWriteGuard _charityWriteGuard;
     private readonly IFatherRepository _fatherRepository;
     private readonly IMotherRepository _motherRepository;
     private readonly IProviderRepository _providerRepository;
@@ -30,6 +31,7 @@ public class FamilyService : IFamilyService
 
     public FamilyService(
         IFamilyRepository familyRepository,
+        IIROSA.Application.Interfaces.ICharityWriteGuard charityWriteGuard,
         IFatherRepository fatherRepository,
         IMotherRepository motherRepository,
         IProviderRepository providerRepository,
@@ -43,6 +45,7 @@ public class FamilyService : IFamilyService
     {
         _familyRepository = familyRepository;
         _fatherRepository = fatherRepository;
+        _charityWriteGuard = charityWriteGuard;
         _motherRepository = motherRepository;
         _providerRepository = providerRepository;
         _relativeRepository = relativeRepository;
@@ -59,6 +62,10 @@ public class FamilyService : IFamilyService
     public async Task<FamilyDto> CreateFamilyAsync(CreateFamilyDto dto)
     {
         _logger.LogInformation("Creating new family with head: {HeadOfFamily}", dto.HeadOfFamily);
+
+        // UC-CHR-08: head office can disable adding for a charity, and UC-CHR-07 can lock it
+        // outright. Enforced here because this is the charity-facing write, not in the controller.
+        await _charityWriteGuard.EnsureCanAddAsync();
 
         // Generate code if not provided
         var code = dto.Code ?? await GenerateFamilyCodeAsync();
@@ -316,6 +323,9 @@ public class FamilyService : IFamilyService
     public async Task<FamilyDto> UpdateFamilyAsync(UpdateFamilyDto dto)
     {
         _logger.LogInformation("Updating family: {Id}", dto.Id);
+
+        // UC-CHR-09 / UC-CHR-07: editing may be disabled, or the account locked.
+        await _charityWriteGuard.EnsureCanUpdateAsync();
 
         var family = await _familyRepository.GetByIdAsync(dto.Id);
         if (family == null)

@@ -16,14 +16,22 @@ namespace IIROSA.Api.Controllers;
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class CharitiesController : ControllerBase
 {
+    /// <summary>
+    /// Mirrors <c>CharityConfiguration</c>'s <c>HasMaxLength(200)</c> on <c>Charity.Name</c>.
+    /// </summary>
+    private const int CharityNameMaxLength = 200;
+
     private readonly ICharityService _charityService;
+    private readonly ICurrentUserService _currentUser;
     private readonly ILogger<CharitiesController> _logger;
 
     public CharitiesController(
         ICharityService charityService,
+        ICurrentUserService currentUser,
         ILogger<CharitiesController> logger)
     {
         _charityService = charityService;
+        _currentUser = currentUser;
         _logger = logger;
     }
 
@@ -33,7 +41,9 @@ public class CharitiesController : ControllerBase
     /// Get all charities with filtering and pagination (UC-3.10)
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = "SuperAdmin,Admin")]
+    // A charity user may call this; CharityService scopes the result to their own record, so the
+    // list is the same screen for both audiences and the scoping decision stays server-side.
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
     [ProducesResponseType(typeof(IEnumerable<CharityListDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<(IEnumerable<CharityListDto> Items, int TotalCount)>> GetCharities(
         [FromQuery] CharityFilterDto filter)
@@ -68,7 +78,9 @@ public class CharitiesController : ControllerBase
             }
 
             // Charity users can only view their own profile
-            if (User.IsInRole("Charity") && !HasAccessToCharity(id))
+            // Gated on the tenancy claim, not the role name: a charity-bound user holding any
+            // other role (Accountant, FinancialOfficer) would otherwise skip the check entirely.
+            if (!HasAccessToCharity(id))
             {
                 return Forbid();
             }
@@ -96,7 +108,9 @@ public class CharitiesController : ControllerBase
             var profile = await _charityService.GetCharityProfileAsync(id);
 
             // Charity users can only view their own profile
-            if (User.IsInRole("Charity") && !HasAccessToCharity(id))
+            // Gated on the tenancy claim, not the role name: a charity-bound user holding any
+            // other role (Accountant, FinancialOfficer) would otherwise skip the check entirely.
+            if (!HasAccessToCharity(id))
             {
                 return Forbid();
             }
@@ -150,6 +164,66 @@ public class CharitiesController : ControllerBase
     }
 
     /// <summary>
+    /// Check whether a charity name is still available (UC-CHR-02).
+    /// </summary>
+    /// <param name="name">The name to check.</param>
+    /// <param name="excludeId">
+    /// The charity being edited, if any. Without it, editing a charity without renaming it would
+    /// report its own name as taken.
+    /// </param>
+    /// <remarks>
+    /// Uniqueness is register-wide, not per charity, because that is the rule the save enforces.
+    /// Reporting a name as free that <c>CreateCharityAsync</c> would then reject would be worse
+    /// than not offering the check at all.
+    ///
+    /// Restricted to the roles that may create or update a charity so the endpoint cannot be used
+    /// to enumerate the register by probing names.
+    /// </remarks>
+    [HttpGet("check-name")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
+    [ProducesResponseType(typeof(CharityNameAvailabilityDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CharityNameAvailabilityDto>> CheckNameAvailability(
+        [FromQuery] string name,
+        [FromQuery] Guid? excludeId = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return BadRequest(new { message = "A name is required to check availability" });
+        }
+
+        var candidate = name.Trim();
+
+        // Charity.Name is nvarchar(200). Without this an over-long name finds no match, is
+        // reported available, and then fails the save with a SQL truncation error.
+        if (candidate.Length > CharityNameMaxLength)
+        {
+            return BadRequest(new
+            {
+                message = $"A charity name may be at most {CharityNameMaxLength} characters"
+            });
+        }
+
+        try
+        {
+            var isAvailable = await _charityService.IsNameUniqueAsync(candidate, excludeId);
+
+            return Ok(new CharityNameAvailabilityDto
+            {
+                Name = candidate,
+                IsAvailable = isAvailable
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking charity name availability for {Name}", name);
+            // Deliberately no exception detail: on an EF/SqlException ex.Message carries table,
+            // column and constraint names. The full exception is in the log above.
+            return StatusCode(500, new { message = "Error checking name availability" });
+        }
+    }
+
+    /// <summary>
     /// Create new charity (UC-3.1)
     /// </summary>
     [HttpPost]
@@ -167,6 +241,21 @@ public class CharitiesController : ControllerBase
 
             var charity = await _charityService.CreateCharityAsync(dto);
             return CreatedAtAction(nameof(GetCharity), new { id = charity.Id }, charity);
+        }
+        // Must precede the catch-all: ValidationException derives from Exception, so without this
+        // it was swallowed into a 500 and never reached ExceptionMiddleware, leaving the client
+        // with no `errors` map and no way to flag the offending field.
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (InvalidOperationException ex)
         {
@@ -208,6 +297,18 @@ public class CharitiesController : ControllerBase
         catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (InvalidOperationException ex)
         {
@@ -533,7 +634,9 @@ public class CharitiesController : ControllerBase
             }
 
             // Charity users can only update their own contacts
-            if (User.IsInRole("Charity") && !HasAccessToCharity(id))
+            // Gated on the tenancy claim, not the role name: a charity-bound user holding any
+            // other role (Accountant, FinancialOfficer) would otherwise skip the check entirely.
+            if (!HasAccessToCharity(id))
             {
                 return Forbid();
             }
@@ -585,18 +688,29 @@ public class CharitiesController : ControllerBase
 
     #region Helper Methods
 
+    /// <summary>
+    /// Whether the caller may read the given charity.
+    /// </summary>
+    /// <remarks>
+    /// Decided from the signed tenancy claim, never from a request parameter. A caller bound to a
+    /// charity may read only that charity; a head-office caller may read any. A caller with no
+    /// charity claim and no head-office role is refused, because an unscopeable caller must not
+    /// default to full access.
+    /// </remarks>
     private bool HasAccessToCharity(Guid charityId)
     {
-        // Check if the current user is associated with this charity
-        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
+        if (!_currentUser.IsAuthenticated)
         {
             return false;
         }
 
-        // TODO: Implement actual check against charity.UserId
-        // For now, this is a placeholder
-        return true;
+        var callerCharityId = _currentUser.CharityId;
+        if (callerCharityId.HasValue)
+        {
+            return callerCharityId.Value == charityId;
+        }
+
+        return _currentUser.IsHeadOffice;
     }
 
     #endregion

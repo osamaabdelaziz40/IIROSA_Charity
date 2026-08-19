@@ -167,7 +167,9 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
+| `#/` | `dashboard` | redirects to `#/dashboard` | implemented |
 | `#/dashboard` | `dashboard` | `DashboardComponent` | implemented |
+| `#/**` (unmatched) | `dashboard` | redirects to `#/dashboard` | implemented |
 
 ### 7.B  Annex - API controllers of this module
 

@@ -98,6 +98,13 @@ builder.Services.AddInfrastructure(configuration);
 builder.Services.AddAntiforgery(options => options.SuppressXFrameOptionsHeader = false);
 builder.Services.AddApplicationServices();
 
+// Resolves the caller's identity, charity and country from the access token so application
+// services can scope their queries server-side.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IIROSA.Application.Interfaces.ICurrentUserService, IIROSA.Api.Services.CurrentUserService>();
+// Enforces Charity.IsLocked / IsAddEnabled / IsUpdateEnabled on charity-facing writes (UC-CHR-07/08/09).
+builder.Services.AddScoped<IIROSA.Application.Interfaces.ICharityWriteGuard, IIROSA.Application.Services.CharityWriteGuard>();
+
 //// AutoMapper Configuration
 //var config = new MapperConfiguration(cfg =>
 //{
@@ -555,25 +562,41 @@ app.MapGet("/health", () =>
 })
 .WithName("Health Check");
 
+// Apply schema migrations on every start, in every environment.
+//
+// This deliberately sits OUTSIDE the seed-data gate below. Schema and seed data are different
+// concerns: seeding only makes sense in Development or on a first run, but a Production deployment
+// against an existing database still needs its schema brought up to date. Keeping the two together
+// meant a Production start applied no migrations at all.
+using (var migrationScope = app.Services.CreateScope())
+{
+    try
+    {
+        Console.WriteLine("Applying pending migrations...");
+
+        migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
+
+        // The identity database must migrate too. ApplicationUser carries CharityId/CountryId, so
+        // EF selects those columns on every user lookup; against a database without this migration
+        // the first login fails with "Invalid column name 'CharityId'". Only ApplicationDbContext
+        // was being migrated, leaving this to a manual step that nothing enforced.
+        migrationScope.ServiceProvider.GetRequiredService<AppIdentityDbContext>().Database.Migrate();
+
+        Console.WriteLine("Migrations applied successfully!");
+    }
+    catch (Exception ex)
+    {
+        // Rethrown rather than swallowed: continuing with an un-migrated schema produces a server
+        // that starts cleanly and then fails every login, which is far harder to diagnose than a
+        // refusal to start.
+        Console.WriteLine($"Error applying migrations: {ex.Message}");
+        throw;
+    }
+}
+
 // Initialize seed data (only in Development or on first run)
 if (app.Environment.IsDevelopment() || IsFirstRun(app))
 {
-    using (var scope = app.Services.CreateScope())
-    {
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        try
-        {
-            Console.WriteLine("Applying pending migrations...");
-            dbContext.Database.Migrate();
-            Console.WriteLine("Migrations applied successfully!");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error applying migrations: {ex.Message}");
-            // Handle the exception as needed
-        }
-    }
     using (var scope = app.Services.CreateScope())
     {
         var seedDataInitializer = scope.ServiceProvider.GetRequiredService<IIROSASeedDataInitializer>();

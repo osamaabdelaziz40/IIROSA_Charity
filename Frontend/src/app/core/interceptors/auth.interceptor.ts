@@ -50,6 +50,14 @@ export class AuthInterceptor implements HttpInterceptor {
           // Token expired or invalid - redirect to login
           this.handle401Error(request);
         }
+        // A 403 is deliberately NOT handled here. An earlier version navigated to the login
+        // screen on every 403, which was wrong: the session is valid, so signing the user out
+        // discards a working session and any half-completed form. Worse, it fires for background
+        // and validation requests too — the charity form's name-availability check returns 403
+        // for non-admin roles, which would have ejected the user mid-typing.
+        //
+        // "Role is not permitted" belongs at the route level (PermissionGuard), where it can be
+        // decided before the screen opens. Individual callers surface their own 403s.
         return throwError(() => error);
       })
     );

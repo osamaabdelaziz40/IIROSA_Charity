@@ -34,7 +34,9 @@ public class CreateCharityDto
     [StringLength(100, ErrorMessage = "Village cannot exceed 100 characters")]
     public string Village { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "City is required")]
+    // NOT [Required]. The city field is commented out of the form, the template, and the client
+    // DTO, so nothing ever sends it. With [ApiController], RequiredAttribute short-circuited every
+    // create with a 400 before the action body ran — charity creation from the UI was impossible.
     [StringLength(100, ErrorMessage = "City cannot exceed 100 characters")]
     public string City { get; set; } = string.Empty;
 

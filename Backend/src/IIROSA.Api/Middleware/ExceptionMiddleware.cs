@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 
 namespace IIROSA.Api.Middleware;
@@ -69,6 +70,27 @@ public class ExceptionMiddleware
                 response.Message = "You are not authorized to access this resource";
                 break;
 
+            // A failed validator is a bad request, and the client needs to know WHICH field failed
+            // so it can flag it — a message string alone cannot do that. Errors are grouped by
+            // property name because one field can break several rules at once.
+            case FluentValidation.ValidationException validationException:
+                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                response.Status = HttpStatusCode.BadRequest;
+                response.Message = "One or more fields are invalid";
+                response.Errors = validationException.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray());
+                break;
+
+            // The caller is authenticated and holds the right role; the refusal is about the
+            // charity's own lock/permission state, so it is a 403 rather than a 401 or a 404.
+            case IIROSA.Application.Interfaces.CharityWriteForbiddenException:
+                context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                response.Status = HttpStatusCode.Forbidden;
+                break;
+
             case KeyNotFoundException:
             case InvalidOperationException:
                 context.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -123,6 +145,12 @@ public class ErrorResponse
     public string? StackTrace { get; set; }
     public string? InnerException { get; set; }
     public Dictionary<string, string>? Details { get; set; }
+
+    /// <summary>
+    /// Per-field validation errors, keyed by property name. Present only on a 400 raised by a
+    /// validator; the client uses the keys to flag the offending fields on the form.
+    /// </summary>
+    public Dictionary<string, string[]>? Errors { get; set; }
 }
 
 /// <summary>

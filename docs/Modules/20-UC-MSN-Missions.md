@@ -10,7 +10,7 @@
 | Use case prefix | UC-MSN |
 | Chapter in master document | Chapter 20 |
 | Documented use cases | 9 |
-| Principal routes | `#/missions`, `#/missions/:id/edit`, `#/missions/:id/register` |
+| Principal routes | `#/missions`, `#/missions/create`, `#/missions/my-missions`, `#/missions/:id`, `#/missions/:id/edit`, `#/missions/:id/register` *(planned)* |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -35,7 +35,7 @@
 | UC-MSN-03 | Select the mission type نوع المأمورية | Gen. Director, Staff | Loads the catalogue of mission types used to classify the assignment. | GET /api/MissionManagement/mission-types |
 | UC-MSN-04 | Select the interview type نوع المقابلة | Gen. Director, Staff | Loads the interview-type catalogue recorded against the mission outcome. | GET /api/LookupManagement/mission-interview-types |
 | UC-MSN-05 | Select the time type التوقيت | Gen. Director, Staff | Loads the time-classification catalogue (for example morning / evening / full day) for the mission. | GET /api/MissionManagement/mission-time-types |
-| UC-MSN-06 | Create a mission تسجيل المأمورية | Gen. Director, Staff | Records the assignment — purpose, type, destination charity, dates, staff and expected outcome. | Route `#/missions/:id/edit` → POST /api/MissionManagement |
+| UC-MSN-06 | Create a mission تسجيل المأمورية | Gen. Director, Staff | Records the assignment — purpose, type, destination charity, dates, staff and expected outcome. | Route `#/missions/create` → POST /api/MissionManagement |
 | UC-MSN-07 | View / update a mission تعديل المأمورية | Gen. Director, Staff | Loads a mission by id and saves the outcome and observations after execution. | GET /api/MissionManagement/{id} PUT /api/MissionManagement |
 | UC-MSN-08 | Delete a mission حذف المأمورية | Gen. Director | Removes a mission record. | DELETE /api/MissionManagement |
 | UC-MSN-09 | Register a mission result تسجيل نتيجة المأمورية | Gen. Director, Staff | Dedicated entry point used by the mission-registration screen to submit the completed mission with its findings. | Route `#/missions/:id/register` → POST /api/MissionManagement/{id}/event |
@@ -83,12 +83,12 @@ Commands on this screen:
 | (icon only) | GetNext() | always |
 | (icon only) | GetPrev() | always |
 
-#### 20.S.2  Screen `#/missions/:id/edit`
+#### 20.S.2  Screen `#/missions/create` and `#/missions/:id/edit`
 
 
 | Property | Value |
 | --- | --- |
-| Angular route | `#/missions/:id/edit` |
+| Angular route | `#/missions/create` and `#/missions/:id/edit` (one component, both routes) |
 | Feature module | `missions` (lazy-loaded) |
 | Component | `MissionFormComponent` |
 | Route status | implemented |
@@ -277,7 +277,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • A new record exists, owned by the charity of the creating user, and appears in the list screen of the module. |
-| Realisation | Route `#/missions/:id/edit` → `MissionFormComponent`<br>`POST /api/MissionManagement` → `MissionManagementController` → `IMissionService` |
+| Realisation | Route `#/missions/create` → `MissionFormComponent`<br>`POST /api/MissionManagement` → `MissionManagementController` → `IMissionService` |
 
 #### 20.U.7  UC-MSN-07 — View / update a mission تعديل المأمورية
 
@@ -345,6 +345,9 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
 | `#/missions` | `missions` | `MissionListComponent` | implemented |
+| `#/missions/create` | `missions` | `MissionFormComponent` | implemented |
+| `#/missions/my-missions` | `missions` | `MyMissionsComponent` | implemented |
+| `#/missions/:id` | `missions` | `MissionDetailComponent` | implemented |
 | `#/missions/:id/edit` | `missions` | `MissionFormComponent` | implemented |
 | `#/missions/:id/register` | `missions` | `MissionRegisterComponent` | planned |
 

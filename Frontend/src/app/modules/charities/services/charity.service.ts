@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams, HttpParameterCodec } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
@@ -13,8 +13,31 @@ import {
   PasswordResetDto,
   CharityStatusUpdateDto,
   CharityCredentialsDto,
+  CharityNameAvailability,
   AttachmentDto
 } from '../models/charity.model';
+
+/**
+ * Percent-encodes query parameters strictly, unlike Angular's default codec which un-escapes a
+ * set of characters — including `+`, which a server reads as a space.
+ */
+class StrictHttpParameterCodec implements HttpParameterCodec {
+  encodeKey(key: string): string {
+    return encodeURIComponent(key);
+  }
+
+  encodeValue(value: string): string {
+    return encodeURIComponent(value);
+  }
+
+  decodeKey(key: string): string {
+    return decodeURIComponent(key);
+  }
+
+  decodeValue(value: string): string {
+    return decodeURIComponent(value);
+  }
+}
 
 @Injectable({
   providedIn: 'root'
@@ -87,7 +110,10 @@ export class CharityService {
   }
 
   private buildHttpParams(filter: any): HttpParams {
-    let params = new HttpParams();
+    // Same strict codec as checkNameAvailability. With Angular's default codec a value containing
+    // `+` reaches the server as a space, so the list search and the availability check would
+    // disagree about whether the same charity name exists.
+    let params = new HttpParams({ encoder: new StrictHttpParameterCodec() });
     if (filter) {
       Object.keys(filter).forEach(key => {
         const value = filter[key];
@@ -113,6 +139,32 @@ export class CharityService {
   getCharity(id: string): Observable<CharityDto> {
     return this.http.get<CharityDto>(`${this.apiUrl}/${id}`, {
       headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Check whether a charity name is still free (UC-CHR-02).
+   *
+   * Uniqueness is register-wide, matching the rule the save enforces.
+   *
+   * @param name the name to check
+   * @param excludeId the charity being edited; omit when creating. Without it, editing a charity
+   *        without renaming it would report its own name as taken.
+   */
+  checkNameAvailability(name: string, excludeId?: string): Observable<CharityNameAvailability> {
+    // Angular's default HttpParams codec re-writes %2B back to a literal '+', which ASP.NET Core
+    // then decodes as a space — so "Al Noor + Partners" would be checked as "Al Noor   Partners".
+    // Encoding the value ourselves and disabling further encoding keeps the two ends agreeing.
+    let params = new HttpParams({ encoder: new StrictHttpParameterCodec() }).set('name', name);
+    if (excludeId) {
+      params = params.set('excludeId', excludeId);
+    }
+
+    return this.http.get<CharityNameAvailability>(`${this.apiUrl}/check-name`, {
+      headers: this.getHeaders(),
+      params
     }).pipe(
       catchError(this.handleError)
     );
@@ -357,7 +409,11 @@ export class CharityService {
       return {
         message: errorMessage,
         status: error.status || 500,
-        details: error.error?.errors || null
+        details: error.error?.errors || null,
+        // Preserved under the original shape as well. Callers that map per-field errors onto form
+        // controls read `error.error.errors`; rethrowing only `details` silently discarded them
+        // and every server-side field error degraded to a generic toast.
+        error: error.error
       };
     });
   }

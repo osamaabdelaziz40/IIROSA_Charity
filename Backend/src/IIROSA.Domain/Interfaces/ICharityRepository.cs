@@ -37,7 +37,10 @@ public interface ICharityRepository : IRepository<Charity>
         int pageNumber = 1,
         int pageSize = 10,
         string? sortBy = null,
-        bool sortDescending = false);
+        bool sortDescending = false,
+        // Appended rather than inserted: every parameter here is optional, so a new one in the
+        // middle silently shifts any positional caller.
+        Guid? charityId = null);
 
     // Specific Queries
     Task<bool> IsNameUniqueAsync(string name, Guid? excludeId = null);

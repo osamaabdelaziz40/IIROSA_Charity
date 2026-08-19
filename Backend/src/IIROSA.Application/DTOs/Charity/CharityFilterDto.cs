@@ -6,6 +6,14 @@ namespace IIROSA.Application.DTOs.Charity;
 public class CharityFilterDto
 {
     public string? SearchTerm { get; set; }
+
+    /// <summary>
+    /// Narrows the result to one charity. A head-office caller may set this to look at a single
+    /// charity; for a charity-bound caller the service overwrites it with their own charity, so
+    /// supplying someone else's id has no effect.
+    /// </summary>
+    public Guid? CharityId { get; set; }
+
     public int? CountryId { get; set; }
     public int? RegionId { get; set; }
     public int? CenterId { get; set; }

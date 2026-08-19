@@ -11,6 +11,8 @@ using Framework.Core.SharedServices.Entities;
 using Framework.Identity.Data.Services.Interfaces;
 using Framework.Identity.Data.Services;
 using Framework.Identity.Data.Dtos;
+using FluentValidation;
+using FluentValidation.Results;
 
 namespace IIROSA.Application.Services;
 
@@ -28,6 +30,9 @@ public class CharityService : ICharityService
     private readonly IAttachmentHelperService _attachmentHelperService;
     private readonly UserAppService _userAppService;
     private readonly IRoleAppService _roleAppService;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IValidator<CreateCharityDto> _createCharityValidator;
+    private readonly IValidator<UpdateCharityDto> _updateCharityValidator;
 
     public CharityService(
         ICharityRepository charityRepository,
@@ -37,7 +42,10 @@ public class CharityService : ICharityService
         AttachmentService attachmentService,
         IAttachmentHelperService attachmentHelperService,
         UserAppService userAppService,
-        IRoleAppService roleAppService)
+        IRoleAppService roleAppService,
+        ICurrentUserService currentUser,
+        IValidator<CreateCharityDto> createCharityValidator,
+        IValidator<UpdateCharityDto> updateCharityValidator)
     {
         _charityRepository = charityRepository;
         _unitOfWork = unitOfWork;
@@ -47,6 +55,9 @@ public class CharityService : ICharityService
         _attachmentHelperService = attachmentHelperService;
         _userAppService = userAppService;
         _roleAppService = roleAppService;
+        _currentUser = currentUser;
+        _createCharityValidator = createCharityValidator;
+        _updateCharityValidator = updateCharityValidator;
     }
 
     #region UC-3.1: Register Charity
@@ -55,32 +66,31 @@ public class CharityService : ICharityService
     {
         _logger.LogInformation("Creating new charity: {Name}", dto.Name);
 
-        // Validate uniqueness
+        // Shape first, then business rules. Running the validator up front means an empty name is
+        // reported as an empty name, rather than failing a uniqueness lookup on an empty string.
+        await _createCharityValidator.ValidateAndThrowAsync(dto);
+
+        // Uniqueness conflicts are raised against the field that caused them, not as a bare
+        // message, so the client can flag that field. (An earlier version of this comment claimed
+        // InvalidOperationException produced a 404 — that was wrong: CharitiesController catches it
+        // and returns 400. The reason to change was field identity, not the status code.)
+        var conflicts = new List<ValidationFailure>();
+
         if (!await IsNameUniqueAsync(dto.Name))
         {
-            throw new InvalidOperationException($"Charity with name '{dto.Name}' already exists");
+            conflicts.Add(new ValidationFailure(
+                nameof(dto.Name), $"Charity with name '{dto.Name}' already exists"));
         }
 
         if (!await IsEmailUniqueAsync(dto.Email))
         {
-            throw new InvalidOperationException($"Charity with email '{dto.Email}' already exists");
+            conflicts.Add(new ValidationFailure(
+                nameof(dto.Email), $"Charity with email '{dto.Email}' already exists"));
         }
 
-        // Validate user account fields
-        if (dto.CreateUserAccount)
+        if (conflicts.Count > 0)
         {
-            if (string.IsNullOrWhiteSpace(dto.Username))
-            {
-                throw new InvalidOperationException("Username is required when creating a user account");
-            }
-            if (string.IsNullOrWhiteSpace(dto.Password))
-            {
-                throw new InvalidOperationException("Password is required when creating a user account");
-            }
-            if (dto.Password.Length < 8)
-            {
-                throw new InvalidOperationException("Password must be at least 8 characters long");
-            }
+            throw new ValidationException(conflicts);
         }
 
         // Generate code if not provided
@@ -99,13 +109,19 @@ public class CharityService : ICharityService
 
         string? createdPassword = null;
 
+        // Allocated up front because the user account must carry this charity's id as its tenancy
+        // claim, and the account is created before the charity row is persisted.
+        var charityId = Guid.NewGuid();
+
         // Create user account if requested
         if (dto.CreateUserAccount)
         {
             var userDto = await CreateUserAccountForCharity(
                 dto.Username,
                 dto.Password,
-                dto.Name
+                dto.Name,
+                charityId,
+                dto.CountryId
             );
 
             if (userDto == null)
@@ -118,9 +134,9 @@ public class CharityService : ICharityService
 
         var charity = new Charity
         {
-            Id = Guid.NewGuid(),
+            Id = charityId,
             Code = code,
-            Name = dto.Name,
+            Name = NormaliseName(dto.Name),
             NGOType = dto.NGOType,
             Address = dto.Address,
             StreetName = dto.StreetName,
@@ -187,14 +203,27 @@ public class CharityService : ICharityService
         }
 
         // Validate uniqueness
+        // Same shape-then-rules ordering as create, and conflicts raised against the field that
+        // caused them so the form can flag it.
+        await _updateCharityValidator.ValidateAndThrowAsync(dto);
+
+        var conflicts = new List<ValidationFailure>();
+
         if (!await IsNameUniqueAsync(dto.Name, dto.Id))
         {
-            throw new InvalidOperationException($"Charity with name '{dto.Name}' already exists");
+            conflicts.Add(new ValidationFailure(
+                nameof(dto.Name), $"Charity with name '{dto.Name}' already exists"));
         }
 
         if (!await IsEmailUniqueAsync(dto.Email, dto.Id))
         {
-            throw new InvalidOperationException($"Charity with email '{dto.Email}' already exists");
+            conflicts.Add(new ValidationFailure(
+                nameof(dto.Email), $"Charity with email '{dto.Email}' already exists"));
+        }
+
+        if (conflicts.Count > 0)
+        {
+            throw new ValidationException(conflicts);
         }
 
         // Handle user account creation/update
@@ -219,7 +248,9 @@ public class CharityService : ICharityService
             var userDto = await CreateUserAccountForCharity(
                 dto.Username,
                 dto.Password,
-                dto.Name
+                dto.Name,
+                charity.Id,
+                dto.CountryId
             );
 
             if (userDto == null)
@@ -253,7 +284,7 @@ public class CharityService : ICharityService
         }
 
         // Update fields
-        charity.Name = dto.Name;
+        charity.Name = NormaliseName(dto.Name);
         charity.NGOType = dto.NGOType;
         charity.Address = dto.Address;
         charity.StreetName = dto.StreetName;
@@ -498,25 +529,129 @@ public class CharityService : ICharityService
     {
         _logger.LogInformation("Getting charities with filter: {@Filter}", filter);
 
+        var scoped = ApplyCallerScope(filter);
+
+        // Named arguments throughout: this signature is all-optional, so a positional call would
+        // bind silently to the wrong parameter if the list ever changes again.
         var (charities, totalCount) = await _charityRepository.GetFilteredPaginatedAsync(
-            filter.SearchTerm,
-            filter.CountryId,
-            filter.RegionId,
-            filter.CenterId,
-            filter.IsActive,
-            filter.IsLocked,
-            filter.IsAddEnabled,
-            filter.IsUpdateEnabled,
-            filter.PageNumber,
-            filter.PageSize,
-            filter.SortBy,
-            filter.SortDescending);
+            searchTerm: scoped.SearchTerm,
+            countryId: scoped.CountryId,
+            regionId: scoped.RegionId,
+            centerId: scoped.CenterId,
+            isActive: scoped.IsActive,
+            isLocked: scoped.IsLocked,
+            isAddEnabled: scoped.IsAddEnabled,
+            isUpdateEnabled: scoped.IsUpdateEnabled,
+            pageNumber: scoped.PageNumber,
+            pageSize: scoped.PageSize,
+            sortBy: scoped.SortBy,
+            sortDescending: scoped.SortDescending,
+            charityId: scoped.CharityId);
 
         // Map each charity individually to avoid collection mapping issues
         var charityDtos = charities.Select(c => _mapper.Map<CharityListDto>(c)).Where(dto => dto != null).Cast<CharityListDto>();
 
         return (charityDtos, totalCount);
     }
+
+    /// <summary>
+    /// Narrows a caller-supplied filter to what the caller is allowed to see.
+    /// </summary>
+    /// <remarks>
+    /// Applied here rather than in the controller so that every caller of
+    /// <see cref="GetCharitiesAsync"/> inherits the same scope.
+    ///
+    /// A charity-bound caller has their charity id written over whatever they sent, so asking for
+    /// another charity returns their own record rather than someone else's. A head-office caller
+    /// keeps any charity id they chose, but is still pinned to their own country when the token
+    /// carries one — this is what stops an HQ user in one country from enumerating another's by
+    /// simply omitting the country filter.
+    /// </remarks>
+    private CharityFilterDto ApplyCallerScope(CharityFilterDto filter)
+    {
+        // Copy rather than mutate: the argument is the model-bound request object, and a caller
+        // that echoes its filter back in a paged response or reuses it to build next-page links
+        // must not observe a tenant id it never sent.
+        var scoped = CloneFilter(filter);
+
+        if (!_currentUser.IsAuthenticated)
+        {
+            return DenyAll(scoped, "request is not authenticated");
+        }
+
+        var callerCharityId = _currentUser.CharityId;
+        if (callerCharityId.HasValue)
+        {
+            if (filter.CharityId.HasValue && filter.CharityId != callerCharityId)
+            {
+                _logger.LogWarning(
+                    "User {UserId} of charity {CallerCharityId} asked for charity {RequestedCharityId}; scope forced to their own charity",
+                    _currentUser.UserId, callerCharityId, filter.CharityId);
+            }
+
+            scoped.CharityId = callerCharityId;
+            return scoped;
+        }
+
+        // No charity claim. Only a head-office role may legitimately look across charities;
+        // anyone else reaching this point has an incomplete token and must see nothing.
+        // Failing open here would hand the whole register to any caller whose CharityId was
+        // never populated, whose token predates these claims, or whose claim failed to parse.
+        if (!_currentUser.IsHeadOffice)
+        {
+            return DenyAll(
+                scoped,
+                "caller has no charity claim and holds no head-office role");
+        }
+
+        var callerCountryId = _currentUser.CountryId;
+        if (callerCountryId.HasValue)
+        {
+            // A head-office user recorded against a country is pinned to it. An explicit charity
+            // id from another country would otherwise AND with the country filter and silently
+            // return an empty page, so the conflict is reported rather than hidden.
+            if (scoped.CharityId.HasValue && filter.CountryId.HasValue && filter.CountryId != callerCountryId)
+            {
+                _logger.LogWarning(
+                    "User {UserId} of country {CallerCountryId} asked for country {RequestedCountryId}; scope forced to their own country",
+                    _currentUser.UserId, callerCountryId, filter.CountryId);
+            }
+
+            scoped.CountryId = callerCountryId;
+        }
+
+        return scoped;
+    }
+
+    /// <summary>
+    /// Returns a filter that cannot match any row, so an unscopeable caller gets an empty page
+    /// rather than the whole register.
+    /// </summary>
+    private CharityFilterDto DenyAll(CharityFilterDto filter, string reason)
+    {
+        _logger.LogWarning(
+            "Charity query denied for user {UserId}: {Reason}", _currentUser.UserId, reason);
+
+        filter.CharityId = Guid.Empty;
+        return filter;
+    }
+
+    private static CharityFilterDto CloneFilter(CharityFilterDto filter) => new()
+    {
+        SearchTerm = filter.SearchTerm,
+        CharityId = filter.CharityId,
+        CountryId = filter.CountryId,
+        RegionId = filter.RegionId,
+        CenterId = filter.CenterId,
+        IsActive = filter.IsActive,
+        IsLocked = filter.IsLocked,
+        IsAddEnabled = filter.IsAddEnabled,
+        IsUpdateEnabled = filter.IsUpdateEnabled,
+        PageNumber = filter.PageNumber,
+        PageSize = filter.PageSize,
+        SortBy = filter.SortBy,
+        SortDescending = filter.SortDescending
+    };
 
     #endregion
 
@@ -786,8 +921,18 @@ public class CharityService : ICharityService
 
     public async Task<bool> IsNameUniqueAsync(string name, Guid? excludeId = null)
     {
-        return await _charityRepository.IsNameUniqueAsync(name, excludeId);
+        // Normalised here so every caller compares the same thing. SQL Server ignores trailing
+        // spaces in an equality test but not leading ones, so " Alpha" and "Alpha" would otherwise
+        // be distinct rows: the availability check (which trimmed) would report the name free, the
+        // save (which did not) would store the padded value, and every later check would keep
+        // reporting it free.
+        return await _charityRepository.IsNameUniqueAsync(NormaliseName(name), excludeId);
     }
+
+    /// <summary>
+    /// The canonical form of a charity name for comparison and storage.
+    /// </summary>
+    private static string NormaliseName(string? name) => (name ?? string.Empty).Trim();
 
     public async Task<bool> IsEmailUniqueAsync(string email, Guid? excludeId = null)
     {
@@ -875,7 +1020,21 @@ public class CharityService : ICharityService
     /// <summary>
     /// Creates a user account for a charity with the Charity role
     /// </summary>
-    private async Task<UserDto?> CreateUserAccountForCharity(string username, string password, string fullName)
+    /// <summary>
+    /// Creates the login for a charity, stamped with the charity and country it belongs to.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="charityId"/> is not optional in practice: an account created without it has
+    /// no tenancy claim in its token, and the application layer cannot scope such a caller. It is
+    /// taken as a parameter rather than read back from the entity because on the create path the
+    /// account is made before the charity row is persisted.
+    /// </remarks>
+    private async Task<UserDto?> CreateUserAccountForCharity(
+        string username,
+        string password,
+        string fullName,
+        Guid charityId,
+        int? countryId)
     {
         try
         {
@@ -889,7 +1048,9 @@ public class CharityService : ICharityService
                 FullName = fullName,
                 Password = password,
                 IsActive = true,
-                RoleNames = new[] { "Charity" }
+                RoleNames = new[] { "Charity" },
+                CharityId = charityId,
+                CountryId = countryId
             };
 
             var user = await _userAppService.CreateAsync(userCreateDto);

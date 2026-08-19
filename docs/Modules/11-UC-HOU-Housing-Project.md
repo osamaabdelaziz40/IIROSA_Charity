@@ -10,7 +10,7 @@
 | Use case prefix | UC-HOU |
 | Chapter in master document | Chapter 11 |
 | Documented use cases | 8 |
-| Principal routes | `#/housing-projects`, `#/housing-projects/:id/edit`, `#/housing-projects/:id/reports`, `#/housing-projects/:id/reports/:reportId` |
+| Principal routes | `#/housing-projects`, `#/housing-projects/create`, `#/housing-projects/:id`, `#/housing-projects/:id/edit`, `#/housing-projects/:id/reports` *(planned)*, `#/housing-projects/:id/reports/:reportId` *(planned)* |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -32,7 +32,7 @@
 | --- | --- | --- | --- | --- |
 | UC-HOU-01 | List housing families قائمة الأسر الساكنة | Charity, HQ roles | Paged list of the families enrolled in the housing project for the charity. | Route `#/housing-projects` → GET /api/Families?familyType=Housing&charityId= |
 | UC-HOU-02 | Search housing families البحث في الأسر الساكنة | Charity, HQ roles | Same criteria set as the main register (guardian name, orphan name, national ID, code, phone) applied to the housing population. | GET /api/Families?familyType=Housing&search=?…&type |
-| UC-HOU-03 | Register a housing family اضافة أسرة ساكنة | Charity | Creates the housing family file including the building and flat to which the family is allocated, along with guardian and children data. | Route `#/housing-projects/:id/edit` → POST /api/HousingProjects/projects |
+| UC-HOU-03 | Register a housing family اضافة أسرة ساكنة | Charity | Creates the housing family file including the building and flat to which the family is allocated, along with guardian and children data. | Route `#/housing-projects/create` → POST /api/HousingProjects/projects |
 | UC-HOU-04 | View / update a housing family بيانات الأسرة الساكنة | Charity, HQ roles | Loads the housing family file for review or amendment, including its current accommodation allocation. | GET /api/HousingProjects/projects/{id} |
 | UC-HOU-05 | Select building and flat اختيار المبنى والشقة | Charity | The form loads the list of housing buildings and, once a building is chosen, the flats belonging to it, so the family can be assigned an accommodation unit. | GET /api/LookupManagement/housing-buildings, GET /api/LookupManagement/housing-flats |
 | UC-HOU-06 | List periodic reports of a housing beneficiary التقارير الدورية للأسر الساكنة | Charity, HQ roles | Shows the report history for a housing beneficiary, who may be either a child or the guardian — the ChildOrParent discriminator selects which. | Route `#/housing-projects/:id/reports` → GET /api/PeriodicOrphanReports/by-orphan/{orphanId} |
@@ -79,12 +79,12 @@ Commands on this screen:
 | (icon only) | GetNext() | always |
 | (icon only) | GetPrev() | always |
 
-#### 11.S.2  Screen `#/housing-projects/:id/edit`
+#### 11.S.2  Screen `#/housing-projects/create` and `#/housing-projects/:id/edit`
 
 
 | Property | Value |
 | --- | --- |
-| Angular route | `#/housing-projects/:id/edit` |
+| Angular route | `#/housing-projects/create` and `#/housing-projects/:id/edit` (one component, both routes) |
 | Feature module | `housing-projects` (lazy-loaded) |
 | Component | `HousingProjectFormComponent` |
 | Route status | implemented |
@@ -385,7 +385,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• The business layer returns «أحد المعيلين مكرر من قبل أكثر من مرة» and the operation is not applied.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • A new record exists, owned by the charity of the creating user, and appears in the list screen of the module. |
-| Realisation | Route `#/housing-projects/:id/edit` → `HousingProjectFormComponent`<br>`POST /api/HousingProjects/projects` → `HousingProjectsController` → `IHousingProjectService` |
+| Realisation | Route `#/housing-projects/create` → `HousingProjectFormComponent`<br>`POST /api/HousingProjects/projects` → `HousingProjectsController` → `IHousingProjectService` |
 
 #### 11.U.4  UC-HOU-04 — View / update a housing family بيانات الأسرة الساكنة
 
@@ -491,6 +491,8 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
 | `#/housing-projects` | `housing-projects` | `HousingProjectListComponent` | implemented |
+| `#/housing-projects/create` | `housing-projects` | `HousingProjectFormComponent` | implemented |
+| `#/housing-projects/:id` | `housing-projects` | `HousingProjectDetailComponent` | implemented |
 | `#/housing-projects/:id/edit` | `housing-projects` | `HousingProjectFormComponent` | implemented |
 | `#/housing-projects/:id/reports` | `housing-projects` | `HousingReportListComponent` | planned |
 | `#/housing-projects/:id/reports/:reportId` | `housing-projects` | `HousingReportFormComponent` | planned |

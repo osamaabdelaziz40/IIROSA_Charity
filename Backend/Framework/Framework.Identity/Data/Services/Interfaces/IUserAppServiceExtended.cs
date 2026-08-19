@@ -58,6 +58,16 @@ namespace Framework.Identity.Data.Services.Interfaces
         public string? PhoneNumber { get; set; }
         public List<string> Roles { get; set; }
         public string? Password { get; set; }
+
+        /// <summary>
+        /// The charity this user belongs to. Required for any account holding the Charity role:
+        /// without it the account has no tenancy claim and the application layer, which fails
+        /// closed on an unscopeable caller, will show them nothing.
+        /// </summary>
+        public Guid? CharityId { get; set; }
+
+        /// <summary>The country this user operates in.</summary>
+        public int? CountryId { get; set; }
     }
 
     public class UpdateUserDto

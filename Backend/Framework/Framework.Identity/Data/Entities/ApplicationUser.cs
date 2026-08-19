@@ -43,6 +43,18 @@ namespace Framework.Identity.Data.Entities
         public int? AgancyId { get; set; }
         public string? CurrentToken { get; set; }
 
+        /// <summary>
+        /// The charity this user belongs to. Null for head-office users, who are not scoped to a
+        /// single charity. Carried into the access token so tenancy can be enforced server-side.
+        /// </summary>
+        public Guid? CharityId { get; set; }
+
+        /// <summary>
+        /// The country this user operates in. Scopes head-office roles that are not bound to one
+        /// charity but must not see other countries.
+        /// </summary>
+        public int? CountryId { get; set; }
+
         public void GenerateOtp()
         {
             Random random = new Random();

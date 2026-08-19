@@ -10,7 +10,7 @@
 | Use case prefix | UC-CHR |
 | Chapter in master document | Chapter 8 |
 | Documented use cases | 9 |
-| Principal routes | `#/charities`, `#/charities/create` |
+| Principal routes | `#/charities`, `#/charities/create`, `#/charities/:id`, `#/charities/:id/edit`, `#/charities/profile`, `#/charities/my-profile` |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -253,7 +253,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | None recorded. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• The charity is closed by a lock (IsLockedOut) — the write is refused. |
 | Post-conditions | • No stored data is changed — the operation is a read. |
-| Realisation | `GET /api/Charities/{id}` → `CharitiesController` → `ICharityService` |
+| Realisation | Route `#/charities/:id` → `CharityDetailComponent`<br>`GET /api/Charities/{id}` → `CharitiesController` → `ICharityService` |
 
 #### 8.U.5  UC-CHR-05 — Update a charity profile تعديل بيانات الجمعية
 
@@ -272,7 +272,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • An HQ role (General Director, Financial Director, Staff) may pass an explicit charity id and so read across the charity boundary; a charity user may not and always sees its own data.<br>• The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • The stored record carries the new values; no other record is affected. |
-| Realisation | `PUT /api/Charities/{id}` → `CharitiesController` → `ICharityService` |
+| Realisation | Route `#/charities/:id/edit` → `CharityFormComponent`<br>`PUT /api/Charities/{id}` → `CharitiesController` → `ICharityService` |
 
 #### 8.U.6  UC-CHR-06 — Open the permissions screen الصلاحيات
 
@@ -360,6 +360,10 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 | --- | --- | --- | --- |
 | `#/charities` | `charities` | `CharityListComponent` | implemented |
 | `#/charities/create` | `charities` | `CharityFormComponent` | implemented |
+| `#/charities/:id` | `charities` | `CharityDetailComponent` | implemented |
+| `#/charities/:id/edit` | `charities` | `CharityFormComponent` | implemented |
+| `#/charities/profile` | `charities` | `CharityDetailComponent` | implemented |
+| `#/charities/my-profile` | `charities` | `CharityDetailComponent` | implemented |
 
 ### 8.B  Annex - API controllers of this module
 

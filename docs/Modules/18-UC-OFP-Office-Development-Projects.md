@@ -10,7 +10,7 @@
 | Use case prefix | UC-OFP |
 | Chapter in master document | Chapter 18 |
 | Documented use cases | 6 |
-| Principal routes | `#/office-development-projects`, `#/office-development-projects/:id/edit` |
+| Principal routes | `#/office-development-projects`, `#/office-development-projects/create`, `#/office-development-projects/progress`, `#/office-development-projects/:id`, `#/office-development-projects/:id/edit` |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -32,7 +32,7 @@
 | --- | --- | --- | --- | --- |
 | UC-OFP-01 | List development projects المشاريع التنموية | Gen. Director, Staff | Paged register of the office's development projects. | Route `#/office-development-projects` → GET /api/OfficeProjectManagement |
 | UC-OFP-02 | Select a project type نوع المشروع | Gen. Director, Staff | Loads the catalogue of development project types that classifies each project. | GET /api/LookupManagement/office-project-types |
-| UC-OFP-03 | Create a development project اضافة مشروع تنموي | Gen. Director, Staff | Captures the project name, type, location, beneficiaries, budget, donor and execution dates. | Route `#/office-development-projects/:id/edit` → POST /api/OfficeProjectManagement |
+| UC-OFP-03 | Create a development project اضافة مشروع تنموي | Gen. Director, Staff | Captures the project name, type, location, beneficiaries, budget, donor and execution dates. | Route `#/office-development-projects/create` → POST /api/OfficeProjectManagement |
 | UC-OFP-04 | View / update a development project تعديل المشروع التنموي | Gen. Director, Staff | Loads one project by id and saves amendments to its data and progress. | GET /api/OfficeProjectManagement/{id} PUT /api/OfficeProjectManagement |
 | UC-OFP-05 | Delete a development project حذف المشروع التنموي | Gen. Director | Removes a project record. | DELETE /api/OfficeProjectManagement |
 | UC-OFP-06 | Report on development projects تقرير المشاريع التنموية | Gen. Director, Staff | Returns the reporting projection of the project register for export and printing. | GET /api/OfficeProjectManagement/export |
@@ -71,12 +71,12 @@ Commands on this screen:
 | (icon only) | GetNext() | always |
 | (icon only) | GetPrev() | always |
 
-#### 18.S.2  Screen `#/office-development-projects/:id/edit`
+#### 18.S.2  Screen `#/office-development-projects/create` and `#/office-development-projects/:id/edit`
 
 
 | Property | Value |
 | --- | --- |
-| Angular route | `#/office-development-projects/:id/edit` |
+| Angular route | `#/office-development-projects/create` and `#/office-development-projects/:id/edit` (one component, both routes) |
 | Feature module | `office-development-projects` (lazy-loaded) |
 | Component | `ProjectFormComponent` |
 | Route status | implemented |
@@ -172,7 +172,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • A new record exists, owned by the charity of the creating user, and appears in the list screen of the module. |
-| Realisation | Route `#/office-development-projects/:id/edit` → `ProjectFormComponent`<br>`POST /api/OfficeProjectManagement` → `OfficeProjectManagementController` → `IOfficeProjectService` |
+| Realisation | Route `#/office-development-projects/create` → `ProjectFormComponent`<br>`POST /api/OfficeProjectManagement` → `OfficeProjectManagementController` → `IOfficeProjectService` |
 
 #### 18.U.4  UC-OFP-04 — View / update a development project تعديل المشروع التنموي
 
@@ -240,6 +240,9 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
 | `#/office-development-projects` | `office-development-projects` | `ProjectListComponent` | implemented |
+| `#/office-development-projects/create` | `office-development-projects` | `ProjectFormComponent` | implemented |
+| `#/office-development-projects/progress` | `office-development-projects` | `ProjectListComponent` (progress view) | implemented |
+| `#/office-development-projects/:id` | `office-development-projects` | `ProjectDetailComponent` | implemented |
 | `#/office-development-projects/:id/edit` | `office-development-projects` | `ProjectFormComponent` | implemented |
 
 ### 18.B  Annex - API controllers of this module

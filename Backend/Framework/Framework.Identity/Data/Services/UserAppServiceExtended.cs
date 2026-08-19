@@ -126,7 +126,11 @@ namespace Framework.Identity.Data.Services
                 IsActive = true,
                 CreatedBy = CurrentUserName,
                 CreatedOn = DateTime.UtcNow,
-                SecurityStamp = Guid.NewGuid().ToString()
+                SecurityStamp = Guid.NewGuid().ToString(),
+                // Tenancy. This is the path the admin user-management UI uses; without these the
+                // accounts it creates carry no charity or country claim.
+                CharityId = userDto.CharityId,
+                CountryId = userDto.CountryId
             };
 
             // Use default password if not provided

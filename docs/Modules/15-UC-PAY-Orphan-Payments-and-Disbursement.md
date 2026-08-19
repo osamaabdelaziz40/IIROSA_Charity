@@ -10,7 +10,7 @@
 | Use case prefix | UC-PAY |
 | Chapter in master document | Chapter 15 |
 | Documented use cases | 24 |
-| Principal routes | `#/orphan-payments`, `#/orphan-payments/:id/edit`, `#/orphan-payments/:id/cheques`, `#/orphan-payments/:id/bank-file` |
+| Principal routes | `#/orphan-payments`, `#/orphan-payments/create`, `#/orphan-payments/:id`, `#/orphan-payments/:id/edit`, `#/orphan-payments/:id/add-orphans`, `#/orphan-payments/:id/cheques` *(planned)*, `#/orphan-payments/:id/bank-file` *(planned)* |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -47,9 +47,9 @@ Each orphan in a batch is represented by a Child_Payment row whose lifecycle is 
 | ID | Use case | Primary actor | Description & main flow | Realisation |
 | --- | --- | --- | --- | --- |
 | UC-PAY-01 | List payment batches قائمة دفعات الأيتام | Gen. Director, Fin. Director, Staff | Paged list of all payment batches with their date, description, currency and totals, as the entry point to batch administration. | Route `#/orphan-payments` → GET /api/OrphanPayments |
-| UC-PAY-02 | Create a payment batch اضافة دفعة مالية | Gen. Director, Fin. Director | Defines a new disbursement run — period, date, currency, amount rules and the charities in scope — and enrols the eligible orphans as payment rows. | Route `#/orphan-payments/:id/edit` → POST /api/OrphanPayments |
-| UC-PAY-03 | View a payment batch عرض الدفعة | Gen. Director, Fin. Director, Staff | Loads a single batch header with its parameters for review or editing. | GET /api/OrphanPayments |
-| UC-PAY-04 | Update a payment batch تعديل الدفعة | Gen. Director, Fin. Director | Amends the batch parameters before or during execution. | PUT /api/OrphanPayments |
+| UC-PAY-02 | Create a payment batch اضافة دفعة مالية | Gen. Director, Fin. Director | Defines a new disbursement run — period, date, currency, amount rules and the charities in scope — and enrols the eligible orphans as payment rows. | Route `#/orphan-payments/create` → POST /api/OrphanPayments, then `#/orphan-payments/:id/add-orphans` to enrol the rows |
+| UC-PAY-03 | View a payment batch عرض الدفعة | Gen. Director, Fin. Director, Staff | Loads a single batch header with its parameters for review or editing. | Route `#/orphan-payments/:id` → GET /api/OrphanPayments |
+| UC-PAY-04 | Update a payment batch تعديل الدفعة | Gen. Director, Fin. Director | Amends the batch parameters before or during execution. | Route `#/orphan-payments/:id/edit` → PUT /api/OrphanPayments |
 | UC-PAY-05 | Delete a payment batch حذف الدفعة | Gen. Director, Fin. Director | Removes a batch and its rows. Used for batches created in error before disbursement. | DELETE /api/OrphanPayments |
 | UC-PAY-06 | List a charity's batch numbers أرقام الدفعات للجمعية | Charity, HQ roles | Returns the batch numbers in which the charity participates, used as the selector on every payment and reporting screen. | GET /api/OrphanPayments/by-batch-no/{batchNo} |
 | UC-PAY-07 | View payment details for a charity تفاصيل الدفعة للجمعية | Charity, HQ roles | Lists every orphan payment row for one charity within one batch, with amount, stop/print/receipt flags and cheque data — the working screen for disbursement. | GET /api/OrphanPayments/{id}/details |
@@ -159,12 +159,12 @@ Commands on this screen:
 | (icon only) | GetNext() | always |
 | (icon only) | GetPrev() | always |
 
-#### 15.S.2  Screen `#/orphan-payments/:id/edit`
+#### 15.S.2  Screen `#/orphan-payments/create` and `#/orphan-payments/:id/edit`
 
 
 | Property | Value |
 | --- | --- |
-| Angular route | `#/orphan-payments/:id/edit` |
+| Angular route | `#/orphan-payments/create` and `#/orphan-payments/:id/edit` (one component, both routes) |
 | Feature module | `orphan-payments` (lazy-loaded) |
 | Component | `OrphanPaymentFormComponent` |
 | Route status | implemented |
@@ -321,7 +321,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • A new record exists, owned by the charity of the creating user, and appears in the list screen of the module. |
-| Realisation | Route `#/orphan-payments/:id/edit` → `OrphanPaymentFormComponent`<br>`POST /api/OrphanPayments` → `OrphanPaymentsController` → `IOrphanPaymentService` |
+| Realisation | Route `#/orphan-payments/create` → `OrphanPaymentFormComponent`<br>`POST /api/OrphanPayments` → `OrphanPaymentsController` → `IOrphanPaymentService` |
 
 #### 15.U.3  UC-PAY-03 — View a payment batch عرض الدفعة
 
@@ -750,7 +750,10 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
 | `#/orphan-payments` | `orphan-payments` | `OrphanPaymentListComponent` | implemented |
+| `#/orphan-payments/create` | `orphan-payments` | `OrphanPaymentFormComponent` | implemented |
+| `#/orphan-payments/:id` | `orphan-payments` | `OrphanPaymentDetailComponent` | implemented |
 | `#/orphan-payments/:id/edit` | `orphan-payments` | `OrphanPaymentFormComponent` | implemented |
+| `#/orphan-payments/:id/add-orphans` | `orphan-payments` | `AddOrphansToGroupComponent` | implemented |
 | `#/orphan-payments/:id/cheques` | `orphan-payments` | `OrphanPaymentChequesComponent` | planned |
 | `#/orphan-payments/:id/bank-file` | `orphan-payments` | `BankFileComponent` | planned |
 

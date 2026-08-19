@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using Framework.Identity.Data.Entities;
 using Framework.Identity.Data.Dtos;
 using Microsoft.AspNetCore.Identity;
+using IIROSA.Application.Interfaces;
 
 namespace IIROSA.Application.Services;
 
@@ -47,6 +48,8 @@ public class TokenService : ITokenService
             new Claim(ClaimTypes.Email, userDto.Email ?? string.Empty),
             new Claim("FullName", userDto.FullName ?? string.Empty)
         };
+
+        AddTenancyClaims(claims, userDto.CharityId, userDto.CountryId);
 
         // Add roles from UserDto
         if (userDto.RoleNames != null)
@@ -142,6 +145,8 @@ public class TokenService : ITokenService
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
+        AddTenancyClaims(claims, user.CharityId, user.CountryId);
+
         // Add roles
         var roles = await _userManager.GetRolesAsync(user);
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
@@ -164,6 +169,24 @@ public class TokenService : ITokenService
         var tokenString = tokenHandler.WriteToken(token);
 
         return (tokenString, expiration);
+    }
+
+    /// <summary>
+    /// Adds the tenancy claims the application layer scopes queries by. A head-office user has no
+    /// charity, so the claim is omitted rather than written as an empty string — an absent claim
+    /// and a blank one must not read the same way downstream.
+    /// </summary>
+    private static void AddTenancyClaims(ICollection<Claim> claims, Guid? charityId, int? countryId)
+    {
+        if (charityId.HasValue)
+        {
+            claims.Add(new Claim(IiroSaClaimTypes.CharityId, charityId.Value.ToString()));
+        }
+
+        if (countryId.HasValue)
+        {
+            claims.Add(new Claim(IiroSaClaimTypes.CountryId, countryId.Value.ToString()));
+        }
     }
 
     /// <summary>

@@ -130,9 +130,15 @@ namespace Framework.Identity.Migrations
                     b.Property<int?>("AgancyId")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("CharityId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("CountryId")
+                        .HasColumnType("int");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()

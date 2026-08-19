@@ -10,7 +10,7 @@
 | Use case prefix | UC-SYS |
 | Chapter in master document | Chapter 24 |
 | Documented use cases | 13 |
-| Principal routes | none of its own — consumed by every feature module via `core/` and `shared/` |
+| Principal routes | `#/lookup-management` and its four child routes; otherwise none of its own — consumed by every feature module via `core/` and `shared/` |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -321,6 +321,11 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
+| `#/lookup-management` | `lookup-management` | `LookupManagementComponent` | implemented |
+| `#/lookup-management/countries` | `lookup-management` | `CountriesListComponent` | implemented |
+| `#/lookup-management/regions` | `lookup-management` | `RegionsListComponent` | implemented |
+| `#/lookup-management/centers` | `lookup-management` | `CentersListComponent` | implemented |
+| `#/lookup-management/departments` | `lookup-management` | `DepartmentsListComponent` | implemented |
 | `#/error` | `core` | `ErrorPageComponent` | planned |
 
 ### 24.B  Annex - API controllers of this module

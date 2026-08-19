@@ -10,7 +10,7 @@
 | Use case prefix | UC-RPT |
 | Chapter in master document | Chapter 23 |
 | Documented use cases | 41 |
-| Principal routes | `#/reports/**` (see Appendix C for the full report-key index) |
+| Principal routes | `#/reports/**` (*planned* — no `reports` feature module exists yet; see Appendix C for the full report-key index) |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -98,7 +98,7 @@ Derived from the AngularJS views of this module. For every screen the table list
 | Angular route | `#/periodic-orphan-reports/orphan-reports/search` |
 | Feature module | `periodic-orphan-reports` (lazy-loaded) |
 | Component | `OrphanReportSearchComponent` |
-| Route status | implemented |
+| Route status | built, not reachable (`periodic-orphan-reports` is unregistered in `app-routing.module.ts`) |
 | Data-entry fields | 10 |
 | Grids on the screen | 1 |
 | Commands | 2 |
@@ -1498,7 +1498,12 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
-| `#/periodic-orphan-reports/orphan-reports/search` | `periodic-orphan-reports` | `OrphanReportSearchComponent` | implemented |
+| `#/periodic-orphan-reports/orphan-reports` | `periodic-orphan-reports` | `OrphanReportsListComponent` | built, not reachable |
+| `#/periodic-orphan-reports/orphan-reports/generate` | `periodic-orphan-reports` | `OrphanReportsGenerateComponent` | built, not reachable |
+| `#/periodic-orphan-reports/orphan-reports/history` | `periodic-orphan-reports` | `OrphanReportHistoryComponent` | built, not reachable |
+| `#/periodic-orphan-reports/orphan-reports/compare` | `periodic-orphan-reports` | `OrphanReportComparisonComponent` | built, not reachable |
+| `#/periodic-orphan-reports/orphan-reports/schedule` | `periodic-orphan-reports` | `ScheduleReportComponent` | built, not reachable |
+| `#/periodic-orphan-reports/orphan-reports/search` | `periodic-orphan-reports` | `OrphanReportSearchComponent` | built, not reachable |
 | `#/seasonal-aid/:id/report` | `seasonal-aid` | `CampaignReportComponent` | planned |
 | `#/reports/orphans` | `reports` | `ReportViewerComponent` | planned |
 | `#/reports/excluded-orphans` | `reports` | `ReportViewerComponent` | planned |

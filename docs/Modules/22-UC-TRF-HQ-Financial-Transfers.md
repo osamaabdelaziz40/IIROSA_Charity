@@ -10,7 +10,7 @@
 | Use case prefix | UC-TRF |
 | Chapter in master document | Chapter 22 |
 | Documented use cases | 8 |
-| Principal routes | `#/hq-transfers`, `#/hq-transfers/:id/edit`, `#/hq-transfers/max-amounts`, `#/hq-transfers/:id/details` |
+| Principal routes | `#/hq-transfers`, `#/hq-transfers/create`, `#/hq-transfers/:id`, `#/hq-transfers/:id/edit`, `#/hq-transfers/max-amounts` (all *planned*) |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -31,13 +31,13 @@
 | ID | Use case | Primary actor | Description & main flow | Realisation |
 | --- | --- | --- | --- | --- |
 | UC-TRF-01 | List transfers قائمة الحوالات | Fin. Director, Gen. Director | Register of head-office transfers with beneficiary, amount, currency, department and status. | Route `#/hq-transfers` → GET /api/HqTransfers |
-| UC-TRF-02 | Create a transfer اضافة حوالة | Fin. Director | Issues a transfer to a charity or country, recording purpose, department, amount and currency. Business rule: the amount is validated against the destination country's configured maximum. | Route `#/hq-transfers/:id/edit` → POST /api/HqTransfers |
+| UC-TRF-02 | Create a transfer اضافة حوالة | Fin. Director | Issues a transfer to a charity or country, recording purpose, department, amount and currency. Business rule: the amount is validated against the destination country's configured maximum. | Route `#/hq-transfers/create` → POST /api/HqTransfers |
 | UC-TRF-03 | View a transfer عرض الحوالة | Fin. Director, Gen. Director | Loads a single transfer with its header data for review or editing. | GET /api/HqTransfers/{id} |
 | UC-TRF-04 | Update a transfer تعديل الحوالة | Fin. Director | Amends transfer data and advances its processing state. | PUT /api/HqTransfers |
 | UC-TRF-05 | Select the issuing department الإدارة المصدرة | Fin. Director | Loads the head-office department catalogue that owns the transfer. | GET /api/LookupManagement/departments |
 | UC-TRF-06 | View the maximum transfer amount for a country الحد الأعلى للحوالة | Fin. Director | Retrieves the ceiling configured for a destination country, shown as a guard on the transfer form. | GET /api/HqTransfers/max-amount |
 | UC-TRF-07 | Set the maximum transfer amount تعيين الحد الأعلى للحوالة | Fin. Director | Updates the per-country ceiling that constrains all subsequent transfers to that country. | Route `#/hq-transfers/max-amounts` → PUT /api/HqTransfers/max-amount |
-| UC-TRF-08 | Manage transfer detail lines تفاصيل الحوالة | Fin. Director | Lists and updates the individual detail lines of a transfer — the allocation of the transferred sum across purposes or charities — from the financial-management screen. | Route `#/hq-transfers/:id/details` → GET /api/HqTransfers/{id}/details PUT /api/HqTransfers/{id}/details |
+| UC-TRF-08 | Manage transfer detail lines تفاصيل الحوالة | Fin. Director | Lists and updates the individual detail lines of a transfer — the allocation of the transferred sum across purposes or charities — from the financial-management screen. | Route `#/hq-transfers/:id` → GET /api/HqTransfers/{id}/details PUT /api/HqTransfers/{id}/details |
 
 ### 22.S  Screen field specifications
 
@@ -105,12 +105,12 @@ Commands on this screen:
 | --- | --- | --- |
 | حفظ | SubmitTransfer() | always |
 
-#### 22.S.3  Screen `#/hq-transfers/:id/details`
+#### 22.S.3  Screen `#/hq-transfers/:id`
 
 
 | Property | Value |
 | --- | --- |
-| Angular route | `#/hq-transfers/:id/details` |
+| Angular route | `#/hq-transfers/:id` |
 | Feature module | `hq-transfers` (lazy-loaded) |
 | Component | `HqTransferDetailComponent` |
 | Route status | planned |
@@ -209,7 +209,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • A new record exists, owned by the charity of the creating user, and appears in the list screen of the module. |
-| Realisation | Route `#/hq-transfers/:id/edit` → `HqTransferFormComponent`<br>`POST /api/HqTransfers` → `HqTransfersController` → `IHqTransferService` |
+| Realisation | Route `#/hq-transfers/create` → `HqTransferFormComponent`<br>`POST /api/HqTransfers` → `HqTransfersController` → `IHqTransferService` |
 
 #### 22.U.3  UC-TRF-03 — View a transfer عرض الحوالة
 
@@ -318,12 +318,12 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Secondary actors | The system (Web API + business layer); the database. |
 | Summary | Lists and updates the individual detail lines of a transfer — the allocation of the transferred sum across purposes or charities — from the financial-management screen. |
 | Trigger | The actor presses «حفظ» on the screen FinManagementForTransfers. |
-| Pre-conditions | 1. The actor is authenticated; the JWT access token is valid and the client holds the role, charity and country claims it carries.<br>2. The actor holds one of: Fin. Director.<br>3. Caller identity comes from the JWT, never from the request; the application service scopes the query to the charity (and country) that owns the user, unless the role is an HQ role permitted to pass an explicit `charityId` filter.<br>4. The SPA route `#/hq-transfers/:id/details` has loaded and its reference-data lookups have been populated.<br>5. The target record exists and its identifier is known to the screen. |
-| Main flow | 1. The actor navigates to the screen at `#/hq-transfers/:id/details`. The screen opens in edit mode on the selected record.<br>2. The system loads the current values into the form.<br>3. The actor changes the fields to be corrected.<br>4. The actor presses «حفظ» (SubmitTransfer(trans)).<br>5. The SPA issues `GET /api/HqTransfers/{id}/details` carrying transferId, userId.<br>6. `HqTransfersController` binds the typed request DTO and delegates to the application service.<br>7. `IHqTransferService` validates the payload with its FluentValidation validator, applies the business rules and the charity scope, and persists through `IUnitOfWork`.<br>8. The business layer re-validates the payload, applies the changes and persists them.<br>9. The system returns the outcome and the SPA refreshes the screen. |
+| Pre-conditions | 1. The actor is authenticated; the JWT access token is valid and the client holds the role, charity and country claims it carries.<br>2. The actor holds one of: Fin. Director.<br>3. Caller identity comes from the JWT, never from the request; the application service scopes the query to the charity (and country) that owns the user, unless the role is an HQ role permitted to pass an explicit `charityId` filter.<br>4. The SPA route `#/hq-transfers/:id` has loaded and its reference-data lookups have been populated.<br>5. The target record exists and its identifier is known to the screen. |
+| Main flow | 1. The actor navigates to the screen at `#/hq-transfers/:id`. The screen opens in edit mode on the selected record.<br>2. The system loads the current values into the form.<br>3. The actor changes the fields to be corrected.<br>4. The actor presses «حفظ» (SubmitTransfer(trans)).<br>5. The SPA issues `GET /api/HqTransfers/{id}/details` carrying transferId, userId.<br>6. `HqTransfersController` binds the typed request DTO and delegates to the application service.<br>7. `IHqTransferService` validates the payload with its FluentValidation validator, applies the business rules and the charity scope, and persists through `IUnitOfWork`.<br>8. The business layer re-validates the payload, applies the changes and persists them.<br>9. The system returns the outcome and the SPA refreshes the screen. |
 | Alternate flows | • An HQ role (General Director, Financial Director, Staff) may pass an explicit charity id and so read across the charity boundary; a charity user may not and always sees its own data.<br>• The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• The business layer returns «Failed Operation» and the operation is not applied.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • The stored record carries the new values; no other record is affected. |
-| Realisation | Route `#/hq-transfers/:id/details` → `HqTransferDetailComponent`<br>`GET /api/HqTransfers/{id}/details` · `PUT /api/HqTransfers/{id}/details` → `HqTransfersController` → `IHqTransferService` |
+| Realisation | Route `#/hq-transfers/:id` → `HqTransferDetailComponent`<br>`GET /api/HqTransfers/{id}/details` · `PUT /api/HqTransfers/{id}/details` → `HqTransfersController` → `IHqTransferService` |
 
 ### 22.A  Annex - Angular routes of this module
 
@@ -334,8 +334,9 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
 | `#/hq-transfers` | `hq-transfers` | `HqTransferListComponent` | planned |
+| `#/hq-transfers/create` | `hq-transfers` | `HqTransferFormComponent` | planned |
+| `#/hq-transfers/:id` | `hq-transfers` | `HqTransferDetailComponent` | planned |
 | `#/hq-transfers/:id/edit` | `hq-transfers` | `HqTransferFormComponent` | planned |
-| `#/hq-transfers/:id/details` | `hq-transfers` | `HqTransferDetailComponent` | planned |
 | `#/hq-transfers/max-amounts` | `hq-transfers` | `MaxTransferAmountComponent` | planned |
 
 ### 22.B  Annex - API controllers of this module

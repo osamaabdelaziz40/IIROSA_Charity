@@ -9,8 +9,8 @@ this folder and the code under `Frontend/src/app` and `Backend/src/IIROSA.Api`.
 | --- | --- |
 | Document title | IIROSA Charities - Routing Map |
 | Purpose | The Angular 18 route and API endpoint behind every documented use case |
-| Version | 1.0 |
-| Date | 18 August 2026 |
+| Version | 1.1 |
+| Date | 19 August 2026 |
 | Applies to | The 19 module documents in `docs/Modules/`, `epics.md`, and `sprint-status.yaml` |
 | Architecture | `_bmad-output/planning-artifacts/architecture.md` (authoritative) |
 | Full indexes | `00-Overview-and-Common-Context.md` Appendix A (routes), B (controllers), C (reports), D (services) |
@@ -76,9 +76,9 @@ delivery epic.
 | 11 | `UC-HOU` | Housing Project | `housing-projects` | `#/housing-projects` | `api/HousingProjects` | EP-06 |
 | 12 | `UC-REF` | Refugee Families | `families` | `#/families/refugees` *(planned)* | `api/Families` (`familyType=Refugee`) | EP-07 |
 | 13 | `UC-ORP` | Orphan Register & Coding | `families` | `#/families/orphans` *(planned)* | `api/Families` (orphans sub-resource) | EP-08 |
-| 14 | `UC-ORR` | Orphan Periodic Reports | `periodic-orphan-reports` | `#/periodic-orphan-reports` | `api/PeriodicOrphanReports` · `api/OrphanReports` | EP-09 |
+| 14 | `UC-ORR` | Orphan Periodic Reports | `periodic-orphan-reports` | `#/periodic-orphan-reports` *(built, unregistered)* | `api/PeriodicOrphanReports` · `api/OrphanReports` | EP-09 |
 | 15 | `UC-PAY` | Orphan Payments & Disbursement | `orphan-payments` | `#/orphan-payments` | `api/OrphanPayments` | EP-10 |
-| 16 | `UC-CHQ` | General Cheques | `general-checks` | `#/general-checks` | `api/CheckManagement` | EP-11 |
+| 16 | `UC-CHQ` | General Cheques | `general-checks` | `#/general-checks` *(uses `edit/:id`)* | `api/CheckManagement` | EP-11 |
 | 17 | `UC-PRJ` | Seasonal Assistance Projects | `seasonal-aid` | `#/seasonal-aid` | `api/SeasonalAid` | EP-12 |
 | 18 | `UC-OFP` | Office Development Projects | `office-development-projects` | `#/office-development-projects` | `api/OfficeProjectManagement` | EP-13 |
 | 19 | `UC-CST` | Technical Support | `technical-support` | `#/technical-support` | `api/SupportTickets` | EP-14 |
@@ -101,6 +101,8 @@ Recorded because they are real work, not documentation defects.
 | 4 | No `DashboardController` | Chapter 7 reads counters that nothing serves yet. |
 | 5 | Refugee families and orphan coding have no routes of their own | They are specified as child routes of `families`; chapters 12 and 13 depend on that decision holding. |
 | 6 | `NGOType` lookup entity and the `NgoMapLocation` property still carry the old name in code | The documentation says *Charity type* and *map location*. Renaming the entity, the property and its migration closes the last `Ngo` in the codebase. |
+| 7 | `general-checks` declares `reconcile` **after** `:id` | The router matches `:id` first, so `#/general-checks/reconcile` opens `CheckDetailComponent` with `id = "reconcile"`. `CheckReconcileComponent` is unreachable until the two are reordered. |
+| 8 | `general-checks` uses `edit/:id` where every other module uses `:id/edit` | The only feature module that breaks the child-route shape in §1.1. Chapter 16 documents the deviation rather than the convention. |
 
 ## 4. How the legacy references were retired
 

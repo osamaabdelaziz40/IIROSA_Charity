@@ -714,6 +714,7 @@
     "completionPercentageRange": "Completion percentage must be between 0 and 100",
     "looksGood": "Looks good!",
     "selectAnOption": "Select an option",
+    "nameTaken": "This name is already used by another charity",
     "invalid": "Invalid value",
     "fileTooLarge": "File size exceeds the maximum allowed size of 10MB",
     "invalidFileType": "File type is not allowed. Only images, PDF, and Word documents are accepted."

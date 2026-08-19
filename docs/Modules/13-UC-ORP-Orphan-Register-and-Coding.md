@@ -10,7 +10,7 @@
 | Use case prefix | UC-ORP |
 | Chapter in master document | Chapter 13 |
 | Documented use cases | 11 |
-| Principal routes | `#/families/orphans/coding/worklist`, `#/families/orphans/coding` |
+| Principal routes | `#/families/orphans/coding`, `#/families/orphans/coding/worklist` (both *planned*) |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |

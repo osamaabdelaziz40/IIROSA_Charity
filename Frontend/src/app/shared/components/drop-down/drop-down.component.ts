@@ -401,6 +401,13 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
       if (field.errors['required']) {
         return 'validation.required';
       }
+      // Set from a server 400 carrying per-field errors. Country, region, centre and bank are all
+      // drop-downs, and they are the fields the server-side validator guards most strictly — so
+      // without this branch those failures set an error that nothing on screen displays.
+      // Returned verbatim rather than as a key; ngx-translate echoes an unknown key unchanged.
+      if (field.errors['server']) {
+        return field.errors['server'];
+      }
     }
     return '';
   }

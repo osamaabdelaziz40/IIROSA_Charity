@@ -13,6 +13,7 @@ namespace IIROSA.Application.Services;
 /// </summary>
 public class HousingProjectService : IHousingProjectService 
 {
+    private readonly IIROSA.Application.Interfaces.ICharityWriteGuard _charityWriteGuard;
     private readonly IHousingProjectRepository _projectRepository;
     private readonly IFamilyRepository _familyRepository;
     private readonly ICharityRepository _charityRepository;
@@ -20,12 +21,14 @@ public class HousingProjectService : IHousingProjectService
     private readonly ILogger<HousingProjectService> _logger;
 
     public HousingProjectService(
+        IIROSA.Application.Interfaces.ICharityWriteGuard charityWriteGuard,
         IHousingProjectRepository projectRepository,
         IFamilyRepository familyRepository,
         ICharityRepository charityRepository,
         IUnitOfWork unitOfWork,
         ILogger<HousingProjectService> logger)
     {
+        _charityWriteGuard = charityWriteGuard;
         _projectRepository = projectRepository;
         _familyRepository = familyRepository;
         _charityRepository = charityRepository;
@@ -37,6 +40,9 @@ public class HousingProjectService : IHousingProjectService
 
     public async Task<HousingProjectDto> CreateProjectAsync(CreateHousingProjectDto dto)
     {
+        // UC-CHR-07/08/09: head office can lock a charity or withdraw its add/edit rights.
+        await _charityWriteGuard.EnsureCanAddAsync();
+
         _logger.LogInformation("Creating new housing project: {Name}", dto.Name);
 
         // Validate uniqueness
@@ -429,6 +435,9 @@ public class HousingProjectService : IHousingProjectService
 
     public async Task<HousingProjectDto> UpdateProjectAsync(UpdateHousingProjectDto dto)
     {
+        // UC-CHR-07/08/09: head office can lock a charity or withdraw its add/edit rights.
+        await _charityWriteGuard.EnsureCanUpdateAsync();
+
         _logger.LogInformation("Updating project: {Id}", dto.Id);
 
         var project = await _projectRepository.GetByIdAsync(dto.Id);

@@ -17,6 +17,7 @@ namespace IIROSA.Application.Services;
 /// </summary>
 public class OfficeProjectService : IOfficeProjectService
 {
+    private readonly IIROSA.Application.Interfaces.ICharityWriteGuard _charityWriteGuard;
     private readonly IOfficeProjectRepository _projectRepository;
     private readonly IMapper _mapper;
     private readonly ILogger<OfficeProjectService> _logger;
@@ -24,12 +25,14 @@ public class OfficeProjectService : IOfficeProjectService
     private readonly IAttachmentHelperService _attachmentHelperService;
 
     public OfficeProjectService(
+        IIROSA.Application.Interfaces.ICharityWriteGuard charityWriteGuard,
         IOfficeProjectRepository projectRepository,
         IMapper mapper,
         ILogger<OfficeProjectService> logger,
         AttachmentService attachmentService,
         IAttachmentHelperService attachmentHelperService)
     {
+        _charityWriteGuard = charityWriteGuard;
         _projectRepository = projectRepository;
         _mapper = mapper;
         _logger = logger;
@@ -110,6 +113,9 @@ public class OfficeProjectService : IOfficeProjectService
     /// </summary>
     public async Task<OfficeProjectDetailDto> CreateProjectAsync(CreateOfficeProjectDto dto)
     {
+        // UC-CHR-07/08/09: head office can lock a charity or withdraw its add/edit rights.
+        await _charityWriteGuard.EnsureCanAddAsync();
+
         try
         {
             _logger.LogInformation("Creating new office project: {@Project}", dto);
@@ -172,6 +178,9 @@ public class OfficeProjectService : IOfficeProjectService
     /// </summary>
     public async Task<OfficeProjectDetailDto> UpdateProjectAsync(Guid id, UpdateOfficeProjectDto dto)
     {
+        // UC-CHR-07/08/09: head office can lock a charity or withdraw its add/edit rights.
+        await _charityWriteGuard.EnsureCanUpdateAsync();
+
         try
         {
             var project = await _projectRepository.GetByIdAsync(id);

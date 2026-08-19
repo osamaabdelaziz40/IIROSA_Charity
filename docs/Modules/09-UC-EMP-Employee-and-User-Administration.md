@@ -10,7 +10,7 @@
 | Use case prefix | UC-EMP |
 | Chapter in master document | Chapter 9 |
 | Documented use cases | 6 |
-| Principal routes | `#/employees`, `#/employees/:id` |
+| Principal routes | `#/employees`, `#/employees/create`, `#/employees/:id`, `#/employees/:id/edit`, `#/employees/:id/roles`, `#/user-management/users`, `#/user-management/roles` |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -32,9 +32,9 @@
 | --- | --- | --- | --- | --- |
 | UC-EMP-01 | List employees قائمة الموظفين | General Director | Shows all HQ employee accounts with their role, country and active/suspended state. | Route `#/employees` → GET /api/EmployeeManagement |
 | UC-EMP-02 | Verify employee username availability التحقق من اسم المستخدم | General Director | Checks a proposed login name against existing accounts before the employee record is submitted. | GET /api/EmployeeManagement/check-national-id; also GET /api/UserManagement/check-username |
-| UC-EMP-03 | Create an employee account اضافة موظف | General Director | Captures personal data, country, login credentials and the role to assign. The system creates the Identity user through `Framework.Identity`, adds them to the chosen role and stores the employee record. | Route `#/employees/:id` → POST /api/EmployeeManagement → `IEmployeeService` |
-| UC-EMP-04 | View an employee record بيانات الموظف | General Director | Loads one employee by id for review or editing, including the currently assigned role. | GET /api/EmployeeManagement/{id} |
-| UC-EMP-05 | Update an employee and change their role تعديل بيانات الموظف | General Director | Applies profile changes. When the role has changed, the system removes the user from the previous role and adds them to the new one, so the permissions take effect on the next sign-in. | PUT /api/EmployeeManagement/{id} → `IEmployeeService` (old-role / new-role swap) |
+| UC-EMP-03 | Create an employee account اضافة موظف | General Director | Captures personal data, country, login credentials and the role to assign. The system creates the Identity user through `Framework.Identity`, adds them to the chosen role and stores the employee record. | Route `#/employees/create` → POST /api/EmployeeManagement → `IEmployeeService` |
+| UC-EMP-04 | View an employee record بيانات الموظف | General Director | Loads one employee by id for review or editing, including the currently assigned role. | Route `#/employees/:id` → GET /api/EmployeeManagement/{id} |
+| UC-EMP-05 | Update an employee and change their role تعديل بيانات الموظف | General Director | Applies profile changes. When the role has changed, the system removes the user from the previous role and adds them to the new one, so the permissions take effect on the next sign-in. | Route `#/employees/:id/edit` · `#/employees/:id/roles` → PUT /api/EmployeeManagement/{id} → `IEmployeeService` (old-role / new-role swap) |
 | UC-EMP-06 | Suspend or reactivate an employee إيقاف / تفعيل الموظف | General Director | Sets a stop flag on the employee, preventing sign-in without deleting the account or its audit history. | PATCH /api/EmployeeManagement/{id}/deactivate |
 
 ### 9.S  Screen field specifications
@@ -77,14 +77,14 @@ Commands on this screen:
 | (icon only) | ChangePassword($index) | always |
 | (icon only) | EditEmployee(emp.Id) | always |
 
-#### 9.S.2  Screen `#/employees/:id`
+#### 9.S.2  Screen `#/employees/create`
 
 
 | Property | Value |
 | --- | --- |
-| Angular route | `#/employees/:id` |
+| Angular route | `#/employees/create` (the same component serves `#/employees/:id/edit`) |
 | Feature module | `employees` (lazy-loaded) |
-| Component | `EmployeeDetailComponent` |
+| Component | `EmployeeFormComponent` |
 | Route status | implemented |
 | Data-entry fields | 5 |
 | Grids on the screen | 0 |
@@ -174,7 +174,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • A new record exists, owned by the charity of the creating user, and appears in the list screen of the module. |
-| Realisation | Route `#/employees/:id` → `EmployeeDetailComponent`<br>`POST /api/EmployeeManagement` → `EmployeeManagementController` → `IEmployeeService` |
+| Realisation | Route `#/employees/create` → `EmployeeFormComponent`<br>`POST /api/EmployeeManagement` → `EmployeeManagementController` → `IEmployeeService` |
 
 #### 9.U.4  UC-EMP-04 — View an employee record بيانات الموظف
 
@@ -193,7 +193,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | None recorded. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state. |
 | Post-conditions | • No stored data is changed — the operation is a read. |
-| Realisation | `GET /api/EmployeeManagement/{id}` → `EmployeeManagementController` → `IEmployeeService` |
+| Realisation | Route `#/employees/:id` → `EmployeeDetailComponent`<br>`GET /api/EmployeeManagement/{id}` → `EmployeeManagementController` → `IEmployeeService` |
 
 #### 9.U.5  UC-EMP-05 — Update an employee and change their role تعديل بيانات الموظف
 
@@ -212,7 +212,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • The stored record carries the new values; no other record is affected. |
-| Realisation | `PUT /api/EmployeeManagement` → `EmployeeManagementController` → `IEmployeeService` |
+| Realisation | Route `#/employees/:id/edit` → `EmployeeFormComponent`<br>`PUT /api/EmployeeManagement` → `EmployeeManagementController` → `IEmployeeService` |
 
 #### 9.U.6  UC-EMP-06 — Suspend or reactivate an employee إيقاف / تفعيل الموظف
 
@@ -241,10 +241,20 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
-| `#/user-management/users` | `user-management` | `UserListComponent` | implemented |
-| `#/user-management/users/:id` | `user-management` | `UserDetailComponent` | implemented |
 | `#/employees` | `employees` | `EmployeeListComponent` | implemented |
+| `#/employees/create` | `employees` | `EmployeeFormComponent` | implemented |
 | `#/employees/:id` | `employees` | `EmployeeDetailComponent` | implemented |
+| `#/employees/:id/edit` | `employees` | `EmployeeFormComponent` | implemented |
+| `#/employees/:id/roles` | `employees` | `RoleAssignmentComponent` | implemented |
+| `#/user-management/users` | `user-management` | `UserListComponent` | implemented |
+| `#/user-management/users/create` | `user-management` | `UserFormComponent` | implemented |
+| `#/user-management/users/:id` | `user-management` | `UserDetailComponent` | implemented |
+| `#/user-management/users/:id/edit` | `user-management` | `UserFormComponent` | implemented |
+| `#/user-management/users/:id/roles` | `user-management` | `RoleAssignmentDialogComponent` | implemented |
+| `#/user-management/roles` | `user-management` | `RoleListComponent` | implemented |
+| `#/user-management/roles/create` | `user-management` | `RoleFormComponent` | implemented |
+| `#/user-management/roles/:id` | `user-management` | `RoleDetailComponent` | implemented |
+| `#/user-management/roles/:id/edit` | `user-management` | `RoleFormComponent` | implemented |
 
 ### 9.B  Annex - API controllers of this module
 

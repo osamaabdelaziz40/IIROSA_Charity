@@ -30,9 +30,13 @@ const routes: Routes = [
   {
     path: ':id',
     component: CharityDetailComponent,
-    canActivate: [AuthGuard],
+    // PermissionGuard was missing here while every sibling route had it, so any authenticated
+    // user could open a charity's detail screen. The server refuses the data, but the screen
+    // opening at all is the client-side gap UC-CHR-04 AC 3 describes.
+    canActivate: [AuthGuard, PermissionGuard],
     data: {
-      title: 'charities.charityDetails'
+      title: 'charities.charityDetails',
+      permission: 'Charities.View'
     }
   },
   {

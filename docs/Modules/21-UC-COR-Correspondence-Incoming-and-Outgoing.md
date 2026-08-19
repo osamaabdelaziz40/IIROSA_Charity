@@ -10,7 +10,7 @@
 | Use case prefix | UC-COR |
 | Chapter in master document | Chapter 21 |
 | Documented use cases | 19 |
-| Principal routes | `#/incoming-outgoing/incoming`, `#/incoming-outgoing/incoming/:id/edit`, `#/incoming-outgoing/outgoing`, `#/incoming-outgoing/outgoing/:id/edit`, `#/incoming-outgoing/export/outgoing`, `#/incoming-outgoing/export/incoming` |
+| Principal routes | `#/incoming-outgoing/incoming`, `/incoming/create`, `/incoming/:id`, `/incoming/:id/edit`, `/outgoing`, `/outgoing/create`, `/outgoing/:id`, `/outgoing/:id/edit`, `/import/:type`, `/export/:type`, `/history` |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -36,7 +36,7 @@
 | UC-COR-01 | List incoming letters الوارد | Staff, Gen. Director | Paged register of received letters with serial, date, sender, subject and status. | Route `#/incoming-outgoing/incoming` → GET /api/IncomingOutgoing/incoming |
 | UC-COR-02 | Search incoming letters البحث في الوارد | Staff, Gen. Director | Filters the register by status, date, description, letter number, serial and date range, with paging optionally disabled for export. | GET /api/IncomingOutgoing/incoming |
 | UC-COR-03 | Obtain the next incoming serial رقم الوارد التالي | Staff | Reserves the next sequential registration number so the letter is filed in order. | GET /api/IncomingOutgoing/incoming/next-serial |
-| UC-COR-04 | Register an incoming letter تسجيل وارد | Staff | Records the received letter — serial, date, sender, receiving department, subject, attachments and routing. | Route `#/incoming-outgoing/incoming/:id/edit` → POST /api/IncomingOutgoing/incoming |
+| UC-COR-04 | Register an incoming letter تسجيل وارد | Staff | Records the received letter — serial, date, sender, receiving department, subject, attachments and routing. | Route `#/incoming-outgoing/incoming/create` → POST /api/IncomingOutgoing/incoming |
 | UC-COR-05 | View an incoming letter عرض الوارد | Staff, Gen. Director | Loads one incoming letter with its routing history and attachments. | GET /api/IncomingOutgoing/incoming/{id} |
 | UC-COR-06 | Update an incoming letter تعديل الوارد | Staff | Amends the registration data or the routing of a received letter. | PUT /api/IncomingOutgoing/incoming |
 | UC-COR-07 | Delete an incoming letter حذف الوارد | Staff, Gen. Director | Removes a registration made in error. | DELETE /api/IncomingOutgoing/incoming |
@@ -51,7 +51,7 @@
 | UC-COR-10 | List outgoing letters الصادر | Staff, Gen. Director | Paged register of dispatched letters with serial, date, recipient and subject. | Route `#/incoming-outgoing/outgoing` → GET /api/IncomingOutgoing/outgoing |
 | UC-COR-11 | Search outgoing letters البحث في الصادر | Staff, Gen. Director | Filters by description, letter number and date range, with paging optionally disabled; an unpaged variant supports export. | GET /api/IncomingOutgoing/outgoing, GET /api/IncomingOutgoing/export/outgoing |
 | UC-COR-12 | Obtain the next outgoing serial رقم الصادر التالي | Staff | Reserves the next sequential dispatch number. | GET /api/IncomingOutgoing/outgoing/next-serial |
-| UC-COR-13 | Register an outgoing letter تسجيل صادر | Staff | Records the dispatch — serial, date, recipient, originating department, category, subject and attachments. | Route `#/incoming-outgoing/outgoing/:id/edit` → POST /api/IncomingOutgoing/outgoing |
+| UC-COR-13 | Register an outgoing letter تسجيل صادر | Staff | Records the dispatch — serial, date, recipient, originating department, category, subject and attachments. | Route `#/incoming-outgoing/outgoing/create` → POST /api/IncomingOutgoing/outgoing |
 | UC-COR-14 | View an outgoing letter عرض الصادر | Staff, Gen. Director | Loads one dispatched letter with its attachments and the orphan reports linked to it. | GET /api/IncomingOutgoing/outgoing/{id} |
 | UC-COR-15 | Update an outgoing letter تعديل الصادر | Staff | Amends the dispatch data before or after sending. | PUT /api/IncomingOutgoing/outgoing |
 | UC-COR-16 | Delete an outgoing letter حذف الصادر | Staff, Gen. Director | Removes a dispatch registered in error. | DELETE /api/IncomingOutgoing/outgoing |
@@ -421,7 +421,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • A new record exists, owned by the charity of the creating user, and appears in the list screen of the module. |
-| Realisation | Route `#/incoming-outgoing/incoming/:id/edit` → `IncomingLetterFormComponent`<br>`POST /api/IncomingOutgoing/incoming` → `IncomingOutgoingController` → `IIncomingService` |
+| Realisation | Route `#/incoming-outgoing/incoming/create` → `IncomingLetterFormComponent`<br>`POST /api/IncomingOutgoing/incoming` → `IncomingOutgoingController` → `IIncomingService` |
 
 #### 21.U.5  UC-COR-05 — View an incoming letter عرض الوارد
 
@@ -592,7 +592,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • A new record exists, owned by the charity of the creating user, and appears in the list screen of the module. |
-| Realisation | Route `#/incoming-outgoing/outgoing/:id/edit` → `OutgoingLetterFormComponent`<br>`POST /api/IncomingOutgoing/outgoing` → `IncomingOutgoingController` → `IOutgoingService` |
+| Realisation | Route `#/incoming-outgoing/outgoing/create` → `OutgoingLetterFormComponent`<br>`POST /api/IncomingOutgoing/outgoing` → `IncomingOutgoingController` → `IOutgoingService` |
 
 #### 21.U.14  UC-COR-14 — View an outgoing letter عرض الصادر
 
@@ -716,13 +716,21 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
+| `#/incoming-outgoing` | `incoming-outgoing` | redirects to `#/incoming-outgoing/incoming` | implemented |
 | `#/incoming-outgoing/incoming` | `incoming-outgoing` | `IncomingLettersListComponent` | implemented |
+| `#/incoming-outgoing/incoming/create` | `incoming-outgoing` | `IncomingLetterFormComponent` | implemented |
+| `#/incoming-outgoing/incoming/:id` | `incoming-outgoing` | `IncomingLetterDetailComponent` | implemented |
 | `#/incoming-outgoing/incoming/:id/edit` | `incoming-outgoing` | `IncomingLetterFormComponent` | implemented |
-| `#/incoming-outgoing/export/incoming` | `incoming-outgoing` | `ExportWizardComponent` | implemented |
 | `#/incoming-outgoing/outgoing` | `incoming-outgoing` | `OutgoingLettersListComponent` | implemented |
+| `#/incoming-outgoing/outgoing/create` | `incoming-outgoing` | `OutgoingLetterFormComponent` | implemented |
+| `#/incoming-outgoing/outgoing/:id` | `incoming-outgoing` | `OutgoingLetterDetailComponent` | implemented |
 | `#/incoming-outgoing/outgoing/:id/edit` | `incoming-outgoing` | `OutgoingLetterFormComponent` | implemented |
-| `#/incoming-outgoing/export/outgoing` | `incoming-outgoing` | `ExportWizardComponent` | implemented |
-| `#/incoming-outgoing/export/outgoing-orphans` | `incoming-outgoing` | `ExportWizardComponent` | planned |
+| `#/incoming-outgoing/import/:type` | `incoming-outgoing` | `ImportWizardComponent` | implemented |
+| `#/incoming-outgoing/export/:type` | `incoming-outgoing` | `ExportWizardComponent` | implemented |
+| `#/incoming-outgoing/history` | `incoming-outgoing` | `HistoryComponent` | implemented |
+
+> `export/:type` is one parameterised route. `#/incoming-outgoing/export/incoming`,
+> `…/export/outgoing` and `…/export/outgoing-orphans` are values of `:type`, not separate routes.
 
 ### 21.B  Annex - API controllers of this module
 

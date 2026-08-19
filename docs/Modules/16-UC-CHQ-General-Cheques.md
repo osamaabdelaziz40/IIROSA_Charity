@@ -10,7 +10,7 @@
 | Use case prefix | UC-CHQ |
 | Chapter in master document | Chapter 16 |
 | Documented use cases | 10 |
-| Principal routes | `#/general-checks`, `#/general-checks/edit/:id`, `#/general-checks/statement` |
+| Principal routes | `#/general-checks`, `#/general-checks/create`, `#/general-checks/edit/:id`, `#/general-checks/:id`, `#/general-checks/reconcile` |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -31,14 +31,14 @@
 | ID | Use case | Primary actor | Description & main flow | Realisation |
 | --- | --- | --- | --- | --- |
 | UC-CHQ-01 | List cheques قائمة الشيكات | Fin. Director, Gen. Director | Paged register of all issued cheques with beneficiary, bank, amount, currency, date and status. | Route `#/general-checks` → GET /api/CheckManagement |
-| UC-CHQ-02 | Issue a cheque اضافة شيك | Fin. Director | Captures beneficiary, bank, account, amount, currency and date, converts the amount to Arabic words for the printed cheque, and stores the record. | Route `#/general-checks/edit/:id` → POST /api/CheckManagement |
+| UC-CHQ-02 | Issue a cheque اضافة شيك | Fin. Director | Captures beneficiary, bank, account, amount, currency and date, converts the amount to Arabic words for the printed cheque, and stores the record. | Route `#/general-checks/create` → POST /api/CheckManagement |
 | UC-CHQ-03 | View a cheque عرض الشيك | Fin. Director, Gen. Director | Loads a single cheque for review or editing. | GET /api/CheckManagement/{id} |
 | UC-CHQ-04 | Update a cheque تعديل الشيك | Fin. Director | Amends an issued cheque's data before printing or clearing. | PUT /api/CheckManagement |
 | UC-CHQ-05 | Select a beneficiary اختيار المستفيد | Fin. Director | Type-ahead search over the beneficiary catalogue (charities, suppliers, individuals) to attach the payee to the cheque. | GET /api/LookupManagement/cheque-beneficiaries |
 | UC-CHQ-06 | Select the currency اختيار العملة | Fin. Director | Loads the currency list that drives the amount and the words conversion. | GET /api/LookupManagement/currencies |
 | UC-CHQ-07 | Convert an amount to Arabic words تفقيط المبلغ | System | Converts the numeric cheque amount into its Arabic written form, which is printed on the cheque face and stored with the record. | GET /api/CheckManagement/amount-in-words |
 | UC-CHQ-08 | Load bank cheque print positions مواضع الطباعة على الشيك | Fin. Director | Retrieves the coordinate offsets configured for the selected bank's cheque stationery so the printed fields align with the pre-printed form. | GET /api/LookupManagement/banks/{id}/cheque-positions; GET /api/LookupManagement/countries/{id} for the bank list |
-| UC-CHQ-09 | Produce a cheque statement بيان الشيكات | Fin. Director, Gen. Director | Filters the cheque register (bank, date range, status, beneficiary) and returns the statement used for bank reconciliation. | Route `#/general-checks/statement` → GET /api/CheckManagement/report |
+| UC-CHQ-09 | Produce a cheque statement بيان الشيكات | Fin. Director, Gen. Director | Filters the cheque register (bank, date range, status, beneficiary) and returns the statement used for bank reconciliation. | Route `#/general-checks/reconcile` → GET /api/CheckManagement/report |
 | UC-CHQ-10 | Print a cheque and the cheque report طباعة الشيك والتقرير | Fin. Director | Renders the cheque onto the bank's stationery using the configured positions, with a country-specific variant, and produces the cheque report for a bank, date range and cheque type. | /api/Reports/general-cheque/export/pdf, /api/Reports/general-cheque-eg/export/pdf, /api/Reports/cheque-statement/export/pdf, /api/Reports/payment-cheques/export/pdf, /api/Reports/payment-cheques-eg/export/pdf |
 
 ### 16.S  Screen field specifications
@@ -191,7 +191,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • A new record exists, owned by the charity of the creating user, and appears in the list screen of the module. |
-| Realisation | Route `#/general-checks/edit/:id` → `CheckFormComponent`<br>`POST /api/CheckManagement` → `CheckManagementController` → `ICheckService` |
+| Realisation | Route `#/general-checks/create` → `CheckFormComponent`<br>`POST /api/CheckManagement` → `CheckManagementController` → `ICheckService` |
 
 #### 16.U.3  UC-CHQ-03 — View a cheque عرض الشيك
 
@@ -324,7 +324,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • An HQ role (General Director, Financial Director, Staff) may pass an explicit charity id and so read across the charity boundary; a charity user may not and always sees its own data. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• The uploaded file is not the expected workbook/CSV layout — the import is abandoned and no row is changed. |
 | Post-conditions | • The matched records carry the imported values; unmatched rows are left untouched and reported. |
-| Realisation | Route `#/general-checks/statement` → `CheckStatementComponent`<br>`GET /api/CheckManagement/report` → `CheckManagementController` → `ICheckService` |
+| Realisation | Route `#/general-checks/reconcile` → `CheckReconcileComponent`<br>`GET /api/CheckManagement/report` → `CheckManagementController` → `ICheckService` |
 
 #### 16.U.10  UC-CHQ-10 — Print a cheque and the cheque report طباعة الشيك والتقرير
 
@@ -354,8 +354,17 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
 | `#/general-checks` | `general-checks` | `CheckListComponent` | implemented |
+| `#/general-checks/create` | `general-checks` | `CheckFormComponent` | implemented |
 | `#/general-checks/edit/:id` | `general-checks` | `CheckFormComponent` | implemented |
-| `#/general-checks/statement` | `general-checks` | `CheckStatementComponent` | planned |
+| `#/general-checks/:id` | `general-checks` | `CheckDetailComponent` | implemented |
+| `#/general-checks/reconcile` | `general-checks` | `CheckReconcileComponent` | declared but shadowed |
+
+> Two deviations in this module, both in `general-checks-routing.module.ts`:
+>
+> 1. The edit route is `edit/:id`, not the `:id/edit` every other feature module uses.
+> 2. `reconcile` is declared **after** `:id`, so the router matches `:id` first and
+>    `#/general-checks/reconcile` opens `CheckDetailComponent` with `id = "reconcile"`.
+>    Moving `reconcile` above `:id` fixes it.
 
 ### 16.B  Annex - API controllers of this module
 

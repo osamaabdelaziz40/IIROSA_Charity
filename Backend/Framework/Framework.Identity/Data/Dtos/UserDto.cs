@@ -39,6 +39,16 @@ namespace Framework.Identity.Data.Dtos
         public bool IsExternalUser { get; set; }
         public int? AgancyId { get; set; }
 
+        /// <summary>
+        /// The charity this user belongs to; null for head-office users.
+        /// </summary>
+        public Guid? CharityId { get; set; }
+
+        /// <summary>
+        /// The country this user operates in.
+        /// </summary>
+        public int? CountryId { get; set; }
+
         public List<UserRolesDto> UserRoles { get; set; }
 
     }

@@ -21,6 +21,32 @@
 #   case id, MoSCoW priority, size and the legacy endpoint that realised it, so the board stays
 #   traceable to the specification.
 #
+# IMPLEMENTATION AUDIT — 2026-08-19
+#   Statuses below are no longer the import baseline. Every story was checked against the code in
+#   this repository and set to one of three values:
+#
+#     done         the API endpoint(s) the story names exist AND the Angular screen exists and is
+#                  reachable from app-routing.module.ts
+#     in-progress  partially built — one side exists without the other, or only some of the
+#                  endpoints the story names are present
+#     backlog      neither the endpoint nor the screen exists
+#
+#   Criterion: FULL STACK. An API with no reachable screen is `in-progress`, never `done`.
+#   Method: 317 endpoints extracted from the 21 controllers under IIROSA.Api/Controllers, and 83
+#   reachable routes extracted from the 16 Angular routing modules, matched against the endpoint
+#   and route named in each story comment. Five stories that name no endpoint were judged by hand.
+#
+#   Whole-module exclusions applied by the audit:
+#     epic-7  Refugee Families      no `families/refugees` routes exist
+#     epic-8  Orphan Register        no `families/orphans/coding` routes exist
+#     epic-9  Orphan Periodic Reports  routes are BUILT but UNREACHABLE — the feature module is
+#                                      not registered in app-routing.module.ts, so no story in this
+#                                      epic can be `done` until that entry is added
+#     epic-17 HQ Financial Transfers  no `hq-transfers` module and no HqTransfersController
+#     epic-18 Reports & Printing      no `reports` feature module and no ReportsController
+#
+#   Result: 85 done + 37 in-progress + 110 backlog = 232.
+#
 # STATUS VALUES:
 #   Epic:  backlog | in-progress | done
 #   Story: backlog | ready-for-dev | in-progress | review | done
@@ -61,7 +87,7 @@
 
 generated: 2026-08-18
 project: IIROSA Charities
-last_updated: 2026-08-18  # Re-platform baseline — all stories open.
+last_updated: 2026-08-19  # Implementation audit, then adversarial code review of epic 3.
 project_key: IIROSA
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
@@ -70,72 +96,72 @@ development_status:
   # Epic 1 — Authentication & User Account (authentication-and-user-account) — 11 stories, 42 pts, 11 Must  [2 open — see the NEW stories at the end of the epic]
   #   Chapter 6 · prefix UC-AUT · 5 screens · goal: to establish who the caller is, with which role and in which country, because every other module is scoped by that answer.
   #   Spec: docs/Modules/06-UC-AUT-Authentication-and-User-Account.md (§6.S screens, §6.U scenarios)
-  epic-1: backlog
-  1-1-log-in-to-the-system: backlog  # UC-AUT-01 · Must · 2pt · route `#/auth/login` · POST /api/Auth/login · legacy: implemented
+  epic-1: in-progress
+  1-1-log-in-to-the-system: done  # UC-AUT-01 · Must · 2pt · route `#/auth/login` · POST /api/Auth/login · legacy: implemented
   1-2-retrieve-signed-in-user-profile: backlog  # UC-AUT-02 · Must · 2pt · GET /api/Auth/me · legacy: implemented
-  1-3-log-out: backlog  # UC-AUT-03 · Must · 2pt · index.html → LogOut() · legacy: implemented
-  1-4-register-a-new-charity-account: backlog  # UC-AUT-04 · Must · 5pt · route `#/auth/register` · POST /api/Auth/register · legacy: implemented
+  1-3-log-out: done  # UC-AUT-03 · Must · 2pt · index.html → LogOut() · legacy: implemented
+  1-4-register-a-new-charity-account: in-progress  # UC-AUT-04 · Must · 5pt · route `#/auth/register` · POST /api/Auth/register · legacy: implemented
   1-5-request-a-password-reset-link: backlog  # UC-AUT-05 · Must · 2pt · route `#/auth/forgot-password` · GET /api/Auth/forgot-password · legacy: implemented
   1-6-validate-a-password-reset-link: backlog  # UC-AUT-06 · Must · 2pt · route `#/auth/reset-password/:userId/:code` · GET /api/Auth/validate-reset-token · legacy: implemented
   1-7-reset-a-forgotten-password: backlog  # UC-AUT-07 · Must · 2pt · route `#/auth/reset-password/:userId/:code` · POST /api/Auth/change-password · legacy: implemented
   1-8-change-own-password: backlog  # UC-AUT-08 · Must · 2pt · route `#/auth/change-password` · POST /api/Auth/change-password · legacy: implemented
-  1-9-enforce-role-based-navigation: backlog  # UC-AUT-09 · Must · 2pt · index.html menu classes adminRule, staff, NotTra · legacy: implemented
-  1-10-issue-a-jwt-access-token-on-login: backlog  # Must · 13pt · NEW · issue a short-lived signed JWT carrying user, role, country and charity claims, validated on every endpoint server-side instead of trusting the client
+  1-9-enforce-role-based-navigation: in-progress  # UC-AUT-09 · Must · 2pt · index.html menu classes adminRule, staff, NotTra · legacy: implemented
+  1-10-issue-a-jwt-access-token-on-login: in-progress  # Must · 13pt · NEW · issue a short-lived signed JWT carrying user, role, country and charity claims, validated on every endpoint server-side instead of trusting the client
   1-11-refresh-an-expired-access-token: backlog  # Must · 8pt · NEW · long-lived rotating refresh token stored server-side and exchanged at POST /api/Auth/Refresh for a new access token; one-time use with rotation, revoked on logout and on password change, so a stolen token cannot outlive the session
   epic-1-retrospective: optional
 
   # Epic 2 — Home Dashboard (home-dashboard) — 3 stories, 7 pts, 2 Should / 1 Could
   #   Chapter 7 · prefix UC-DSH · 2 screens · goal: to give each role an immediate picture of the work waiting for it as soon as it signs in.
   #   Spec: docs/Modules/07-UC-DSH-Home-Dashboard.md (§7.S screens, §7.U scenarios)
-  epic-2: backlog
+  epic-2: in-progress
   2-1-view-beneficiary-family-count: backlog  # UC-DSH-01 · Should · 2pt · route `#/dashboard` · GET /api/Dashboard/summary · legacy: implemented
   2-2-view-statistical-breakdown-charts: backlog  # UC-DSH-02 · Could · 3pt · GET /api/Dashboard/charts · legacy: implemented
-  2-3-navigate-to-a-functional-module: backlog  # UC-DSH-03 · Should · 2pt · Angular router + PermissionGuard, app-routing.module.ts · legacy: implemented
+  2-3-navigate-to-a-functional-module: in-progress  # UC-DSH-03 · Should · 2pt · Angular router + PermissionGuard, app-routing.module.ts · legacy: implemented
   epic-2-retrospective: optional
 
   # Epic 3 — Charity Administration (charity-administration) — 9 stories, 36 pts, 9 Should
   #   Chapter 8 · prefix UC-CHR · 2 screens · goal: to onboard partner charities and control what each of them may add or change.
   #   Spec: docs/Modules/08-UC-CHR-Charity-Administration.md (§8.S screens, §8.U scenarios)
-  epic-3: backlog
-  3-1-list-all-charities: backlog  # UC-CHR-01 · Should · 5pt · route `#/charities` · GET /api/Charities · legacy: implemented
-  3-2-verify-charity-name-availability: backlog  # UC-CHR-02 · Should · 2pt · GET /api/Charities/check-name · legacy: implemented
-  3-3-create-a-charity: backlog  # UC-CHR-03 · Should · 8pt · route `#/charities/create` · POST /api/Charities · legacy: implemented
-  3-4-view-a-charity-profile: backlog  # UC-CHR-04 · Should · 2pt · GET /api/Charities/{id} · legacy: implemented
-  3-5-update-a-charity-profile: backlog  # UC-CHR-05 · Should · 5pt · PUT /api/Charities/{id} · legacy: implemented
-  3-6-open-the-permissions-screen: backlog  # UC-CHR-06 · Should · 2pt · GET /api/Charities · legacy: implemented
-  3-7-lock-or-unlock-a-charity-account: backlog  # UC-CHR-07 · Should · 2pt · POST /api/Charities/{id}/lock · POST /api/Charities/{id}/unlock · legacy: implemented
-  3-8-enable-or-disable-data-entry-for-a-charity: backlog  # UC-CHR-08 · Should · 5pt · PUT /api/Charities/{id}/update-rights · legacy: implemented
-  3-9-enable-or-disable-data-editing-for-a-charity: backlog  # UC-CHR-09 · Should · 5pt · PUT /api/Charities/{id}/update-rights · legacy: implemented
-  epic-3-retrospective: optional
+  epic-3: done
+  3-1-list-all-charities: done  # UC-CHR-01 · Should · 5pt · route `#/charities` · GET /api/Charities · legacy: implemented
+  3-2-verify-charity-name-availability: done  # UC-CHR-02 · Should · 2pt · GET /api/Charities/check-name · legacy: implemented
+  3-3-create-a-charity: done  # UC-CHR-03 · Should · 8pt · route `#/charities/create` · POST /api/Charities · legacy: implemented
+  3-4-view-a-charity-profile: done  # UC-CHR-04 · Should · 2pt · GET /api/Charities/{id} · legacy: implemented
+  3-5-update-a-charity-profile: done  # UC-CHR-05 · Should · 5pt · PUT /api/Charities/{id} · legacy: implemented
+  3-6-open-the-permissions-screen: done  # UC-CHR-06 · Should · 2pt · GET /api/Charities · legacy: implemented
+  3-7-lock-or-unlock-a-charity-account: done  # UC-CHR-07 · Should · 2pt · POST /api/Charities/{id}/lock · POST /api/Charities/{id}/unlock · legacy: implemented
+  3-8-enable-or-disable-data-entry-for-a-charity: done  # UC-CHR-08 · Should · 5pt · PUT /api/Charities/{id}/update-rights · legacy: implemented
+  3-9-enable-or-disable-data-editing-for-a-charity: done  # UC-CHR-09 · Should · 5pt · PUT /api/Charities/{id}/update-rights · legacy: implemented
+  epic-3-retrospective: done
 
   # Epic 4 — Employee & User Administration (employee-and-user-administration) — 6 stories, 18 pts, 6 Should
   #   Chapter 9 · prefix UC-EMP · 2 screens · goal: to create and maintain head-office staff accounts and the roles attached to them.
   #   Spec: docs/Modules/09-UC-EMP-Employee-and-User-Administration.md (§9.S screens, §9.U scenarios)
-  epic-4: backlog
-  4-1-list-employees: backlog  # UC-EMP-01 · Should · 2pt · route `#/employees` · GET /api/EmployeeManagement · legacy: implemented
+  epic-4: in-progress
+  4-1-list-employees: done  # UC-EMP-01 · Should · 2pt · route `#/employees` · GET /api/EmployeeManagement · legacy: implemented
   4-2-verify-employee-username-availability: backlog  # UC-EMP-02 · Should · 2pt · GET /api/EmployeeManagement/check-national-id · legacy: implemented
-  4-3-create-an-employee-account: backlog  # UC-EMP-03 · Should · 5pt · route `#/employees/:id` · POST /api/EmployeeManagement · legacy: implemented
-  4-4-view-an-employee-record: backlog  # UC-EMP-04 · Should · 2pt · GET /api/EmployeeManagement/{id} · legacy: implemented
-  4-5-update-an-employee-and-change-their-role: backlog  # UC-EMP-05 · Should · 5pt · PUT /api/EmployeeManagement · legacy: implemented
-  4-6-suspend-or-reactivate-an-employee: backlog  # UC-EMP-06 · Should · 2pt · PATCH /api/EmployeeManagement/{id}/deactivate · legacy: implemented
+  4-3-create-an-employee-account: done  # UC-EMP-03 · Should · 5pt · route `#/employees/:id` · POST /api/EmployeeManagement · legacy: implemented
+  4-4-view-an-employee-record: done  # UC-EMP-04 · Should · 2pt · GET /api/EmployeeManagement/{id} · legacy: implemented
+  4-5-update-an-employee-and-change-their-role: done  # UC-EMP-05 · Should · 5pt · PUT /api/EmployeeManagement · legacy: implemented
+  4-6-suspend-or-reactivate-an-employee: done  # UC-EMP-06 · Should · 2pt · PATCH /api/EmployeeManagement/{id}/deactivate · legacy: implemented
   epic-4-retrospective: optional
 
   # Epic 5 — Family Register (family-register) — 14 stories, 68 pts, 8 Must / 6 Should
   #   Chapter 10 · prefix UC-FAM · 4 screens · goal: to hold the beneficiary household file that every orphan, payment and report hangs from.
   #   Spec: docs/Modules/10-UC-FAM-Family-Register.md (§10.S screens, §10.U scenarios)
-  epic-5: backlog
-  5-1-list-families-of-a-charity: backlog  # UC-FAM-01 · Must · 2pt · route `#/families` · GET /api/Families?charityId= · legacy: implemented
-  5-2-search-families: backlog  # UC-FAM-02 · Should · 2pt · GET /api/Families?charityId=&search= · legacy: implemented
-  5-3-register-a-new-family: backlog  # UC-FAM-03 · Must · 10pt · route `#/families/:id/edit` · POST /api/Families · legacy: implemented
-  5-4-view-a-family-file: backlog  # UC-FAM-04 · Must · 2pt · GET /api/Families/{id} · legacy: implemented
-  5-5-update-a-family-file: backlog  # UC-FAM-05 · Must · 5pt · PUT /api/Families · legacy: implemented
+  epic-5: in-progress
+  5-1-list-families-of-a-charity: done  # UC-FAM-01 · Must · 2pt · route `#/families` · GET /api/Families?charityId= · legacy: implemented
+  5-2-search-families: done  # UC-FAM-02 · Should · 2pt · GET /api/Families?charityId=&search= · legacy: implemented
+  5-3-register-a-new-family: done  # UC-FAM-03 · Must · 10pt · route `#/families/:id/edit` · POST /api/Families · legacy: implemented
+  5-4-view-a-family-file: done  # UC-FAM-04 · Must · 2pt · GET /api/Families/{id} · legacy: implemented
+  5-5-update-a-family-file: done  # UC-FAM-05 · Must · 5pt · PUT /api/Families · legacy: implemented
   5-6-transfer-a-family-to-another-charity: backlog  # UC-FAM-06 · Should · 8pt · PUT /api/Families/{id}/charity · legacy: implemented
   5-7-move-an-orphan-between-families: backlog  # UC-FAM-07 · Should · 8pt · route `#/families/:id/members` · POST /api/Families/{familyId}/members/{memberId}/control · legacy: implemented
   5-8-move-a-guardian-between-families: backlog  # UC-FAM-08 · Must · 5pt · POST /api/Families/{familyId}/members/{memberId}/control · legacy: implemented
   5-9-review-guardian-change-requests: backlog  # UC-FAM-09 · Must · 5pt · route `#/families/provider-requests` · GET /api/Families/provider-requests · legacy: implemented
   5-10-approve-a-guardian-change-request: backlog  # UC-FAM-10 · Must · 8pt · POST /api/Families/provider-requests/{id}/approve · legacy: implemented
   5-11-track-family-follow-up-activity: backlog  # UC-FAM-11 · Should · 3pt · route `#/reports/family-orphans` · GET /api/Families/{id}/follow-up · legacy: implemented
-  5-12-verify-a-guardian-can-be-added: backlog  # UC-FAM-12 · Must · 5pt · POST /api/Families/{familyId}/verify-provider · legacy: implemented
+  5-12-verify-a-guardian-can-be-added: done  # UC-FAM-12 · Must · 5pt · POST /api/Families/{familyId}/verify-provider · legacy: implemented
   5-13-remove-a-guardians-sponsorship-link: backlog  # UC-FAM-13 · Should · 2pt · DELETE /api/Families/{familyId}/provider/sponsor · legacy: implemented
   5-14-print-family-follow-up-and-identification-sheets: backlog  # UC-FAM-14 · Should · 3pt · POST /api/Reports/family-update-tracking/export/pdf · legacy: implemented
   epic-5-retrospective: optional
@@ -143,31 +169,31 @@ development_status:
   # Epic 6 — Housing Project (housing-project) — 8 stories, 36 pts, 7 Should / 1 Could
   #   Chapter 11 · prefix UC-HOU · 4 screens · goal: to run the parallel register of families housed in organisation-owned buildings.
   #   Spec: docs/Modules/11-UC-HOU-Housing-Project.md (§11.S screens, §11.U scenarios)
-  epic-6: backlog
-  6-1-list-housing-families: backlog  # UC-HOU-01 · Should · 2pt · route `#/housing-projects` · GET /api/Families?familyType=Housing&charityId= · legacy: implemented
-  6-2-search-housing-families: backlog  # UC-HOU-02 · Should · 2pt · GET /api/Families?familyType=Housing&search= · legacy: implemented
-  6-3-register-a-housing-family: backlog  # UC-HOU-03 · Should · 10pt · route `#/housing-projects/:id/edit` · POST /api/HousingProjects/projects · legacy: implemented
-  6-4-view-update-a-housing-family: backlog  # UC-HOU-04 · Should · 5pt · GET /api/HousingProjects/projects/{id} · legacy: implemented
+  epic-6: in-progress
+  6-1-list-housing-families: done  # UC-HOU-01 · Should · 2pt · route `#/housing-projects` · GET /api/Families?familyType=Housing&charityId= · legacy: implemented
+  6-2-search-housing-families: done  # UC-HOU-02 · Should · 2pt · GET /api/Families?familyType=Housing&search= · legacy: implemented
+  6-3-register-a-housing-family: done  # UC-HOU-03 · Should · 10pt · route `#/housing-projects/:id/edit` · POST /api/HousingProjects/projects · legacy: implemented
+  6-4-view-update-a-housing-family: done  # UC-HOU-04 · Should · 5pt · GET /api/HousingProjects/projects/{id} · legacy: implemented
   6-5-select-building-and-flat: backlog  # UC-HOU-05 · Should · 2pt · GET /api/LookupManagement/housing-buildings · legacy: implemented
-  6-6-list-periodic-reports-of-a-housing-beneficiary: backlog  # UC-HOU-06 · Could · 3pt · route `#/housing-projects/:id/reports` · GET /api/PeriodicOrphanReports/by-orphan/{orphanId} · legacy: implemented
-  6-7-look-up-a-housing-beneficiary-by-code: backlog  # UC-HOU-07 · Should · 2pt · GET /api/PeriodicOrphanReports/by-orphan/{orphanId} · legacy: implemented
-  6-8-create-a-housing-periodic-report: backlog  # UC-HOU-08 · Should · 10pt · route `#/housing-projects/:id/reports/:reportId` · POST /api/PeriodicOrphanReports · legacy: implemented
+  6-6-list-periodic-reports-of-a-housing-beneficiary: in-progress  # UC-HOU-06 · Could · 3pt · route `#/housing-projects/:id/reports` · GET /api/PeriodicOrphanReports/by-orphan/{orphanId} · legacy: implemented
+  6-7-look-up-a-housing-beneficiary-by-code: done  # UC-HOU-07 · Should · 2pt · GET /api/PeriodicOrphanReports/by-orphan/{orphanId} · legacy: implemented
+  6-8-create-a-housing-periodic-report: in-progress  # UC-HOU-08 · Should · 10pt · route `#/housing-projects/:id/reports/:reportId` · POST /api/PeriodicOrphanReports · legacy: implemented
   epic-6-retrospective: optional
 
   # Epic 7 — Refugee Families (refugee-families) — 4 stories, 19 pts, 4 Should
   #   Chapter 12 · prefix UC-REF · 2 screens · goal: to keep displaced families in their own register with their own contract and search.
   #   Spec: docs/Modules/12-UC-REF-Refugee-Families.md (§12.S screens, §12.U scenarios)
-  epic-7: backlog
+  epic-7: in-progress
   7-1-list-refugee-families: backlog  # UC-REF-01 · Should · 2pt · route `#/families/refugees` · Route `#/families/refugees` · legacy: implemented
-  7-2-search-refugee-families: backlog  # UC-REF-02 · Should · 2pt · GET /api/Families?familyType=Refugee&search= · legacy: implemented
-  7-3-register-a-refugee-family: backlog  # UC-REF-03 · Should · 10pt · route `#/families/refugees/:id/edit` · POST /api/Families · legacy: implemented
-  7-4-view-update-a-refugee-family: backlog  # UC-REF-04 · Should · 5pt · GET /api/Families/{id} · legacy: implemented
+  7-2-search-refugee-families: in-progress  # UC-REF-02 · Should · 2pt · GET /api/Families?familyType=Refugee&search= · legacy: implemented
+  7-3-register-a-refugee-family: in-progress  # UC-REF-03 · Should · 10pt · route `#/families/refugees/:id/edit` · POST /api/Families · legacy: implemented
+  7-4-view-update-a-refugee-family: in-progress  # UC-REF-04 · Should · 5pt · GET /api/Families/{id} · legacy: implemented
   epic-7-retrospective: optional
 
   # Epic 8 — Orphan Register & Coding (orphan-register-and-coding) — 11 stories, 31 pts, 9 Must / 2 Should
   #   Chapter 13 · prefix UC-ORP · 2 screens · goal: to admit an orphan to sponsorship by giving it a code — without a code it can neither be reported on nor paid.
   #   Spec: docs/Modules/13-UC-ORP-Orphan-Register-and-Coding.md (§13.S screens, §13.U scenarios)
-  epic-8: backlog
+  epic-8: in-progress
   8-1-check-whether-an-orphan-may-be-added: backlog  # UC-ORP-01 · Must · 5pt · GET /api/Families/orphans/check-national-id · legacy: implemented
   8-2-find-an-orphan-by-name: backlog  # UC-ORP-02 · Should · 2pt · GET /api/Families/orphans?search= · legacy: implemented
   8-3-open-the-coding-worklist: backlog  # UC-ORP-03 · Must · 2pt · route `#/families/orphans/coding/worklist` · GET /api/Families/orphans?codingStatus=Pending · legacy: implemented
@@ -175,61 +201,61 @@ development_status:
   8-5-verify-a-code-is-not-already-used: backlog  # UC-ORP-05 · Must · 2pt · GET /api/Families/orphans/check-code · legacy: implemented
   8-6-assign-a-sponsorship-code-to-an-orphan: backlog  # UC-ORP-06 · Must · 5pt · POST /api/Families/orphans/{orphanId}/code · legacy: implemented
   8-7-resolve-an-orphans-name-from-a-code: backlog  # UC-ORP-07 · Must · 2pt · GET /api/Families/orphans?search= · legacy: implemented
-  8-8-view-an-orphans-payment-history: backlog  # UC-ORP-08 · Must · 2pt · GET /api/OrphanPayments?orphanId= · legacy: implemented
-  8-9-view-an-orphans-payment-details: backlog  # UC-ORP-09 · Must · 2pt · GET /api/OrphanPayments · legacy: implemented
+  8-8-view-an-orphans-payment-history: in-progress  # UC-ORP-08 · Must · 2pt · GET /api/OrphanPayments?orphanId= · legacy: implemented
+  8-9-view-an-orphans-payment-details: in-progress  # UC-ORP-09 · Must · 2pt · GET /api/OrphanPayments · legacy: implemented
   8-10-check-a-phone-number-is-not-duplicated: backlog  # UC-ORP-10 · Must · 5pt · GET /api/Families/{familyId}/provider/check-phone · legacy: implemented
-  8-11-load-orphan-reference-data: backlog  # UC-ORP-11 · Must · 2pt · GET /api/OrphanPayments · legacy: implemented
+  8-11-load-orphan-reference-data: in-progress  # UC-ORP-11 · Must · 2pt · GET /api/OrphanPayments · legacy: implemented
   epic-8-retrospective: optional
 
   # Epic 9 — Orphan Periodic Reports (orphan-periodic-reports) — 17 stories, 80 pts, 7 Must / 10 Should
   #   Chapter 14 · prefix UC-ORR · 4 screens · goal: to prove that sponsorship is being delivered, by collecting a recurring evidenced status report on each orphan and having head office accept or refuse it.
   #   Spec: docs/Modules/14-UC-ORR-Orphan-Periodic-Reports.md (§14.S screens, §14.U scenarios)
-  epic-9: backlog
+  epic-9: in-progress
   9-1-list-an-orphans-periodic-reports: backlog  # UC-ORR-01 · Should · 3pt · route `#/periodic-orphan-reports` · GET /api/OrphanReports · legacy: implemented
-  9-2-look-up-an-orphan-by-code-before-reporting: backlog  # UC-ORR-02 · Should · 3pt · GET /api/PeriodicOrphanReports/by-orphan/{orphanId} · legacy: implemented
-  9-3-create-a-periodic-report: backlog  # UC-ORR-03 · Must · 10pt · route `#/periodic-orphan-reports/:id/edit` · POST /api/PeriodicOrphanReports · legacy: implemented
-  9-4-view-a-periodic-report: backlog  # UC-ORR-04 · Should · 3pt · GET /api/PeriodicOrphanReports · legacy: implemented
-  9-5-update-a-periodic-report: backlog  # UC-ORR-05 · Must · 5pt · PUT /api/PeriodicOrphanReports · legacy: implemented
-  9-6-delete-a-periodic-report: backlog  # UC-ORR-06 · Should · 2pt · DELETE /api/PeriodicOrphanReports · legacy: implemented
-  9-7-accept-a-periodic-report: backlog  # UC-ORR-07 · Must · 8pt · PUT /api/PeriodicOrphanReports · legacy: implemented
-  9-8-refuse-a-periodic-report-with-reasons: backlog  # UC-ORR-08 · Must · 8pt · PUT /api/PeriodicOrphanReports · legacy: implemented
-  9-9-filter-reports-by-status: backlog  # UC-ORR-09 · Should · 2pt · route `#/periodic-orphan-reports/orphan-reports/search` · POST /api/PeriodicOrphanReports/{id}/review · legacy: implemented
-  9-10-view-report-statistics-by-group: backlog  # UC-ORR-10 · Should · 3pt · route `#/periodic-orphan-reports/orphan-reports` · POST /api/OrphanReports/statistics · legacy: implemented
-  9-11-extract-detailed-report-data: backlog  # UC-ORR-11 · Should · 3pt · POST /api/OrphanReports/generate · legacy: implemented
-  9-12-extract-accepted-reports: backlog  # UC-ORR-12 · Must · 8pt · GET /api/PeriodicOrphanReports/approved · legacy: implemented
-  9-13-extract-refused-reports: backlog  # UC-ORR-13 · Must · 8pt · GET /api/PeriodicOrphanReports/rejected · legacy: implemented
+  9-2-look-up-an-orphan-by-code-before-reporting: in-progress  # UC-ORR-02 · Should · 3pt · GET /api/PeriodicOrphanReports/by-orphan/{orphanId} · legacy: implemented
+  9-3-create-a-periodic-report: in-progress  # UC-ORR-03 · Must · 10pt · route `#/periodic-orphan-reports/:id/edit` · POST /api/PeriodicOrphanReports · legacy: implemented
+  9-4-view-a-periodic-report: in-progress  # UC-ORR-04 · Should · 3pt · GET /api/PeriodicOrphanReports · legacy: implemented
+  9-5-update-a-periodic-report: in-progress  # UC-ORR-05 · Must · 5pt · PUT /api/PeriodicOrphanReports · legacy: implemented
+  9-6-delete-a-periodic-report: in-progress  # UC-ORR-06 · Should · 2pt · DELETE /api/PeriodicOrphanReports · legacy: implemented
+  9-7-accept-a-periodic-report: in-progress  # UC-ORR-07 · Must · 8pt · PUT /api/PeriodicOrphanReports · legacy: implemented
+  9-8-refuse-a-periodic-report-with-reasons: in-progress  # UC-ORR-08 · Must · 8pt · PUT /api/PeriodicOrphanReports · legacy: implemented
+  9-9-filter-reports-by-status: in-progress  # UC-ORR-09 · Should · 2pt · route `#/periodic-orphan-reports/orphan-reports/search` · POST /api/PeriodicOrphanReports/{id}/review · legacy: implemented
+  9-10-view-report-statistics-by-group: in-progress  # UC-ORR-10 · Should · 3pt · route `#/periodic-orphan-reports/orphan-reports` · POST /api/OrphanReports/statistics · legacy: implemented
+  9-11-extract-detailed-report-data: in-progress  # UC-ORR-11 · Should · 3pt · POST /api/OrphanReports/generate · legacy: implemented
+  9-12-extract-accepted-reports: in-progress  # UC-ORR-12 · Must · 8pt · GET /api/PeriodicOrphanReports/approved · legacy: implemented
+  9-13-extract-refused-reports: in-progress  # UC-ORR-13 · Must · 8pt · GET /api/PeriodicOrphanReports/rejected · legacy: implemented
   9-14-list-orphans-with-no-renewed-report: backlog  # UC-ORR-14 · Should · 3pt · POST /api/Reports/non-renewed-reports · legacy: implemented
-  9-15-extract-report-numbers-added-in-a-period: backlog  # UC-ORR-15 · Must · 5pt · POST /api/OrphanReports/statistics · legacy: implemented
-  9-16-view-report-attachments: backlog  # UC-ORR-16 · Should · 3pt · GET /api/Attachments/{id}/image · legacy: implemented
+  9-15-extract-report-numbers-added-in-a-period: in-progress  # UC-ORR-15 · Must · 5pt · POST /api/OrphanReports/statistics · legacy: implemented
+  9-16-view-report-attachments: in-progress  # UC-ORR-16 · Should · 3pt · GET /api/Attachments/{id}/image · legacy: implemented
   9-17-print-the-periodic-report-form: backlog  # UC-ORR-17 · Should · 3pt · POST /api/Reports/orphan-report-form/export/pdf · legacy: implemented
   epic-9-retrospective: optional
 
   # Epic 10 — Orphan Payments & Disbursement (orphan-payments-and-disbursement) — 24 stories, 95 pts, 18 Must / 6 Should
   #   Chapter 15 · prefix UC-PAY · 4 screens · goal: to get the sponsorship money from head office to the guardian, and be able to prove afterwards that it arrived.
   #   Spec: docs/Modules/15-UC-PAY-Orphan-Payments-and-Disbursement.md (§15.S screens, §15.U scenarios)
-  epic-10: backlog
-  10-1-list-payment-batches: backlog  # UC-PAY-01 · Must · 2pt · route `#/orphan-payments` · GET /api/OrphanPayments · legacy: implemented
-  10-2-create-a-payment-batch: backlog  # UC-PAY-02 · Must · 5pt · route `#/orphan-payments/:id/edit` · POST /api/OrphanPayments · legacy: implemented
-  10-3-view-a-payment-batch: backlog  # UC-PAY-03 · Must · 2pt · GET /api/OrphanPayments · legacy: implemented
-  10-4-update-a-payment-batch: backlog  # UC-PAY-04 · Must · 5pt · PUT /api/OrphanPayments · legacy: implemented
-  10-5-delete-a-payment-batch: backlog  # UC-PAY-05 · Should · 2pt · DELETE /api/OrphanPayments · legacy: implemented
-  10-6-list-a-charitys-batch-numbers: backlog  # UC-PAY-06 · Must · 2pt · GET /api/OrphanPayments/by-batch-no/{batchNo} · legacy: implemented
-  10-7-view-payment-details-for-a-charity: backlog  # UC-PAY-07 · Must · 2pt · GET /api/OrphanPayments/{id}/details · legacy: implemented
-  10-8-list-orphans-in-a-batch: backlog  # UC-PAY-08 · Must · 2pt · GET /api/OrphanPayments/{id}/details · legacy: implemented
+  epic-10: in-progress
+  10-1-list-payment-batches: done  # UC-PAY-01 · Must · 2pt · route `#/orphan-payments` · GET /api/OrphanPayments · legacy: implemented
+  10-2-create-a-payment-batch: done  # UC-PAY-02 · Must · 5pt · route `#/orphan-payments/:id/edit` · POST /api/OrphanPayments · legacy: implemented
+  10-3-view-a-payment-batch: done  # UC-PAY-03 · Must · 2pt · GET /api/OrphanPayments · legacy: implemented
+  10-4-update-a-payment-batch: done  # UC-PAY-04 · Must · 5pt · PUT /api/OrphanPayments · legacy: implemented
+  10-5-delete-a-payment-batch: done  # UC-PAY-05 · Should · 2pt · DELETE /api/OrphanPayments · legacy: implemented
+  10-6-list-a-charitys-batch-numbers: done  # UC-PAY-06 · Must · 2pt · GET /api/OrphanPayments/by-batch-no/{batchNo} · legacy: implemented
+  10-7-view-payment-details-for-a-charity: done  # UC-PAY-07 · Must · 2pt · GET /api/OrphanPayments/{id}/details · legacy: implemented
+  10-8-list-orphans-in-a-batch: done  # UC-PAY-08 · Must · 2pt · GET /api/OrphanPayments/{id}/details · legacy: implemented
   10-9-stop-or-resume-an-orphans-payment: backlog  # UC-PAY-09 · Must · 5pt · POST /api/OrphanPayments/orphan-items · legacy: implemented
   10-10-mark-a-payment-row-printed: backlog  # UC-PAY-10 · Should · 3pt · POST /api/OrphanPayments/orphan-items · legacy: implemented
   10-11-confirm-receipt-of-a-payment: backlog  # UC-PAY-11 · Must · 5pt · POST /api/OrphanPayments/orphan-items · legacy: implemented
   10-12-record-cheque-number-date-and-collector: backlog  # UC-PAY-12 · Must · 5pt · POST /api/OrphanPayments/orphan-items · legacy: implemented
-  10-13-update-payment-detail-flags: backlog  # UC-PAY-13 · Must · 5pt · PUT /api/OrphanPayments/{id} · legacy: implemented
-  10-14-generate-the-bank-transfer-file: backlog  # UC-PAY-14 · Must · 8pt · route `#/orphan-payments/:id/bank-file` · GET /api/OrphanPayments/{id}/export · legacy: implemented
+  10-13-update-payment-detail-flags: done  # UC-PAY-13 · Must · 5pt · PUT /api/OrphanPayments/{id} · legacy: implemented
+  10-14-generate-the-bank-transfer-file: in-progress  # UC-PAY-14 · Must · 8pt · route `#/orphan-payments/:id/bank-file` · GET /api/OrphanPayments/{id}/export · legacy: implemented
   10-15-import-transfer-numbers-from-the-bank: backlog  # UC-PAY-15 · Must · 8pt · POST /api/OrphanPayments/{id}/import/transfer-numbers · legacy: implemented
   10-16-import-a-batch-reconciliation-file: backlog  # UC-PAY-16 · Must · 8pt · POST /api/OrphanPayments/{id}/import/bank-file · legacy: implemented
   10-17-import-exchange-execution-statuses: backlog  # UC-PAY-17 · Must · 8pt · POST /api/OrphanPayments/{id}/import/exchange-status · legacy: implemented
-  10-18-report-payments-received: backlog  # UC-PAY-18 · Should · 3pt · GET /api/OrphanPayments/{id}/details?received=true · legacy: implemented
+  10-18-report-payments-received: done  # UC-PAY-18 · Should · 3pt · GET /api/OrphanPayments/{id}/details?received=true · legacy: implemented
   10-19-report-payments-not-received: backlog  # UC-PAY-19 · Should · 3pt · POST /api/Reports/payments-not-received · legacy: implemented
   10-20-report-stopped-payments: backlog  # UC-PAY-20 · Should · 3pt · POST /api/Reports/payments-stopped · legacy: implemented
   10-21-view-batch-summary-pages: backlog  # UC-PAY-21 · Must · 2pt · GET /api/Dashboard/payment-summary · legacy: implemented
-  10-22-view-batch-transfers-and-cheques: backlog  # UC-PAY-22 · Must · 2pt · route `#/orphan-payments/:id/cheques` · GET /api/OrphanPayments/{id}/details · legacy: implemented
+  10-22-view-batch-transfers-and-cheques: in-progress  # UC-PAY-22 · Must · 2pt · route `#/orphan-payments/:id/cheques` · GET /api/OrphanPayments/{id}/details · legacy: implemented
   10-23-identify-orphans-sponsored-elsewhere: backlog  # UC-PAY-23 · Must · 2pt · POST /api/Reports/orphans-other-sponsor · legacy: implemented
   10-24-print-disbursement-documents: backlog  # UC-PAY-24 · Should · 3pt · POST /api/Reports/payments-received/export/pdf · legacy: implemented
   epic-10-retrospective: optional
@@ -237,11 +263,11 @@ development_status:
   # Epic 11 — General Cheques (general-cheques) — 10 stories, 35 pts, 7 Should / 3 Could
   #   Chapter 16 · prefix UC-CHQ · 3 screens · goal: to issue and account for cheques raised outside the orphan payment cycle.
   #   Spec: docs/Modules/16-UC-CHQ-General-Cheques.md (§16.S screens, §16.U scenarios)
-  epic-11: backlog
-  11-1-list-cheques: backlog  # UC-CHQ-01 · Should · 2pt · route `#/general-checks` · GET /api/CheckManagement · legacy: implemented
-  11-2-issue-a-cheque: backlog  # UC-CHQ-02 · Should · 5pt · route `#/general-checks/edit/:id` · POST /api/CheckManagement · legacy: implemented
-  11-3-view-a-cheque: backlog  # UC-CHQ-03 · Should · 2pt · GET /api/CheckManagement/{id} · legacy: implemented
-  11-4-update-a-cheque: backlog  # UC-CHQ-04 · Should · 5pt · PUT /api/CheckManagement · legacy: implemented
+  epic-11: in-progress
+  11-1-list-cheques: done  # UC-CHQ-01 · Should · 2pt · route `#/general-checks` · GET /api/CheckManagement · legacy: implemented
+  11-2-issue-a-cheque: done  # UC-CHQ-02 · Should · 5pt · route `#/general-checks/edit/:id` · POST /api/CheckManagement · legacy: implemented
+  11-3-view-a-cheque: done  # UC-CHQ-03 · Should · 2pt · GET /api/CheckManagement/{id} · legacy: implemented
+  11-4-update-a-cheque: done  # UC-CHQ-04 · Should · 5pt · PUT /api/CheckManagement · legacy: implemented
   11-5-select-a-beneficiary: backlog  # UC-CHQ-05 · Should · 2pt · GET /api/LookupManagement/cheque-beneficiaries · legacy: implemented
   11-6-select-the-currency: backlog  # UC-CHQ-06 · Should · 2pt · GET /api/LookupManagement/currencies · legacy: implemented
   11-7-convert-an-amount-to-arabic-words: backlog  # UC-CHQ-07 · Could · 3pt · GET /api/CheckManagement/amount-in-words · legacy: implemented
@@ -253,95 +279,95 @@ development_status:
   # Epic 12 — Seasonal Assistance Projects (seasonal-assistance-projects) — 13 stories, 43 pts, 11 Should / 2 Could
   #   Chapter 17 · prefix UC-PRJ · 7 screens · goal: to run seasonal and one-off aid campaigns and record which family received what.
   #   Spec: docs/Modules/17-UC-PRJ-Seasonal-Assistance-Projects.md (§17.S screens, §17.U scenarios)
-  epic-12: backlog
-  12-1-list-projects: backlog  # UC-PRJ-01 · Should · 2pt · route `#/seasonal-aid` · GET /api/SeasonalAid/campaigns · legacy: implemented
-  12-2-create-a-project: backlog  # UC-PRJ-02 · Should · 5pt · route `#/seasonal-aid/:id/edit` · POST /api/SeasonalAid/campaigns · legacy: implemented
-  12-3-view-a-project: backlog  # UC-PRJ-03 · Should · 2pt · GET /api/SeasonalAid/campaigns · legacy: implemented
-  12-4-update-a-project: backlog  # UC-PRJ-04 · Should · 5pt · PUT /api/SeasonalAid/campaigns · legacy: implemented
-  12-5-delete-a-project: backlog  # UC-PRJ-05 · Should · 2pt · DELETE /api/SeasonalAid/campaigns · legacy: implemented
-  12-6-open-the-family-selection-screen: backlog  # UC-PRJ-06 · Should · 2pt · route `#/seasonal-aid/:id/beneficiaries` · GET /api/SeasonalAid/campaigns/{campaignId}/beneficiaries · legacy: implemented
+  epic-12: in-progress
+  12-1-list-projects: done  # UC-PRJ-01 · Should · 2pt · route `#/seasonal-aid` · GET /api/SeasonalAid/campaigns · legacy: implemented
+  12-2-create-a-project: done  # UC-PRJ-02 · Should · 5pt · route `#/seasonal-aid/:id/edit` · POST /api/SeasonalAid/campaigns · legacy: implemented
+  12-3-view-a-project: done  # UC-PRJ-03 · Should · 2pt · GET /api/SeasonalAid/campaigns · legacy: implemented
+  12-4-update-a-project: done  # UC-PRJ-04 · Should · 5pt · PUT /api/SeasonalAid/campaigns · legacy: implemented
+  12-5-delete-a-project: done  # UC-PRJ-05 · Should · 2pt · DELETE /api/SeasonalAid/campaigns · legacy: implemented
+  12-6-open-the-family-selection-screen: done  # UC-PRJ-06 · Should · 2pt · route `#/seasonal-aid/:id/beneficiaries` · GET /api/SeasonalAid/campaigns/{campaignId}/beneficiaries · legacy: implemented
   12-7-register-families-for-a-project: backlog  # UC-PRJ-07 · Should · 5pt · PUT /api/SeasonalAid/campaigns/{campaignId}/beneficiaries · legacy: implemented
   12-8-confirm-a-family-received-the-assistance: backlog  # UC-PRJ-08 · Should · 2pt · PUT /api/Families/{id}/received-flag · legacy: implemented
-  12-9-list-registered-families: backlog  # UC-PRJ-09 · Should · 5pt · route `#/seasonal-aid/:id/beneficiaries` · GET /api/SeasonalAid/campaigns/{campaignId}/beneficiaries · legacy: implemented
-  12-10-list-non-registered-families: backlog  # UC-PRJ-10 · Should · 5pt · route `#/seasonal-aid/:id/eligible-families` · GET /api/SeasonalAid/campaigns/{campaignId}/eligible-families · legacy: implemented
-  12-11-view-the-project-summary: backlog  # UC-PRJ-11 · Should · 2pt · GET /api/SeasonalAid/campaigns/{id}/report · legacy: implemented
-  12-12-project-detail-report-by-charity: backlog  # UC-PRJ-12 · Could · 3pt · route `#/seasonal-aid/:id/report` · GET /api/SeasonalAid/campaigns/{id}/report · legacy: implemented
+  12-9-list-registered-families: done  # UC-PRJ-09 · Should · 5pt · route `#/seasonal-aid/:id/beneficiaries` · GET /api/SeasonalAid/campaigns/{campaignId}/beneficiaries · legacy: implemented
+  12-10-list-non-registered-families: in-progress  # UC-PRJ-10 · Should · 5pt · route `#/seasonal-aid/:id/eligible-families` · GET /api/SeasonalAid/campaigns/{campaignId}/eligible-families · legacy: implemented
+  12-11-view-the-project-summary: done  # UC-PRJ-11 · Should · 2pt · GET /api/SeasonalAid/campaigns/{id}/report · legacy: implemented
+  12-12-project-detail-report-by-charity: in-progress  # UC-PRJ-12 · Could · 3pt · route `#/seasonal-aid/:id/report` · GET /api/SeasonalAid/campaigns/{id}/report · legacy: implemented
   12-13-print-project-distribution-documents: backlog  # UC-PRJ-13 · Could · 3pt · POST /api/Reports/family-cards/export/pdf · legacy: implemented
   epic-12-retrospective: optional
 
   # Epic 13 — Office Development Projects (office-development-projects) — 6 stories, 22 pts, 5 Should / 1 Could
   #   Chapter 18 · prefix UC-OFP · 2 screens · goal: to track the capital and development projects the head office runs itself.
   #   Spec: docs/Modules/18-UC-OFP-Office-Development-Projects.md (§18.S screens, §18.U scenarios)
-  epic-13: backlog
-  13-1-list-development-projects: backlog  # UC-OFP-01 · Should · 2pt · route `#/office-development-projects` · GET /api/OfficeProjectManagement · legacy: implemented
-  13-2-select-a-project-type: backlog  # UC-OFP-02 · Should · 2pt · GET /api/LookupManagement/office-project-types · legacy: implemented
-  13-3-create-a-development-project: backlog  # UC-OFP-03 · Should · 8pt · route `#/office-development-projects/:id/edit` · POST /api/OfficeProjectManagement · legacy: implemented
-  13-4-view-update-a-development-project: backlog  # UC-OFP-04 · Should · 5pt · GET /api/OfficeProjectManagement/{id} · legacy: implemented
-  13-5-delete-a-development-project: backlog  # UC-OFP-05 · Should · 2pt · DELETE /api/OfficeProjectManagement · legacy: implemented
+  epic-13: in-progress
+  13-1-list-development-projects: done  # UC-OFP-01 · Should · 2pt · route `#/office-development-projects` · GET /api/OfficeProjectManagement · legacy: implemented
+  13-2-select-a-project-type: done  # UC-OFP-02 · Should · 2pt · GET /api/LookupManagement/office-project-types · legacy: implemented
+  13-3-create-a-development-project: done  # UC-OFP-03 · Should · 8pt · route `#/office-development-projects/:id/edit` · POST /api/OfficeProjectManagement · legacy: implemented
+  13-4-view-update-a-development-project: done  # UC-OFP-04 · Should · 5pt · GET /api/OfficeProjectManagement/{id} · legacy: implemented
+  13-5-delete-a-development-project: done  # UC-OFP-05 · Should · 2pt · DELETE /api/OfficeProjectManagement · legacy: implemented
   13-6-report-on-development-projects: backlog  # UC-OFP-06 · Could · 3pt · GET /api/OfficeProjectManagement/export · legacy: implemented
   epic-13-retrospective: optional
 
   # Epic 14 — Technical Support (technical-support) — 6 stories, 19 pts, 5 Should / 1 Could
   #   Chapter 19 · prefix UC-CST · 2 screens · goal: to let charities raise problems and let the office track them to closure.
   #   Spec: docs/Modules/19-UC-CST-Technical-Support.md (§19.S screens, §19.U scenarios)
-  epic-14: backlog
-  14-1-list-support-tickets: backlog  # UC-CST-01 · Should · 2pt · route `#/technical-support` · GET /api/SupportTickets/all-tickets · legacy: implemented
-  14-2-raise-a-support-ticket: backlog  # UC-CST-02 · Should · 5pt · route `#/technical-support/:id/edit` · POST /api/SupportTickets · legacy: implemented
-  14-3-view-a-support-ticket: backlog  # UC-CST-03 · Should · 2pt · GET /api/SupportTickets/{id} · legacy: implemented
+  epic-14: in-progress
+  14-1-list-support-tickets: done  # UC-CST-01 · Should · 2pt · route `#/technical-support` · GET /api/SupportTickets/all-tickets · legacy: implemented
+  14-2-raise-a-support-ticket: done  # UC-CST-02 · Should · 5pt · route `#/technical-support/:id/edit` · POST /api/SupportTickets · legacy: implemented
+  14-3-view-a-support-ticket: done  # UC-CST-03 · Should · 2pt · GET /api/SupportTickets/{id} · legacy: implemented
   14-4-update-a-support-ticket: backlog  # UC-CST-04 · Should · 5pt · PUT /api/SupportTickets · legacy: implemented
-  14-5-delete-a-support-ticket: backlog  # UC-CST-05 · Should · 2pt · DELETE /api/SupportTickets · legacy: implemented
+  14-5-delete-a-support-ticket: done  # UC-CST-05 · Should · 2pt · DELETE /api/SupportTickets · legacy: implemented
   14-6-report-on-support-tickets: backlog  # UC-CST-06 · Could · 3pt · GET /api/SupportTickets/report · legacy: implemented
   epic-14-retrospective: optional
 
   # Epic 15 — Missions (missions) — 9 stories, 30 pts, 9 Should
   #   Chapter 20 · prefix UC-MSN · 3 screens · goal: to plan field visits to charities and record what the visit found.
   #   Spec: docs/Modules/20-UC-MSN-Missions.md (§20.S screens, §20.U scenarios)
-  epic-15: backlog
-  15-1-list-missions: backlog  # UC-MSN-01 · Should · 2pt · route `#/missions` · GET /api/MissionManagement/my-missions · legacy: implemented
-  15-2-filter-missions-by-date: backlog  # UC-MSN-02 · Should · 2pt · GET /api/MissionManagement · legacy: implemented
-  15-3-select-the-mission-type: backlog  # UC-MSN-03 · Should · 2pt · GET /api/MissionManagement/mission-types · legacy: implemented
+  epic-15: in-progress
+  15-1-list-missions: done  # UC-MSN-01 · Should · 2pt · route `#/missions` · GET /api/MissionManagement/my-missions · legacy: implemented
+  15-2-filter-missions-by-date: done  # UC-MSN-02 · Should · 2pt · GET /api/MissionManagement · legacy: implemented
+  15-3-select-the-mission-type: done  # UC-MSN-03 · Should · 2pt · GET /api/MissionManagement/mission-types · legacy: implemented
   15-4-select-the-interview-type: backlog  # UC-MSN-04 · Should · 2pt · GET /api/LookupManagement/mission-interview-types · legacy: implemented
-  15-5-select-the-time-type: backlog  # UC-MSN-05 · Should · 2pt · GET /api/MissionManagement/mission-time-types · legacy: implemented
-  15-6-create-a-mission: backlog  # UC-MSN-06 · Should · 5pt · route `#/missions/:id/edit` · POST /api/MissionManagement · legacy: implemented
-  15-7-view-update-a-mission: backlog  # UC-MSN-07 · Should · 5pt · GET /api/MissionManagement/{id} · legacy: implemented
-  15-8-delete-a-mission: backlog  # UC-MSN-08 · Should · 2pt · DELETE /api/MissionManagement · legacy: implemented
+  15-5-select-the-time-type: done  # UC-MSN-05 · Should · 2pt · GET /api/MissionManagement/mission-time-types · legacy: implemented
+  15-6-create-a-mission: done  # UC-MSN-06 · Should · 5pt · route `#/missions/:id/edit` · POST /api/MissionManagement · legacy: implemented
+  15-7-view-update-a-mission: done  # UC-MSN-07 · Should · 5pt · GET /api/MissionManagement/{id} · legacy: implemented
+  15-8-delete-a-mission: done  # UC-MSN-08 · Should · 2pt · DELETE /api/MissionManagement · legacy: implemented
   15-9-register-a-mission-result: backlog  # UC-MSN-09 · Should · 8pt · route `#/missions/:id/register` · POST /api/MissionManagement/{id}/event · legacy: implemented
   epic-15-retrospective: optional
 
   # Epic 16 — Correspondence — Incoming & Outgoing (correspondence-incoming-and-outgoing) — 19 stories, 54 pts, 18 Should / 1 Could
   #   Chapter 21 · prefix UC-COR · 7 screens · goal: to keep the official letter register, and carry orphan periodic reports to and from the charities as letter attachments.
   #   Spec: docs/Modules/21-UC-COR-Correspondence-Incoming-and-Outgoing.md (§21.S screens, §21.U scenarios)
-  epic-16: backlog
-  16-1-list-incoming-letters: backlog  # UC-COR-01 · Should · 2pt · route `#/incoming-outgoing/incoming` · GET /api/IncomingOutgoing/incoming · legacy: implemented
-  16-2-search-incoming-letters: backlog  # UC-COR-02 · Should · 2pt · GET /api/IncomingOutgoing/incoming · legacy: implemented
-  16-3-obtain-the-next-incoming-serial: backlog  # UC-COR-03 · Should · 2pt · GET /api/IncomingOutgoing/incoming/next-serial · legacy: implemented
-  16-4-register-an-incoming-letter: backlog  # UC-COR-04 · Should · 5pt · route `#/incoming-outgoing/incoming/:id/edit` · POST /api/IncomingOutgoing/incoming · legacy: implemented
-  16-5-view-an-incoming-letter: backlog  # UC-COR-05 · Should · 2pt · GET /api/IncomingOutgoing/incoming/{id} · legacy: implemented
-  16-6-update-an-incoming-letter: backlog  # UC-COR-06 · Should · 5pt · PUT /api/IncomingOutgoing/incoming · legacy: implemented
-  16-7-delete-an-incoming-letter: backlog  # UC-COR-07 · Should · 2pt · DELETE /api/IncomingOutgoing/incoming · legacy: implemented
-  16-8-select-the-routing-department: backlog  # UC-COR-08 · Should · 2pt · GET /api/LookupManagement/departments · legacy: implemented
-  16-9-attach-employees-to-an-incoming-letter: backlog  # UC-COR-09 · Should · 2pt · route `#/incoming-outgoing/export/incoming` · GET /api/IncomingOutgoing/incoming · legacy: implemented
-  16-10-list-outgoing-letters: backlog  # UC-COR-10 · Should · 2pt · route `#/incoming-outgoing/outgoing` · GET /api/IncomingOutgoing/outgoing · legacy: implemented
-  16-11-search-outgoing-letters: backlog  # UC-COR-11 · Should · 2pt · GET /api/IncomingOutgoing/outgoing · legacy: implemented
-  16-12-obtain-the-next-outgoing-serial: backlog  # UC-COR-12 · Should · 2pt · GET /api/IncomingOutgoing/outgoing/next-serial · legacy: implemented
-  16-13-register-an-outgoing-letter: backlog  # UC-COR-13 · Should · 5pt · route `#/incoming-outgoing/outgoing/:id/edit` · POST /api/IncomingOutgoing/outgoing · legacy: implemented
-  16-14-view-an-outgoing-letter: backlog  # UC-COR-14 · Should · 2pt · GET /api/IncomingOutgoing/outgoing/{id} · legacy: implemented
-  16-15-update-an-outgoing-letter: backlog  # UC-COR-15 · Should · 5pt · PUT /api/IncomingOutgoing/outgoing · legacy: implemented
-  16-16-delete-an-outgoing-letter: backlog  # UC-COR-16 · Should · 2pt · DELETE /api/IncomingOutgoing/outgoing · legacy: implemented
-  16-17-select-the-outgoing-category: backlog  # UC-COR-17 · Should · 2pt · GET /api/IncomingOutgoing/outgoing/categories · legacy: implemented
-  16-18-attach-orphan-reports-to-an-outgoing-letter: backlog  # UC-COR-18 · Should · 5pt · route `#/incoming-outgoing/export/outgoing` · GET /api/IncomingOutgoing/outgoing/{parentOutgoingId}/children · legacy: implemented
-  16-19-report-orphans-by-outgoing-letter: backlog  # UC-COR-19 · Could · 3pt · route `#/incoming-outgoing/export/outgoing-orphans` · GET /api/IncomingOutgoing/outgoing?orphanNumber= · legacy: implemented
+  epic-16: in-progress
+  16-1-list-incoming-letters: done  # UC-COR-01 · Should · 2pt · route `#/incoming-outgoing/incoming` · GET /api/IncomingOutgoing/incoming · legacy: implemented
+  16-2-search-incoming-letters: done  # UC-COR-02 · Should · 2pt · GET /api/IncomingOutgoing/incoming · legacy: implemented
+  16-3-obtain-the-next-incoming-serial: done  # UC-COR-03 · Should · 2pt · GET /api/IncomingOutgoing/incoming/next-serial · legacy: implemented
+  16-4-register-an-incoming-letter: done  # UC-COR-04 · Should · 5pt · route `#/incoming-outgoing/incoming/:id/edit` · POST /api/IncomingOutgoing/incoming · legacy: implemented
+  16-5-view-an-incoming-letter: done  # UC-COR-05 · Should · 2pt · GET /api/IncomingOutgoing/incoming/{id} · legacy: implemented
+  16-6-update-an-incoming-letter: done  # UC-COR-06 · Should · 5pt · PUT /api/IncomingOutgoing/incoming · legacy: implemented
+  16-7-delete-an-incoming-letter: done  # UC-COR-07 · Should · 2pt · DELETE /api/IncomingOutgoing/incoming · legacy: implemented
+  16-8-select-the-routing-department: done  # UC-COR-08 · Should · 2pt · GET /api/LookupManagement/departments · legacy: implemented
+  16-9-attach-employees-to-an-incoming-letter: in-progress  # UC-COR-09 · Should · 2pt · route `#/incoming-outgoing/export/incoming` · GET /api/IncomingOutgoing/incoming · legacy: implemented
+  16-10-list-outgoing-letters: done  # UC-COR-10 · Should · 2pt · route `#/incoming-outgoing/outgoing` · GET /api/IncomingOutgoing/outgoing · legacy: implemented
+  16-11-search-outgoing-letters: done  # UC-COR-11 · Should · 2pt · GET /api/IncomingOutgoing/outgoing · legacy: implemented
+  16-12-obtain-the-next-outgoing-serial: done  # UC-COR-12 · Should · 2pt · GET /api/IncomingOutgoing/outgoing/next-serial · legacy: implemented
+  16-13-register-an-outgoing-letter: done  # UC-COR-13 · Should · 5pt · route `#/incoming-outgoing/outgoing/:id/edit` · POST /api/IncomingOutgoing/outgoing · legacy: implemented
+  16-14-view-an-outgoing-letter: done  # UC-COR-14 · Should · 2pt · GET /api/IncomingOutgoing/outgoing/{id} · legacy: implemented
+  16-15-update-an-outgoing-letter: done  # UC-COR-15 · Should · 5pt · PUT /api/IncomingOutgoing/outgoing · legacy: implemented
+  16-16-delete-an-outgoing-letter: done  # UC-COR-16 · Should · 2pt · DELETE /api/IncomingOutgoing/outgoing · legacy: implemented
+  16-17-select-the-outgoing-category: done  # UC-COR-17 · Should · 2pt · GET /api/IncomingOutgoing/outgoing/categories · legacy: implemented
+  16-18-attach-orphan-reports-to-an-outgoing-letter: in-progress  # UC-COR-18 · Should · 5pt · route `#/incoming-outgoing/export/outgoing` · GET /api/IncomingOutgoing/outgoing/{parentOutgoingId}/children · legacy: implemented
+  16-19-report-orphans-by-outgoing-letter: in-progress  # UC-COR-19 · Could · 3pt · route `#/incoming-outgoing/export/outgoing-orphans` · GET /api/IncomingOutgoing/outgoing?orphanNumber= · legacy: implemented
   epic-16-retrospective: optional
 
   # Epic 17 — HQ Financial Transfers (hq-financial-transfers) — 8 stories, 28 pts, 8 Should
   #   Chapter 22 · prefix UC-TRF · 4 screens · goal: to record the money head office sends to a charity or a country and what happened to it.
   #   Spec: docs/Modules/22-UC-TRF-HQ-Financial-Transfers.md (§22.S screens, §22.U scenarios)
-  epic-17: backlog
+  epic-17: in-progress
   17-1-list-transfers: backlog  # UC-TRF-01 · Should · 2pt · route `#/hq-transfers` · GET /api/HqTransfers · legacy: implemented
   17-2-create-a-transfer: backlog  # UC-TRF-02 · Should · 5pt · route `#/hq-transfers/:id/edit` · POST /api/HqTransfers · legacy: implemented
   17-3-view-a-transfer: backlog  # UC-TRF-03 · Should · 2pt · GET /api/HqTransfers/{id} · legacy: implemented
   17-4-update-a-transfer: backlog  # UC-TRF-04 · Should · 5pt · PUT /api/HqTransfers · legacy: implemented
-  17-5-select-the-issuing-department: backlog  # UC-TRF-05 · Should · 2pt · GET /api/LookupManagement/departments · legacy: implemented
+  17-5-select-the-issuing-department: in-progress  # UC-TRF-05 · Should · 2pt · GET /api/LookupManagement/departments · legacy: implemented
   17-6-view-the-maximum-transfer-amount-for-a-country: backlog  # UC-TRF-06 · Should · 2pt · GET /api/HqTransfers/max-amount · legacy: implemented
   17-7-set-the-maximum-transfer-amount: backlog  # UC-TRF-07 · Should · 5pt · route `#/hq-transfers/max-amounts` · PUT /api/HqTransfers/max-amount · legacy: implemented
   17-8-manage-transfer-detail-lines: backlog  # UC-TRF-08 · Should · 5pt · route `#/hq-transfers/:id/details` · GET /api/HqTransfers/{id}/details · legacy: implemented
@@ -350,9 +376,9 @@ development_status:
   # Epic 18 — Reports & Printing (reports-and-printing) — 41 stories, 151 pts, 16 Should / 25 Could
   #   Chapter 23 · prefix UC-RPT · 19 screens · goal: to answer the operational, compliance and financial questions asked of the register, and produce the printed documents the process depends on.
   #   Spec: docs/Modules/23-UC-RPT-Reports-and-Printing.md (§23.S screens, §23.U scenarios)
-  epic-18: backlog
+  epic-18: in-progress
   18-1-orphan-data: backlog  # UC-RPT-01 · Should · 2pt · route `#/reports/orphans` · POST /api/Reports/orphans · legacy: implemented
-  18-2-orphan-status: backlog  # UC-RPT-02 · Should · 2pt · route `#/periodic-orphan-reports/orphan-reports/search` · POST /api/PeriodicOrphanReports/{id}/review · legacy: implemented
+  18-2-orphan-status: in-progress  # UC-RPT-02 · Should · 2pt · route `#/periodic-orphan-reports/orphan-reports/search` · POST /api/PeriodicOrphanReports/{id}/review · legacy: implemented
   18-3-excluded-orphans: backlog  # UC-RPT-03 · Should · 2pt · route `#/reports/excluded-orphans` · POST /api/Reports/excluded-orphans · legacy: implemented
   18-4-orphans-with-ended-sponsorship: backlog  # UC-RPT-04 · Should · 2pt · route `#/reports/finished-sponsorship-orphans` · POST /api/Reports/finished-sponsorship-orphans · legacy: implemented
   18-5-unsponsored-orphans: backlog  # UC-RPT-05 · Should · 5pt · route `#/reports/unsponsored-orphans` · POST /api/Reports/unsponsored-orphans · legacy: implemented
@@ -377,7 +403,7 @@ development_status:
   18-24-export-orphan-photographs: backlog  # UC-RPT-24 · Could · 8pt · route `#/reports/orphan-files` · POST /api/Reports/orphan-files/export · legacy: implemented
   18-25-export-certificate-images: backlog  # UC-RPT-25 · Could · 8pt · POST /api/Reports/certificate-files/export · legacy: implemented
   18-26-print-the-survey-questionnaire: backlog  # UC-RPT-26 · Could · 3pt · Printing() / WidowPrinting() in index.html · legacy: implemented
-  18-27-orphans-in-a-payment-batch: backlog  # UC-RPT-27 · Should · 2pt · GET /api/OrphanPayments/{id}/details · legacy: implemented
+  18-27-orphans-in-a-payment-batch: in-progress  # UC-RPT-27 · Should · 2pt · GET /api/OrphanPayments/{id}/details · legacy: implemented
   18-28-orphans-receiving-nothing: backlog  # UC-RPT-28 · Should · 2pt · POST /api/Reports/orphans-without-payment · legacy: implemented
   18-29-received-not-received-stopped-lists: backlog  # UC-RPT-29 · Could · 3pt · POST /api/Reports/payments-received/export/pdf · legacy: implemented
   18-30-cheque-numbers-list: backlog  # UC-RPT-30 · Could · 3pt · POST /api/Reports/cheque-numbers/export/pdf · legacy: implemented
@@ -397,20 +423,20 @@ development_status:
   # Epic 19 — Cross-Cutting Services (cross-cutting-services) — 13 stories, 45 pts, 12 Should / 1 Could
   #   Chapter 24 · prefix UC-SYS · 1 screens · goal: to provide the attachment handling, reference data and validation that every other module depends on.
   #   Spec: docs/Modules/24-UC-SYS-Cross-Cutting-Services.md (§24.S screens, §24.U scenarios)
-  epic-19: backlog
+  epic-19: in-progress
   19-1-upload-a-file: backlog  # UC-SYS-01 · Should · 8pt · POST /api/Attachments · legacy: implemented
-  19-2-download-a-file: backlog  # UC-SYS-02 · Should · 2pt · GET /api/Attachments/{id}/download · legacy: implemented
+  19-2-download-a-file: done  # UC-SYS-02 · Should · 2pt · GET /api/Attachments/{id}/download · legacy: implemented
   19-3-save-a-generated-report-file: backlog  # UC-SYS-03 · Could · 3pt · GET /api/Attachments · legacy: implemented
   19-4-load-a-generic-lookup-list: backlog  # UC-SYS-04 · Should · 2pt · GET /api/LookupManagement · legacy: implemented
   19-5-load-guardian-lookup-lists: backlog  # UC-SYS-05 · Should · 2pt · GET /api/LookupManagement · legacy: implemented
   19-6-load-refusal-reasons: backlog  # UC-SYS-06 · Should · 8pt · GET /api/LookupManagement/general-reasons · legacy: implemented
-  19-7-select-country-region-and-centre: backlog  # UC-SYS-07 · Should · 2pt · GET /api/LookupManagement/countries · legacy: implemented
-  19-8-select-a-bank: backlog  # UC-SYS-08 · Should · 2pt · GET /api/LookupManagement/countries · legacy: implemented
+  19-7-select-country-region-and-centre: done  # UC-SYS-07 · Should · 2pt · GET /api/LookupManagement/countries · legacy: implemented
+  19-8-select-a-bank: done  # UC-SYS-08 · Should · 2pt · GET /api/LookupManagement/countries · legacy: implemented
   19-9-select-a-job: backlog  # UC-SYS-09 · Should · 2pt · GET /api/Reports · legacy: implemented
-  19-10-select-the-orphan-payment-category: backlog  # UC-SYS-10 · Should · 2pt · GET /api/OrphanPayments?orphanId= · legacy: implemented
-  19-11-load-country-validation-rules: backlog  # UC-SYS-11 · Should · 2pt · GET /api/LookupManagement/countries · legacy: implemented
+  19-10-select-the-orphan-payment-category: done  # UC-SYS-10 · Should · 2pt · GET /api/OrphanPayments?orphanId= · legacy: implemented
+  19-11-load-country-validation-rules: done  # UC-SYS-11 · Should · 2pt · GET /api/LookupManagement/countries · legacy: implemented
   19-12-check-a-national-id-is-unique: backlog  # UC-SYS-12 · Should · 5pt · GET /api/Families/check-national-id · legacy: implemented
-  19-13-log-and-surface-an-error: backlog  # UC-SYS-13 · Should · 5pt · exception middleware + ILogger, route `#/error` · legacy: implemented
+  19-13-log-and-surface-an-error: in-progress  # UC-SYS-13 · Should · 5pt · exception middleware + ILogger, route `#/error` · legacy: implemented
   epic-19-retrospective: optional
 
 # ---------------------------------------------------------------------------

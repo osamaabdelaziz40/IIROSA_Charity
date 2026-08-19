@@ -244,7 +244,12 @@ namespace Framework.Identity.Data.Services
             {
                 CreatedBy = CurrentUserName ?? input.UserName,
                 EmailConfirmed = true,
-                UserTypeId = input.UserTypeId
+                UserTypeId = input.UserTypeId,
+                // Tenancy. Set here rather than by AutoMapper because this entity is built by
+                // hand; a field added to the DTO alone would be silently dropped and the account
+                // would be created with no scope.
+                CharityId = input.CharityId,
+                CountryId = input.CountryId
             };
             user.CreatedBy = CurrentUserName ?? input.UserName;
             user.EmailConfirmed = true;

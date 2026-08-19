@@ -96,7 +96,8 @@ public class CharityRepository : Repository<Charity>, ICharityRepository
         int pageNumber = 1,
         int pageSize = 10,
         string? sortBy = null,
-        bool sortDescending = false)
+        bool sortDescending = false,
+        Guid? charityId = null)
     {
         var query = IncludeNavigationProperties()
             .Where(c => !c.IsDeleted);
@@ -108,6 +109,11 @@ public class CharityRepository : Repository<Charity>, ICharityRepository
                 c.Name.Contains(searchTerm) ||
                 c.Code.Contains(searchTerm) ||
                 c.Email.Contains(searchTerm));
+        }
+
+        if (charityId.HasValue)
+        {
+            query = query.Where(c => c.Id == charityId.Value);
         }
 
         if (countryId.HasValue)

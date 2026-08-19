@@ -50,6 +50,22 @@ export interface TokenInfo {
   shouldShowWarning: boolean;
 }
 
+/**
+ * Route permission → roles that satisfy it.
+ *
+ * These mirror the `[Authorize(Roles = ...)]` sets on `CharitiesController` exactly. If the two
+ * drift, the client hides a screen the server would have allowed, or opens one it then refuses —
+ * both look like bugs to the user, so they are kept in step deliberately.
+ */
+const PERMISSION_ROLES: Record<string, string[]> = {
+  // GET /api/Charities and GET /api/Charities/{id} admit Charity too; the service scopes the
+  // result to the caller's own record.
+  'Charities.View': ['SuperAdmin', 'Admin', 'Charity'],
+  'Charities.Create': ['SuperAdmin', 'Admin'],
+  'Charities.Edit': ['SuperAdmin', 'Admin'],
+  'Charities.Delete': ['SuperAdmin']
+};
+
 @Injectable({
   providedIn: 'root'
 })
@@ -297,10 +313,34 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
+  /**
+   * Whether the signed-in user holds the named route permission (UC-CHR-04).
+   *
+   * Route-level authorisation only. It decides whether a screen may open; it is never the control
+   * itself. Every endpoint authorises independently server-side, because anything decided in the
+   * browser can be bypassed.
+   *
+   * Permissions not present in {@link PERMISSION_ROLES} keep the previous behaviour — allowed for
+   * any authenticated user — and warn. Denying them instead would lock every other feature module
+   * out of routes that already declare permissions no one has mapped yet, which is far beyond the
+   * scope of the charity stories. Each module should add its own entry.
+   */
   hasPermission(permission: string): boolean {
-    // For now, all authenticated users have all permissions
-    // TODO: Implement proper permission checking based on user roles and claims
-    return this.isAuthenticated();
+    if (!this.isAuthenticated()) {
+      return false;
+    }
+
+    const allowedRoles = PERMISSION_ROLES[permission];
+
+    if (!allowedRoles) {
+      console.warn(
+        `[AuthService] No role mapping for permission "${permission}"; allowing by default. ` +
+        `Add it to PERMISSION_ROLES to enforce it at the route.`
+      );
+      return true;
+    }
+
+    return this.hasAnyRole(allowedRoles);
   }
 
   getAuthorizationHeader(): HttpHeaders {

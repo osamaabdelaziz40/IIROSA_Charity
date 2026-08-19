@@ -10,7 +10,7 @@
 | Use case prefix | UC-CST |
 | Chapter in master document | Chapter 19 |
 | Documented use cases | 6 |
-| Principal routes | `#/technical-support`, `#/technical-support/:id/edit` |
+| Principal routes | `#/technical-support`, `#/technical-support/my-tickets`, `#/technical-support/all-tickets`, `#/technical-support/create`, `#/technical-support/:id`, `#/technical-support/:id/edit`, `#/technical-support/reports` |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -31,11 +31,11 @@
 | ID | Use case | Primary actor | Description & main flow | Realisation |
 | --- | --- | --- | --- | --- |
 | UC-CST-01 | List support tickets قائمة الدعم الفني | Gen. Director, Staff | Paged list of the logged support requests with their subject, requester and state. | Route `#/technical-support` → GET /api/SupportTickets/all-tickets |
-| UC-CST-02 | Raise a support ticket اضافة دعم فني | Gen. Director, Staff | Records a new request — requester, charity, subject, description and date. | Route `#/technical-support/:id/edit` → POST /api/SupportTickets |
-| UC-CST-03 | View a support ticket عرض الطلب | Gen. Director, Staff | Loads a single ticket by id. | GET /api/SupportTickets/{id} |
-| UC-CST-04 | Update a support ticket تعديل الطلب | Gen. Director, Staff | Records progress, the response given and the closure of the request. | PUT /api/SupportTickets |
-| UC-CST-05 | Delete a support ticket حذف الطلب | Gen. Director | Removes a ticket logged in error. | DELETE /api/SupportTickets |
-| UC-CST-06 | Report on support tickets تقرير الدعم الفني | Gen. Director, Staff | Returns the reporting projection of the ticket register for export and printing. | GET /api/SupportTickets/report |
+| UC-CST-02 | Raise a support ticket اضافة دعم فني | Gen. Director, Staff | Records a new request — requester, charity, subject, description and date. | Route `#/technical-support/create` → POST /api/SupportTickets |
+| UC-CST-03 | View a support ticket عرض الطلب | Gen. Director, Staff | Loads a single ticket by id. | Route `#/technical-support/:id` → GET /api/SupportTickets/{id} |
+| UC-CST-04 | Update a support ticket تعديل الطلب | Gen. Director, Staff | Records progress, the response given and the closure of the request. | Route `#/technical-support/:id/edit` → PUT /api/SupportTickets |
+| UC-CST-05 | Delete a support ticket حذف الطلب | Gen. Director | Removes a ticket logged in error. | From `#/technical-support` → DELETE /api/SupportTickets |
+| UC-CST-06 | Report on support tickets تقرير الدعم الفني | Gen. Director, Staff | Returns the reporting projection of the ticket register for export and printing. | Route `#/technical-support/reports` → GET /api/SupportTickets/report |
 
 ### 19.S  Screen field specifications
 
@@ -71,12 +71,12 @@ Commands on this screen:
 | (icon only) | GetNext() | always |
 | (icon only) | GetPrev() | always |
 
-#### 19.S.2  Screen `#/technical-support/:id/edit`
+#### 19.S.2  Screen `#/technical-support/create`
 
 
 | Property | Value |
 | --- | --- |
-| Angular route | `#/technical-support/:id/edit` |
+| Angular route | `#/technical-support/create` |
 | Feature module | `technical-support` (lazy-loaded) |
 | Component | `TicketFormComponent` |
 | Route status | implemented |
@@ -133,12 +133,12 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Secondary actors | The system (Web API + business layer); the database. |
 | Summary | Records a new request — requester, charity, subject, description and date. |
 | Trigger | The actor presses «حفظ» on the screen AddCustomerSupport. |
-| Pre-conditions | 1. The actor is authenticated; the JWT access token is valid and the client holds the role, charity and country claims it carries.<br>2. The actor holds one of: Gen. Director, Staff.<br>3. The SPA route `#/technical-support/:id/edit` has loaded and its reference-data lookups have been populated. |
-| Main flow | 1. The actor navigates to the screen at `#/technical-support/:id/edit`. The screen opens in add mode.<br>2. The system loads the reference data the form needs (regions, centres, banks, types and the other lookup lists bound to the drop-downs).<br>3. The actor completes the input fields. Mandatory fields: وصف المشكله، عنوان المشكله.<br>4. The actor presses «حفظ» (SubmitAdd()).<br>5. The SPA issues `POST /api/SupportTickets` carrying CustomerSupportContract obj.<br>6. `SupportTicketsController` binds the typed request DTO and delegates to the application service.<br>7. `ISupportTicketService` validates the payload with its FluentValidation validator, applies the business rules and the charity scope, and persists through `IUnitOfWork`.<br>8. The business layer validates the payload, stamps the owning charity and the creating user, and persists the new record.<br>9. The system returns the outcome and the SPA confirms the save and returns to the list screen. |
+| Pre-conditions | 1. The actor is authenticated; the JWT access token is valid and the client holds the role, charity and country claims it carries.<br>2. The actor holds one of: Gen. Director, Staff.<br>3. The SPA route `#/technical-support/create` has loaded and its reference-data lookups have been populated. |
+| Main flow | 1. The actor navigates to the screen at `#/technical-support/create`. The screen opens in add mode.<br>2. The system loads the reference data the form needs (regions, centres, banks, types and the other lookup lists bound to the drop-downs).<br>3. The actor completes the input fields. Mandatory fields: وصف المشكله، عنوان المشكله.<br>4. The actor presses «حفظ» (SubmitAdd()).<br>5. The SPA issues `POST /api/SupportTickets` carrying CustomerSupportContract obj.<br>6. `SupportTicketsController` binds the typed request DTO and delegates to the application service.<br>7. `ISupportTicketService` validates the payload with its FluentValidation validator, applies the business rules and the charity scope, and persists through `IUnitOfWork`.<br>8. The business layer validates the payload, stamps the owning charity and the creating user, and persists the new record.<br>9. The system returns the outcome and the SPA confirms the save and returns to the list screen. |
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • A new record exists, owned by the charity of the creating user, and appears in the list screen of the module. |
-| Realisation | Route `#/technical-support/:id/edit` → `TicketFormComponent`<br>`POST /api/SupportTickets` → `SupportTicketsController` → `ISupportTicketService` |
+| Realisation | Route `#/technical-support/create` → `TicketFormComponent`<br>`POST /api/SupportTickets` → `SupportTicketsController` → `ISupportTicketService` |
 
 #### 19.U.3  UC-CST-03 — View a support ticket عرض الطلب
 
@@ -157,7 +157,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | None recorded. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state. |
 | Post-conditions | • No stored data is changed — the operation is a read. |
-| Realisation | `GET /api/SupportTickets/{id}` → `SupportTicketsController` → `ISupportTicketService` |
+| Realisation | Route `#/technical-support/:id` → `TicketDetailComponent`<br>`GET /api/SupportTickets/{id}` → `SupportTicketsController` → `ISupportTicketService` |
 
 #### 19.U.4  UC-CST-04 — Update a support ticket تعديل الطلب
 
@@ -176,7 +176,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • The stored record carries the new values; no other record is affected. |
-| Realisation | `PUT /api/SupportTickets` → `SupportTicketsController` → `ISupportTicketService` |
+| Realisation | Route `#/technical-support/:id/edit` → `TicketFormComponent`<br>`PUT /api/SupportTickets` → `SupportTicketsController` → `ISupportTicketService` |
 
 #### 19.U.5  UC-CST-05 — Delete a support ticket حذف الطلب
 
@@ -195,7 +195,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | None recorded. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state. |
 | Post-conditions | • The record is no longer returned by the list and read endpoints of the module. |
-| Realisation | `DELETE /api/SupportTickets` → `SupportTicketsController` → `ISupportTicketService` |
+| Realisation | From `#/technical-support` → `TicketListComponent`<br>`DELETE /api/SupportTickets` → `SupportTicketsController` → `ISupportTicketService` |
 
 #### 19.U.6  UC-CST-06 — Report on support tickets تقرير الدعم الفني
 
@@ -214,7 +214,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • No row matches the criteria — the grid renders empty and the paging control reports zero pages. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state. |
 | Post-conditions | • No stored data is changed — the operation is a read. |
-| Realisation | `GET /api/SupportTickets/report` → `SupportTicketsController` → `ISupportTicketService` |
+| Realisation | Route `#/technical-support/reports` → `SupportReportComponent`<br>`GET /api/SupportTickets/report` → `SupportTicketsController` → `ISupportTicketService` |
 
 ### 19.A  Annex - Angular routes of this module
 
@@ -225,7 +225,12 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
 | `#/technical-support` | `technical-support` | `TicketListComponent` | implemented |
+| `#/technical-support/my-tickets` | `technical-support` | `TicketListComponent` (`viewMode: my-tickets`) | implemented |
+| `#/technical-support/all-tickets` | `technical-support` | `TicketListComponent` (`viewMode: all-tickets`) | implemented |
+| `#/technical-support/create` | `technical-support` | `TicketFormComponent` | implemented |
+| `#/technical-support/:id` | `technical-support` | `TicketDetailComponent` | implemented |
 | `#/technical-support/:id/edit` | `technical-support` | `TicketFormComponent` | implemented |
+| `#/technical-support/reports` | `technical-support` | `SupportReportComponent` | implemented |
 
 ### 19.B  Annex - API controllers of this module
 

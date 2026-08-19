@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl, AbstractControl, AsyncValidatorFn, ValidationErrors } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { CharityService } from '../services/charity.service';
 import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
 import { CountryDto, RegionDto, CenterDto } from '../../lookup-management/models/lookup.model';
@@ -11,7 +12,8 @@ import { BreadcrumbComponent, BreadcrumbItem, AttachmentInputComponent } from '.
 import { TranslateModule, TranslateService, LangChangeEvent } from '@ngx-translate/core';
 import { CreateCharityDto, UpdateCharityDto, CharityDto, AttachmentDto } from '../models/charity.model';
 import { SharedModule, AttachmentFileType } from '../../../shared/shared.module';
-import { Subscription } from 'rxjs';
+import { Observable, Subscription, of, timer } from 'rxjs';
+import { catchError, first, map, switchMap } from 'rxjs/operators';
 
 declare var $: any;
 
@@ -33,6 +35,10 @@ declare var $: any;
 })
 export class CharityFormComponent implements OnInit, OnDestroy {
   private langChangeSubscription?: Subscription;
+  /** Held so it can be torn down; see the PENDING branch of onSubmit(). */
+  private pendingValidationSubscription?: Subscription;
+  /** Guards against a second click registering a second statusChanges subscription. */
+  private awaitingValidation = false;
   charityForm: FormGroup;
   isEditMode = false;
   charityId: string | null = null;
@@ -121,6 +127,12 @@ export class CharityFormComponent implements OnInit, OnDestroy {
     if (this.langChangeSubscription) {
       this.langChangeSubscription.unsubscribe();
     }
+
+    // A name check still in flight would otherwise re-enter onSubmit() after the component is
+    // gone, saving a record and navigating from a destroyed view.
+    if (this.pendingValidationSubscription) {
+      this.pendingValidationSubscription.unsubscribe();
+    }
   }
 
   private updateBreadcrumbs(): void {
@@ -166,11 +178,64 @@ export class CharityFormComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Async validator for the charity name (UC-CHR-02).
+   *
+   * Reports `nameTaken` when another charity already holds the name, so the operator finds out
+   * while typing rather than by losing a completed form to a refused save.
+   *
+   * Notes on the operators:
+   * - `debounceTime` keeps the check off every keystroke.
+   * - `switchMap` cancels a request that a newer keystroke has superseded, so a slow earlier reply
+   *   cannot overwrite a newer one.
+   * - `first()` completes the observable; an async validator that never completes leaves the
+   *   control stuck in `pending` forever.
+   * - A failed request resolves to `null` (valid). A name check is a convenience, and a network
+   *   blip must not block the save — the server re-checks uniqueness on write regardless.
+   */
+  private charityNameAvailabilityValidator(): AsyncValidatorFn {
+    return (control: AbstractControl): Observable<ValidationErrors | null> => {
+      const name = (control.value ?? '').trim();
+
+      if (name.length < 3) {
+        return of(null);
+      }
+
+      return timer(400).pipe(
+        switchMap(() => this.charityService.checkNameAvailability(name, this.charityId ?? undefined)),
+        map(result => {
+          // The server echoes the name it actually checked. If it does not match what we asked
+          // about, the answer is about a different string — a stale reply, or a value mangled in
+          // transit — and must not be used to mark this control invalid.
+          if (result.name !== name) {
+            return null;
+          }
+          return result.isAvailable ? null : { nameTaken: true };
+        }),
+        catchError((error: HttpErrorResponse) => {
+          // A refused request is not a verdict on the name. 401 is handled by the interceptor;
+          // for anything else keep the control valid so a transient failure cannot block the save.
+          // The server re-checks uniqueness on write, so the worst case is the save is refused
+          // with a message rather than the field being flagged early.
+          console.warn(
+            `Charity name availability check failed (${error.status}); treating the name as unverified.`
+          );
+          return of(null);
+        }),
+        first()
+      );
+    };
+  }
+
   private createForm(): FormGroup {
     return this.fb.group({
       // Basic Information
       code: ['', Validators.required],
-      name: ['', [Validators.required, Validators.minLength(3)]],
+      name: [
+        '',
+        [Validators.required, Validators.minLength(3), Validators.maxLength(200)],
+        [this.charityNameAvailabilityValidator()]
+      ],
       // nameAr: ['', Validators.required],
       // nameEn: ['', Validators.required],
       ngoType: [null, Validators.required],
@@ -541,6 +606,12 @@ export class CharityFormComponent implements OnInit, OnDestroy {
   }
 
   onSubmit(): void {
+    // Re-entrancy guard: without it a second click during the PENDING window queues a second
+    // submit, producing duplicate charity rows and duplicate user accounts.
+    if (this.saving) {
+      return;
+    }
+
     debugger;
     // Debug logging
     console.log('[CharityForm] onSubmit called');
@@ -570,6 +641,33 @@ debugger;
         ngoTypeControl.setValue(null, { emitEvent: false });
         console.log('[CharityForm] Converted empty ngoType to null');
       }
+    }
+
+    // A control whose async validator is still running is PENDING, not INVALID, so the guard
+    // below would let the save through and bypass the name check entirely. Wait for the pending
+    // validators to settle, then re-enter.
+    if (this.charityForm.pending) {
+      // `saving` is set here rather than only below, because it drives the button's disabled
+      // state. Without it the button stays live while PENDING, and every extra click registers
+      // another statusChanges subscription — all of which fire at once when validation settles,
+      // producing one POST per click and duplicate charity rows.
+      if (this.awaitingValidation) {
+        return;
+      }
+
+      this.awaitingValidation = true;
+      this.saving = true;
+
+      // Stored and torn down in ngOnDestroy: otherwise navigating away mid-check still resolves
+      // and re-enters onSubmit() on a destroyed component, issuing a save and a navigation.
+      this.pendingValidationSubscription = this.charityForm.statusChanges
+        .pipe(first(status => status !== 'PENDING'))
+        .subscribe(() => {
+          this.awaitingValidation = false;
+          this.saving = false;
+          this.onSubmit();
+        });
+      return;
     }
 
     if (this.charityForm.invalid) {
@@ -653,10 +751,68 @@ debugger;
       },
       error: (error: any) => {
         console.error('Error creating charity:', error);
-        this.notification.error(this.translate.instant('charities.createFailed'));
+
+        // A 400 from the server-side validator carries which fields failed. Without this the
+        // form shows only a generic toast and AC 3's "the offending field is flagged" is unmet
+        // for anything the client-side rules do not catch — a duplicate name, most obviously.
+        if (!this.applyServerValidationErrors(error)) {
+          this.notification.error(this.translate.instant('charities.createFailed'));
+        }
+
         this.saving = false;
       }
     });
+  }
+
+  /**
+   * Maps a server validation response onto the form so the offending controls are flagged.
+   *
+   * @returns true when field errors were applied, so the caller can skip the generic message.
+   */
+  private applyServerValidationErrors(error: any): boolean {
+    const fieldErrors: Record<string, string[]> | undefined = error?.error?.errors;
+
+    if (!fieldErrors || Object.keys(fieldErrors).length === 0) {
+      return false;
+    }
+
+    let applied = false;
+    const unmatched: string[] = [];
+    const controlNames = Object.keys(this.charityForm.controls);
+
+    Object.keys(fieldErrors).forEach(property => {
+      // Case-insensitive match against the real control names. Lowercasing only the first
+      // character is not a valid inverse of .NET naming: "NGOType" becomes "nGOType" and
+      // "IBAN" becomes "iBAN", neither of which is a control, so those errors were dropped.
+      const controlName = controlNames.find(
+        name => name.toLowerCase() === property.toLowerCase()
+      );
+      const control = controlName ? this.charityForm.get(controlName) : null;
+
+      if (control) {
+        // Join every message for the field. The server groups them precisely because one field
+        // can break several rules at once; showing only the first makes the operator fix them
+        // one submit at a time.
+        control.setErrors({
+          ...(control.errors ?? {}),
+          server: fieldErrors[property].join(" ")
+        });
+        control.markAsTouched();
+        applied = true;
+      } else {
+        unmatched.push(...fieldErrors[property]);
+      }
+    });
+
+    // Errors with no matching control - model-level rules, or fields the form does not render -
+    // must still be said, whether or not other errors matched. Keying this off `applied` meant
+    // they vanished whenever any other field matched.
+    if (unmatched.length > 0) {
+      this.notification.error(unmatched.join(" "));
+      return true;
+    }
+
+    return applied;
   }
 
   private updateCharity(): void {

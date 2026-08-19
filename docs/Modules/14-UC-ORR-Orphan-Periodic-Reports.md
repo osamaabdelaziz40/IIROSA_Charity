@@ -10,7 +10,7 @@
 | Use case prefix | UC-ORR |
 | Chapter in master document | Chapter 14 |
 | Documented use cases | 17 |
-| Principal routes | `#/periodic-orphan-reports`, `#/periodic-orphan-reports/:id/edit`, `#/periodic-orphan-reports/orphan-reports/search`, `#/periodic-orphan-reports/orphan-reports` |
+| Principal routes | `#/periodic-orphan-reports`, `/create`, `/:id`, `/:id/edit`, `/:id/review`, `/orphan-reports`, `/orphan-reports/generate`, `/orphan-reports/history`, `/orphan-reports/compare`, `/orphan-reports/schedule`, `/orphan-reports/search`, `/orphan-reports/orphan/:orphanId` |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -45,7 +45,7 @@
 | --- | --- | --- | --- | --- |
 | UC-ORR-01 | List an orphan's periodic reports التقارير الدورية لليتيم | Charity, HQ roles | Shows the paged report history for an orphan, identified by code, with the date and approval state of each report. | Route `#/periodic-orphan-reports` → GET /api/OrphanReports |
 | UC-ORR-02 | Look up an orphan by code before reporting استدعاء اليتيم بالكود | Charity | The operator enters the sponsorship code; the system returns the orphan with their family and identifying data, pre-filling the report header. Alternate: an unknown or uncoded orphan cannot be reported on. | GET /api/PeriodicOrphanReports/by-orphan/{orphanId} |
-| UC-ORR-03 | Create a periodic report إضافة تقرير دوري | Charity | Captures the full status assessment and attachments and stores it against the orphan with the reporting date and the submitting charity. Pre-condition: orphan is coded and the charity's add permission is enabled. | Route `#/periodic-orphan-reports/:id/edit` → POST /api/PeriodicOrphanReports |
+| UC-ORR-03 | Create a periodic report إضافة تقرير دوري | Charity | Captures the full status assessment and attachments and stores it against the orphan with the reporting date and the submitting charity. Pre-condition: orphan is coded and the charity's add permission is enabled. | Route `#/periodic-orphan-reports/create` → POST /api/PeriodicOrphanReports |
 | UC-ORR-04 | View a periodic report عرض التقرير | Charity, HQ roles | Loads one report in read-only mode with all recorded dimensions and its attachments. | GET /api/PeriodicOrphanReports |
 | UC-ORR-05 | Update a periodic report تعديل التقرير | Charity, HQ roles | Amends a previously submitted report. If the report had been refused and is re-submitted unchanged in approval state, the refusal flag is cleared so it returns to the review queue. | PUT /api/PeriodicOrphanReports |
 | UC-ORR-06 | Delete a periodic report حذف التقرير | HQ roles | Removes an erroneous report together with its attachment references. | DELETE /api/PeriodicOrphanReports |
@@ -109,7 +109,7 @@ Derived from the AngularJS views of this module. For every screen the table list
 | Angular route | `#/periodic-orphan-reports` |
 | Feature module | `periodic-orphan-reports` (lazy-loaded) |
 | Component | `PeriodicReportsListComponent` |
-| Route status | implemented |
+| Route status | built, not reachable (feature module unregistered in `app-routing.module.ts`) |
 | Data-entry fields | 7 |
 | Grids on the screen | 1 |
 | Commands | 17 |
@@ -153,15 +153,15 @@ Commands on this screen:
 | (icon only) | GetNext() | always |
 | (icon only) | GetPrev() | always |
 
-#### 14.S.2  Screen `#/periodic-orphan-reports/:id/edit`
+#### 14.S.2  Screen `#/periodic-orphan-reports/create` and `#/periodic-orphan-reports/:id/edit`
 
 
 | Property | Value |
 | --- | --- |
-| Angular route | `#/periodic-orphan-reports/:id/edit` |
+| Angular route | `#/periodic-orphan-reports/create` and `#/periodic-orphan-reports/:id/edit` (one component, both routes) |
 | Feature module | `periodic-orphan-reports` (lazy-loaded) |
 | Component | `PeriodicReportFormComponent` |
-| Route status | implemented |
+| Route status | built, not reachable (feature module unregistered in `app-routing.module.ts`) |
 | Data-entry fields | 53 |
 | Grids on the screen | 0 |
 | Commands | 12 |
@@ -248,7 +248,7 @@ Commands on this screen:
 | Angular route | `#/periodic-orphan-reports/orphan-reports` |
 | Feature module | `periodic-orphan-reports` (lazy-loaded) |
 | Component | `OrphanReportsListComponent` |
-| Route status | implemented |
+| Route status | built, not reachable (feature module unregistered in `app-routing.module.ts`) |
 | Data-entry fields | 1 |
 | Grids on the screen | 1 |
 | Commands | 3 |
@@ -280,7 +280,7 @@ Commands on this screen:
 | Angular route | `#/periodic-orphan-reports/orphan-reports/search` |
 | Feature module | `periodic-orphan-reports` (lazy-loaded) |
 | Component | `OrphanReportSearchComponent` |
-| Route status | implemented |
+| Route status | built, not reachable (feature module unregistered in `app-routing.module.ts`) |
 | Data-entry fields | 10 |
 | Grids on the screen | 1 |
 | Commands | 2 |
@@ -371,7 +371,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • An HQ role (General Director, Financial Director, Staff) may pass an explicit charity id and so read across the charity boundary; a charity user may not and always sees its own data.<br>• The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • A new record exists, owned by the charity of the creating user, and appears in the list screen of the module. |
-| Realisation | Route `#/periodic-orphan-reports/:id/edit` → `PeriodicReportFormComponent`<br>`POST /api/PeriodicOrphanReports` → `PeriodicOrphanReportsController` → `IPeriodicOrphanReportService` |
+| Realisation | Route `#/periodic-orphan-reports/create` → `PeriodicReportFormComponent`<br>`POST /api/PeriodicOrphanReports` → `PeriodicOrphanReportsController` → `IPeriodicOrphanReportService` |
 
 #### 14.U.4  UC-ORR-04 — View a periodic report عرض التقرير
 
@@ -647,10 +647,22 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
-| `#/periodic-orphan-reports` | `periodic-orphan-reports` | `PeriodicReportsListComponent` | implemented |
-| `#/periodic-orphan-reports/:id/edit` | `periodic-orphan-reports` | `PeriodicReportFormComponent` | implemented |
-| `#/periodic-orphan-reports/orphan-reports` | `periodic-orphan-reports` | `OrphanReportsListComponent` | implemented |
-| `#/periodic-orphan-reports/orphan-reports/search` | `periodic-orphan-reports` | `OrphanReportSearchComponent` | implemented |
+| `#/periodic-orphan-reports` | `periodic-orphan-reports` | `PeriodicReportsListComponent` | built, not reachable |
+| `#/periodic-orphan-reports/create` | `periodic-orphan-reports` | `PeriodicReportFormComponent` | built, not reachable |
+| `#/periodic-orphan-reports/:id` | `periodic-orphan-reports` | `PeriodicReportDetailComponent` | built, not reachable |
+| `#/periodic-orphan-reports/:id/edit` | `periodic-orphan-reports` | `PeriodicReportFormComponent` | built, not reachable |
+| `#/periodic-orphan-reports/:id/review` | `periodic-orphan-reports` | `PeriodicReportReviewComponent` | built, not reachable |
+| `#/periodic-orphan-reports/orphan-reports` | `periodic-orphan-reports` | `OrphanReportsListComponent` | built, not reachable |
+| `#/periodic-orphan-reports/orphan-reports/generate` | `periodic-orphan-reports` | `OrphanReportsGenerateComponent` | built, not reachable |
+| `#/periodic-orphan-reports/orphan-reports/history` | `periodic-orphan-reports` | `OrphanReportHistoryComponent` | built, not reachable |
+| `#/periodic-orphan-reports/orphan-reports/compare` | `periodic-orphan-reports` | `OrphanReportComparisonComponent` | built, not reachable |
+| `#/periodic-orphan-reports/orphan-reports/schedule` | `periodic-orphan-reports` | `ScheduleReportComponent` | built, not reachable |
+| `#/periodic-orphan-reports/orphan-reports/search` | `periodic-orphan-reports` | `OrphanReportSearchComponent` | built, not reachable |
+| `#/periodic-orphan-reports/orphan-reports/orphan/:orphanId` | `periodic-orphan-reports` | `OrphanReportSearchComponent` | built, not reachable |
+
+> **These routes are not reachable in the running client.** `PeriodicOrphanReportsRoutingModule`
+> declares them, but `app-routing.module.ts` has no `periodic-orphan-reports` entry, so nothing
+> lazy-loads the feature module. Registering that entry is the first task of this chapter.
 
 ### 14.B  Annex - API controllers of this module
 

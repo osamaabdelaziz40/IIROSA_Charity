@@ -770,9 +770,27 @@ public class FamiliesController : ControllerBase
 
     #region Helper Methods
 
+    /// <summary>
+    /// The charity the caller belongs to, from the access token.
+    /// </summary>
+    /// <remarks>
+    /// This read the literal string "CharityId" for a claim that no token carried, so every
+    /// tenancy branch in this controller was dormant and the register was effectively unscoped.
+    /// Story 3-1 added a `charityId` claim, and because .NET compares claim types
+    /// case-insensitively, this method began returning a value — activating ~17 call sites at once
+    /// as a side effect rather than a decision.
+    ///
+    /// Now bound to <see cref="IiroSaClaimTypes.CharityId"/> so the coupling is explicit and a
+    /// rename cannot silently switch this controller's scoping on or off again.
+    ///
+    /// NOTE: this scopes families by <c>ApplicationUser.CharityId</c>, while family rows carry
+    /// <c>FK_CharityId</c>. The two are populated by separate mechanisms; if they disagree for an
+    /// existing tenant, that tenant's family register will read as empty. Verify they agree before
+    /// relying on this in production.
+    /// </remarks>
     private Guid? GetUserCharityId()
     {
-        var charityIdClaim = User.FindFirst("CharityId")?.Value;
+        var charityIdClaim = User.FindFirst(IiroSaClaimTypes.CharityId)?.Value;
         if (Guid.TryParse(charityIdClaim, out var charityId))
         {
             return charityId;

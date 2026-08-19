@@ -10,7 +10,7 @@
 | Use case prefix | UC-REF |
 | Chapter in master document | Chapter 12 |
 | Documented use cases | 4 |
-| Principal routes | `#/families/refugees`, `#/families/refugees/:id/edit` |
+| Principal routes | `#/families/refugees`, `#/families/refugees/create`, `#/families/refugees/:id`, `#/families/refugees/:id/edit` (all *planned*) |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -32,7 +32,7 @@
 | --- | --- | --- | --- | --- |
 | UC-REF-01 | List refugee families قائمة الأسر اللاجئة | Charity, HQ roles | Paged list of the refugee families registered by the charity. | Route `#/families/refugees` |
 | UC-REF-02 | Search refugee families البحث في الأسر اللاجئة | Charity, HQ roles | Applies the standard search criteria to the refugee population. | GET /api/Families?familyType=Refugee&search=?…&type |
-| UC-REF-03 | Register a refugee family اضافة أسرة لاجئة | Charity | Creates the refugee family file using the dedicated refugee contract, which captures displacement-specific data in addition to the standard household details. | Route `#/families/refugees/:id/edit` → POST /api/Families |
+| UC-REF-03 | Register a refugee family اضافة أسرة لاجئة | Charity | Creates the refugee family file using the dedicated refugee contract, which captures displacement-specific data in addition to the standard household details. | Route `#/families/refugees/create` → POST /api/Families |
 | UC-REF-04 | View / update a refugee family بيانات الأسرة اللاجئة | Charity, HQ roles | Loads a refugee family file for review or amendment. | GET /api/Families/{id} |
 
 ### 12.S  Screen field specifications
@@ -241,7 +241,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• The business layer returns «أحد المعيلين مكرر من قبل أكثر من مرة» and the operation is not applied.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form. |
 | Post-conditions | • A new record exists, owned by the charity of the creating user, and appears in the list screen of the module. |
-| Realisation | Route `#/families/refugees/:id/edit` → `RefugeeFamilyFormComponent`<br>`POST /api/Families` → `FamiliesController` → `IFamilyService` |
+| Realisation | Route `#/families/refugees/create` → `RefugeeFamilyFormComponent`<br>`POST /api/Families` → `FamiliesController` → `IFamilyService` |
 
 #### 12.U.4  UC-REF-04 — View / update a refugee family بيانات الأسرة اللاجئة
 
@@ -271,6 +271,8 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
 | `#/families/refugees` | `families` | `RefugeeFamilyListComponent` | planned |
+| `#/families/refugees/create` | `families` | `RefugeeFamilyFormComponent` | planned |
+| `#/families/refugees/:id` | `families` | `RefugeeFamilyDetailComponent` | planned |
 | `#/families/refugees/:id/edit` | `families` | `RefugeeFamilyFormComponent` | planned |
 
 ### 12.B  Annex - API controllers of this module

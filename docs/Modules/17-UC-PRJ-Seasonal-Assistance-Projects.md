@@ -10,7 +10,7 @@
 | Use case prefix | UC-PRJ |
 | Chapter in master document | Chapter 17 |
 | Documented use cases | 13 |
-| Principal routes | `#/seasonal-aid`, `#/seasonal-aid/:id/edit`, `#/seasonal-aid/:id/beneficiaries`, `#/seasonal-aid/:id/report` |
+| Principal routes | `#/seasonal-aid`, `#/seasonal-aid/create`, `#/seasonal-aid/:id`, `#/seasonal-aid/:id/edit`, `#/seasonal-aid/:id/beneficiaries`, `#/seasonal-aid/:id/distribution`, `#/seasonal-aid/:id/eligible-families` *(planned)*, `#/seasonal-aid/:id/report` *(planned)* |
 | Version | 1.1 |
 | Status | Chapter content extracted verbatim; screen fields and scenarios derived from the source code |
 | Date | 18 August 2026 |
@@ -32,7 +32,7 @@
 | ID | Use case | Primary actor | Description & main flow | Realisation |
 | --- | --- | --- | --- | --- |
 | UC-PRJ-01 | List projects المشاريع | Gen. Director, Staff | Paged list of assistance projects for a charity or across all charities, with dates, budget and status. | Route `#/seasonal-aid` → GET /api/SeasonalAid/campaigns |
-| UC-PRJ-02 | Create a project إضافة مشروع | Gen. Director | Defines the campaign — name, type, period, per-family amount or in-kind item, target charities and quota — making it available for family selection. | Route `#/seasonal-aid/:id/edit` → POST /api/SeasonalAid/campaigns |
+| UC-PRJ-02 | Create a project إضافة مشروع | Gen. Director | Defines the campaign — name, type, period, per-family amount or in-kind item, target charities and quota — making it available for family selection. | Route `#/seasonal-aid/create` → POST /api/SeasonalAid/campaigns |
 | UC-PRJ-03 | View a project عرض المشروع | Gen. Director, Staff, charity | Loads one project's definition and its current registration figures. | GET /api/SeasonalAid/campaigns |
 | UC-PRJ-04 | Update a project تعديل المشروع | Gen. Director | Amends project parameters and quotas while the campaign is open. | PUT /api/SeasonalAid/campaigns |
 | UC-PRJ-05 | Delete a project حذف المشروع | Gen. Director | Removes a project created in error together with its family registrations. | DELETE /api/SeasonalAid/campaigns |
@@ -103,12 +103,12 @@ Commands on this screen:
 | (icon only) | GetNext() | always |
 | (icon only) | GetPrev() | always |
 
-#### 17.S.2  Screen `#/seasonal-aid/:id/edit`
+#### 17.S.2  Screen `#/seasonal-aid/create` and `#/seasonal-aid/:id/edit`
 
 
 | Property | Value |
 | --- | --- |
-| Angular route | `#/seasonal-aid/:id/edit` |
+| Angular route | `#/seasonal-aid/create` and `#/seasonal-aid/:id/edit` (one component, both routes) |
 | Feature module | `seasonal-aid` (lazy-loaded) |
 | Component | `CampaignFormComponent` |
 | Route status | implemented |
@@ -355,7 +355,7 @@ One expanded scenario for every use case of this module. Pre-conditions, flows a
 | Alternate flows | • The actor abandons the form before saving — nothing is written and the record keeps its previous state. |
 | Exception flows | • The session has expired or the role is not permitted — the request is rejected and the SPA routes back to the login state.<br>• A mandatory field is empty or fails its format check — the save is refused and the field is flagged on the form.<br>• The charity is closed by a lock (IsLocked) — the write is refused. |
 | Post-conditions | • A new record exists, owned by the charity of the creating user, and appears in the list screen of the module. |
-| Realisation | Route `#/seasonal-aid/:id/edit` → `CampaignFormComponent`<br>`POST /api/SeasonalAid/campaigns` → `SeasonalAidController` → `ISeasonalAidService` |
+| Realisation | Route `#/seasonal-aid/create` → `CampaignFormComponent`<br>`POST /api/SeasonalAid/campaigns` → `SeasonalAidController` → `ISeasonalAidService` |
 
 #### 17.U.3  UC-PRJ-03 — View a project عرض المشروع
 
@@ -575,8 +575,11 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
 | `#/seasonal-aid` | `seasonal-aid` | `CampaignListComponent` | implemented |
+| `#/seasonal-aid/create` | `seasonal-aid` | `CampaignFormComponent` | implemented |
+| `#/seasonal-aid/:id` | `seasonal-aid` | `CampaignDetailComponent` | implemented |
 | `#/seasonal-aid/:id/edit` | `seasonal-aid` | `CampaignFormComponent` | implemented |
 | `#/seasonal-aid/:id/beneficiaries` | `seasonal-aid` | `BeneficiarySelectionComponent` | implemented |
+| `#/seasonal-aid/:id/distribution` | `seasonal-aid` | `DistributionRecordComponent` | implemented |
 | `#/seasonal-aid/:id/eligible-families` | `seasonal-aid` | `EligibleFamiliesComponent` | planned |
 | `#/seasonal-aid/:id/report` | `seasonal-aid` | `CampaignReportComponent` | planned |
 

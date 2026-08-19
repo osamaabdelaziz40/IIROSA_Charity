@@ -204,3 +204,14 @@ export interface CharityCredentialsDto {
   email: string;
   temporaryPassword: boolean;
 }
+
+/**
+ * Result of GET /api/Charities/check-name (UC-CHR-02).
+ *
+ * Carries the name back with the answer so a reply that arrives after the user has typed on can
+ * be recognised as stale and discarded.
+ */
+export interface CharityNameAvailability {
+  name: string;
+  isAvailable: boolean;
+}

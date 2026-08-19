@@ -387,6 +387,7 @@ Routes are hash-based (`useHash: true`), rendered inside `MainLayoutComponent` b
 
 | Angular route | Feature module | Component | Status |
 | --- | --- | --- | --- |
+| `#/auth` | `auth` | redirects to `#/auth/login` | implemented |
 | `#/auth/login` | `auth` | `LoginComponent` | implemented |
 | `#/auth/register` | `auth` | `RegisterComponent` | planned |
 | `#/auth/forgot-password` | `auth` | `ForgotPasswordComponent` | planned |
