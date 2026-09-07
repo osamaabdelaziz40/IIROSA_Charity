@@ -77,6 +77,12 @@ export class HousingProjectListComponent implements OnInit, OnDestroy {
       type: 'primary',
       icon: 'fe-plus',
       click: () => this.router.navigate(['/housing-projects', 'create'])
+    },
+    {
+      label: 'common.exportToExcel',
+      type: 'success',
+      icon: 'fe-download',
+      click: () => this.exportToExcel()
     }
   ];
 
@@ -208,6 +214,92 @@ export class HousingProjectListComponent implements OnInit, OnDestroy {
         // OnPush: the template never re-evaluates unless the component is marked
         // dirty — without this the spinner outlives the data that replaced it.
         this.cdr.markForCheck();
+      },
+      error: () => {
+        this.notification.error(this.translate.instant('housingProjects.loadFailed'));
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  /**
+   * Export the §11.S.1 register to Excel — client-side ExcelJS (§21.S.7 extract
+   * precedent): /api/Families has no server-side export endpoint, so re-run the
+   * current filter with one page holding every row, then build the workbook here.
+   */
+  exportToExcel(): void {
+    if (this.families.length === 0) {
+      this.notification.info(this.translate.instant('housingProjects.nothingToExport'));
+      return;
+    }
+
+    this.loading = true;
+    this.cdr.markForCheck();
+
+    const filters = this.filterForm.value;
+    this.familyService.getFamilies({
+      familyType: 'Housing',
+      charityId: filters.charityId && filters.charityId !== HousingProjectListComponent.ALL_CHARITIES
+        ? filters.charityId
+        : undefined,
+      searchTerm: filters.searchValue || undefined,
+      searchType: filters.searchValue ? filters.searchType : undefined,
+      pageNumber: 1,
+      pageSize: Math.max(this.totalCount, this.pageSize)
+    }).pipe(takeUntil(this.destroy$)).subscribe({
+      next: response => {
+        const rows = (response.items || []) as unknown as FamilyListItemDto[];
+        this.loading = false;
+        this.cdr.markForCheck();
+
+        if (rows.length === 0) {
+          this.notification.info(this.translate.instant('housingProjects.nothingToExport'));
+          return;
+        }
+
+        import('exceljs').then(({ default: ExcelJS }) => {
+          const workbook = new ExcelJS.Workbook();
+          const sheet = workbook.addWorksheet(this.translate.instant('housingProjects.title'));
+          sheet.addRow([
+            this.translate.instant('housingProjects.columns.serial'),
+            this.translate.instant('housingProjects.columns.fatherName'),
+            this.translate.instant('housingProjects.columns.motherName'),
+            this.translate.instant('housingProjects.columns.children'),
+            this.translate.instant('housingProjects.columns.phones'),
+            this.translate.instant('housingProjects.columns.familyCode'),
+            this.translate.instant('housingProjects.columns.charity')
+          ]);
+          rows.forEach((family, index) => sheet.addRow([
+            index + 1,
+            family.fatherName || '',
+            family.motherName || '',
+            family.orphansCount || 0,
+            family.phoneNumber || '',
+            family.code || '',
+            family.charityName || ''
+          ]));
+
+          workbook.xlsx.writeBuffer().then(buffer => {
+            const blob = new Blob([buffer], {
+              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `housing_families_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+          }).catch(() => {
+            // Review P11: a failed write is a user-facing failure, not a silent non-event
+            this.notification.error(this.translate.instant('housingProjects.exportFailed'));
+          });
+        }).catch(() => {
+          // Review P11: the ExcelJS chunk itself can fail to load (offline first hit)
+          this.notification.error(this.translate.instant('housingProjects.exportFailed'));
+        });
       },
       error: () => {
         this.notification.error(this.translate.instant('housingProjects.loadFailed'));

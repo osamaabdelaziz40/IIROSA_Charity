@@ -67,6 +67,45 @@ public class CheckManagementController : ControllerBase
     }
 
     /// <summary>
+    /// The cheque register (§16.S.1 grid) as an Excel workbook — the current filters,
+    /// every matching row. Same scope rules as the register read: tenancy is applied
+    /// by the service from the token.
+    /// </summary>
+    [HttpGet("export")]
+    [Authorize(Roles = ReadRoles)]
+    public async Task<IActionResult> ExportChecks([FromQuery] CheckFilterDto filter)
+    {
+        try
+        {
+            var excelBytes = await _checkService.ExportChecksToExcelAsync(filter);
+
+            _logger.LogInformation("Cheque register exported to Excel by {ExportedBy}", User.Identity?.Name);
+
+            return File(
+                excelBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"general-checks_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting cheques to Excel with filter {@Filter}", filter);
+            return StatusCode(500, new { message = "An error occurred while exporting cheques" });
+        }
+    }
+
+    /// <summary>
     /// UC-CHQ-07 — convert an amount into its Arabic words تفقيط for the given currency.
     /// </summary>
     [HttpGet("amount-in-words")]

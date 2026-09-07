@@ -19,6 +19,14 @@ import {
   BankDto,
   CreateBankDto,
   UpdateBankDto,
+  CreateLookupDto,
+  UpdateLookupDto,
+  HousingBuildingDto,
+  CreateHousingBuildingDto,
+  UpdateHousingBuildingDto,
+  HousingFlatDto,
+  CreateHousingFlatDto,
+  UpdateHousingFlatDto,
   LookupFilterDto,
   LookupPagedResult,
   LookupTableSummaryDto,
@@ -349,6 +357,257 @@ export class LookupManagementService {
 
   deactivateBank(id: number): Observable<void> {
     return this.http.patch<void>(`${this.apiUrl}/banks/${id}/deactivate`, {}, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // ==================== OFFICE PROJECT TYPES (management) ====================
+
+  getOfficeProjectTypesItems(filter?: LookupFilterDto): Observable<LookupPagedResult<LookupDto>> {
+    return this.http.get<LookupPagedResult<LookupDto>>(`${this.apiUrl}/office-project-types/items`, {
+      headers: this.getHeaders(),
+      params: this.buildHttpParams(filter)
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getOfficeProjectType(id: number): Observable<LookupDto> {
+    return this.http.get<LookupDto>(`${this.apiUrl}/office-project-types/${id}`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  createOfficeProjectType(type: CreateLookupDto): Observable<LookupDto> {
+    return this.http.post<LookupDto>(`${this.apiUrl}/office-project-types`, type, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  updateOfficeProjectType(id: number, type: UpdateLookupDto): Observable<LookupDto> {
+    return this.http.put<LookupDto>(`${this.apiUrl}/office-project-types/${id}`, type, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  deleteOfficeProjectType(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/office-project-types/${id}`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  activateOfficeProjectType(id: number): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/office-project-types/${id}/activate`, {}, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  deactivateOfficeProjectType(id: number): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/office-project-types/${id}/deactivate`, {}, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // ==================== OUTGOING CATEGORIES (UC-COR-17 management) ====================
+
+  /** Active-only catalogue (GET outgoing-categories) — feeds form drop-downs. */
+  getOutgoingCategories(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/outgoing-categories`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Management list (GET outgoing-categories/items) — paged, includes inactive rows. */
+  getOutgoingCategoriesItems(filter?: LookupFilterDto): Observable<LookupPagedResult<LookupDto>> {
+    return this.http.get<LookupPagedResult<LookupDto>>(`${this.apiUrl}/outgoing-categories/items`, {
+      headers: this.getHeaders(),
+      params: this.buildHttpParams(filter)
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getOutgoingCategory(id: number): Observable<LookupDto> {
+    return this.http.get<LookupDto>(`${this.apiUrl}/outgoing-categories/${id}`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  createOutgoingCategory(category: CreateLookupDto): Observable<LookupDto> {
+    return this.http.post<LookupDto>(`${this.apiUrl}/outgoing-categories`, category, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  updateOutgoingCategory(id: number, category: UpdateLookupDto): Observable<LookupDto> {
+    return this.http.put<LookupDto>(`${this.apiUrl}/outgoing-categories/${id}`, category, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  deleteOutgoingCategory(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/outgoing-categories/${id}`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  activateOutgoingCategory(id: number): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/outgoing-categories/${id}/activate`, {}, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  deactivateOutgoingCategory(id: number): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/outgoing-categories/${id}/deactivate`, {}, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // ==================== HOUSING BUILDINGS (management, UC-HOU-05) ====================
+
+  getHousingBuildingsItems(filter?: LookupFilterDto): Observable<LookupPagedResult<HousingBuildingDto>> {
+    return this.http.get<LookupPagedResult<HousingBuildingDto>>(`${this.apiUrl}/housing-buildings/items`, {
+      headers: this.getHeaders(),
+      params: this.buildHttpParams(filter)
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getHousingBuilding(id: number): Observable<HousingBuildingDto> {
+    return this.http.get<HousingBuildingDto>(`${this.apiUrl}/housing-buildings/${id}`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  createHousingBuilding(building: CreateHousingBuildingDto): Observable<HousingBuildingDto> {
+    return this.http.post<HousingBuildingDto>(`${this.apiUrl}/housing-buildings`, building, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  updateHousingBuilding(id: number, building: UpdateHousingBuildingDto): Observable<HousingBuildingDto> {
+    return this.http.put<HousingBuildingDto>(`${this.apiUrl}/housing-buildings/${id}`, building, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  deleteHousingBuilding(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/housing-buildings/${id}`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  activateHousingBuilding(id: number): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/housing-buildings/${id}/activate`, {}, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  deactivateHousingBuilding(id: number): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/housing-buildings/${id}/deactivate`, {}, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // ==================== HOUSING FLATS (management, UC-HOU-05) ====================
+
+  /**
+   * All flats of one building for the management screen — includes inactive rows,
+   * unlike getHousingFlats which feeds the §11.S.2 drop-down (active only).
+   */
+  getHousingFlatItems(buildingId: number): Observable<HousingFlatDto[]> {
+    let params = new HttpParams().set('buildingId', buildingId.toString());
+    return this.http.get<HousingFlatDto[]>(`${this.apiUrl}/housing-flats/items`, {
+      headers: this.getHeaders(),
+      params
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getHousingFlat(id: number): Observable<HousingFlatDto> {
+    return this.http.get<HousingFlatDto>(`${this.apiUrl}/housing-flats/${id}`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  createHousingFlat(flat: CreateHousingFlatDto): Observable<HousingFlatDto> {
+    return this.http.post<HousingFlatDto>(`${this.apiUrl}/housing-flats`, flat, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  updateHousingFlat(id: number, flat: UpdateHousingFlatDto): Observable<HousingFlatDto> {
+    return this.http.put<HousingFlatDto>(`${this.apiUrl}/housing-flats/${id}`, flat, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  deleteHousingFlat(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/housing-flats/${id}`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  activateHousingFlat(id: number): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/housing-flats/${id}/activate`, {}, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  deactivateHousingFlat(id: number): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/housing-flats/${id}/deactivate`, {}, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)

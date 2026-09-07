@@ -1,0 +1,14 @@
+// Outgoing Categories List Component Styles
+
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.invalid-feedback {
+  display: block;
+}
+
+.required::after {
+  content: ' *';
+  color: var(--danger);
+}

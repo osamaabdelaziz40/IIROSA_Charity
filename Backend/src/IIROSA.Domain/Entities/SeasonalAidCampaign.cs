@@ -28,9 +28,6 @@ public class SeasonalAidCampaign : FullAuditedEntity
     public int? RegionId { get; set; }
     public int? CenterId { get; set; }
 
-    // Charity Assignment (UC-9.11)
-    public Guid? CharityId { get; set; }
-
     // Beneficiary Criteria (UC-9.1)
     public int? MaximumFamilies { get; set; }
     public string? FamilyType { get; set; } // All, Orphan Families, Needy Families
@@ -63,7 +60,6 @@ public class SeasonalAidCampaign : FullAuditedEntity
     public virtual Country? Country { get; set; }
     public virtual Region? Region { get; set; }
     public virtual Center? Center { get; set; }
-    public virtual Charity? Charity { get; set; }
 
     public virtual ICollection<SeasonalAidBeneficiary> Beneficiaries { get; set; } = new List<SeasonalAidBeneficiary>();
 }

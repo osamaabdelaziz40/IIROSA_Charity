@@ -208,7 +208,8 @@ public class OutgoingService : IOutgoingService
 
     /// <summary>
     /// Delete an outgoing letter (UC-COR-16) — soft delete, refused while the letter still
-    /// has incoming replies or attached orphan reports, per the spec's guards.
+    /// has attached orphan reports, per the spec's guard. (Incoming letters no longer link
+    /// to outgoing letters, so the incoming-replies guard is structurally always empty.)
     /// </summary>
     public async Task DeleteAsync(Guid id, Guid? deletedBy)
     {
@@ -216,13 +217,6 @@ public class OutgoingService : IOutgoingService
         if (outgoing == null || !IsWithinCallerScope(outgoing))
         {
             throw new InvalidOperationException($"Outgoing letter {id} not found");
-        }
-
-        var replies = await _outgoingRepository.CountIncomingRepliesAsync(id);
-        if (replies > 0)
-        {
-            throw new InvalidOperationException(
-                "Operation Faild: the letter has incoming replies and cannot be deleted");
         }
 
         var attachedReports = await _orphanReportRepository.GetByOutgoingAsync(id);

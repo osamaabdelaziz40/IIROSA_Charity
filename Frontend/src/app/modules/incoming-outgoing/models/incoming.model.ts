@@ -16,8 +16,6 @@ export interface IncomingDto {
   departmentName?: string;
   assignedUserId?: string;
   assignedUserName?: string;
-  outgoingId?: string;
-  outgoingLetterNumber?: string;
   uploadedFileId?: string;
   uploadedFileName?: string;
   charityId?: string;
@@ -34,7 +32,6 @@ export interface CreateIncomingDto {
   subject: string;
   status?: string;
   assignedUserId?: string;
-  outgoingId?: string;
   letterDescription?: string;
   uploadedFileId?: string;
 }

@@ -8,9 +8,10 @@ using Microsoft.Extensions.Logging;
 namespace IIROSA.Application.Services;
 
 /// <summary>
-/// Housing Building Service (UC-HOU-05) — rides the generic lookup machinery
+/// Housing Building Service (UC-HOU-05) — rides the generic lookup machinery with rich
+/// DTOs (BuildingNumber / BuildingAddress / BuildingDescription) for lookup management
 /// </summary>
-public class HousingBuildingService : LookupServiceBase<HousingBuilding, LookupDto, CreateLookupDto, UpdateLookupDto>, IHousingBuildingService
+public class HousingBuildingService : LookupServiceBase<HousingBuilding, HousingBuildingDto, CreateHousingBuildingDto, UpdateHousingBuildingDto>, IHousingBuildingService
 {
     public HousingBuildingService(
         ILookupRepository<HousingBuilding> repository,

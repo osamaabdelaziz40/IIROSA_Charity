@@ -60,6 +60,12 @@ export class HqTransferListComponent implements OnInit, OnDestroy {
       icon: 'fe-plus',
       type: 'primary',
       click: () => this.createTransfer()
+    },
+    {
+      label: 'common.exportToExcel',
+      icon: 'fe-download',
+      type: 'success',
+      click: () => this.exportToExcel()
     }
   ];
 
@@ -126,6 +132,36 @@ export class HqTransferListComponent implements OnInit, OnDestroy {
    */
   createTransfer(): void {
     this.router.navigate(['/hq-transfers', 'create']);
+  }
+
+  /**
+   * Export the §22.S.1 register to Excel (orphan-payments §15.S.1 pattern) — the server
+   * ignores paging and writes every row in the caller's country scope
+   */
+  exportToExcel(): void {
+    this.loading = true;
+
+    this.transferService.exportToExcel()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob: Blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `hq-transfers_${new Date().toISOString().split('T')[0]}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+
+          this.notification.success(this.translate.instant('common.operationSuccess'));
+          this.loading = false;
+        },
+        error: () => {
+          this.loading = false;
+          this.notification.error(this.translate.instant('common.operationFailed'));
+        }
+      });
   }
 
   /**

@@ -51,6 +51,14 @@ export class HqTransferService {
   }
 
   /**
+   * Export the §22.S.1 register to Excel — every row in the caller's country scope
+   * (the list read's rules; paging is ignored server-side)
+   */
+  exportToExcel(): Observable<Blob> {
+    return this.http.get(`${this.apiBaseUrl}/export`, { responseType: 'blob' });
+  }
+
+  /**
    * UC-TRF-02: file a new HQ transfer. 201 + detail echo on success; 400 with
    * { message, errors } when FluentValidation or the lookup checks reject it.
    */

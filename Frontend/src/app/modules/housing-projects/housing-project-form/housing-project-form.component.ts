@@ -35,11 +35,13 @@ import { LookupManagementService } from '../../lookup-management/services/lookup
 import { CharityService } from '../../charities/services/charity.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { AttachmentService } from '../../../core/services/attachment.service';
 import {
   BreadcrumbComponent,
   BreadcrumbItem,
   PageHeaderComponent
 } from '../../../shared/components';
+import { AttachmentComponent } from '../../../shared/components/attachment/attachment.component';
 import { SharedModule } from '../../../shared/shared.module';
 
 /** { id, name } option shape the shared app-drop-down expects (LookupBase). */
@@ -66,7 +68,47 @@ interface ChildRow {
   departmentName: string;
   facultyName: string;
   schoolName: string;
+  /** الصوره الشخصيه — attachment id (§11.S.2 اضافة ابن uploads) */
+  photoAttachmentId?: string | null;
+  /** صوره شهاده الميلاد — attachment id */
+  birthCertificateAttachmentId?: string | null;
+  /** صوره إثبات القيد — attachment id */
+  enrollmentAttachmentId?: string | null;
   notes: string;
+}
+
+/** One captured guardian row (§11.S.2 اضافة الاباء — AddNewParent() always): the entry
+ *  form is a staging area — تم pushes/updates a row, and the rows drive the payload. */
+interface GuardianRow {
+  /** UC-HOU-04 edit-sync key — present on rows loaded from the family, absent on new rows. */
+  id?: string;
+  value: GuardianFormValue;
+}
+
+/** The guardian entry form's raw value (name composed from أول/ثانى/ثالث/رباعي parts). */
+interface GuardianFormValue {
+  reasonOfRelationId: number | null;
+  relationId: number | null;
+  mainRelation: string | null;
+  firstName: string;
+  secondName: string;
+  thirdName: string;
+  fourthName: string;
+  familyName: string;
+  nationalityCountryId: number | null;
+  dateOfBirth: string;
+  nationalId: string;
+  job: string;
+  phone: string;
+  /** number input — the control yields '' while empty, hence the string union */
+  monthlyIncome: number | string | null;
+  educationLevelId: number | null;
+  socialStatusId: number | null;
+  healthStatusId: number | null;
+  widowSponsorship: boolean;
+  anotherSponsor: boolean;
+  motherIsMar: boolean;
+  isCaring: boolean;
 }
 
 @Component({
@@ -78,6 +120,7 @@ interface ChildRow {
     TranslateModule,
     BreadcrumbComponent,
     PageHeaderComponent,
+    AttachmentComponent,
     SharedModule
   ],
   templateUrl: './housing-project-form.component.html',
@@ -117,10 +160,11 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
   isHQ = false;
   saving = false;
 
-  // §11.S.2 closed sets (values are the Arabic literals the server stores)
-  mainRelationOptions = HOUSING_MAIN_RELATIONS;
-  genderOptions = HOUSING_CHILD_GENDERS;
-  phoneBelongsToOptions = HOUSING_PHONE_BELONGS_TO;
+  // §11.S.2 closed sets (values are the Arabic literals the server stores), rendered
+  // through the shared select2 drop-down — the option ids ARE the Arabic literals.
+  mainRelationSelectOptions: DropdownOption[] = [];
+  genderSelectOptions: DropdownOption[] = [];
+  phoneBelongsToSelectOptions: DropdownOption[] = [];
 
   // Drop-down catalogues
   charities: DropdownOption[] = [];
@@ -142,9 +186,11 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
   // Phones grid — client-side rows; the default row's number reaches the payload
   phoneArray!: FormArray;
 
-  // اضافة معيل (single guardian block)
+  // اضافة معيل / اضافة الاباء — entry form (staging) + captured rows (payload source)
   guardianForm!: FormGroup;
   guardianSaved = false;
+  guardians: GuardianRow[] = [];
+  editingGuardianIndex = -1;
 
   // اضافة ابن
   childForm!: FormGroup;
@@ -158,6 +204,7 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
     private charityService: CharityService,
     private auth: AuthService,
     private notification: NotificationService,
+    private attachmentService: AttachmentService,
     private translate: TranslateService,
     private router: Router,
     private route: ActivatedRoute,
@@ -166,6 +213,12 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.isHQ = this.auth.hasRole('SuperAdmin') || this.auth.hasRole('Admin');
+
+    // Closed-set select2 options are translated snapshots — rebuild on language switch.
+    this.rebuildTranslatedOptions();
+    this.translate.onLangChange
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.rebuildTranslatedOptions());
 
     // UC-HOU-04: :id/edit → edit mode (load the aggregate); create → the 6-3 add flow.
     // Resolved BEFORE buildForms — the guardian name-part validators read editMode
@@ -197,6 +250,7 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
       charityId: [null, this.isHQ ? Validators.required : []],
       code: [''],
       cityVillage: ['', Validators.required],
+      countryId: [null, Validators.required],
       regionId: [null, Validators.required],
       centerId: [null, Validators.required],
       housingBuildingId: [null, Validators.required],
@@ -258,6 +312,11 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
       departmentName: ['', Validators.required],
       facultyName: ['', Validators.required],
       schoolName: ['', Validators.required],
+      // §11.S.2 اضافة ابن attachments (shared attachment component) — the ids ride the
+      // child rows; edit keeps a stored id unless the user removes/replaces the file.
+      photoAttachmentId: [null],
+      birthCertificateAttachmentId: [null],
+      enrollmentAttachmentId: [null],
       notes: ['']
     });
   }
@@ -310,12 +369,7 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
         error: () => { this.countries = []; done(); }
       });
 
-    this.lookupService.getRegions({ page: 1, pageSize: 1000, isActive: true })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: result => { this.regions = this.toOptions(result.items || []); done(); },
-        error: () => { this.regions = []; done(); }
-      });
+    // Regions cascade from the country (getRegionsByCountry) — no unconditional load here.
 
     this.lookupService.getHousingBuildings()
       .pipe(takeUntil(this.destroy$))
@@ -382,6 +436,7 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
       charityId: detail.charityId || null,
       code: detail.code || '',
       cityVillage: detail.cityVillage || '',
+      countryId: detail.countryId ?? null,
       regionId: detail.regionId ?? null,
       centerId: detail.centerId ?? null,
       housingBuildingId: detail.housingBuildingId ?? null,
@@ -399,6 +454,7 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
     this.familyForm.get('code')?.disable();
 
     // Option lists for the patched cascade selections (no reset — the family owns them)
+    this.loadRegionsByCountry(detail.countryId ?? null);
     this.loadCenters(detail.regionId ?? null);
     this.loadFlats(detail.housingBuildingId ?? null);
 
@@ -408,35 +464,40 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
       isDefault: true
     });
 
-    // اضافة معيل — the stored full name decomposed back into أول/ثانى/ثالث/رباعي parts
-    const guardian = detail.provider;
-    if (guardian) {
+    // اضافة الاباء — every stored guardian becomes an editable row carrying its id
+    // (legacy detail carries the single provider; new detail carries the full set).
+    const guardianDetails =
+      detail.providers?.length ? detail.providers : detail.provider ? [detail.provider] : [];
+    this.guardians = guardianDetails.map(guardian => {
       const parts = this.decomposeName(guardian.fullName);
-      this.guardianForm.patchValue({
-        reasonOfRelationId: guardian.reasonOfRelationId ?? null,
-        relationId: guardian.relationId ?? null,
-        mainRelation: guardian.mainRelation || null,
-        firstName: parts.firstName,
-        secondName: parts.secondName,
-        thirdName: parts.thirdName,
-        fourthName: parts.fourthName,
-        familyName: parts.familyName,
-        nationalityCountryId: guardian.nationalityCountryId ?? null,
-        dateOfBirth: guardian.dateOfBirth ? guardian.dateOfBirth.slice(0, 10) : '',
-        nationalId: guardian.nationalId || '',
-        job: guardian.job || '',
-        phone: guardian.phone || '',
-        monthlyIncome: guardian.monthlyIncome ?? null,
-        educationLevelId: guardian.educationLevelId ?? null,
-        socialStatusId: guardian.socialStatusId ?? null,
-        healthStatusId: guardian.healthStatusId ?? null,
-        widowSponsorship: !!guardian.widowSponsorship,
-        anotherSponsor: !!guardian.anotherSponsor,
-        motherIsMar: !!guardian.motherIsMar,
-        isCaring: !!guardian.isCaring
-      });
-      this.guardianSaved = true; // the guardian exists — the block starts confirmed
-    }
+      return {
+        id: guardian.id,
+        value: {
+          reasonOfRelationId: guardian.reasonOfRelationId ?? null,
+          relationId: guardian.relationId ?? null,
+          mainRelation: guardian.mainRelation || null,
+          firstName: parts.firstName,
+          secondName: parts.secondName,
+          thirdName: parts.thirdName,
+          fourthName: parts.fourthName,
+          familyName: parts.familyName,
+          nationalityCountryId: guardian.nationalityCountryId ?? null,
+          dateOfBirth: guardian.dateOfBirth ? guardian.dateOfBirth.slice(0, 10) : '',
+          nationalId: guardian.nationalId || '',
+          job: guardian.job || '',
+          phone: guardian.phone || '',
+          monthlyIncome: guardian.monthlyIncome ?? null,
+          educationLevelId: guardian.educationLevelId ?? null,
+          socialStatusId: guardian.socialStatusId ?? null,
+          healthStatusId: guardian.healthStatusId ?? null,
+          widowSponsorship: !!guardian.widowSponsorship,
+          anotherSponsor: !!guardian.anotherSponsor,
+          motherIsMar: !!guardian.motherIsMar,
+          isCaring: !!guardian.isCaring
+        }
+      };
+    });
+    this.guardianSaved = this.guardians.length > 0; // a guardian exists — the block starts confirmed
 
     // اضافة ابن — every stored child becomes an editable row carrying its id
     this.children = (detail.children || []).map(child => ({
@@ -454,6 +515,9 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
       departmentName: child.departmentName || '',
       facultyName: child.facultyName || '',
       schoolName: child.schoolName || '',
+      photoAttachmentId: child.photoAttachmentId ?? null,
+      birthCertificateAttachmentId: child.birthCertificateAttachmentId ?? null,
+      enrollmentAttachmentId: child.enrollmentAttachmentId ?? null,
       notes: child.notes || ''
     }));
   }
@@ -475,6 +539,16 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
 
   // ==================== CASCADES ====================
 
+  /** البلد → المنطقة (§11.S.2: regions repopulate on country change — selection resets,
+   *  and the centers below it follow, exactly like the office-development cascade). */
+  onCountryChanged(): void {
+    this.regions = [];
+    this.familyForm.get('regionId')?.reset(null);
+    this.centers = [];
+    this.familyForm.get('centerId')?.reset(null);
+    this.loadRegionsByCountry(this.familyForm.get('countryId')?.value);
+  }
+
   /** المنطقة → المركز (§11.S.2: centers repopulate on region change — selection resets). */
   onRegionChanged(): void {
     this.centers = [];
@@ -490,7 +564,19 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
   }
 
   /** Option-loading primitives — the edit-mode load calls these WITHOUT resetting the
-   *  patched center/flat selections (the family already owns them). */
+   *  patched region/center/flat selections (the family already owns them). */
+  private loadRegionsByCountry(countryId: number | string | null): void {
+    if (!countryId) {
+      return;
+    }
+    this.lookupService.getRegionsByCountry(Number(countryId))
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: result => { this.regions = this.toOptions(result || []); this.cdr.markForCheck(); },
+        error: () => { this.regions = []; this.cdr.markForCheck(); }
+      });
+  }
+
   private loadCenters(regionId: number | string | null): void {
     if (!regionId) {
       return;
@@ -552,38 +638,116 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
     return this.children.length;
   }
 
+  /** الدخل الكلى — the sum of every captured guardian's monthly income. */
   get totalIncome(): number {
-    const income = this.guardianForm?.get('monthlyIncome')?.value;
-    return Number(income) || 0;
+    return this.guardians.reduce(
+      (sum, row) => sum + (Number(row.value.monthlyIncome) || 0), 0);
   }
 
   get perMemberShare(): number {
-    const members = this.children.length + 1; // children + guardian
+    const members = this.children.length + this.guardians.length; // children + guardians
     return members > 0 ? this.totalIncome / members : 0;
   }
 
-  // ==================== GUARDIAN ====================
+  // ==================== GUARDIANS (§11.S.2 اضافة الاباء — multi-guardian) ====================
 
-  get composedGuardianName(): string {
-    const v = this.guardianForm?.value;
-    if (!v) {
+  /** Display name for a captured guardian row (the captured-rows table). */
+  guardianDisplayName(row: GuardianRow): string {
+    return this.composeGuardianName(row.value);
+  }
+
+  /** Compose the full name from the أول/ثانى/ثالث/رباعي/لقب parts of a guardian value. */
+  private composeGuardianName(value: GuardianFormValue | null | undefined): string {
+    if (!value) {
       return '';
     }
-    return [v.firstName, v.secondName, v.thirdName, v.fourthName, v.familyName]
+    return [value.firstName, value.secondName, value.thirdName, value.fourthName, value.familyName]
       .filter((part: string) => !!part)
       .join(' ')
       .trim();
   }
 
-  /** تم — accept the guardian block into the capture state. */
+  /** تم — accept the entry form into the captured rows (add, or update the edited row). */
   confirmGuardian(): void {
     this.guardianForm.markAllAsTouched();
     if (this.guardianForm.invalid) {
       this.notification.error(this.translate.instant('housingProjects.form.messages.fixErrors'));
       return;
     }
-    this.guardianSaved = true;
+    const value = { ...this.guardianForm.value } as GuardianFormValue;
+    if (this.editingGuardianIndex >= 0) {
+      // Keep the loaded row's edit-sync id — the entry form has no id control.
+      const rowId = this.guardians[this.editingGuardianIndex].id;
+      this.guardians[this.editingGuardianIndex] = { id: rowId, value };
+      this.editingGuardianIndex = -1;
+    } else {
+      this.guardians.push({ value });
+    }
+    this.guardianSaved = this.guardians.length > 0;
+    this.resetGuardianForm();
     this.notification.success(this.translate.instant('housingProjects.form.messages.guardianSaved'));
+  }
+
+  editGuardian(index: number): void {
+    this.guardianForm.patchValue(this.guardians[index].value);
+    this.editingGuardianIndex = index;
+  }
+
+  /** Cancel the in-place guardian edit — discard the form copy, KEEP the captured row. */
+  cancelGuardianEdit(): void {
+    this.editingGuardianIndex = -1;
+    this.resetGuardianForm();
+  }
+
+  removeGuardian(index: number): void {
+    this.guardians.splice(index, 1);
+    if (this.editingGuardianIndex === index) {
+      this.editingGuardianIndex = -1;
+      this.resetGuardianForm();
+    } else if (this.editingGuardianIndex > index) {
+      // The splice shifted rows below the removed one up — move the edit target with it.
+      this.editingGuardianIndex--;
+    }
+    this.guardianSaved = this.guardians.length > 0;
+  }
+
+  /** Clear the entry form for the next guardian — closed-set selects reset to null, not ''. */
+  private resetGuardianForm(): void {
+    this.guardianForm.reset();
+    ['reasonOfRelationId', 'relationId', 'mainRelation', 'nationalityCountryId',
+      'educationLevelId', 'socialStatusId', 'healthStatusId'].forEach(
+      control => this.guardianForm.get(control)?.reset(null)
+    );
+  }
+
+  /** Cut a captured row into the wire guardian shape (payload per row; row 1 mirrors provider). */
+  private guardianRequestFromRow(row: GuardianRow): CreateHousingGuardianRequest {
+    const v = row.value;
+    return {
+      // Edit-sync key: rows loaded from the family carry their id (update); new rows don't
+      // (add). Rows absent from the payload are soft-removed server-side.
+      id: row.id,
+      fullName: this.composeGuardianName(v),
+      relationshipToFamily: v.mainRelation || '', // base DTO requires it — carries العلاقة
+      nationalId: v.nationalId,
+      phone: v.phone,
+      dateOfBirth: v.dateOfBirth || undefined,
+      nationalityCountryId: v.nationalityCountryId ?? undefined,
+      job: v.job || undefined,
+      monthlyIncome: v.monthlyIncome != null && v.monthlyIncome !== ''
+        ? Number(v.monthlyIncome)
+        : undefined,
+      reasonOfRelationId: v.reasonOfRelationId ?? undefined,
+      relationId: v.relationId ?? undefined,
+      mainRelation: v.mainRelation || undefined,
+      educationLevelId: v.educationLevelId ?? undefined,
+      socialStatusId: v.socialStatusId ?? undefined,
+      healthStatusId: v.healthStatusId ?? undefined,
+      widowSponsorship: !!v.widowSponsorship,
+      anotherSponsor: !!v.anotherSponsor,
+      motherIsMar: !!v.motherIsMar,
+      isCaring: !!v.isCaring
+    };
   }
 
   // ==================== CHILDREN ====================
@@ -641,47 +805,62 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
     );
   }
 
+  // ==================== CHILD ATTACHMENTS (§11.S.2 اضافة ابن) ====================
+
+  /** Shared attachment component callback — upload the picked file and hold its id on the
+   *  control; addChild carries it onto the captured row. */
+  onChildFileSelected(controlName: string, files: File[]): void {
+    const file = files?.[0];
+    if (!file) {
+      return;
+    }
+    this.attachmentService.upload(file, 'HousingProject')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: response => {
+          this.childForm.get(controlName)?.setValue(response.id);
+          this.cdr.markForCheck(); // OnPush — control change happened off the event stream
+        },
+        error: () => {
+          this.notification.error(
+            this.translate.instant('housingProjects.form.child.attachmentUploadFailed'));
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  onChildFileRemoved(controlName: string): void {
+    this.childForm.get(controlName)?.setValue(null);
+  }
+
   // ==================== SAVE (UC-HOU-03 create · UC-HOU-04 update) ====================
 
   save(): void {
     this.markFormGroupTouched(this.familyForm);
-    this.guardianForm.markAllAsTouched();
     for (const row of this.phoneRows) {
       row.markAllAsTouched();
     }
 
-    if (this.familyForm.invalid || this.guardianForm.invalid || this.phoneArray.invalid) {
+    if (this.familyForm.invalid || this.phoneArray.invalid) {
       this.notification.error(this.translate.instant('housingProjects.form.messages.fixErrors'));
+      return;
+    }
+
+    // §11.S.2 اضافة الاباء — at least one captured guardian row must reach the payload;
+    // the entry form may sit empty between captures (the rows are the source of truth).
+    if (this.guardians.length === 0) {
+      this.guardianForm.markAllAsTouched();
+      this.notification.error(this.translate.instant('housingProjects.form.messages.guardianRequired'));
       return;
     }
 
     const defaultRow =
       this.phoneRows.find(row => row.get('isDefault')?.value) || this.phoneRows[0];
-    const guardian = this.guardianForm.value;
-    const guardianName = this.composedGuardianName;
 
-    const provider: CreateHousingGuardianRequest = {
-      fullName: guardianName,
-      relationshipToFamily: guardian.mainRelation, // base DTO requires it — carries العلاقة
-      nationalId: guardian.nationalId,
-      phone: guardian.phone,
-      dateOfBirth: guardian.dateOfBirth,
-      nationalityCountryId: guardian.nationalityCountryId,
-      job: guardian.job,
-      monthlyIncome: guardian.monthlyIncome != null && guardian.monthlyIncome !== ''
-        ? Number(guardian.monthlyIncome)
-        : undefined,
-      reasonOfRelationId: guardian.reasonOfRelationId,
-      relationId: guardian.relationId,
-      mainRelation: guardian.mainRelation,
-      educationLevelId: guardian.educationLevelId,
-      socialStatusId: guardian.socialStatusId,
-      healthStatusId: guardian.healthStatusId,
-      widowSponsorship: !!guardian.widowSponsorship,
-      anotherSponsor: !!guardian.anotherSponsor,
-      motherIsMar: !!guardian.motherIsMar,
-      isCaring: !!guardian.isCaring
-    };
+    const providers = this.guardians.map(row => this.guardianRequestFromRow(row));
+    // providers[0] mirrors the legacy single-provider wire — the server treats the
+    // providers set as the source of truth and normalises row 1 onto Provider.
+    const provider = providers[0];
 
     const orphans: CreateHousingChildRequest[] = this.children.map(child => ({
       // Edit-sync key: rows loaded from the family carry their id (update); new rows don't
@@ -700,6 +879,9 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
       departmentName: child.departmentName,
       facultyName: child.facultyName,
       schoolName: child.schoolName,
+      photoAttachmentId: child.photoAttachmentId ?? undefined,
+      birthCertificateAttachmentId: child.birthCertificateAttachmentId ?? undefined,
+      enrollmentAttachmentId: child.enrollmentAttachmentId ?? undefined,
       notes: child.notes || undefined
     }));
 
@@ -709,8 +891,9 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
       // disabled (dropped from .value) and the server ignores them anyway.
       charityId: !this.editMode && this.isHQ ? family.charityId : undefined,
       code: this.editMode ? undefined : (family.code || undefined),
-      headOfFamily: guardianName,
+      headOfFamily: provider.fullName,
       cityVillage: family.cityVillage,
+      countryId: family.countryId,
       regionId: family.regionId,
       centerId: family.centerId,
       nearBy: family.nearBy || undefined,
@@ -723,6 +906,7 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
       housingFlatId: family.housingFlatId,
       notes: family.notes || undefined,
       provider,
+      providers,
       orphans
     };
 
@@ -768,10 +952,10 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
   /** 400 shapes from HousingProjectsController: { message } (business refusal, literal
    *  Arabic §11.U.3 text) or { message, errors: { field: [messages] } } (validator).
    *  Review 2026-08-24: validator keys are also FLAGGED onto the live controls —
-   *  Provider.* → the guardian block (reopened so the flagged fields are visible),
-   *  bare family fields → familyForm. Orphans[i].* keys have no live control (rows are
-   *  captured state) — they surface via the toast; the row re-opens from the grid.
-   *  Mirrors the 6-8 report form's errors-map pattern. */
+   *  Provider.* → the guardian entry block (reopened so the flagged fields are visible),
+   *  bare family fields → familyForm. Orphans[i].* and Providers[i].* keys have no live
+   *  control (rows are captured state) — they surface via the toast; the row re-opens
+   *  from the grid. Mirrors the 6-8 report form's errors-map pattern. */
   private handleSaveError(err: any): void {
     const body = err?.error;
     if (body?.errors && typeof body.errors === 'object') {
@@ -797,7 +981,7 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
         control?.setErrors({ server: messages[0] });
         control?.markAsTouched();
         this.guardianSaved = false; // reopen the block so the flagged fields are visible
-      } else if (!key.startsWith('Orphans[')) {
+      } else if (!key.startsWith('Orphans[') && !key.startsWith('Providers[')) {
         const control = this.familyForm.get(this.toCamelKey(key));
         control?.setErrors({ server: messages[0] });
         control?.markAsTouched();
@@ -847,7 +1031,7 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
     return '';
   }
 
-  // ==================== TRACK BY ====================
+  // ==================== TRACK BY + SELECT2 OPTION BUILD ====================
 
   trackByOption(index: number, option: DropdownOption): number | string {
     return option.id;
@@ -861,7 +1045,18 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
     return index;
   }
 
-  trackByStaticValue(index: number, option: { value: string; labelKey: string }): string {
-    return option.value;
+  trackByGuardianIndex(index: number): number {
+    return index;
+  }
+
+  /** Closed-set → select2 options (translated snapshot; ids are the Arabic literals the
+   *  server stores — drop-down.toOptionId keeps non-numeric ids verbatim). */
+  private rebuildTranslatedOptions(): void {
+    this.mainRelationSelectOptions = HOUSING_MAIN_RELATIONS.map(
+      option => ({ id: option.value, name: this.translate.instant(option.labelKey) }));
+    this.genderSelectOptions = HOUSING_CHILD_GENDERS.map(
+      option => ({ id: option.value, name: this.translate.instant(option.labelKey) }));
+    this.phoneBelongsToSelectOptions = HOUSING_PHONE_BELONGS_TO.map(
+      option => ({ id: option.value, name: this.translate.instant(option.labelKey) }));
   }
 }

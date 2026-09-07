@@ -1,5 +1,6 @@
 using AutoMapper;
 using FluentValidation;
+using Framework.Identity.Data.Services.Interfaces;
 using IIROSA.Application.DTOs.IncomingOutgoing;
 using IIROSA.Application.Interfaces;
 using IIROSA.Domain.Entities;
@@ -36,8 +37,7 @@ public class IncomingService : IIncomingService
     private readonly IIncomingRepository _incomingRepository;
     private readonly IIncomingEmployeeRepository _employeeRepository;
     private readonly IDepartmentRepository _departmentRepository;
-    private readonly IOutgoingRepository _outgoingRepository;
-    private readonly IEmployeeService _employeeService;
+    private readonly IUserAppServiceExtended _userAppService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly ILogger<IncomingService> _logger;
@@ -49,8 +49,7 @@ public class IncomingService : IIncomingService
         IIncomingRepository incomingRepository,
         IIncomingEmployeeRepository employeeRepository,
         IDepartmentRepository departmentRepository,
-        IOutgoingRepository outgoingRepository,
-        IEmployeeService employeeService,
+        IUserAppServiceExtended userAppService,
         IUnitOfWork unitOfWork,
         IMapper mapper,
         ILogger<IncomingService> logger,
@@ -61,8 +60,7 @@ public class IncomingService : IIncomingService
         _incomingRepository = incomingRepository;
         _employeeRepository = employeeRepository;
         _departmentRepository = departmentRepository;
-        _outgoingRepository = outgoingRepository;
-        _employeeService = employeeService;
+        _userAppService = userAppService;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _logger = logger;
@@ -133,7 +131,7 @@ public class IncomingService : IIncomingService
     public async Task<IncomingDto> CreateAsync(CreateIncomingDto dto)
     {
         await _createValidator.ValidateAndThrowAsync(dto);
-        await EnsureReferencesExistAsync(dto.DepartmentId, dto.AssignedUserId, dto.OutgoingId);
+        await EnsureReferencesExistAsync(dto.DepartmentId, dto.AssignedUserId);
 
         var year = dto.Date!.Value.Year;
         // A caller with no charity claim creates an HQ-owned (NULL-charity) letter —
@@ -167,7 +165,6 @@ public class IncomingService : IIncomingService
             LetterDescription = dto.LetterDescription,
             FK_DepartmentId = dto.DepartmentId,
             FK_UserId = dto.AssignedUserId,
-            OutgoingId = dto.OutgoingId,
             UploadedFileId = dto.UploadedFileId,
             FK_CharityId = charityId
         };
@@ -209,7 +206,7 @@ public class IncomingService : IIncomingService
     public async Task<IncomingDto> UpdateAsync(Guid id, UpdateIncomingDto dto)
     {
         await _updateValidator.ValidateAndThrowAsync(dto);
-        await EnsureReferencesExistAsync(dto.DepartmentId, dto.AssignedUserId, dto.OutgoingId);
+        await EnsureReferencesExistAsync(dto.DepartmentId, dto.AssignedUserId);
 
         var incoming = await _incomingRepository.GetWithDetailsAsync(id);
         if (incoming == null || !IsWithinCallerScope(incoming))
@@ -237,7 +234,6 @@ public class IncomingService : IIncomingService
         incoming.LetterDescription = dto.LetterDescription;
         incoming.FK_DepartmentId = dto.DepartmentId;
         incoming.FK_UserId = dto.AssignedUserId;
-        incoming.OutgoingId = dto.OutgoingId;
         incoming.UploadedFileId = dto.UploadedFileId;
 
         _incomingRepository.Update(incoming);
@@ -444,12 +440,12 @@ public class IncomingService : IIncomingService
     }
 
     /// <summary>
-    /// FK existence checks (§21.S.2 / §21.U.4): a bogus department, employee or reply-to
-    /// outgoing letter is a field-flagging 400 (ValidationException → the controller's
-    /// errors map), never an FK-constraint 500. The reply-to letter must also sit inside
-    /// the caller's charity when the caller is pinned to one.
+    /// FK existence checks (§21.S.2 / §21.U.4): a bogus department or assignee is a
+    /// field-flagging 400 (ValidationException → the controller's errors map), never an
+    /// FK-constraint 500. The assignee is an identity user (الموظف المناط به) — validated
+    /// against the users store, not the employee register.
     /// </summary>
-    private async Task EnsureReferencesExistAsync(int? departmentId, Guid? assignedUserId, Guid? outgoingId)
+    private async Task EnsureReferencesExistAsync(int? departmentId, Guid? assignedUserId)
     {
         var failures = new List<FluentValidation.Results.ValidationFailure>();
 
@@ -459,25 +455,10 @@ public class IncomingService : IIncomingService
                 nameof(CreateIncomingDto.DepartmentId), "Routing department does not exist"));
         }
 
-        if (assignedUserId.HasValue && await _employeeService.GetEmployeeByIdAsync(assignedUserId.Value) == null)
+        if (assignedUserId.HasValue && await _userAppService.GetUserDetailAsync(assignedUserId.Value) == null)
         {
             failures.Add(new FluentValidation.Results.ValidationFailure(
                 nameof(CreateIncomingDto.AssignedUserId), "Assigned employee does not exist"));
-        }
-
-        if (outgoingId.HasValue)
-        {
-            var outgoing = await _outgoingRepository.GetWithDetailsAsync(outgoingId.Value);
-            if (outgoing == null)
-            {
-                failures.Add(new FluentValidation.Results.ValidationFailure(
-                    nameof(CreateIncomingDto.OutgoingId), "The outgoing letter being replied to does not exist"));
-            }
-            else if (_currentUser.CharityId.HasValue && outgoing.FK_CharityId != _currentUser.CharityId.Value)
-            {
-                failures.Add(new FluentValidation.Results.ValidationFailure(
-                    nameof(CreateIncomingDto.OutgoingId), "The outgoing letter being replied to is outside the caller's charity"));
-            }
         }
 
         if (failures.Count > 0)

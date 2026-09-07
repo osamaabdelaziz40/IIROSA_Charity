@@ -76,25 +76,14 @@
       </div>
 
       <div class="row">
-        <!-- Assigned Employee (Required) -->
+        <!-- Assigned User (Required) -->
         <div class="col-md-6">
           <app-drop-down
             [fg]="letterForm"
             fcn="assignedUserId"
             [label]="'incomingOutgoing.assignedEmployee'"
             [placeholder]="'incomingOutgoing.selectEmployee' | translate"
-            [initialData]="employeeOptions">
-          </app-drop-down>
-        </div>
-
-        <!-- Reply To Outgoing (Required) -->
-        <div class="col-md-6">
-          <app-drop-down
-            [fg]="letterForm"
-            fcn="outgoingId"
-            [label]="'incomingOutgoing.replyToOutgoing'"
-            [placeholder]="'incomingOutgoing.selectOutgoingLetter' | translate"
-            [initialData]="outgoingLetterOptions">
+            [initialData]="userOptions">
           </app-drop-down>
         </div>
       </div>

@@ -770,3 +770,75 @@ public class UpdateJobDto
     public bool? IsActive { get; set; }
     public int? SortOrder { get; set; }
 }
+
+/// <summary>
+/// Housing building DTOs (UC-HOU-05 · §11.S.2 رقم العماره) — the building title lives in
+/// NameAr/NameEn; Description carries BuildingDescription.
+/// </summary>
+public class HousingBuildingDto : LookupDto
+{
+    public int? BuildingNumber { get; set; }
+    public string? BuildingAddress { get; set; }
+}
+
+public class CreateHousingBuildingDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public int? BuildingNumber { get; set; }
+    public string? BuildingAddress { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateHousingBuildingDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public int? BuildingNumber { get; set; }
+    public string? BuildingAddress { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+/// <summary>
+/// Housing flat DTOs (UC-HOU-05 · §11.S.2 رقم الشقه) — the flat's display name (its
+/// number as text) lives in NameAr/NameEn; Number/SizeInMtr carry it numerically.
+/// </summary>
+public class HousingFlatDto : LookupDto
+{
+    public int? Number { get; set; }
+    public int? SizeInMtr { get; set; }
+    public int BuildingId { get; set; }
+    public string? BuildingName { get; set; }
+}
+
+public class CreateHousingFlatDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public int? Number { get; set; }
+    public int? SizeInMtr { get; set; }
+    public int BuildingId { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateHousingFlatDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public int? Number { get; set; }
+    public int? SizeInMtr { get; set; }
+    public int? BuildingId { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}

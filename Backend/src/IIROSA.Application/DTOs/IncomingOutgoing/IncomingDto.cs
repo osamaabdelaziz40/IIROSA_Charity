@@ -20,8 +20,6 @@ public class IncomingDto
     public string? DepartmentName { get; set; }
     public Guid? AssignedUserId { get; set; }
     public string? AssignedUserName { get; set; }
-    public Guid? OutgoingId { get; set; }
-    public string? OutgoingLetterNumber { get; set; }
     public Guid? UploadedFileId { get; set; }
     public string? UploadedFileName { get; set; }
     public Guid? CharityId { get; set; }
@@ -43,7 +41,6 @@ public class CreateIncomingDto
     public string Subject { get; set; } = string.Empty;
     public string? Status { get; set; }
     public Guid? AssignedUserId { get; set; }
-    public Guid? OutgoingId { get; set; }
     public string? LetterDescription { get; set; }
     public Guid? UploadedFileId { get; set; }
 }
@@ -61,7 +58,6 @@ public class UpdateIncomingDto
     public string Subject { get; set; } = string.Empty;
     public string? Status { get; set; }
     public Guid? AssignedUserId { get; set; }
-    public Guid? OutgoingId { get; set; }
     public string? LetterDescription { get; set; }
     public Guid? UploadedFileId { get; set; }
 }

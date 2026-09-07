@@ -47,6 +47,30 @@ public class HqTransfersController : ApiController
     }
 
     /// <summary>
+    /// Export the §22.S.1 register to Excel — the list read's scope rules (the caller's
+    /// country claim, pinned in the service), every matching row: paging is ignored.
+    /// Literal route beside {id:guid} — literals outrank parameters (max-amount precedent).
+    /// </summary>
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportHqTransfers([FromQuery] HqTransferFilterDto filter)
+    {
+        try
+        {
+            var excelBytes = await _transferService.ExportHqTransfersToExcelAsync(filter);
+
+            return File(
+                excelBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"hq-transfers_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
+        }
+        catch (Exception)
+        {
+            // The service layer already logs at Error and rethrows — no duplicate here
+            return StatusCode(500, new { message = "An error occurred while exporting HQ transfers" });
+        }
+    }
+
+    /// <summary>
     /// Get one HQ transfer with resolved lookup names (UC-TRF-03: view). The {id:guid}
     /// constraint keeps the literal sibling routes (max-amount, 17-6/17-7) unambiguous.
     /// </summary>

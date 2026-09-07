@@ -691,39 +691,6 @@ public class SeasonalAidController : ControllerBase
 
     #endregion
 
-    #region Charity Assignment (UC-9.11)
-
-    /// <summary>
-    /// Assign campaign to charity (UC-9.11)
-    /// </summary>
-    [HttpPut("campaigns/{id}/charity")]
-    [Authorize(Roles = "SuperAdmin,Admin")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult> AssignCampaignToCharity(Guid id, [FromBody] AssignCharityDto dto)
-    {
-        try
-        {
-            await _seasonalAidService.AssignCampaignToCharityAsync(id, dto.CharityId);
-            return Ok(new { message = "Campaign assigned to charity successfully" });
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error assigning campaign to charity: {Id}", id);
-            return StatusCode(500, new { message = "Error assigning campaign to charity", error = ex.Message });
-        }
-    }
-
-    #endregion
-
     #region Helper Methods
 
     /// <summary>
@@ -770,16 +737,6 @@ public class SetBudgetDto
     public decimal PerFamilyAllocation { get; set; }
 
     public string? DonorName { get; set; }
-}
-
-//public class AssignCharityDto
-//{
-//    public Guid? CharityId { get; set; }
-//}
-
-public class AssignCharityDto
-{
-    public Guid? CharityId { get; set; }
 }
 
 #endregion

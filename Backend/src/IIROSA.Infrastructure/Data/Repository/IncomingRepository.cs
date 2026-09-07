@@ -48,7 +48,6 @@ public class IncomingRepository : Repository<Incoming>, IIncomingRepository
             .Include(i => i.Department)
             .Include(i => i.UploadedFile)
             .Include(i => i.AssignedUser)
-            .Include(i => i.OutgoingLetter)
             .Include(i => i.Charity)
             .FirstOrDefaultAsync(i => i.Id == id && !i.IsDeleted);
     }

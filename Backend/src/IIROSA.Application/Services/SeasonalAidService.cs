@@ -66,10 +66,10 @@ public class SeasonalAidService : ISeasonalAidService
     #region Caller scoping
 
     /// <summary>
-    /// Copies the filter and pins it to the caller's tenancy: a charity user sees only their own
-    /// campaigns whatever they ask for; a head-office user keeps any explicit charity id but is
-    /// pinned to their own country when the token carries one. An unauthenticated or unscopeable
-    /// caller gets a filter that matches nothing.
+    /// Copies the filter and pins it to the caller's country when the token carries one.
+    /// Campaigns are not charity-owned — they are a shared, country-scoped catalogue — so the
+    /// only tenancy dimension left is the country claim. An unauthenticated caller gets a
+    /// filter that matches nothing.
     /// </summary>
     private SeasonalAidCampaignFilterDto ApplyCallerScope(SeasonalAidCampaignFilterDto filter)
     {
@@ -82,7 +82,6 @@ public class SeasonalAidService : ISeasonalAidService
             CountryId = filter.CountryId,
             RegionId = filter.RegionId,
             CenterId = filter.CenterId,
-            CharityId = filter.CharityId,
             StartDateFrom = filter.StartDateFrom,
             StartDateTo = filter.StartDateTo,
             EndDateFrom = filter.EndDateFrom,
@@ -96,25 +95,6 @@ public class SeasonalAidService : ISeasonalAidService
         if (!_currentUser.IsAuthenticated)
         {
             return DenyAll(scoped, "request is not authenticated");
-        }
-
-        var callerCharityId = _currentUser.CharityId;
-        if (callerCharityId.HasValue)
-        {
-            if (filter.CharityId.HasValue && filter.CharityId != callerCharityId)
-            {
-                _logger.LogWarning(
-                    "User {UserId} of charity {CallerCharityId} asked for charity {RequestedCharityId}; scope forced to their own charity",
-                    _currentUser.UserId, callerCharityId, filter.CharityId);
-            }
-
-            scoped.CharityId = callerCharityId;
-            return scoped;
-        }
-
-        if (!_currentUser.IsHeadOffice)
-        {
-            return DenyAll(scoped, "caller has no charity claim and holds no head-office role");
         }
 
         if (_currentUser.CountryId.HasValue)
@@ -135,27 +115,19 @@ public class SeasonalAidService : ISeasonalAidService
     private SeasonalAidCampaignFilterDto DenyAll(SeasonalAidCampaignFilterDto filter, string reason)
     {
         _logger.LogWarning("Seasonal aid query denied for user {UserId}: {Reason}", _currentUser.UserId, reason);
-        filter.CharityId = Guid.Empty;
+        // No campaign can carry this id — country ids are positive lookup identities.
+        filter.CountryId = -1;
         return filter;
     }
 
     /// <summary>
-    /// True when the campaign belongs to the caller's tenancy: their charity for a charity-bound
-    /// caller, their country (when the token carries one) for a head-office caller.
+    /// True when the campaign is inside the caller's country scope. Campaigns carry no charity,
+    /// so the only narrowing dimension is the country claim; a caller without one sees the
+    /// shared catalogue.
     /// </summary>
     private bool IsCampaignVisibleToCaller(SeasonalAidCampaign campaign)
     {
         if (!_currentUser.IsAuthenticated)
-        {
-            return false;
-        }
-
-        if (_currentUser.CharityId.HasValue)
-        {
-            return campaign.CharityId == _currentUser.CharityId;
-        }
-
-        if (!_currentUser.IsHeadOffice)
         {
             return false;
         }
@@ -186,12 +158,13 @@ public class SeasonalAidService : ISeasonalAidService
     }
 
     /// <summary>
-    /// The charity a campaign's families must belong to: the campaign's own charity when HQ
-    /// assigned one, otherwise the charity-bound caller's own charity.
+    /// The charity whose families are in scope for the caller: their own charity for a
+    /// charity-bound caller, every charity for a head-office caller. Campaigns carry no
+    /// charity, so the scope comes from the caller alone.
     /// </summary>
-    private Guid? ResolveCampaignFamilyCharityId(SeasonalAidCampaign campaign)
+    private Guid? ResolveCallerFamilyCharityId()
     {
-        return campaign.CharityId ?? _currentUser.CharityId;
+        return _currentUser.CharityId;
     }
 
     /// <summary>
@@ -230,22 +203,9 @@ public class SeasonalAidService : ISeasonalAidService
             throw new InvalidOperationException($"Campaign with name '{dto.Name}' already exists");
         }
 
-        // Tenancy: a charity-bound caller owns whatever they create; a head-office caller keeps
-        // the charity they named. The country is defaulted from the caller's claim and pinned
-        // to it when the token carries one.
-        Guid? charityId = dto.CharityId;
-        if (_currentUser.CharityId.HasValue)
-        {
-            if (dto.CharityId.HasValue && dto.CharityId != _currentUser.CharityId)
-            {
-                _logger.LogWarning(
-                    "User {UserId} of charity {CallerCharityId} tried to create a campaign for charity {RequestedCharityId}; owner forced to their own charity",
-                    _currentUser.UserId, _currentUser.CharityId, dto.CharityId);
-            }
-
-            charityId = _currentUser.CharityId;
-        }
-
+        // Tenancy: the country is defaulted from the caller's claim and pinned to it when the
+        // token carries one. Campaigns carry no charity — they are shared, country-scoped
+        // programmes.
         int? countryId = dto.CountryId;
         if (_currentUser.CountryId.HasValue)
         {
@@ -273,7 +233,6 @@ public class SeasonalAidService : ISeasonalAidService
             CountryId = countryId,
             RegionId = dto.RegionId,
             CenterId = dto.CenterId,
-            CharityId = charityId,
             MaximumFamilies = dto.MaximumFamilies,
             FamilyType = dto.FamilyType,
             MinChildrenAge = dto.MinChildrenAge,
@@ -401,7 +360,7 @@ public class SeasonalAidService : ISeasonalAidService
         int registeredCount = 0;
         decimal totalAllocation = 0;
         var beneficiaries = new List<SeasonalAidBeneficiary>();
-        var familyCharityId = ResolveCampaignFamilyCharityId(campaign);
+        var familyCharityId = ResolveCallerFamilyCharityId();
 
         foreach (var familyId in dto.FamilyIds)
         {
@@ -511,7 +470,7 @@ public class SeasonalAidService : ISeasonalAidService
             }
         }
 
-        var familyCharityId = ResolveCampaignFamilyCharityId(campaign);
+        var familyCharityId = ResolveCallerFamilyCharityId();
         var allocationAmount = dto.AllocationAmount ?? campaign.PerFamilyAllocation;
         var currency = dto.Currency ?? campaign.BudgetCurrency;
 
@@ -659,9 +618,9 @@ public class SeasonalAidService : ISeasonalAidService
 
         var campaign = await GetScopedCampaignAsync(filter.CampaignId, "list eligible families");
 
-        // The charity whose families are in scope: the campaign's own charity, else the
-        // charity-bound caller's. A charity user cannot widen this by passing a filter value.
-        var scopedCharityId = ResolveCampaignFamilyCharityId(campaign);
+        // The charity whose families are in scope: the charity-bound caller's own charity.
+        // A charity user cannot widen this by passing a filter value.
+        var scopedCharityId = ResolveCallerFamilyCharityId();
         if (scopedCharityId.HasValue)
         {
             filter.CharityId = scopedCharityId;
@@ -864,7 +823,6 @@ public class SeasonalAidService : ISeasonalAidService
             countryId: scoped.CountryId,
             regionId: scoped.RegionId,
             centerId: scoped.CenterId,
-            charityId: scoped.CharityId,
             startDateFrom: scoped.StartDateFrom,
             startDateTo: scoped.StartDateTo,
             endDateFrom: scoped.EndDateFrom,
@@ -889,7 +847,6 @@ public class SeasonalAidService : ISeasonalAidService
             DistributedBeneficiariesCount = c.DistributedBeneficiariesCount,
             IsActive = c.IsActive,
             IsClosed = c.IsClosed,
-            CharityName = c.Charity?.Name,
             CountryName = c.Country?.Name
         });
 
@@ -902,12 +859,8 @@ public class SeasonalAidService : ISeasonalAidService
 
         var campaigns = await _campaignRepository.GetActiveCampaignsAsync();
 
-        // A charity-bound caller only sees their own campaigns.
-        if (_currentUser.CharityId.HasValue)
-        {
-            campaigns = campaigns.Where(c => c.CharityId == _currentUser.CharityId);
-        }
-        else if (_currentUser.IsAuthenticated && _currentUser.IsHeadOffice && _currentUser.CountryId.HasValue)
+        // Country scope when the token carries one — campaigns are a shared catalogue.
+        if (_currentUser.IsAuthenticated && _currentUser.CountryId.HasValue)
         {
             campaigns = campaigns.Where(c => !c.CountryId.HasValue || c.CountryId == _currentUser.CountryId);
         }
@@ -927,7 +880,6 @@ public class SeasonalAidService : ISeasonalAidService
             DistributedBeneficiariesCount = c.DistributedBeneficiariesCount,
             IsActive = c.IsActive,
             IsClosed = c.IsClosed,
-            CharityName = c.Charity?.Name,
             CountryName = c.Country?.Name
         });
     }
@@ -1072,14 +1024,8 @@ public class SeasonalAidService : ISeasonalAidService
             throw new InvalidOperationException("Cannot modify a closed campaign");
         }
 
-        // Tenancy is preserved on update: a charity-bound caller keeps their own charity and
-        // the country follows the caller's claim exactly as on create.
-        Guid? charityId = dto.CharityId ?? campaign.CharityId;
-        if (_currentUser.CharityId.HasValue)
-        {
-            charityId = _currentUser.CharityId;
-        }
-
+        // The country follows the caller's claim exactly as on create; campaigns carry no
+        // charity, so there is no charity tenancy to preserve.
         int? countryId = dto.CountryId ?? campaign.CountryId;
         if (_currentUser.CountryId.HasValue)
         {
@@ -1110,7 +1056,6 @@ public class SeasonalAidService : ISeasonalAidService
         campaign.CountryId = countryId;
         campaign.RegionId = dto.RegionId;
         campaign.CenterId = dto.CenterId;
-        campaign.CharityId = charityId;
         campaign.MaximumFamilies = dto.MaximumFamilies;
         campaign.FamilyType = dto.FamilyType;
         campaign.MinChildrenAge = dto.MinChildrenAge;
@@ -1283,29 +1228,6 @@ public class SeasonalAidService : ISeasonalAidService
 
     #endregion
 
-    #region UC-9.11: Assign Campaign to Charity
-
-    public async Task AssignCampaignToCharityAsync(Guid campaignId, Guid? charityId)
-    {
-        _logger.LogInformation("Assigning campaign {CampaignId} to charity {CharityId}", campaignId, charityId);
-
-        var campaign = await GetScopedCampaignAsync(campaignId, "assign charity");
-
-        if (campaign.IsClosed)
-        {
-            throw new InvalidOperationException("Cannot modify charity assignment for a closed campaign");
-        }
-
-        campaign.CharityId = charityId;
-
-        _campaignRepository.Update(campaign);
-        await _unitOfWork.SaveChangesAsync();
-
-        _logger.LogInformation("Campaign assigned to charity successfully: {CampaignId}", campaignId);
-    }
-
-    #endregion
-
     #region Additional Helper Methods
 
     public async Task<SeasonalAidCampaignDto?> GetCampaignByIdAsync(Guid id)
@@ -1419,8 +1341,6 @@ public class SeasonalAidService : ISeasonalAidService
             RegionName = campaign.Region != null ? (campaign.Region.NameAr ?? campaign.Region.NameEn) : null,
             CenterId = campaign.CenterId,
             CenterName = campaign.Center != null ? (campaign.Center.NameAr ?? campaign.Center.NameEn) : null,
-            CharityId = campaign.CharityId,
-            CharityName = campaign.Charity?.Name,
             MaximumFamilies = campaign.MaximumFamilies,
             FamilyType = campaign.FamilyType,
             MinChildrenAge = campaign.MinChildrenAge,

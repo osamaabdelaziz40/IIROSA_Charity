@@ -27,9 +27,6 @@ public class CreateIncomingValidator : AbstractValidator<CreateIncomingDto>
         RuleFor(x => x.AssignedUserId)
             .NotEmpty().WithMessage("Assigned employee is required");
 
-        RuleFor(x => x.OutgoingId)
-            .NotEmpty().WithMessage("The outgoing letter being replied to is required");
-
         RuleFor(x => x.LetterDescription)
             .NotEmpty().WithMessage("Letter description is required")
             .MaximumLength(4000).WithMessage("Letter description cannot exceed 4000 characters");
@@ -77,9 +74,6 @@ public class UpdateIncomingValidator : AbstractValidator<UpdateIncomingDto>
 
         RuleFor(x => x.AssignedUserId)
             .NotEmpty().WithMessage("Assigned employee is required");
-
-        RuleFor(x => x.OutgoingId)
-            .NotEmpty().WithMessage("The outgoing letter being replied to is required");
 
         RuleFor(x => x.LetterDescription)
             .NotEmpty().WithMessage("Letter description is required")

@@ -112,6 +112,12 @@ public interface IFamilyService
     Task<(IEnumerable<FamilyListDto> Items, int TotalCount)> GetFamiliesAsync(FamilyFilterDto filter, Guid? userCharityId, string? userRole);
 
     /// <summary>
+    /// Export the family list to Excel — the same query and scoping as
+    /// <see cref="GetFamiliesAsync"/> with the page widened to every matching row.
+    /// </summary>
+    Task<byte[]> ExportFamiliesToExcelAsync(FamilyFilterDto filter, Guid? userCharityId, string? userRole);
+
+    /// <summary>
     /// The follow-up report (UC-FAM-11 متابعة إدخالات الأسر): what was created or updated on the
     /// family files for one calendar day — a pure read over the inherited audit columns, nothing
     /// is stored. A <c>Charity</c>-role caller is scoped server-side to its own charity's

@@ -1,0 +1,197 @@
+- generic [ref=f1e32]:
+  - navigation [ref=f1e33]:
+    - button "" [ref=f1e34] [cursor=pointer]
+    - list [ref=f1e36]:
+      - listitem [ref=f1e37]:
+        - link "English " [ref=f1e38] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f1e39]: 
+          - text: English 
+      - listitem [ref=f1e40]:
+        - link "" [ref=f1e41] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f1e43]:
+        - link "" [ref=f1e44] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f1e47]:
+        - button [ref=f1e48] [cursor=pointer]:
+          - generic [ref=f1e49]:
+            - text: Welcome Osama Abdelaziz
+            - img "..." [ref=f1e50]
+          - text: 
+  - complementary [ref=f1e51]:
+    - generic [ref=f1e56]:
+      - text: 
+      - navigation [ref=f1e57]:
+        - link [ref=f1e59] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f1e60]
+        - paragraph [ref=f1e61]: Website Elements
+        - list [ref=f1e62]:
+          - listitem [ref=f1e63]:
+            - link " Home Page (current) " [ref=f1e64] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f1e65]: 
+              - generic [ref=f1e66]: Home Page
+              - generic [ref=f1e67]: (current)
+              - text: 
+            - list [ref=f1e68]:
+              - listitem [ref=f1e69]:
+                - link "Home" [ref=f1e70] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f1e71]:
+            - link " Settings " [ref=f1e72] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=f1e73]: 
+              - generic [ref=f1e74]: Settings
+              - text: 
+          - listitem [ref=f1e75]:
+            - link " Technical Support " [ref=f1e76] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f1e77]: 
+              - generic [ref=f1e78]: Technical Support
+              - text: 
+          - listitem [ref=f1e79]:
+            - link " Missions " [ref=f1e80] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f1e81]: 
+              - generic [ref=f1e82]: Missions
+              - text: 
+          - listitem [ref=f1e83]:
+            - link " Orphan Payments " [ref=f1e84] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f1e85]: 
+              - generic [ref=f1e86]: Orphan Payments
+              - text: 
+          - listitem [ref=f1e87]:
+            - link " Office Projects " [ref=f1e88] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f1e89]: 
+              - generic [ref=f1e90]: Office Projects
+              - text: 
+          - listitem [ref=f1e91]:
+            - link " Housing Projects " [ref=f1e92] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f1e93]: 
+              - generic [ref=f1e94]: Housing Projects
+              - text: 
+          - listitem [ref=f1e95]:
+            - link " Seasonal Aid " [ref=f1e96] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f1e97]: 
+              - generic [ref=f1e98]: Seasonal Aid
+              - text: 
+          - listitem [ref=f1e99]:
+            - link " Incoming & Outgoing " [ref=f1e100] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f1e101]: 
+              - generic [ref=f1e102]: Incoming & Outgoing
+              - text: 
+            - list [ref=f1e692]:
+              - listitem [ref=f1e693]:
+                - link "Incoming Letters" [ref=f1e694] [cursor=pointer]:
+                  - /url: "#/incoming-outgoing/incoming"
+              - listitem [ref=f1e695]:
+                - link "Outgoing Letters" [ref=f1e696] [cursor=pointer]:
+                  - /url: "#/incoming-outgoing/outgoing"
+              - listitem [ref=f1e697]:
+                - link "Attach Employees to Incoming Letter" [ref=f1e698] [cursor=pointer]:
+                  - /url: "#/incoming-outgoing/export/incoming"
+              - listitem [ref=f1e699]:
+                - link "Attach Orphan Reports to Outgoing Letter" [ref=f1e700] [cursor=pointer]:
+                  - /url: "#/incoming-outgoing/export/outgoing"
+              - listitem [ref=f1e701]:
+                - link "Orphans by Outgoing Letter Report" [ref=f1e702] [cursor=pointer]:
+                  - /url: "#/incoming-outgoing/export/outgoing-orphans"
+          - listitem [ref=f1e103]:
+            - link " Families " [ref=f1e104] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f1e105]: 
+              - generic [ref=f1e106]: Families
+              - text: 
+          - listitem [ref=f1e107]:
+            - link " Reports " [ref=f1e108] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f1e109]: 
+              - generic [ref=f1e110]: Reports
+              - text: 
+          - listitem [ref=f1e111]:
+            - link " General Cheques " [ref=f1e112] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f1e113]: 
+              - generic [ref=f1e114]: General Cheques
+              - text: 
+          - listitem [ref=f1e115]:
+            - link " Periodic Orphan Reports " [ref=f1e116] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f1e117]: 
+              - generic [ref=f1e118]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=f1e119]:
+            - link " Financial Transfers " [ref=f1e120] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f1e121]: 
+              - generic [ref=f1e122]: Financial Transfers
+              - text: 
+  - main [ref=f1e123]:
+    - generic [ref=f1e804]:
+      - navigation "breadcrumb" [ref=f1e806]:
+        - list [ref=f1e807]:
+          - listitem [ref=f1e808]:
+            - link "Home" [ref=f1e809] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=f1e810]:
+            - text: /
+            - link "Outgoing Letters" [ref=f1e811] [cursor=pointer]:
+              - /url: "#/incoming-outgoing/outgoing"
+          - listitem [ref=f1e812]:
+            - text: /
+            - generic [ref=f1e813]: Add Outgoing Letter
+      - generic [ref=f1e815]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f1e816]:
+          - generic [ref=f1e817]:
+            - generic [ref=f1e818]: 
+            - generic [ref=f1e819]:
+              - heading "Add Outgoing Letter" [level=3] [ref=f1e820]
+              - paragraph [ref=f1e821]: Fill in the outgoing letter details below
+          - button "Cancel" [ref=f1e823] [cursor=pointer]
+      - generic [ref=f1e826]:
+        - generic [ref=f1e827]:
+          - generic [ref=f1e829]:
+            - generic [ref=f1e830]: Serial
+            - textbox [ref=f1e831]
+          - generic [ref=f1e832]: Department *
+          - generic [ref=f1e838]:
+            - generic [ref=f1e839]: Received Date *
+            - textbox "Received Date *" [ref=f1e840]:
+              - /placeholder: ""
+        - generic [ref=f1e841]:
+          - generic [ref=f1e842]: Outgoing Category *
+          - generic [ref=f1e846]: In reply to incoming letter
+        - generic [ref=f1e853]:
+          - generic [ref=f1e854]: Subject *
+          - textbox "Subject *" [ref=f1e855]:
+            - /placeholder: Enter the letter subject
+        - generic [ref=f1e857]:
+          - generic [ref=f1e858]: Attached File
+          - generic [ref=f1e863]:
+            - generic [ref=f1e864]: 
+            - paragraph [ref=f1e865]: Drag & drop files here
+            - paragraph [ref=f1e866]: or
+            - generic [ref=f1e867] [cursor=pointer]:
+              - generic [ref=f1e868]: 
+              - text: Browse
+        - generic [ref=f1e871]:
+          - button " Cancel" [ref=f1e872] [cursor=pointer]:
+            - generic [ref=f1e873]: 
+            - text: Cancel
+          - button " Save" [ref=f1e874] [cursor=pointer]:
+            - generic [ref=f1e875]: 
+            - text: Save
+  - contentinfo [ref=f1e479]:
+    - generic [ref=f1e481]:
+      - paragraph [ref=f1e483]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f1e485]: Version 1.0.0

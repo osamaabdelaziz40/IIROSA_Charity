@@ -24,8 +24,6 @@ export interface SeasonalAidCampaign {
   regionName?: string | null;
   centerId?: number | null;
   centerName?: string | null;
-  charityId?: string | null;
-  charityName?: string | null;
   maximumFamilies?: number | null;
   familyType?: string | null;
   minChildrenAge?: number | null;
@@ -57,7 +55,6 @@ export interface SeasonalAidCampaignListItem {
   distributedBeneficiariesCount: number;
   isActive: boolean;
   isClosed: boolean;
-  charityName?: string | null;
   countryName?: string | null;
   completionPercentage: number;
 }
@@ -74,7 +71,6 @@ export interface CreateSeasonalAidCampaignRequest {
   countryId?: number | null;
   regionId?: number | null;
   centerId?: number | null;
-  charityId?: string | null;
   maximumFamilies?: number | null;
   familyType?: string | null;
   minChildrenAge?: number | null;
@@ -236,7 +232,6 @@ export interface SeasonalAidCampaignFilter {
   countryId?: number;
   regionId?: number;
   centerId?: number;
-  charityId?: string;
   startDateFrom?: string;
   startDateTo?: string;
   endDateFrom?: string;

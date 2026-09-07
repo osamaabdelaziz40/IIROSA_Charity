@@ -29,6 +29,8 @@ export interface CreateHousingFamilyRequest {
   headOfFamily?: string;
   /** القرية / الحي */
   cityVillage?: string;
+  /** البلد — drives the regions cascade (Countries lookup) */
+  countryId?: number;
   /** المنطقة /المحافظة — drives the centers cascade */
   regionId?: number;
   /** المركز/ المدينة */
@@ -51,17 +53,28 @@ export interface CreateHousingFamilyRequest {
   housingFlatId?: number;
   /** ملاحظات الباحث */
   notes?: string;
-  /** اضافة معيل — the guardian block */
+  /** اضافة معيل — the guardian block (row 1; mirrors providers[0] for the legacy wire) */
   provider: CreateHousingGuardianRequest;
+  /**
+   * §11.S.2 اضافة الاباء (AddNewParent() always): the full guardian set — several live
+   * guardians per housing family. providers[0] is mirrored onto `provider` above; the
+   * server treats `providers` as the source of truth when present. On the update (PUT
+   * projects/{id}) a row carrying an id updates that guardian, one without is added, and
+   * an existing guardian absent from the payload is soft-removed server-side.
+   */
+  providers?: CreateHousingGuardianRequest[];
   /** اضافة ابن — child blocks added from the client-side collection */
   orphans?: CreateHousingChildRequest[];
 }
 
 /**
- * §11.S.2 اضافة معيل — one guardian per housing family (the register has no
- * father/mother sections; the guardian is the family's Provider).
+ * §11.S.2 اضافة معيل — the guardian block (the register has no father/mother
+ * sections; guardians are the family's Providers). §11.S.2 اضافة الاباء allows several
+ * live guardians per family.
  */
 export interface CreateHousingGuardianRequest {
+  /** UC-HOU-04 edit-sync key — undefined on the create path */
+  id?: string;
   /** composed from أول/ثانى/ثالث/رباعي name parts */
   fullName: string;
   /** base CreateProviderDto requires it — carries the MainRelation literal (الاب/الام) */
@@ -131,6 +144,12 @@ export interface CreateHousingChildRequest {
   facultyName?: string;
   /** الموسسة التعليمية */
   schoolName?: string;
+  /** الصوره الشخصيه — attachment id (shared attachment component) */
+  photoAttachmentId?: string;
+  /** صوره شهاده الميلاد — attachment id */
+  birthCertificateAttachmentId?: string;
+  /** صوره إثبات القيد — attachment id */
+  enrollmentAttachmentId?: string;
   /** ملاحظات */
   notes?: string;
 }
@@ -204,6 +223,12 @@ export interface HousingChildDetail {
   profession?: string;
   departmentName?: string;
   facultyName?: string;
+  /** الصوره الشخصيه — attachment id */
+  photoAttachmentId?: string;
+  /** صوره شهاده الميلاد — attachment id */
+  birthCertificateAttachmentId?: string;
+  /** صوره إثبات القيد — attachment id */
+  enrollmentAttachmentId?: string;
 }
 
 /** The housing-family aggregate — FamilyDto lifted with the full Children set. */
@@ -215,6 +240,8 @@ export interface HousingFamilyDetail {
   familyType: string;
   headOfFamily: string;
   cityVillage?: string;
+  countryId?: number;
+  countryName?: string;
   regionId?: number;
   regionName?: string;
   centerId?: number;
@@ -235,7 +262,10 @@ export interface HousingFamilyDetail {
   orphansCount?: number;
   createdOn: string;
   updatedOn?: string;
+  /** primary guardian — first live row by CreatedOn/Id (legacy single-seat pick) */
   provider?: HousingGuardianDetail;
+  /** §11.S.2 اضافة الاباء — the full guardian set, primary first */
+  providers?: HousingGuardianDetail[];
   children: HousingChildDetail[];
 }
 

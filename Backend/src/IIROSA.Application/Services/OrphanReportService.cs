@@ -54,7 +54,7 @@ public class OrphanReportService : IOrphanReportService
             .Include(o => o.Family)
                 .ThenInclude(f => f!.Mother)
             .Include(o => o.Family)
-                .ThenInclude(f => f!.Provider)
+                .ThenInclude(f => f!.Providers)
             .Include(o => o.Family)
                 .ThenInclude(f => f!.Region)
             .Include(o => o.Family)
@@ -154,7 +154,12 @@ public class OrphanReportService : IOrphanReportService
                 dto.FamilyAddress = orphan.Family?.Address;
                 dto.FatherName = orphan.Family?.Father?.FullName;
                 dto.MotherName = orphan.Family?.Mother?.FullName;
-                dto.ProviderName = orphan.Family?.Provider?.FullName;
+                // §11.S.2 multi-guardian: PRIMARY guardian = first live row by CreatedOn/Id.
+                dto.ProviderName = orphan.Family?.Providers
+                    ?.Where(p => !p.IsDeleted)
+                    .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+                    .Select(p => p.FullName)
+                    .FirstOrDefault();
                 dto.FamilyPhone = orphan.Family?.PhoneNumber;
             }
 

@@ -44,14 +44,6 @@ public class SeasonalAidCampaignRepository : Repository<SeasonalAidCampaign>, IS
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<SeasonalAidCampaign>> GetByCharityAsync(Guid charityId)
-    {
-        return await IncludeNavigationProperties()
-            .Where(c => !c.IsDeleted && c.CharityId == charityId)
-            .OrderBy(c => c.StartDate)
-            .ToListAsync();
-    }
-
     public async Task<IEnumerable<SeasonalAidCampaign>> GetByCountryAsync(int countryId)
     {
         return await IncludeNavigationProperties()
@@ -129,11 +121,6 @@ public class SeasonalAidCampaignRepository : Repository<SeasonalAidCampaign>, IS
             query = query.Where(c => c.CenterId == filter.CenterId.Value);
         }
 
-        if (filter.CharityId.HasValue)
-        {
-            query = query.Where(c => c.CharityId == filter.CharityId.Value);
-        }
-
         // Apply date range filters
         if (filter.StartDateFrom.HasValue)
         {
@@ -192,7 +179,7 @@ public class SeasonalAidCampaignRepository : Repository<SeasonalAidCampaign>, IS
     public async Task<(IEnumerable<SeasonalAidCampaign> Items, int TotalCount)> GetFilteredPaginatedAsync(
         string? searchTerm = null, string? campaignType = null, bool? isActive = null,
         bool? isClosed = null, int? countryId = null, int? regionId = null,
-        int? centerId = null, Guid? charityId = null,
+        int? centerId = null,
         DateTime? startDateFrom = null, DateTime? startDateTo = null,
         DateTime? endDateFrom = null, DateTime? endDateTo = null,
         int pageNumber = 1, int pageSize = 10, string? sortBy = null, bool sortDescending = false)
@@ -206,7 +193,6 @@ public class SeasonalAidCampaignRepository : Repository<SeasonalAidCampaign>, IS
             CountryId = countryId,
             RegionId = regionId,
             CenterId = centerId,
-            CharityId = charityId,
             StartDateFrom = startDateFrom,
             StartDateTo = startDateTo,
             EndDateFrom = endDateFrom,
@@ -340,8 +326,7 @@ public class SeasonalAidCampaignRepository : Repository<SeasonalAidCampaign>, IS
         return _dbSet
             .Include(c => c.Country)
             .Include(c => c.Region)
-            .Include(c => c.Center)
-            .Include(c => c.Charity);
+            .Include(c => c.Center);
     }
 
     public System.Linq.IQueryable<SeasonalAidCampaign> IncludeBeneficiaries()
@@ -379,7 +364,7 @@ public class SeasonalAidCampaignRepository : Repository<SeasonalAidCampaign>, IS
     public async Task<(IEnumerable<SeasonalAidCampaign> Items, int TotalCount)> GetFilteredAsync(
         string? name = null, string? campaignType = null, bool? isActive = null,
         bool? isClosed = null, int? countryId = null, int? regionId = null,
-        int? centerId = null, Guid? charityId = null)
+        int? centerId = null)
     {
         var query = IncludeNavigationProperties()
             .Where(c => !c.IsDeleted);
@@ -404,9 +389,6 @@ public class SeasonalAidCampaignRepository : Repository<SeasonalAidCampaign>, IS
 
         if (centerId.HasValue)
             query = query.Where(c => c.CenterId == centerId.Value);
-
-        if (charityId.HasValue)
-            query = query.Where(c => c.CharityId == charityId.Value);
 
         var totalCount = await query.CountAsync();
         var items = await query

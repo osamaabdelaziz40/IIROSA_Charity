@@ -1,5 +1,5 @@
 import { Injectable, OnDestroy } from '@angular/core';
-import { BehaviorSubject, Observable, timer, Subscription } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, timer, Subscription } from 'rxjs';
 import { filter, switchMap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 
@@ -12,7 +12,11 @@ export class SessionTimeoutService implements OnDestroy {
   private countdownDuration: number = 60; // 60 seconds countdown in dialog
 
   private _showWarningDialog$ = new BehaviorSubject<number>(0);
-  private _sessionExpired$ = new BehaviorSubject<boolean>(false);
+  // Subject, not BehaviorSubject: an expired event must fire once to whoever is
+  // mounted (the handler lives in the authenticated layout), never replay to the
+  // layout that mounts after a re-login — that replay bounced freshly logged-in
+  // users straight back to /auth/login.
+  private _sessionExpired$ = new Subject<boolean>();
 
   public showWarningDialog$ = this._showWarningDialog$.asObservable();
   public sessionExpired$ = this._sessionExpired$.asObservable();

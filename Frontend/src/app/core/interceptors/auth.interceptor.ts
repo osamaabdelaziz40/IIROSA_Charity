@@ -78,22 +78,28 @@ export class AuthInterceptor implements HttpInterceptor {
   }
 
   private handle401Error(request: HttpRequest<unknown>) {
-    // Don't redirect if already on login page
-    if (!request.url.includes('/auth/login')) {
-      // Clear stored tokens and redirect to login
-      this.authService.logout().subscribe({
-        next: () => {
-          this.router.navigate(['/auth/login'], {
-            queryParams: { returnUrl: this.router.url }
-          });
-        },
-        error: () => {
-          // Navigate anyway even if logout fails
-          this.router.navigate(['/auth/login'], {
-            queryParams: { returnUrl: this.router.url }
-          });
-        }
-      });
+    // Any auth endpoint's own 401 must not re-enter this path: with an expired
+    // access token POST /auth/logout itself 401s, which recursed into another
+    // logout() (duplicate POSTs) and stacked nested returnUrl chains.
+    if (request.url.includes('/auth/')) {
+      return;
     }
+
+    // Clear stored tokens and redirect to login
+    this.authService.logout().subscribe({
+      next: () => this.navigateToLogin(),
+      error: () => this.navigateToLogin() // Navigate anyway even if logout fails
+    });
+  }
+
+  private navigateToLogin(): void {
+    // The login page must never become its own returnUrl — mid-redirect the
+    // router already reports /auth/login?..., which is how
+    // login?returnUrl=login?returnUrl=... chains formed.
+    const current = this.router.url;
+    const queryParams = current.startsWith('/auth/login')
+      ? {}
+      : { returnUrl: current };
+    this.router.navigate(['/auth/login'], { queryParams });
   }
 }

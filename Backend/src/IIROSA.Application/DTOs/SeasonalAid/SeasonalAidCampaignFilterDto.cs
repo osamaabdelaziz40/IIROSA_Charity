@@ -15,7 +15,6 @@ public class SeasonalAidCampaignFilterDto
     public int? CountryId { get; set; }
     public int? RegionId { get; set; }
     public int? CenterId { get; set; }
-    public Guid? CharityId { get; set; }
 
     // Date Range
     public DateTime? StartDateFrom { get; set; }

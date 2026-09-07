@@ -71,6 +71,47 @@ public class OrphanPaymentsController : ControllerBase
     }
 
     /// <summary>
+    /// Export payment groups to Excel — the §15.S.1 grid columns, every filtered row.
+    /// Same scope rules as the list read: charity callers stay orphan-scoped (UC-ORP-08).
+    /// </summary>
+    [HttpGet("export")]
+    [Authorize(Roles = "SuperAdmin,Admin,Accountant,FinancialOfficer,Charity")]
+    public async Task<IActionResult> ExportPaymentGroups([FromQuery] OrphanPaymentFilterDto filter)
+    {
+        try
+        {
+            // D4 fail-closed, as on the list read: a Charity token must be orphan-scoped
+            // with a parseable charity claim, else it gets nothing.
+            if (User.IsInRole("Charity") && (!filter.OrphanId.HasValue || GetUserCharityId() == null))
+            {
+                return Forbid();
+            }
+
+            var excelBytes = await _orphanPaymentService.ExportPaymentGroupsToExcelAsync(filter, GetUserCharityId(), GetUserRole());
+
+            _logger.LogInformation("Payment groups exported to Excel by {ExportedBy}", User.Identity?.Name);
+
+            return File(
+                excelBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"orphan-payments_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting payment groups to Excel");
+            return StatusCode(500, new { message = "Error exporting payment groups" });
+        }
+    }
+
+    /// <summary>
     /// UC-ORP-11 — the distinct batch numbers (رقم الحصة) in the caller's scope, most recent first.
     /// Feeds the orphan payment-details picker and the history dialog's batch filter.
     /// </summary>

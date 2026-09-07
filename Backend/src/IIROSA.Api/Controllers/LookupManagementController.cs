@@ -30,6 +30,7 @@ public class LookupManagementController : ControllerBase
     private readonly IOfficeProjectTypeService _officeProjectTypeService;
     private readonly IHousingBuildingService _housingBuildingService;
     private readonly IHousingFlatService _housingFlatService;
+    private readonly IOutgoingCategoryService _outgoingCategoryService;
     private readonly IBankService _bankService;
     private readonly INGOTypeService _ngoTypeService;
     private readonly IEducationLevelService _educationLevelService;
@@ -68,6 +69,7 @@ public class LookupManagementController : ControllerBase
         IOfficeProjectTypeService officeProjectTypeService,
         IHousingBuildingService housingBuildingService,
         IHousingFlatService housingFlatService,
+        IOutgoingCategoryService outgoingCategoryService,
         IBankService bankService,
         INGOTypeService ngoTypeService,
         IEducationLevelService educationLevelService,
@@ -95,6 +97,7 @@ public class LookupManagementController : ControllerBase
         _officeProjectTypeService = officeProjectTypeService;
         _housingBuildingService = housingBuildingService;
         _housingFlatService = housingFlatService;
+        _outgoingCategoryService = outgoingCategoryService;
         _bankService = bankService;
         _ngoTypeService = ngoTypeService;
         _educationLevelService = educationLevelService;
@@ -847,13 +850,173 @@ public class LookupManagementController : ControllerBase
     }
 
     /// <summary>
+    /// Office project types with filtering and pagination — the lookup-management screen
+    /// (UC-14.5). Unlike the dropdown action above, inactive rows are visible here.
+    /// </summary>
+    [HttpGet("office-project-types/items")]
+    public async Task<ActionResult<LookupPagedResult<LookupDto>>> GetOfficeProjectTypesItems([FromQuery] LookupFilterDto filter)
+    {
+        try
+        {
+            var result = await _officeProjectTypeService.GetLookupItemsAsync(filter);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving office project types");
+            return StatusCode(500, new { message = "An error occurred while retrieving office project types" });
+        }
+    }
+
+    /// <summary>
+    /// Get office project type by ID
+    /// </summary>
+    [HttpGet("office-project-types/{id:int}")]
+    public async Task<ActionResult<LookupDto>> GetOfficeProjectType(int id)
+    {
+        try
+        {
+            var type = await _officeProjectTypeService.GetLookupByIdAsync(id);
+            if (type == null)
+            {
+                return NotFound(new { message = "Office project type not found" });
+            }
+
+            return Ok(type);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving office project type {TypeId}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving office project type" });
+        }
+    }
+
+    /// <summary>
+    /// Create office project type
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPost("office-project-types")]
+    public async Task<ActionResult<LookupDto>> CreateOfficeProjectType([FromBody] CreateLookupDto model)
+    {
+        try
+        {
+            var type = await _officeProjectTypeService.CreateLookupAsync(model);
+            return CreatedAtAction(nameof(GetOfficeProjectType), new { id = type.Id }, type);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while creating office project type");
+            return StatusCode(500, new { message = "An error occurred while creating office project type" });
+        }
+    }
+
+    /// <summary>
+    /// Update office project type
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPut("office-project-types/{id:int}")]
+    public async Task<ActionResult<LookupDto>> UpdateOfficeProjectType(int id, [FromBody] UpdateLookupDto model)
+    {
+        try
+        {
+            var type = await _officeProjectTypeService.UpdateLookupAsync(id, model);
+            return Ok(type);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while updating office project type {TypeId}", id);
+            return StatusCode(500, new { message = "An error occurred while updating office project type" });
+        }
+    }
+
+    /// <summary>
+    /// Delete office project type
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpDelete("office-project-types/{id:int}")]
+    public async Task<ActionResult> DeleteOfficeProjectType(int id)
+    {
+        try
+        {
+            await _officeProjectTypeService.DeleteLookupAsync(id);
+            _logger.LogInformation("Office project type {TypeId} deleted", id);
+            return Ok(new { message = "Office project type deleted successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            return BadRequest(new { message = "Cannot delete this type because office projects reference it" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deleting office project type {TypeId}", id);
+            return StatusCode(500, new { message = "An error occurred while deleting office project type" });
+        }
+    }
+
+    /// <summary>
+    /// Activate office project type
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPatch("office-project-types/{id:int}/activate")]
+    public async Task<ActionResult> ActivateOfficeProjectType(int id)
+    {
+        try
+        {
+            await _officeProjectTypeService.ActivateLookupAsync(id);
+            return Ok(new { message = "Office project type activated successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while activating office project type {TypeId}", id);
+            return StatusCode(500, new { message = "An error occurred while activating office project type" });
+        }
+    }
+
+    /// <summary>
+    /// Deactivate office project type
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPatch("office-project-types/{id:int}/deactivate")]
+    public async Task<ActionResult> DeactivateOfficeProjectType(int id)
+    {
+        try
+        {
+            await _officeProjectTypeService.DeactivateLookupAsync(id);
+            return Ok(new { message = "Office project type deactivated successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deactivating office project type {TypeId}", id);
+            return StatusCode(500, new { message = "An error occurred while deactivating office project type" });
+        }
+    }
+
+    // ==================== HOUSING BUILDINGS (UC-HOU-05) ====================
+
+    /// <summary>
     /// UC-HOU-05: Select building and flat — the §11.S.2 رقم العماره drop-down source.
     /// Active-only housing buildings (organisation-owned catalogue). Charity callers read
     /// this for the housing family form, so the action admits the module's full role set.
     /// </summary>
     [HttpGet("housing-buildings")]
     [Authorize(Roles = "Admin,SuperAdmin,Charity")]
-    public async Task<ActionResult<List<LookupDto>>> GetHousingBuildings()
+    public async Task<ActionResult<List<HousingBuildingDto>>> GetHousingBuildings()
     {
         try
         {
@@ -874,12 +1037,359 @@ public class LookupManagementController : ControllerBase
     }
 
     /// <summary>
+    /// Housing buildings with filtering and pagination — the lookup-management screen
+    /// (UC-14.5). Unlike the dropdown action above, inactive rows are visible here.
+    /// </summary>
+    [HttpGet("housing-buildings/items")]
+    public async Task<ActionResult<LookupPagedResult<HousingBuildingDto>>> GetHousingBuildingsItems([FromQuery] LookupFilterDto filter)
+    {
+        try
+        {
+            var result = await _housingBuildingService.GetLookupItemsAsync(filter);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving housing buildings");
+            return StatusCode(500, new { message = "An error occurred while retrieving housing buildings" });
+        }
+    }
+
+    /// <summary>
+    /// Get housing building by ID
+    /// </summary>
+    [HttpGet("housing-buildings/{id:int}")]
+    public async Task<ActionResult<HousingBuildingDto>> GetHousingBuilding(int id)
+    {
+        try
+        {
+            var building = await _housingBuildingService.GetLookupByIdAsync(id);
+            if (building == null)
+            {
+                return NotFound(new { message = "Housing building not found" });
+            }
+
+            return Ok(building);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving housing building {BuildingId}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving housing building" });
+        }
+    }
+
+    /// <summary>
+    /// Create housing building
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPost("housing-buildings")]
+    public async Task<ActionResult<HousingBuildingDto>> CreateHousingBuilding([FromBody] CreateHousingBuildingDto model)
+    {
+        try
+        {
+            var building = await _housingBuildingService.CreateLookupAsync(model);
+            return CreatedAtAction(nameof(GetHousingBuilding), new { id = building.Id }, building);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while creating housing building");
+            return StatusCode(500, new { message = "An error occurred while creating housing building" });
+        }
+    }
+
+    /// <summary>
+    /// Update housing building
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPut("housing-buildings/{id:int}")]
+    public async Task<ActionResult<HousingBuildingDto>> UpdateHousingBuilding(int id, [FromBody] UpdateHousingBuildingDto model)
+    {
+        try
+        {
+            var building = await _housingBuildingService.UpdateLookupAsync(id, model);
+            return Ok(building);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while updating housing building {BuildingId}", id);
+            return StatusCode(500, new { message = "An error occurred while updating housing building" });
+        }
+    }
+
+    /// <summary>
+    /// Delete housing building
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpDelete("housing-buildings/{id:int}")]
+    public async Task<ActionResult> DeleteHousingBuilding(int id)
+    {
+        try
+        {
+            await _housingBuildingService.DeleteLookupAsync(id);
+            _logger.LogInformation("Housing building {BuildingId} deleted", id);
+            return Ok(new { message = "Housing building deleted successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            return BadRequest(new { message = "Cannot delete this building because flats or housing families reference it" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deleting housing building {BuildingId}", id);
+            return StatusCode(500, new { message = "An error occurred while deleting housing building" });
+        }
+    }
+
+    /// <summary>
+    /// Activate housing building
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPatch("housing-buildings/{id:int}/activate")]
+    public async Task<ActionResult> ActivateHousingBuilding(int id)
+    {
+        try
+        {
+            await _housingBuildingService.ActivateLookupAsync(id);
+            return Ok(new { message = "Housing building activated successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while activating housing building {BuildingId}", id);
+            return StatusCode(500, new { message = "An error occurred while activating housing building" });
+        }
+    }
+
+    /// <summary>
+    /// Deactivate housing building
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPatch("housing-buildings/{id:int}/deactivate")]
+    public async Task<ActionResult> DeactivateHousingBuilding(int id)
+    {
+        try
+        {
+            await _housingBuildingService.DeactivateLookupAsync(id);
+            return Ok(new { message = "Housing building deactivated successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deactivating housing building {BuildingId}", id);
+            return StatusCode(500, new { message = "An error occurred while deactivating housing building" });
+        }
+    }
+
+    // ==================== OUTGOING CATEGORIES (UC-COR-17) ====================
+
+    /// <summary>
+    /// UC-COR-17: active outgoing letter categories — the outgoing form's تصنيف الصادر
+    /// drop-down source. Correspondence is charity-scoped, so the module's full role set
+    /// reads it.
+    /// </summary>
+    [HttpGet("outgoing-categories")]
+    [Authorize(Roles = "Admin,SuperAdmin,Charity")]
+    public async Task<ActionResult<List<LookupDto>>> GetOutgoingCategories()
+    {
+        try
+        {
+            var filter = new LookupFilterDto
+            {
+                IsActive = true,
+                Page = 1,
+                PageSize = DropdownPageSize
+            };
+            var result = await _outgoingCategoryService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving outgoing categories");
+            return StatusCode(500, new { message = "An error occurred while retrieving outgoing categories" });
+        }
+    }
+
+    /// <summary>
+    /// Outgoing categories with filtering and pagination — the lookup-management screen
+    /// (UC-14.5). Unlike the dropdown action above, inactive rows are visible here.
+    /// </summary>
+    [HttpGet("outgoing-categories/items")]
+    public async Task<ActionResult<LookupPagedResult<LookupDto>>> GetOutgoingCategoriesItems([FromQuery] LookupFilterDto filter)
+    {
+        try
+        {
+            var result = await _outgoingCategoryService.GetLookupItemsAsync(filter);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving outgoing categories");
+            return StatusCode(500, new { message = "An error occurred while retrieving outgoing categories" });
+        }
+    }
+
+    /// <summary>
+    /// Get outgoing category by ID
+    /// </summary>
+    [HttpGet("outgoing-categories/{id:int}")]
+    public async Task<ActionResult<LookupDto>> GetOutgoingCategory(int id)
+    {
+        try
+        {
+            var category = await _outgoingCategoryService.GetLookupByIdAsync(id);
+            if (category == null)
+            {
+                return NotFound(new { message = "Outgoing category not found" });
+            }
+
+            return Ok(category);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving outgoing category {CategoryId}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving outgoing category" });
+        }
+    }
+
+    /// <summary>
+    /// Create outgoing category
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPost("outgoing-categories")]
+    public async Task<ActionResult<LookupDto>> CreateOutgoingCategory([FromBody] CreateLookupDto model)
+    {
+        try
+        {
+            var category = await _outgoingCategoryService.CreateLookupAsync(model);
+            return CreatedAtAction(nameof(GetOutgoingCategory), new { id = category.Id }, category);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while creating outgoing category");
+            return StatusCode(500, new { message = "An error occurred while creating outgoing category" });
+        }
+    }
+
+    /// <summary>
+    /// Update outgoing category
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPut("outgoing-categories/{id:int}")]
+    public async Task<ActionResult<LookupDto>> UpdateOutgoingCategory(int id, [FromBody] UpdateLookupDto model)
+    {
+        try
+        {
+            var category = await _outgoingCategoryService.UpdateLookupAsync(id, model);
+            return Ok(category);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while updating outgoing category {CategoryId}", id);
+            return StatusCode(500, new { message = "An error occurred while updating outgoing category" });
+        }
+    }
+
+    /// <summary>
+    /// Delete outgoing category
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpDelete("outgoing-categories/{id:int}")]
+    public async Task<ActionResult> DeleteOutgoingCategory(int id)
+    {
+        try
+        {
+            await _outgoingCategoryService.DeleteLookupAsync(id);
+            _logger.LogInformation("Outgoing category {CategoryId} deleted", id);
+            return Ok(new { message = "Outgoing category deleted successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            return BadRequest(new { message = "Cannot delete this category because outgoing letters reference it" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deleting outgoing category {CategoryId}", id);
+            return StatusCode(500, new { message = "An error occurred while deleting outgoing category" });
+        }
+    }
+
+    /// <summary>
+    /// Activate outgoing category
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPatch("outgoing-categories/{id:int}/activate")]
+    public async Task<ActionResult> ActivateOutgoingCategory(int id)
+    {
+        try
+        {
+            await _outgoingCategoryService.ActivateLookupAsync(id);
+            return Ok(new { message = "Outgoing category activated successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while activating outgoing category {CategoryId}", id);
+            return StatusCode(500, new { message = "An error occurred while activating outgoing category" });
+        }
+    }
+
+    /// <summary>
+    /// Deactivate outgoing category
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPatch("outgoing-categories/{id:int}/deactivate")]
+    public async Task<ActionResult> DeactivateOutgoingCategory(int id)
+    {
+        try
+        {
+            await _outgoingCategoryService.DeactivateLookupAsync(id);
+            return Ok(new { message = "Outgoing category deactivated successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deactivating outgoing category {CategoryId}", id);
+            return StatusCode(500, new { message = "An error occurred while deactivating outgoing category" });
+        }
+    }
+
+    // ==================== HOUSING FLATS (UC-HOU-05) ====================
+
+    /// <summary>
     /// UC-HOU-05: flats of one building — the §11.S.2 رقم الشقه cascade (republished on
-    /// رقم العماره change). buildingId is required; absent or non-positive is a 400.
+    /// رقم العماره change). Active-only; buildingId is required; absent or non-positive is a 400.
     /// </summary>
     [HttpGet("housing-flats")]
     [Authorize(Roles = "Admin,SuperAdmin,Charity")]
-    public async Task<ActionResult<List<LookupDto>>> GetHousingFlats([FromQuery] int? buildingId)
+    public async Task<ActionResult<List<HousingFlatDto>>> GetHousingFlats([FromQuery] int? buildingId)
     {
         if (!buildingId.HasValue || buildingId.Value <= 0)
         {
@@ -895,6 +1405,182 @@ public class LookupManagementController : ControllerBase
         {
             _logger.LogError(ex, "Error occurred while retrieving housing flats for building {BuildingId}", buildingId.Value);
             return StatusCode(500, new { message = "An error occurred while retrieving housing flats" });
+        }
+    }
+
+    /// <summary>
+    /// Flats of one building for the lookup-management screen — includes inactive rows so
+    /// the management table shows the full catalogue.
+    /// </summary>
+    [HttpGet("housing-flats/items")]
+    public async Task<ActionResult<List<HousingFlatDto>>> GetHousingFlatItems([FromQuery] int? buildingId)
+    {
+        if (!buildingId.HasValue || buildingId.Value <= 0)
+        {
+            return BadRequest(new { message = "buildingId is required" });
+        }
+
+        try
+        {
+            var flats = await _housingFlatService.GetFlatsByBuildingAsync(buildingId.Value, includeInactive: true);
+            return Ok(flats);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving housing flats for building {BuildingId}", buildingId.Value);
+            return StatusCode(500, new { message = "An error occurred while retrieving housing flats" });
+        }
+    }
+
+    /// <summary>
+    /// Get housing flat by ID
+    /// </summary>
+    [HttpGet("housing-flats/{id:int}")]
+    public async Task<ActionResult<HousingFlatDto>> GetHousingFlat(int id)
+    {
+        try
+        {
+            var flat = await _housingFlatService.GetLookupByIdAsync(id);
+            if (flat == null)
+            {
+                return NotFound(new { message = "Housing flat not found" });
+            }
+
+            return Ok(flat);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving housing flat {FlatId}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving housing flat" });
+        }
+    }
+
+    /// <summary>
+    /// Create housing flat
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPost("housing-flats")]
+    public async Task<ActionResult<HousingFlatDto>> CreateHousingFlat([FromBody] CreateHousingFlatDto model)
+    {
+        if (model.BuildingId <= 0)
+        {
+            return BadRequest(new { message = "buildingId is required" });
+        }
+
+        try
+        {
+            var flat = await _housingFlatService.CreateLookupAsync(model);
+            return CreatedAtAction(nameof(GetHousingFlat), new { id = flat.Id }, flat);
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            return BadRequest(new { message = "The selected building does not exist" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while creating housing flat");
+            return StatusCode(500, new { message = "An error occurred while creating housing flat" });
+        }
+    }
+
+    /// <summary>
+    /// Update housing flat
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPut("housing-flats/{id:int}")]
+    public async Task<ActionResult<HousingFlatDto>> UpdateHousingFlat(int id, [FromBody] UpdateHousingFlatDto model)
+    {
+        try
+        {
+            var flat = await _housingFlatService.UpdateLookupAsync(id, model);
+            return Ok(flat);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            return BadRequest(new { message = "The selected building does not exist" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while updating housing flat {FlatId}", id);
+            return StatusCode(500, new { message = "An error occurred while updating housing flat" });
+        }
+    }
+
+    /// <summary>
+    /// Delete housing flat
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpDelete("housing-flats/{id:int}")]
+    public async Task<ActionResult> DeleteHousingFlat(int id)
+    {
+        try
+        {
+            await _housingFlatService.DeleteLookupAsync(id);
+            _logger.LogInformation("Housing flat {FlatId} deleted", id);
+            return Ok(new { message = "Housing flat deleted successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            return BadRequest(new { message = "Cannot delete this flat because a housing family references it" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deleting housing flat {FlatId}", id);
+            return StatusCode(500, new { message = "An error occurred while deleting housing flat" });
+        }
+    }
+
+    /// <summary>
+    /// Activate housing flat
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPatch("housing-flats/{id:int}/activate")]
+    public async Task<ActionResult> ActivateHousingFlat(int id)
+    {
+        try
+        {
+            await _housingFlatService.ActivateLookupAsync(id);
+            return Ok(new { message = "Housing flat activated successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while activating housing flat {FlatId}", id);
+            return StatusCode(500, new { message = "An error occurred while activating housing flat" });
+        }
+    }
+
+    /// <summary>
+    /// Deactivate housing flat
+    /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPatch("housing-flats/{id:int}/deactivate")]
+    public async Task<ActionResult> DeactivateHousingFlat(int id)
+    {
+        try
+        {
+            await _housingFlatService.DeactivateLookupAsync(id);
+            return Ok(new { message = "Housing flat deactivated successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deactivating housing flat {FlatId}", id);
+            return StatusCode(500, new { message = "An error occurred while deactivating housing flat" });
         }
     }
 
@@ -942,7 +1628,11 @@ public class LookupManagementController : ControllerBase
             new { name = "Mission Types", arabicName = "أنواع المهام", endpoint = "missiontypes" },
             new { name = "Project Types", arabicName = "أنواع المشاريع", endpoint = "projecttypes" },
             new { name = "Banks", arabicName = "البنوك", endpoint = "banks" },
-            new { name = "NGO Types", arabicName = "أنواع الجمعيات", endpoint = "ngotypes" }
+            new { name = "NGO Types", arabicName = "أنواع الجمعيات", endpoint = "ngotypes" },
+            new { name = "Office Development Project Types", arabicName = "أنواع مشاريع تطوير المكاتب", endpoint = "office-project-types" },
+            new { name = "Housing Buildings", arabicName = "عمارات الإسكان", endpoint = "housing-buildings" },
+            new { name = "Housing Flats", arabicName = "شقق الإسكان", endpoint = "housing-flats" },
+            new { name = "Outgoing Categories", arabicName = "تصنيفات الصادر", endpoint = "outgoing-categories" }
         };
 
         return Ok(types);

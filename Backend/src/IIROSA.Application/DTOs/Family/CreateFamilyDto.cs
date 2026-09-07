@@ -166,9 +166,18 @@ public class CreateFamilyDto
     public CreateMotherDto? Mother { get; set; }
 
     /// <summary>
-    /// Other provider information (optional, required only if ProviderType is "Other")
+    /// Other provider information (optional, required only if ProviderType is "Other").
+    /// For the housing register this is the PRIMARY guardian of the multi-guardian set.
     /// </summary>
     public CreateProviderDto? Provider { get; set; }
+
+    /// <summary>
+    /// §11.S.2 multi-guardian payload (اضافة الاباء · AddNewParent() always): the full live
+    /// guardian set for a housing family create/update, edit-sync keyed by row id. Falls back
+    /// to the single <see cref="Provider"/> above when absent — every other register keeps
+    /// the single-seat contract.
+    /// </summary>
+    public List<CreateProviderDto>? Providers { get; set; }
 
     /// <summary>
     /// Other family relatives (optional - brothers, sisters, grandparents, uncles, aunts, etc.)

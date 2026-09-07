@@ -701,7 +701,8 @@ public class MissionService : IMissionService
     // ========== Export ==========
 
     /// <summary>
-    /// Export missions to Excel (not in epic 15's scope — left as the copied TODO)
+    /// Export missions to Excel — §20.S.1's 13 grid columns, all filtered rows
+    /// (OfficeProjectService.ExportProjectsToExcelAsync pattern).
     /// </summary>
     public async Task<byte[]> ExportMissionsToExcelAsync(MissionFilterDto filter)
     {
@@ -709,11 +710,63 @@ public class MissionService : IMissionService
         {
             _logger.LogInformation("Exporting missions to Excel with filter: {@Filter}", filter);
 
-            var result = await GetMissionsFilteredAsync(filter);
+            var exportFilter = filter ?? new MissionFilterDto();
+            exportFilter.Page = 1;
+            exportFilter.PageSize = int.MaxValue;
 
-            // TODO: Implement Excel export using a library like EPPlus or ClosedXML
-            // For now, return a placeholder
-            throw new NotImplementedException("Excel export functionality not yet implemented");
+            var result = await GetMissionsFilteredAsync(exportFilter);
+
+            using (var package = new OfficeOpenXml.ExcelPackage())
+            {
+                var worksheet = package.Workbook.Worksheets.Add("المهام");
+
+                worksheet.Cells[1, 1].Value = "الرقم";
+                worksheet.Cells[1, 2].Value = "جهة المهمة";
+                worksheet.Cells[1, 3].Value = "نوع المهمة";
+                worksheet.Cells[1, 4].Value = "نوع التوقيت";
+                worksheet.Cells[1, 5].Value = "اسم الجهة";
+                worksheet.Cells[1, 6].Value = "التفاصيل";
+                worksheet.Cells[1, 7].Value = "تاريخ المهمة";
+                worksheet.Cells[1, 8].Value = "الدولة";
+                worksheet.Cells[1, 9].Value = "المنطقة";
+                worksheet.Cells[1, 10].Value = "المركز";
+                worksheet.Cells[1, 11].Value = "القرية";
+                worksheet.Cells[1, 12].Value = "مكان المهمة";
+                worksheet.Cells[1, 13].Value = "المكلف بها";
+                worksheet.Cells[1, 14].Value = "حالة الانتهاء";
+
+                using (var range = worksheet.Cells[1, 1, 1, 14])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
+                }
+
+                var row = 2;
+                var serial = 1;
+                foreach (var mission in result.Items)
+                {
+                    worksheet.Cells[row, 1].Value = serial++;
+                    worksheet.Cells[row, 2].Value = mission.MissionTarget;
+                    worksheet.Cells[row, 3].Value = mission.MissionType ?? "";
+                    worksheet.Cells[row, 4].Value = mission.MissionTimeType ?? "";
+                    worksheet.Cells[row, 5].Value = mission.EntityName ?? "";
+                    worksheet.Cells[row, 6].Value = mission.Details ?? "";
+                    worksheet.Cells[row, 7].Value = mission.MissionDate.ToString("yyyy-MM-dd");
+                    worksheet.Cells[row, 8].Value = mission.CountryName ?? "";
+                    worksheet.Cells[row, 9].Value = mission.Region ?? "";
+                    worksheet.Cells[row, 10].Value = mission.Center ?? "";
+                    worksheet.Cells[row, 11].Value = mission.Village ?? "";
+                    worksheet.Cells[row, 12].Value = mission.MissionLocation ?? "";
+                    worksheet.Cells[row, 13].Value = mission.AssignedTo ?? "";
+                    worksheet.Cells[row, 14].Value = mission.MissionCompletedTxt ?? "";
+                    row++;
+                }
+
+                worksheet.Cells[1, 1, row - 1, 14].AutoFitColumns();
+
+                return package.GetAsByteArray();
+            }
         }
         catch (Exception ex)
         {

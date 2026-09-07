@@ -20,9 +20,6 @@ public interface IOutgoingRepository : IRepository<Outgoing>
     /// <summary>Detail read with the navigations the §21.S.5 view renders.</summary>
     Task<Outgoing?> GetWithDetailsAsync(Guid id);
 
-    /// <summary>Reply-count of an incoming letter — the 16-16 delete guard.</summary>
-    Task<int> CountIncomingRepliesAsync(Guid outgoingId);
-
     /// <summary>
     /// Next serial in the charity + year sequence (UC-COR-12). Advisory when shown in the
     /// form; CreateAsync re-derives it inside its transaction to close the Max+1 race.

@@ -256,6 +256,58 @@ export class RefugeeFamilyListComponent implements OnInit, OnDestroy {
 
   trackByFamilyId = (_: number, family: FamilyListItemDto): string => family.id;
 
+  /**
+   * تصدير (UC-4.12 export sheet) — same filters/scoping as the on-screen list, pinned to
+   * the Refugee register. The endpoint re-authorises and widens the page server-side.
+   */
+  exportToExcel(): void {
+    this.loading = true;
+    const formValues = this.filterForm.value;
+
+    const searchRequest: FamilySearchRequest = {
+      familyType: 'Refugee',
+      pageNumber: 1,
+      pageSize: 10000
+    };
+
+    if (this.isHQ && formValues.charityId && formValues.charityId !== 'all') {
+      searchRequest.charityId = formValues.charityId;
+    }
+
+    if (formValues.searchValue && formValues.searchValue.trim()) {
+      searchRequest.searchTerm = formValues.searchValue.trim();
+    }
+
+    if (formValues.searchType && formValues.searchType !== 'all') {
+      searchRequest.searchType = formValues.searchType;
+    }
+
+    this.familyService.exportFamiliesToExcel(searchRequest)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob: Blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `refugee_families_${new Date().toISOString().split('T')[0]}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+
+          this.notification.success(this.translate.instant('families.exportSuccess'));
+          this.loading = false;
+          this.cdr.markForCheck();
+        },
+        error: (error: any) => {
+          console.error('Export failed:', error);
+          this.notification.error(this.translate.instant('families.exportFailed'));
+          this.loading = false;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
   viewRefugeeFamily(id: string): void {
     this.router.navigate(['/families/refugees', id]);
   }

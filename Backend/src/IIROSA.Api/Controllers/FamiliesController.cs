@@ -339,6 +339,36 @@ public class FamiliesController : ControllerBase
     }
 
     /// <summary>
+    /// Export the family list to Excel (UC-4.12: View Family List - Export) — same
+    /// filters and scoping as the list, with the page widened to every matching row.
+    /// </summary>
+    [HttpPost("export")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ExportFamilies([FromBody] FamilyFilterDto filter)
+    {
+        try
+        {
+            var userCharityId = GetUserCharityId();
+            var userRole = GetUserRole();
+
+            var content = await _familyService.ExportFamiliesToExcelAsync(filter, userCharityId, userRole);
+
+            _logger.LogInformation("Families exported to Excel by {ExportedBy}", User.Identity?.Name);
+
+            return File(
+                content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"families_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting families to Excel");
+            return StatusCode(500, new { message = "Error exporting families to Excel", error = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Get family by ID (UC-4.13: View Family Details)
     /// </summary>
     [HttpGet("{id}")]

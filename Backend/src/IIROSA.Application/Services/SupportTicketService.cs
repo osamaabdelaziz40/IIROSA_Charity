@@ -178,6 +178,66 @@ public class SupportTicketService : ISupportTicketService
         return (ticketDtos, totalCount);
     }
 
+    // List export — the visible grid columns as an Excel workbook, every filtered row
+    // (OfficeProjectService.ExportProjectsToExcelAsync pattern). allTickets selects the
+    // admin-wide read; otherwise the caller only ever sees their own rows.
+    public async Task<byte[]> ExportTicketsToExcelAsync(SupportTicketFilterDto filter, string userId, bool allTickets)
+    {
+        _logger.LogInformation("Exporting tickets to Excel (allTickets: {AllTickets}) with filter: {@Filter}", allTickets, filter);
+
+        var exportFilter = filter ?? new SupportTicketFilterDto();
+        exportFilter.PageNumber = 1;
+        exportFilter.PageSize = int.MaxValue;
+
+        var (tickets, _) = allTickets
+            ? await GetAllTicketsAsync(exportFilter)
+            : await GetMyTicketsAsync(userId, exportFilter);
+
+        using (var package = new OfficeOpenXml.ExcelPackage())
+        {
+            var worksheet = package.Workbook.Worksheets.Add("الدعم الفني");
+
+            worksheet.Cells[1, 1].Value = "الرقم";
+            worksheet.Cells[1, 2].Value = "عنوان الطلب";
+            worksheet.Cells[1, 3].Value = "التصنيف";
+            worksheet.Cells[1, 4].Value = "الأولوية";
+            worksheet.Cells[1, 5].Value = "الحالة";
+            worksheet.Cells[1, 6].Value = "تم الحل";
+            worksheet.Cells[1, 7].Value = "منشئ الطلب";
+            worksheet.Cells[1, 8].Value = "معين إلى";
+            worksheet.Cells[1, 9].Value = "تاريخ الإنشاء";
+            worksheet.Cells[1, 10].Value = "آخر تحديث";
+
+            using (var range = worksheet.Cells[1, 1, 1, 10])
+            {
+                range.Style.Font.Bold = true;
+                range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
+            }
+
+            var row = 2;
+            var serial = 1;
+            foreach (var ticket in tickets)
+            {
+                worksheet.Cells[row, 1].Value = serial++;
+                worksheet.Cells[row, 2].Value = ticket.Title;
+                worksheet.Cells[row, 3].Value = ticket.CategoryName ?? "";
+                worksheet.Cells[row, 4].Value = ticket.PriorityName ?? "";
+                worksheet.Cells[row, 5].Value = ticket.StatusName ?? "";
+                worksheet.Cells[row, 6].Value = ticket.IsSolved ? "نعم" : "لا";
+                worksheet.Cells[row, 7].Value = ticket.CreatedByUserName ?? "";
+                worksheet.Cells[row, 8].Value = ticket.AssignedToName ?? "";
+                worksheet.Cells[row, 9].Value = ticket.CreatedOn.ToString("yyyy-MM-dd HH:mm");
+                worksheet.Cells[row, 10].Value = ticket.UpdatedOn.ToString("yyyy-MM-dd HH:mm");
+                row++;
+            }
+
+            worksheet.Cells[1, 1, row - 1, 10].AutoFitColumns();
+
+            return package.GetAsByteArray();
+        }
+    }
+
     // UC-13.5: Update Ticket Status (Admin/Super Admin only)
     public async Task UpdateTicketStatusAsync(UpdateTicketStatusDto dto, string adminUserId)
     {

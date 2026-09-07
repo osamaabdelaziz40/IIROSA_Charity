@@ -64,9 +64,13 @@
 
 <div class="card shadow mb-4">
   <div class="card-body">
-    <!-- Toolbar: تسجيل أسرة لاجئة (UC-REF-03) — the endpoint authorises again server-side -->
-    <div class="d-flex justify-content-end mb-3" *ngIf="canCreate">
-      <a class="btn btn-primary" routerLink="/families/refugees/create">
+    <!-- Toolbar: تسجيل أسرة لاجئة (UC-REF-03) + تصدير — the endpoints authorise again server-side -->
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-success mr-2" type="button" (click)="exportToExcel()">
+        <i class="fe fe-file-plus mr-1"></i>
+        {{ 'common.exportToExcel' | translate }}
+      </button>
+      <a *ngIf="canCreate" class="btn btn-primary" routerLink="/families/refugees/create">
         <i class="fe fe-plus mr-1"></i>
         {{ 'families.refugeeAddFamily' | translate }}
       </a>

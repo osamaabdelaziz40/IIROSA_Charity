@@ -109,6 +109,11 @@ namespace IIROSA.Infrastructure.Data.SeedData
                 await CountryNidRuleSeedData.SeedNidRulesAsync(_appContext);
                 _logger.LogInformation("Country NID rules seeding completed successfully");
 
+                // Step 12: Seed Office Development Projects type catalogue (UC-7.1)
+                _logger.LogInformation("Step 12: Seeding office project types...");
+                await OfficeProjectTypeSeedData.SeedOfficeProjectTypesAsync(_appContext);
+                _logger.LogInformation("Office project type seeding completed successfully");
+
                 // Final state
                 var finalRoles = await _identityContext.Roles.CountAsync();
                 var finalUsers = await _identityContext.Users.CountAsync();

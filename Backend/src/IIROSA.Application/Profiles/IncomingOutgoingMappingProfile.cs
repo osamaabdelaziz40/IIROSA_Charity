@@ -21,8 +21,6 @@ public class IncomingOutgoingMappingProfile : Profile
             .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department != null ? src.Department.Name : null))
             .ForMember(dest => dest.AssignedUserId, opt => opt.MapFrom(src => src.FK_UserId))
             .ForMember(dest => dest.AssignedUserName, opt => opt.MapFrom(src => src.AssignedUser != null ? src.AssignedUser.FullName : null))
-            .ForMember(dest => dest.OutgoingLetterNumber, opt => opt.MapFrom(src =>
-                src.OutgoingLetter != null ? src.OutgoingLetter.OutGoingNumber ?? src.OutgoingLetter.OutGoingId : null))
             .ForMember(dest => dest.UploadedFileName, opt => opt.MapFrom(src => src.UploadedFile != null ? src.UploadedFile.FileName : null))
             .ForMember(dest => dest.CharityId, opt => opt.MapFrom(src => src.FK_CharityId))
             .ForMember(dest => dest.CharityName, opt => opt.MapFrom(src => src.Charity != null ? src.Charity.Name : null));

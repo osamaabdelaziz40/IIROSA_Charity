@@ -24,6 +24,10 @@ public class LookupManagementService : ILookupManagementService
     private readonly IProjectTypeRepository _projectTypeRepository;
     private readonly IBankRepository _bankRepository;
     private readonly INGOTypeRepository _ngoTypeRepository;
+    private readonly ILookupRepository<OfficeProjectType> _officeProjectTypeRepository;
+    private readonly ILookupRepository<HousingBuilding> _housingBuildingRepository;
+    private readonly ILookupRepository<HousingFlat> _housingFlatRepository;
+    private readonly IOutgoingCategoryRepository _outgoingCategoryRepository;
     private readonly IRepository<ChequeBeneficiary> _chequeBeneficiaryRepository;
     private readonly ILogger<LookupManagementService> _logger;
 
@@ -36,6 +40,10 @@ public class LookupManagementService : ILookupManagementService
         IProjectTypeRepository projectTypeRepository,
         IBankRepository bankRepository,
         INGOTypeRepository ngoTypeRepository,
+        ILookupRepository<OfficeProjectType> officeProjectTypeRepository,
+        ILookupRepository<HousingBuilding> housingBuildingRepository,
+        ILookupRepository<HousingFlat> housingFlatRepository,
+        IOutgoingCategoryRepository outgoingCategoryRepository,
         IRepository<ChequeBeneficiary> chequeBeneficiaryRepository,
         ILogger<LookupManagementService> logger)
     {
@@ -47,6 +55,10 @@ public class LookupManagementService : ILookupManagementService
         _projectTypeRepository = projectTypeRepository;
         _bankRepository = bankRepository;
         _ngoTypeRepository = ngoTypeRepository;
+        _officeProjectTypeRepository = officeProjectTypeRepository;
+        _housingBuildingRepository = housingBuildingRepository;
+        _housingFlatRepository = housingFlatRepository;
+        _outgoingCategoryRepository = outgoingCategoryRepository;
         _chequeBeneficiaryRepository = chequeBeneficiaryRepository;
         _logger = logger;
     }
@@ -66,6 +78,10 @@ public class LookupManagementService : ILookupManagementService
             summaries.Add(await GetTableSummaryAsync("ProjectTypes", "Project Types", "أنواع المشاريع", _projectTypeRepository));
             summaries.Add(await GetTableSummaryAsync("Banks", "Banks", "البنوك", _bankRepository));
             summaries.Add(await GetTableSummaryAsync("NGOTypes", "NGO Types", "أنواع الجمعيات", _ngoTypeRepository));
+            summaries.Add(await GetTableSummaryAsync("OfficeProjectTypes", "Office Development Project Types", "أنواع مشاريع تطوير المكاتب", _officeProjectTypeRepository));
+            summaries.Add(await GetTableSummaryAsync("HousingBuildings", "Housing Buildings", "عمارات الإسكان", _housingBuildingRepository));
+            summaries.Add(await GetTableSummaryAsync("HousingFlats", "Housing Flats", "شقق الإسكان", _housingFlatRepository));
+            summaries.Add(await GetTableSummaryAsync("OutgoingCategories", "Outgoing Categories", "تصنيفات الصادر", _outgoingCategoryRepository));
 
             return summaries.OrderByDescending(s => s.LastModified).ToList();
         }
@@ -177,6 +193,10 @@ public class LookupManagementService : ILookupManagementService
                 "ProjectTypes" => await ExportTableAsync(_projectTypeRepository, exportDto),
                 "Banks" => await ExportTableAsync(_bankRepository, exportDto),
                 "NGOTypes" => await ExportTableAsync(_ngoTypeRepository, exportDto),
+                "OfficeProjectTypes" => await ExportTableAsync(_officeProjectTypeRepository, exportDto),
+                "HousingBuildings" => await ExportTableAsync(_housingBuildingRepository, exportDto),
+                "HousingFlats" => await ExportTableAsync(_housingFlatRepository, exportDto),
+                "OutgoingCategories" => await ExportTableAsync(_outgoingCategoryRepository, exportDto),
                 _ => throw new ArgumentException($"Unknown lookup table: {tableName}")
             };
         }

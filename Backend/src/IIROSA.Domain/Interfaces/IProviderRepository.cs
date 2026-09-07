@@ -11,9 +11,14 @@ namespace IIROSA.Domain.Interfaces;
 public interface IProviderRepository : IRepository<Provider>
 {
     /// <summary>
-    /// Get provider by family ID
+    /// Get provider by family ID — the PRIMARY guardian (deterministic first live row)
     /// </summary>
     Task<Provider?> GetByFamilyIdAsync(Guid familyId);
+
+    /// <summary>
+    /// All live providers of a family (§11.S.2 multi-guardian), primary-first order
+    /// </summary>
+    Task<List<Provider>> GetAllByFamilyIdAsync(Guid familyId);
 
     /// <summary>
     /// Check if national ID exists

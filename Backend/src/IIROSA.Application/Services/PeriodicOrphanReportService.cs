@@ -478,7 +478,7 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
 
         var orphan = await _orphanRepository.AsQueryable()
             .Include(o => o.Family!)
-                .ThenInclude(f => f.Provider)
+                .ThenInclude(f => f.Providers)
             .FirstOrDefaultAsync(o => o.Code == normalized && !o.IsDeleted);
 
         if (orphan == null || !await IsOrphanInCallerScopeAsync(orphan))
@@ -508,7 +508,11 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
             BirthDate = orphan.DateOfBirth,
             FamilyId = orphan.FamilyId,
             FamilyCode = orphan.Family?.Code,
-            GuardianName = orphan.Family?.Provider?.FullName,
+            GuardianName = orphan.Family?.Providers
+                ?.Where(p => !p.IsDeleted)
+                .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+                .Select(p => p.FullName)
+                .FirstOrDefault(),
             TotalReports = totalReports,
             PendingReports = pendingReports
         };
@@ -893,18 +897,43 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
                 OrphanNationalId = r.Orphan.NationalId,
                 OrphanPhone = r.Orphan.Phone,
                 FamilyCode = r.Orphan.Family != null ? r.Orphan.Family.Code : null,
-                GuardianName = r.Orphan.Family != null && r.Orphan.Family.Provider != null
-                    ? r.Orphan.Family.Provider.FullName : null,
-                GuardianRelation = r.Orphan.Family != null && r.Orphan.Family.Provider != null
-                    ? r.Orphan.Family.Provider.RelationshipToFamily : null,
-                GuardianNationalId = r.Orphan.Family != null && r.Orphan.Family.Provider != null
-                    ? r.Orphan.Family.Provider.NationalId : null,
-                GuardianJob = r.Orphan.Family != null && r.Orphan.Family.Provider != null
-                    ? r.Orphan.Family.Provider.Job : null,
+                // §11.S.2 multi-guardian: the wide grid shows the PRIMARY guardian —
+                // first live row by CreatedOn/Id (the legacy single-seat pick).
+                GuardianName = r.Orphan.Family != null
+                    ? r.Orphan.Family.Providers
+                        .Where(p => !p.IsDeleted)
+                        .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+                        .Select(p => p.FullName)
+                        .FirstOrDefault()
+                    : null,
+                GuardianRelation = r.Orphan.Family != null
+                    ? r.Orphan.Family.Providers
+                        .Where(p => !p.IsDeleted)
+                        .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+                        .Select(p => p.RelationshipToFamily)
+                        .FirstOrDefault()
+                    : null,
+                GuardianNationalId = r.Orphan.Family != null
+                    ? r.Orphan.Family.Providers
+                        .Where(p => !p.IsDeleted)
+                        .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+                        .Select(p => p.NationalId)
+                        .FirstOrDefault()
+                    : null,
+                GuardianJob = r.Orphan.Family != null
+                    ? r.Orphan.Family.Providers
+                        .Where(p => !p.IsDeleted)
+                        .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+                        .Select(p => p.Job)
+                        .FirstOrDefault()
+                    : null,
                 GuardianEducationLevelName = r.Orphan.Family != null
-                    && r.Orphan.Family.Provider != null
-                    && r.Orphan.Family.Provider.EducationLevel != null
-                        ? r.Orphan.Family.Provider.EducationLevel.NameAr : null,
+                    ? r.Orphan.Family.Providers
+                        .Where(p => !p.IsDeleted)
+                        .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+                        .Select(p => p.EducationLevel != null ? p.EducationLevel.NameAr : null)
+                        .FirstOrDefault()
+                    : null,
                 RegionName = r.Orphan.Family != null && r.Orphan.Family.Region != null
                     ? r.Orphan.Family.Region.NameAr : null,
                 CenterName = r.Orphan.Family != null && r.Orphan.Family.Center != null

@@ -13,6 +13,12 @@ public interface IHqTransferService
     Task<HqTransferPagedResult<HqTransferListDto>> GetHqTransfersAsync(HqTransferFilterDto filter);
 
     /// <summary>
+    /// Export the §22.S.1 register to Excel — the grid's serial + 11 data columns, every
+    /// row in the caller's country scope (the list read's rules; paging ignored)
+    /// </summary>
+    Task<byte[]> ExportHqTransfersToExcelAsync(HqTransferFilterDto filter);
+
+    /// <summary>
     /// Get one transfer with resolved lookup names (UC-TRF-03: view) — NotFoundException
     /// covers absent, soft-deleted, and out-of-scope records alike
     /// </summary>

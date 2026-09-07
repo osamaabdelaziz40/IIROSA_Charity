@@ -44,9 +44,6 @@ public class CreateSeasonalAidCampaignDto
     public int? RegionId { get; set; }
     public int? CenterId { get; set; }
 
-    // Charity Assignment (UC-9.11)
-    public Guid? CharityId { get; set; }
-
     // Beneficiary Criteria (UC-9.1)
     [Range(1, int.MaxValue, ErrorMessage = "Maximum families must be at least 1")]
     public int? MaximumFamilies { get; set; }

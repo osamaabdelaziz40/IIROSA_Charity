@@ -9,10 +9,11 @@ using Microsoft.Extensions.Logging;
 namespace IIROSA.Application.Services;
 
 /// <summary>
-/// Housing Flat Service (UC-HOU-05) — rides the generic lookup machinery and adds the
-/// per-building cascade the §11.S.2 form needs (رقم الشقه repopulates on رقم العماره change)
+/// Housing Flat Service (UC-HOU-05) — rides the generic lookup machinery with rich DTOs
+/// (Number / SizeInMtr / Description / BuildingId) and adds the per-building cascade the
+/// §11.S.2 form needs (رقم الشقه repopulates on رقم العماره change)
 /// </summary>
-public class HousingFlatService : LookupServiceBase<HousingFlat, LookupDto, CreateLookupDto, UpdateLookupDto>, IHousingFlatService
+public class HousingFlatService : LookupServiceBase<HousingFlat, HousingFlatDto, CreateHousingFlatDto, UpdateHousingFlatDto>, IHousingFlatService
 {
     public HousingFlatService(
         ILookupRepository<HousingFlat> repository,
@@ -22,16 +23,23 @@ public class HousingFlatService : LookupServiceBase<HousingFlat, LookupDto, Crea
     }
 
     /// <inheritdoc />
-    public async Task<List<LookupDto>> GetFlatsByBuildingAsync(int buildingId)
+    public async Task<List<HousingFlatDto>> GetFlatsByBuildingAsync(int buildingId, bool includeInactive = false)
     {
         // Review 2026-08-24: the predicate runs server-side (Where on the IQueryable) —
         // the old GetAllAsync() materialized the whole flat table to filter in memory.
-        var flats = await _repository.AsQueryable()
-            .Where(f => f.BuildingId == buildingId && f.IsActive)
+        var query = _repository.AsQueryable()
+            .Where(f => f.BuildingId == buildingId);
+
+        if (!includeInactive)
+        {
+            query = query.Where(f => f.IsActive);
+        }
+
+        var flats = await query
             .OrderBy(f => f.SortOrder)
             .ThenBy(f => f.Id)
             .ToListAsync();
 
-        return _mapper.Map<List<LookupDto>>(flats);
+        return _mapper.Map<List<HousingFlatDto>>(flats);
     }
 }

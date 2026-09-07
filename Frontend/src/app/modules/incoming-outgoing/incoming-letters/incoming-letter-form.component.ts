@@ -5,8 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { IncomingService } from '../services/incoming.service';
-import { OutgoingService } from '../services/outgoing.service';
-import { EmployeeService } from '../../employees/services/employee.service';
+import { UserManagementService } from '../../user-management/services/user-management.service';
 import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
 import { DepartmentDto } from '../../lookup-management/models/lookup.model';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -14,9 +13,8 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { BreadcrumbComponent, BreadcrumbItem, AttachmentInputComponent } from '../../../shared/components';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { IncomingDto, CreateIncomingDto, UpdateIncomingDto, CorrespondenceStatusOption } from '../models/incoming.model';
-import { OutgoingListDto } from '../models/outgoing.model';
 import { SharedModule, AttachmentFileType } from '../../../shared/shared.module';
-import { Employee } from '../../../core/models/employee.model';
+import { User } from '../../../core/models/user.model';
 
 @Component({
   selector: 'app-incoming-letter-form',
@@ -47,23 +45,15 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
 
   // Lookup data
   allDepartments: DepartmentDto[] = [];
-  allOutgoingLetters: OutgoingListDto[] = [];
-  activeEmployees: Employee[] = [];
+  allUsers: User[] = [];
 
   // Dropdown data (transformed for LookupBase compatibility)
   get departmentOptions(): Array<{ id: number; name: string }> {
     return this.allDepartments.map(d => ({ id: d.id, name: d.nameAr || d.name }));
   }
 
-  get outgoingLetterOptions(): Array<{ id: string; name: string }> {
-    return this.allOutgoingLetters.map(letter => ({
-      id: letter.id,
-      name: `${letter.serial ?? ''} - ${letter.subject}`
-    }));
-  }
-
-  get employeeOptions(): Array<{ id: string; name: string }> {
-    return this.activeEmployees.map(e => ({ id: e.id, name: e.fullName }));
+  get userOptions(): Array<{ id: string; name: string }> {
+    return this.allUsers.map(u => ({ id: u.id, name: u.fullName || u.userName || u.email }));
   }
 
   // Attachments
@@ -96,8 +86,7 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private incomingService: IncomingService,
-    private outgoingService: OutgoingService,
-    private employeeService: EmployeeService,
+    private userManagementService: UserManagementService,
     private lookupService: LookupManagementService,
     private notification: NotificationService,
     private translate: TranslateService
@@ -181,7 +170,6 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
       subject: ['', [Validators.required, Validators.maxLength(500)]],
       status: ['معلق'],
       assignedUserId: [null, Validators.required],
-      outgoingId: [null, Validators.required],
       letterDescription: ['', [Validators.required, Validators.maxLength(4000)]]
     });
   }
@@ -195,20 +183,13 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
       error: () => console.error('Error loading departments')
     });
 
-    // Load Outgoing Letters (ردا على — required reply target)
-    this.outgoingService.getOutgoingLetters({ pageNumber: 1, pageSize: 1000 }).subscribe({
+    // Load users for assignment (الموظف المسؤول) — every user in the database,
+    // matching the backend's identity-user validation of assignedUserId.
+    this.userManagementService.getUsers({ page: 1, pageSize: 1000, isActive: true }).subscribe({
       next: (response) => {
-        this.allOutgoingLetters = response.items || [];
+        this.allUsers = response.items || [];
       },
-      error: () => console.error('Error loading outgoing letters')
-    });
-
-    // Load active employees (الموظف المسؤول)
-    this.employeeService.getEmployees({ page: 1, pageSize: 1000, isActive: true }).subscribe({
-      next: (response) => {
-        this.activeEmployees = response.items || [];
-      },
-      error: () => console.error('Error loading employees')
+      error: () => console.error('Error loading users')
     });
   }
 
@@ -239,7 +220,6 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
       subject: letter.subject,
       status: letter.status || 'معلق',
       assignedUserId: letter.assignedUserId ?? null,
-      outgoingId: letter.outgoingId ?? null,
       letterDescription: letter.letterDescription || ''
     });
   }
@@ -281,7 +261,6 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
       subject: formValue.subject,
       status: formValue.status || 'معلق',
       assignedUserId: formValue.assignedUserId ?? null,
-      outgoingId: formValue.outgoingId ?? null,
       letterDescription: formValue.letterDescription || null,
       uploadedFileId: this.attachmentFileId || undefined
     };

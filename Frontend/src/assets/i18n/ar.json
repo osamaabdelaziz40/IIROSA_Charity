@@ -1245,6 +1245,8 @@
     "refugeeDetailSubtitle": "العرض التفصيلي لملف الأسرة في سجل اللاجئين",
     "refugeeDetailLoadFailed": "تعذر تحميل بيانات الأسرة",
     "refugeeListLoadFailed": "تعذر تحميل قائمة أسر اللاجئين",
+    "exportSuccess": "تم تصدير الأسر بنجاح",
+    "exportFailed": "فشل تصدير الأسر",
     "refugeeFormLoadFailed": "تعذر تحميل بيانات الأسرة اللاجئة",
     "refugeeCatalogueLoadFailed": "تعذر تحميل القوائم الأساسية",
     "refugeeNotRefugeeFamily": "هذه الأسرة ليست مسجلة في سجل اللاجئين",
@@ -1839,7 +1841,14 @@
       "region": "المنطقة",
       "departmentCode": "رمز القسم",
       "isActive": "نشط",
-      "sortOrder": "ترتيب الفرز"
+      "sortOrder": "ترتيب الفرز",
+      "description": "الوصف",
+      "buildingNumber": "رقم العمارة",
+      "buildingAddress": "عنوان العمارة",
+      "flatNumber": "رقم الشقة",
+      "number": "الرقم",
+      "sizeInMtr": "المساحة (م²)",
+      "building": "العمارة"
     },
     "placeholders": {
       "name": "أدخل الاسم",
@@ -1851,10 +1860,45 @@
       "regionCode": "أدخل رمز المنطقة",
       "centerCode": "أدخل رمز المركز",
       "departmentCode": "أدخل رمز القسم",
-      "sortOrder": "أدخل ترتيب الفرز"
+      "sortOrder": "أدخل ترتيب الفرز",
+      "nameEn": "الاسم بالإنجليزية",
+      "description": "أدخل الوصف",
+      "buildingNumber": "مثال: 7",
+      "buildingAddress": "مثال: مدينه نصر",
+      "flatNumber": "مثال: 5",
+      "sizeInMtr": "مثال: 100"
     },
     "selectCountry": "اختر دولة",
-    "selectRegion": "اختر منطقة"
+    "selectRegion": "اختر منطقة",
+    "addOfficeProjectType": "إضافة نوع مشروع",
+    "editOfficeProjectType": "تعديل نوع المشروع",
+    "officeProjectTypeDetails": "تفاصيل نوع المشروع",
+    "noOfficeProjectTypesFound": "لا توجد أنواع مشاريع",
+    "addHousingBuilding": "إضافة عمارة",
+    "editHousingBuilding": "تعديل العمارة",
+    "housingBuildingDetails": "تفاصيل العمارة",
+    "noHousingBuildingsFound": "لا توجد عمارات",
+    "addHousingFlat": "إضافة شقة",
+    "editHousingFlat": "تعديل الشقة",
+    "housingFlatDetails": "تفاصيل الشقة",
+    "noHousingFlatsFound": "لا توجد شقق",
+    "selectBuilding": "اختر العمارة",
+    "addOutgoingCategory": "إضافة تصنيف",
+    "editOutgoingCategory": "تعديل التصنيف",
+    "outgoingCategoryDetails": "تفاصيل التصنيف",
+    "noOutgoingCategoriesFound": "لا توجد تصنيفات",
+    "officeProjectTypes": {
+      "title": "أنواع مشاريع تطوير المكاتب"
+    },
+    "housingBuildings": {
+      "title": "عمارات الإسكان"
+    },
+    "housingFlats": {
+      "title": "شقق الإسكان"
+    },
+    "outgoingCategories": {
+      "title": "تصنيفات الصادر"
+    }
   },
   "missions": {
     "title": "المهام",
@@ -2065,7 +2109,8 @@
       "failedOperation": "بيانات التنفيذ والوصول تُدخل فقط عندما يكون مصير الحوالة «تم التنفيذ»",
       "lineSaved": "تم حفظ التفصيل بنجاح",
       "lineSaveFailed": "فشل حفظ التفصيل",
-      "loadFailed": "فشل تحميل تفاصيل الحوالة"
+      "loadFailed": "فشل تحميل تفاصيل الحوالة",
+      "sumExceedsPayment": "مجموع مبالغ الحوالات ({{sum}}) يتجاوز مبلغ الدفعة ({{payment}})"
     },
     "backToList": "رجوع إلى القائمة",
     "transferNotFound": "الحوالة المطلوبة غير موجودة",
@@ -2175,7 +2220,7 @@
     "donorName": "اسم المتبرع",
     "beneficiariesCount": "عدد المستفيدين",
     "beneficiariesType": "نوع المستفيدين",
-    "assignedCharity": "الجمعية المعينة",
+    "assignedCharity": "الجمعيه المتعاونه",
     "attachedFile": "الملف المرفق",
     "projectReportFile": "ملف تقرير المشروع",
     "isFinished": "مكتمل",
@@ -2615,6 +2660,8 @@
     },
     "loadFailed": "تعذر تحميل قائمة الأسر الساكنة",
     "empty": "لا توجد أسر ساكنة مسجلة",
+    "nothingToExport": "لا توجد بيانات لاستخراجها",
+    "exportFailed": "فشل استخراج بيانات الأسر الساكنة",
     "filters": {
       "charity": "الجمعية",
       "allCharities": "كافة الجهات",
@@ -2649,7 +2696,8 @@
         "phones": "بيانات الاتصال",
         "guardian": "اضافة معيل",
         "child": "اضافة ابن",
-        "childrenTable": "الأبناء المسجلون"
+        "childrenTable": "الأبناء المسجلون",
+        "guardiansTable": "المعيلون المسجلون"
       },
       "charity": "الجمعية",
       "familyCode": "رقم القيد",
@@ -2727,7 +2775,8 @@
         "motherIsMar": "الأم متزوجة",
         "isCaring": "يقوم بالرعاية",
         "confirm": "تم",
-        "saved": "تم تسجيل المعيل"
+        "saved": "تم تسجيل المعيل",
+        "update": "تحديث"
       },
       "child": {
         "birthDate": "تاريخ الميلاد",
@@ -2746,7 +2795,11 @@
         "school": "الموسسة التعليمية",
         "notes": "ملاحظات",
         "add": "اضافة",
-        "update": "تحديث"
+        "update": "تحديث",
+        "photo": "الصوره الشخصيه",
+        "birthCertificate": "صوره شهاده الميلاد",
+        "enrollmentProof": "صوره إثبات القيد",
+        "attachmentUploadFailed": "فشل رفع الملف"
       },
       "childrenTable": {
         "name": "الاسم",
@@ -2764,7 +2817,14 @@
         "updated": "تم تحديث بيانات الأسرة الساكنة",
         "createFailed": "تعذر تسجيل الأسرة الساكنة",
         "loadFailed": "تعذر تحميل بيانات الأسرة الساكنة",
-        "nationalIdTooLong": "الرقم القومى لا يزيد عن 14 رقماً"
+        "nationalIdTooLong": "الرقم القومى لا يزيد عن 14 رقماً",
+        "guardianRequired": "يجب إضافة معيل واحد على الأقل"
+      },
+      "country": "البلد",
+      "guardiansTable": {
+        "name": "الاسم",
+        "nationalId": "الرقم القومي",
+        "mainRelation": "العلاقة"
       }
     },
     "detail": {
@@ -3183,6 +3243,7 @@
     "placeholders": {
       "userAction": "ماذا كنت تفعل عند حدوث المشكلة؟",
       "userActionHelp": "صف الإجراء الذي كنت تقوم به عند حدوث المشكلة",
+      "pageUrlHelp": "يتم التقاط الرابط تلقائياً ويمكنك تعديله",
       "response": "أدخل ردك هنا...",
       "resolution": "صف كيف تم حل المشكلة...",
       "solutionSteps": "اختياري: قم بإدراج الخطوات المتخذة للحل..."

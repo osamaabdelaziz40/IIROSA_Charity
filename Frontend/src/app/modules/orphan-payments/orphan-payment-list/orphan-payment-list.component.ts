@@ -91,6 +91,12 @@ export class OrphanPaymentListComponent implements OnInit, OnDestroy {
       click: () => this.createPaymentGroup()
     },
     {
+      label: 'common.exportToExcel',
+      type: 'success',
+      icon: 'fe-download',
+      click: () => this.exportToExcel()
+    },
+    {
       label: 'common.refresh',
       type: 'secondary',
       icon: 'fe-refresh-cw',
@@ -290,6 +296,60 @@ export class OrphanPaymentListComponent implements OnInit, OnDestroy {
   onSearch(): void {
     this.currentPage = 1;
     this.loadPaymentGroups();
+  }
+
+  /**
+   * Export the §15.S.1 list to Excel (charity-list pattern) — the current filters
+   * ride along; the server ignores paging and writes every matching row.
+   */
+  exportToExcel(): void {
+    this.loading = true;
+    const formValues = this.filterForm.value;
+
+    const searchRequest: OrphanPaymentSearchRequest = {
+      pageNumber: 1,
+      pageSize: 100000,
+      sortBy: 'groupDate',
+      sortDescending: true
+    };
+
+    if (formValues.searchValue && formValues.searchValue.trim()) {
+      searchRequest.searchTerm = formValues.searchValue.trim();
+    }
+    if (formValues.paymentPeriodFrom) {
+      searchRequest.paymentPeriodFrom = formValues.paymentPeriodFrom;
+    }
+    if (formValues.paymentPeriodTo) {
+      searchRequest.paymentPeriodTo = formValues.paymentPeriodTo;
+    }
+    if (formValues.isBatchUploaded !== null && formValues.isBatchUploaded !== undefined) {
+      searchRequest.isBatchUploaded = formValues.isBatchUploaded;
+    }
+    if (this.isHqUser && formValues.charityId) {
+      searchRequest.charityId = formValues.charityId;
+    }
+
+    this.orphanPaymentService.exportToExcel(searchRequest)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob: Blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `orphan-payments_${new Date().toISOString().split('T')[0]}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+
+          this.notificationService.success(this.translate.instant('common.operationSuccess'));
+          this.loading = false;
+        },
+        error: () => {
+          this.loading = false;
+          this.notificationService.error(this.translate.instant('common.operationFailed'));
+        }
+      });
   }
 
   /**

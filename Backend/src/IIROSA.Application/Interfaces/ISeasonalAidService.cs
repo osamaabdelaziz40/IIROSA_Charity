@@ -51,9 +51,6 @@ public interface ISeasonalAidService
     Task<byte[]> ExportCampaignReportToPdfAsync(Guid campaignId);
     Task<byte[]> ExportCampaignReportToExcelAsync(Guid campaignId);
 
-    // UC-9.11: Assign Campaign to Charity
-    Task AssignCampaignToCharityAsync(Guid campaignId, Guid? charityId);
-
     // Additional helper methods
     Task<SeasonalAidCampaignDto?> GetCampaignByIdAsync(Guid id);
     Task<SeasonalAidCampaignDto?> GetCampaignByNameAsync(string name);

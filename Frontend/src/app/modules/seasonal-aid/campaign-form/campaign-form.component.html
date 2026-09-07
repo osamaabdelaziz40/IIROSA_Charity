@@ -114,7 +114,7 @@
                   fcn="countryId"
                   [label]="'seasonalAid.country'"
                   [initialData]="countryOptions"
-                  (onDropDownChanged)="onCountryChange($event)">
+                  (onDropDownChanged)="onCountryDropDownChanged($event)">
                 </app-drop-down>
               </div>
               <div class="col-md-4">
@@ -123,7 +123,8 @@
                   fcn="regionId"
                   [label]="'seasonalAid.region'"
                   [initialData]="regionOptions"
-                  (onDropDownChanged)="onRegionChange($event)">
+                  [disabled]="!campaignForm.get('countryId')?.value || regionOptions.length === 0"
+                  (onDropDownChanged)="onRegionDropDownChanged($event)">
                 </app-drop-down>
               </div>
               <div class="col-md-4">
@@ -131,21 +132,8 @@
                   [fg]="campaignForm"
                   fcn="centerId"
                   [label]="'seasonalAid.center'"
-                  [initialData]="centerOptions">
-                </app-drop-down>
-              </div>
-            </div>
-
-            <!-- Charity Assignment Section -->
-            <h5 class="mb-3 mt-4">{{ 'seasonalAid.charityAssignment' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-6">
-                <app-drop-down
-                  [fg]="campaignForm"
-                  fcn="charityId"
-                  [label]="'seasonalAid.assignedCharity'"
-                  [initialData]="charityOptions">
+                  [initialData]="centerOptions"
+                  [disabled]="!campaignForm.get('regionId')?.value || centerOptions.length === 0">
                 </app-drop-down>
               </div>
             </div>

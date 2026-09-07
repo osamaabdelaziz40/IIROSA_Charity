@@ -55,13 +55,6 @@ public class OutgoingRepository : Repository<Outgoing>, IOutgoingRepository
             .FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted);
     }
 
-    public Task<int> CountIncomingRepliesAsync(Guid outgoingId)
-    {
-        // Incoming.OutgoingId — incoming letters replying to this outgoing letter;
-        // soft-deleted replies must not block the delete (review P1)
-        return DbContext.Set<Incoming>().CountAsync(i => i.OutgoingId == outgoingId && !i.IsDeleted);
-    }
-
     public async Task<int> GetNextSerialAsync(Guid? charityId, int year)
     {
         // Serials derive from live rows only — a soft-deleted letter's serial is reusable

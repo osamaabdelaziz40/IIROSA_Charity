@@ -164,7 +164,7 @@ public class ReportService : IReportService
             .Where(o => !o.IsDeleted)
             .Include(o => o.Family!).ThenInclude(f => f.Father)
             .Include(o => o.Family!).ThenInclude(f => f.Mother)
-            .Include(o => o.Family!).ThenInclude(f => f.Provider)
+            .Include(o => o.Family!).ThenInclude(f => f.Providers)
             .Include(o => o.Family!).ThenInclude(f => f.Region)
             .Include(o => o.Family!).ThenInclude(f => f.Center)
             .Include(o => o.Family!).ThenInclude(f => f.HouseOwnership)
@@ -1163,7 +1163,12 @@ public class ReportService : IReportService
                 OrphanId = i.OrphanId,
                 OrphanCode = i.Orphan!.Code,
                 OrphanName = i.Orphan!.FullName,
-                GuardianName = i.Orphan!.Family!.Provider!.FullName,
+                // §11.S.2 multi-guardian: the PRIMARY guardian (first live row) names the row
+                GuardianName = i.Orphan!.Family!.Providers
+                    .Where(p => !p.IsDeleted)
+                    .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+                    .Select(p => p.FullName)
+                    .FirstOrDefault(),
                 Amount = i.Amount ?? 0m,
                 ChiqueNo = i.ChiqueNum,
                 PrintDate = i.Printdate,
@@ -1276,7 +1281,12 @@ public class ReportService : IReportService
                 OrphanId = i.OrphanId,
                 OrphanCode = i.Orphan!.Code,
                 OrphanName = i.Orphan!.FullName,
-                GuardianName = i.Orphan!.Family!.Provider!.FullName,
+                // §11.S.2 multi-guardian: the PRIMARY guardian (first live row) names the row
+                GuardianName = i.Orphan!.Family!.Providers
+                    .Where(p => !p.IsDeleted)
+                    .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+                    .Select(p => p.FullName)
+                    .FirstOrDefault(),
                 Amount = i.Amount ?? 0m,
                 ChiqueNo = i.ChiqueNum,
                 PrintDate = i.Printdate,
@@ -1385,7 +1395,12 @@ public class ReportService : IReportService
                 OrphanId = i.OrphanId,
                 OrphanCode = i.Orphan!.Code,
                 OrphanName = i.Orphan!.FullName,
-                GuardianName = i.Orphan!.Family!.Provider!.FullName,
+                // §11.S.2 multi-guardian: the PRIMARY guardian (first live row) names the row
+                GuardianName = i.Orphan!.Family!.Providers
+                    .Where(p => !p.IsDeleted)
+                    .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+                    .Select(p => p.FullName)
+                    .FirstOrDefault(),
                 Amount = i.Amount ?? 0m,
                 ChiqueNo = i.ChiqueNum
             })
@@ -1480,8 +1495,12 @@ public class ReportService : IReportService
                     OrphanName = o.FullName,
                     BirthDate = o.DateOfBirth,
                     FamilyCode = o.Family != null ? o.Family.Code : null,
-                    GuardianName = o.Family != null && o.Family.Provider != null
-                        ? o.Family.Provider.FullName
+                    GuardianName = o.Family != null
+                        ? o.Family.Providers
+                            .Where(p => !p.IsDeleted)
+                            .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+                            .Select(p => p.FullName)
+                            .FirstOrDefault()
                         : null,
                     CharityId = o.FK_CharityId,
                     RegistrationDate = o.CreatedOn
@@ -1681,7 +1700,10 @@ public class ReportService : IReportService
                         OrphanCode = o.Code,
                         OrphanName = o.FullName,
                         GuardianName = o.Family != null
-                            ? (o.Family.Provider != null ? o.Family.Provider.FullName : o.Family.HeadOfFamily)
+                            ? (o.Family.Providers.Where(p => !p.IsDeleted)
+                                    .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+                                    .Select(p => p.FullName).FirstOrDefault()
+                                ?? o.Family.HeadOfFamily)
                             : null,
                         FamilyCode = o.Family != null ? o.Family.Code : null,
                         CharityId = o.FK_CharityId,
@@ -2334,9 +2356,11 @@ public class ReportService : IReportService
             {
                 b.FamilyId,
                 FamilyCode = b.Family!.Code,
-                HeadName = b.Family.Provider != null ? b.Family.Provider.FullName :
-                           b.Family.Father != null ? b.Family.Father.FullName :
-                           b.Family.Mother != null ? b.Family.Mother.FullName : null,
+                HeadName = b.Family.Providers.Where(p => !p.IsDeleted)
+                               .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+                               .Select(p => p.FullName).FirstOrDefault()
+                           ?? b.Family.Father!.FullName
+                           ?? b.Family.Mother!.FullName,
                 Phone = b.Family.PhoneNumber,
                 Address = b.Family.Address,
                 CharityId = b.Family.FK_CharityId,

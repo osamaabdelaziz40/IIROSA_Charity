@@ -21,7 +21,12 @@ public class ReportProfile : Profile
     private static OrphanDataListDto MapOrphanData(Orphan source)
     {
         var family = source.Family;
-        var provider = family?.Provider;
+        // §11.S.2 multi-guardian: the register report shows the PRIMARY guardian —
+        // first live row by CreatedOn/Id (the legacy single-seat pick).
+        var provider = family?.Providers
+            ?.Where(p => !p.IsDeleted)
+            .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+            .FirstOrDefault();
         var father = family?.Father;
         var mother = family?.Mother;
 

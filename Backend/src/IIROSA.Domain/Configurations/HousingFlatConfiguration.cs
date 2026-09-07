@@ -25,6 +25,15 @@ public class HousingFlatConfiguration : IEntityTypeConfiguration<HousingFlat>
         builder.Property(x => x.IsActive)
             .IsRequired();
 
+        // ========== HousingFlat-Specific Properties ==========
+
+        builder.Property(x => x.Number);
+
+        builder.Property(x => x.SizeInMtr);
+
+        builder.Property(x => x.Description)
+            .HasMaxLength(500);
+
         // ========== Relationships ==========
 
         builder.HasOne(x => x.Building)

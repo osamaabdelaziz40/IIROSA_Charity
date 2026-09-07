@@ -200,6 +200,70 @@ export interface UpdateBankDto {
 }
 
 /// <summary>
+/// Housing building DTOs (UC-HOU-05 · §11.S.2 رقم العماره)
+/// </summary>
+export interface HousingBuildingDto extends LookupDto {
+  buildingNumber?: number;
+  buildingAddress?: string;
+}
+
+export interface CreateHousingBuildingDto {
+  name: string;
+  nameAr?: string;
+  nameEn?: string;
+  description?: string;
+  buildingNumber?: number;
+  buildingAddress?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdateHousingBuildingDto {
+  name?: string;
+  nameAr?: string;
+  nameEn?: string;
+  description?: string;
+  buildingNumber?: number;
+  buildingAddress?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+/// <summary>
+/// Housing flat DTOs (UC-HOU-05 · §11.S.2 رقم الشقه)
+/// </summary>
+export interface HousingFlatDto extends LookupDto {
+  number?: number;
+  sizeInMtr?: number;
+  buildingId: number;
+  buildingName?: string;
+}
+
+export interface CreateHousingFlatDto {
+  name: string;
+  nameAr?: string;
+  nameEn?: string;
+  description?: string;
+  number?: number;
+  sizeInMtr?: number;
+  buildingId: number;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdateHousingFlatDto {
+  name?: string;
+  nameAr?: string;
+  nameEn?: string;
+  description?: string;
+  number?: number;
+  sizeInMtr?: number;
+  buildingId?: number;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+/// <summary>
 /// Filter and pagination DTOs
 /// </summary>
 export interface LookupFilterDto {

@@ -33,7 +33,8 @@ public static class CorrespondenceLookupSeedData
     }
 
     /// <summary>
-    /// Seed the outgoing category catalogue (UC-COR-17 — اختيار تصنيف الصادر)
+    /// Seed the outgoing category catalogue (UC-COR-17 — اختيار تصنيف الصادر).
+    /// The office's working classification of outgoing letters.
     /// </summary>
     public static async Task SeedOutgoingCategoriesAsync(ApplicationDbContext context)
     {
@@ -42,11 +43,17 @@ public static class CorrespondenceLookupSeedData
 
         var categories = new[]
         {
-            new OutgoingCategory { NameAr = "رسمي", NameEn = "Official", IsActive = true, SortOrder = 1 },
-            new OutgoingCategory { NameAr = "داخلي", NameEn = "Internal", IsActive = true, SortOrder = 2 },
-            new OutgoingCategory { NameAr = "خارجي", NameEn = "External", IsActive = true, SortOrder = 3 },
-            new OutgoingCategory { NameAr = "تعميم", NameEn = "Circular", IsActive = true, SortOrder = 4 },
-            new OutgoingCategory { NameAr = "أخرى", NameEn = "Other", IsActive = true, SortOrder = 5 }
+            new OutgoingCategory { NameAr = "دراسة حالة", NameEn = "Case Study", IsActive = true, SortOrder = 1 },
+            new OutgoingCategory { NameAr = "مخاطبات داخل مصر", NameEn = "Correspondence Within Egypt", IsActive = true, SortOrder = 2 },
+            new OutgoingCategory { NameAr = "بنكية", NameEn = "Banking", IsActive = true, SortOrder = 3 },
+            new OutgoingCategory { NameAr = "تقارير إنجاز", NameEn = "Progress Reports", IsActive = true, SortOrder = 4 },
+            new OutgoingCategory { NameAr = "سداد عهد مالية", NameEn = "Financial Custody Settlement", IsActive = true, SortOrder = 5 },
+            new OutgoingCategory { NameAr = "تقارير مالية", NameEn = "Financial Reports", IsActive = true, SortOrder = 6 },
+            new OutgoingCategory { NameAr = "شؤون قانونية", NameEn = "Legal Affairs", IsActive = true, SortOrder = 7 },
+            new OutgoingCategory { NameAr = "تقارير دورية للأيتام", NameEn = "Periodic Orphan Reports", IsActive = true, SortOrder = 8 },
+            new OutgoingCategory { NameAr = "شؤون إدارية", NameEn = "Administrative Affairs", IsActive = true, SortOrder = 9 },
+            new OutgoingCategory { NameAr = "دراسات للمشروعات", NameEn = "Project Studies", IsActive = true, SortOrder = 10 },
+            new OutgoingCategory { NameAr = "موارد بشرية", NameEn = "Human Resources", IsActive = true, SortOrder = 11 }
         };
 
         await context.Set<OutgoingCategory>().AddRangeAsync(categories);

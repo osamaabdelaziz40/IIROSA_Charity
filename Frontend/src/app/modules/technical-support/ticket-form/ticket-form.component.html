@@ -125,13 +125,16 @@
           </div>
 
           <div class="form-group">
-            <label>{{ 'technicalSupport.pageUrl' | translate }}</label>
+            <label for="pageUrl">{{ 'technicalSupport.pageUrl' | translate }}</label>
             <input
               type="text"
               class="form-control"
-              [value]="pageUrl"
-              readonly
-              disabled>
+              id="pageUrl"
+              formControlName="pageUrl"
+              [placeholder]="'technicalSupport.pageUrl' | translate">
+            <small class="form-text text-muted">
+              {{ 'technicalSupport.placeholders.pageUrlHelp' | translate }}
+            </small>
           </div>
 
             <!-- Form Actions -->

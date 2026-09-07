@@ -27,8 +27,13 @@ public class HousingBuildingConfiguration : IEntityTypeConfiguration<HousingBuil
 
         // ========== HousingBuilding-Specific Properties ==========
 
-        builder.Property(x => x.Location)
+        builder.Property(x => x.BuildingNumber);
+
+        builder.Property(x => x.BuildingAddress)
             .HasMaxLength(200);
+
+        builder.Property(x => x.BuildingDescription)
+            .HasMaxLength(500);
 
         // ========== Indexes ==========
 

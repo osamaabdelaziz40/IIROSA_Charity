@@ -40,7 +40,9 @@ public class CreateHousingFamilyValidator : AbstractValidator<CreateFamilyDto>
         RuleFor(x => x.CharityId)
             .NotNull().WithMessage("الجمعية مطلوبة");
 
-        // اضافة معيل (guardian block) — §11.S.2 mandatories
+        // اضافة معيل (guardian block) — §11.S.2 mandatories. The service mirrors the first
+        // multi-guardian row onto Provider before validating, so row 1 always runs through
+        // the Provider rules; rows 2+ run the same mandatory set per row below.
         RuleFor(x => x.Provider)
             .NotNull().WithMessage("بيانات المعيل مطلوبة");
         When(x => x.Provider != null, () =>
@@ -68,6 +70,36 @@ public class CreateHousingFamilyValidator : AbstractValidator<CreateFamilyDto>
             RuleFor(x => x.Provider!.HealthStatusId)        // الحالة الصحية
                 .NotNull().WithMessage("الحالة الصحية للمعيل مطلوبة");
             RuleFor(x => x.Provider!.Phone)
+                .NotEmpty().WithMessage("هاتف المعيل مطلوب");
+        });
+
+        // §11.S.2 multi-guardian rows (اضافة الاباء · AddNewParent() always) — the same
+        // mandatory set per row; rows are keyed by id on the update (edit-sync contract).
+        RuleForEach(x => x.Providers).ChildRules(guardian =>
+        {
+            guardian.RuleFor(g => g.FullName)
+                .NotEmpty().WithMessage("اسم المعيل مطلوب");
+            guardian.RuleFor(g => g.NationalId)
+                .NotEmpty().WithMessage("الرقم القومي للمعيل مطلوب");
+            guardian.RuleFor(g => g.DateOfBirth)
+                .NotNull().WithMessage("تاريخ ميلاد المعيل مطلوب");
+            guardian.RuleFor(g => g.NationalityCountryId)
+                .NotNull().WithMessage("جنسية المعيل مطلوبة");
+            guardian.RuleFor(g => g.Job)
+                .NotEmpty().WithMessage("نوع عمل المعيل مطلوب");
+            guardian.RuleFor(g => g.ReasonOfRelationId)
+                .NotNull().WithMessage("سبب العلاقة مطلوب");
+            guardian.RuleFor(g => g.RelationId)
+                .NotNull().WithMessage("نوع العلاقة مطلوب");
+            guardian.RuleFor(g => g.MainRelation)
+                .NotEmpty().WithMessage("العلاقة مطلوبة");
+            guardian.RuleFor(g => g.EducationLevelId)
+                .NotNull().WithMessage("المؤهل الدراسى للمعيل مطلوب");
+            guardian.RuleFor(g => g.SocialStatusId)
+                .NotNull().WithMessage("الحالة الاجتماعية للمعيل مطلوبة");
+            guardian.RuleFor(g => g.HealthStatusId)
+                .NotNull().WithMessage("الحالة الصحية للمعيل مطلوبة");
+            guardian.RuleFor(g => g.Phone)
                 .NotEmpty().WithMessage("هاتف المعيل مطلوب");
         });
 

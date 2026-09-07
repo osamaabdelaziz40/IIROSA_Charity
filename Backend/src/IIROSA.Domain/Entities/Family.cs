@@ -203,7 +203,12 @@ public class Family : FullAuditedEntity
     public virtual Lookups.HousingFlat? HousingFlat { get; set; }
     public virtual Father? Father { get; set; }
     public virtual Mother? Mother { get; set; }
-    public virtual Provider? Provider { get; set; }
+    /// <summary>
+    /// §11.S.2 multi-guardian set (اضافة الاباء · AddNewParent() always): a housing family
+    /// may carry several live guardians. Primary = first by CreatedOn/Id; the legacy
+    /// single-seat rule (BR-06) stays enforced in code for the standalone member endpoint.
+    /// </summary>
+    public virtual ICollection<Provider> Providers { get; set; } = new List<Provider>();
     public virtual ICollection<Relative> Relatives { get; set; } = new List<Relative>();
     public virtual ICollection<Orphan> Orphans { get; set; } = new List<Orphan>();
 

@@ -42,6 +42,9 @@ public interface IOrphanPaymentService
     // callers must use that mode (the scoping params verify the orphan is theirs).
     Task<(IEnumerable<OrphanPaymentListDto> Items, int TotalCount)> GetPaymentGroupsAsync(OrphanPaymentFilterDto filter, Guid? userCharityId = null, string? userRole = null);
 
+    // List export to Excel — same scope rules as GetPaymentGroupsAsync
+    Task<byte[]> ExportPaymentGroupsToExcelAsync(OrphanPaymentFilterDto filter, Guid? userCharityId = null, string? userRole = null);
+
     // UC-5.9: View Payment Group Details.
     // UC-ORP-09: with orphanId set, the batch header stays complete but Orphans is filtered to
     // that orphan's rows; out-of-scope orphan → KeyNotFoundException (no existence leak).

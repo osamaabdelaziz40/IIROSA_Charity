@@ -48,6 +48,12 @@ export class TechnicalSupportService {
       .pipe(map(res => this.toPagedResponse(res, search)));
   }
 
+  // List export (Excel) — the server widens the page to all matching rows; the
+  // admin-wide vs. my-tickets scope is decided server-side from the caller's roles.
+  exportToExcel(search: TicketSearchRequest): Observable<Blob> {
+    return this.api.getBlob(`${this.endpoint}/export`, search);
+  }
+
   getTicketById(id: string): Observable<SupportTicket> {
     return this.api.get<SupportTicket>(`${this.endpoint}/${id}`);
   }

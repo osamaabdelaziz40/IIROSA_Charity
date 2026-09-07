@@ -122,10 +122,11 @@ public class FamilyRepository : Repository<Family>, IFamilyRepository
             .Include(f => f.Charity)
             .Include(f => f.Father)
             .Include(f => f.Mother)
-            // The housing register's guardian (ولي الأمر) — 6-4's guardian block and 6-7's
-            // Parent beneficiary row read family.Provider; without this Include both are
-            // silently empty on every housing family (found live, 6-8 battery).
-            .Include(f => f.Provider)
+            // The housing register's guardians (ولي الأمر) — 6-4's guardian block and 6-7's
+            // Parent beneficiary rows read family.Providers; without this Include both are
+            // silently empty on every housing family (found live, 6-8 battery). §11.S.2
+            // multi-guardian: collection Include — no principal-row duplication risk.
+            .Include(f => f.Providers)
             .Include(f => f.Orphans)
                 .ThenInclude(o => o.SocialStatus)
             // Refugee/housing register reference navs (§12.S.2 / §11.S.2) — resolved names

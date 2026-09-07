@@ -1,0 +1,208 @@
+- generic [ref=f6e266]:
+  - navigation [ref=f6e267]:
+    - button "" [ref=f6e268] [cursor=pointer]
+    - list [ref=f6e270]:
+      - listitem [ref=f6e271]:
+        - link "English " [ref=f6e272] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f6e273]: 
+          - text: English 
+      - listitem [ref=f6e274]:
+        - link "" [ref=f6e275] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f6e277]:
+        - link "" [ref=f6e278] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f6e281]:
+        - button [ref=f6e282] [cursor=pointer]:
+          - generic [ref=f6e283]:
+            - text: Welcome System Admin
+            - img "..." [ref=f6e284]
+          - text: 
+  - complementary [ref=f6e285]:
+    - generic [ref=f6e290]:
+      - text: 
+      - navigation [ref=f6e291]:
+        - link [ref=f6e293] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f6e294]
+        - paragraph [ref=f6e295]: Website Elements
+        - list [ref=f6e296]:
+          - listitem [ref=f6e297]:
+            - link " Home Page (current) " [ref=f6e298] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f6e299]: 
+              - generic [ref=f6e300]: Home Page
+              - generic [ref=f6e301]: (current)
+              - text: 
+            - list [ref=f6e302]:
+              - listitem [ref=f6e303]:
+                - link "Home" [ref=f6e304] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f6e305]:
+            - link " Settings " [ref=f6e306] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=f6e307]: 
+              - generic [ref=f6e308]: Settings
+              - text: 
+          - listitem [ref=f6e309]:
+            - link " Technical Support " [ref=f6e310] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f6e311]: 
+              - generic [ref=f6e312]: Technical Support
+              - text: 
+          - listitem [ref=f6e313]:
+            - link " Missions " [ref=f6e314] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f6e315]: 
+              - generic [ref=f6e316]: Missions
+              - text: 
+          - listitem [ref=f6e317]:
+            - link " Orphan Payments " [ref=f6e318] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f6e319]: 
+              - generic [ref=f6e320]: Orphan Payments
+              - text: 
+          - listitem [ref=f6e321]:
+            - link " Office Projects " [ref=f6e322] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f6e323]: 
+              - generic [ref=f6e324]: Office Projects
+              - text: 
+          - listitem [ref=f6e325]:
+            - link " Housing Projects " [ref=f6e326] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f6e327]: 
+              - generic [ref=f6e328]: Housing Projects
+              - text: 
+          - listitem [ref=f6e329]:
+            - link " Seasonal Aid " [ref=f6e330] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f6e331]: 
+              - generic [ref=f6e332]: Seasonal Aid
+              - text: 
+          - listitem [ref=f6e333]:
+            - link " Incoming & Outgoing " [ref=f6e334] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f6e335]: 
+              - generic [ref=f6e336]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=f6e337]:
+            - link " Families " [ref=f6e338] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f6e339]: 
+              - generic [ref=f6e340]: Families
+              - text: 
+          - listitem [ref=f6e341]:
+            - link " Reports " [ref=f6e342] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f6e343]: 
+              - generic [ref=f6e344]: Reports
+              - text: 
+          - listitem [ref=f6e345]:
+            - link " General Cheques " [ref=f6e346] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f6e347]: 
+              - generic [ref=f6e348]: General Cheques
+              - text: 
+          - listitem [ref=f6e349]:
+            - link " Periodic Orphan Reports " [ref=f6e350] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f6e351]: 
+              - generic [ref=f6e352]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=f6e353]:
+            - link " Financial Transfers " [ref=f6e354] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f6e355]: 
+              - generic [ref=f6e356]: Financial Transfers
+              - text: 
+            - list [ref=f6e357]:
+              - listitem [ref=f6e358]:
+                - link "Financial Transfers" [ref=f6e359] [cursor=pointer]:
+                  - /url: "#/hq-transfers"
+  - main [ref=f6e360]:
+    - generic [ref=f6e362]:
+      - navigation "breadcrumb" [ref=f6e364]:
+        - list [ref=f6e365]:
+          - listitem [ref=f6e366]:
+            - link "Home" [ref=f6e367] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=f6e368]:
+            - text: /
+            - generic [ref=f6e369]: Financial Transfers
+      - generic [ref=f6e371]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f6e372]:
+          - generic [ref=f6e373]:
+            - generic [ref=f6e374]: 
+            - generic [ref=f6e375]:
+              - heading "Financial Transfers" [level=3] [ref=f6e376]
+              - paragraph [ref=f6e377]: Financial transfers issued by the HQ Financial Department
+          - generic [ref=f6e378]:
+            - button "Add Transfer" [ref=f6e379] [cursor=pointer]:
+              - generic [ref=f6e380]: 
+              - text: Add Transfer
+            - button "Export to Excel" [ref=f6e381] [cursor=pointer]:
+              - generic [ref=f6e382]: 
+              - text: Export to Excel
+      - generic [ref=f6e384]:
+        - table [ref=f6e386]:
+          - rowgroup [ref=f6e387]:
+            - row [ref=f6e388]:
+              - columnheader "No." [ref=f6e389]
+              - columnheader "Operation No." [ref=f6e390]
+              - columnheader "Fiscal Year" [ref=f6e391]
+              - columnheader "Payment No." [ref=f6e392]
+              - columnheader "From Date" [ref=f6e393]
+              - columnheader "To Date" [ref=f6e394]
+              - columnheader "Payment Amount" [ref=f6e395]
+              - columnheader "Statement" [ref=f6e396]
+              - columnheader "Beneficiaries" [ref=f6e397]
+              - columnheader "Transaction No." [ref=f6e398]
+              - columnheader "Transaction Date" [ref=f6e399]
+              - columnheader "Actions" [ref=f6e400]
+          - rowgroup [ref=f6e401]:
+            - row [ref=f6e402]:
+              - cell "1" [ref=f6e403]
+              - cell "OP-2026-001" [ref=f6e404]
+              - cell "2026" [ref=f6e405]
+              - cell "2" [ref=f6e406]
+              - cell "Jan 1, 2026" [ref=f6e408]
+              - cell "Mar 31, 2026" [ref=f6e409]
+              - cell [ref=f6e410]:
+                - strong [ref=f6e411]: 150,000.50
+              - cell "battery-17-4 statement" [ref=f6e412]
+              - cell "321" [ref=f6e413]
+              - cell "TRX-88123" [ref=f6e414]
+              - cell "Mar 28, 2026" [ref=f6e415]
+              - cell [ref=f6e416]:
+                - generic [ref=f6e417]:
+                  - button "" [ref=f6e418] [cursor=pointer]
+                  - button "" [ref=f6e420] [cursor=pointer]
+                  - button "" [ref=f6e422] [cursor=pointer]
+            - row [ref=f6e424]:
+              - cell "2" [ref=f6e425]
+              - cell "OP-2026-003" [ref=f6e426]
+              - cell "2026" [ref=f6e427]
+              - cell "1" [ref=f6e428]
+              - cell "Feb 1, 2026" [ref=f6e430]
+              - cell "Feb 28, 2026" [ref=f6e431]
+              - cell [ref=f6e432]:
+                - strong [ref=f6e433]: 99,000.00
+              - cell "-" [ref=f6e434]
+              - cell "90" [ref=f6e435]
+              - cell "TRX-99456" [ref=f6e436]
+              - cell "Mar 1, 2026" [ref=f6e437]
+              - cell [ref=f6e438]:
+                - generic [ref=f6e439]:
+                  - button "" [ref=f6e440] [cursor=pointer]
+                  - button "" [ref=f6e442] [cursor=pointer]
+                  - button "" [ref=f6e444] [cursor=pointer]
+        - generic [ref=f6e446]: Showing 1 to 2 of 2
+  - contentinfo [ref=f6e448]:
+    - generic [ref=f6e450]:
+      - paragraph [ref=f6e452]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f6e454]: Version 1.0.0

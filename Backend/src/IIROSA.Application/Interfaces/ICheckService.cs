@@ -12,6 +12,9 @@ public interface ICheckService
     /// <summary>UC-CHQ-01 — paged cheque register.</summary>
     Task<CheckPagedResult<CheckListDto>> GetChecksAsync(CheckFilterDto filter);
 
+    /// <summary>The register (§16.S.1 grid columns) as an Excel workbook — every filtered row.</summary>
+    Task<byte[]> ExportChecksToExcelAsync(CheckFilterDto filter);
+
     /// <summary>UC-CHQ-03 — single cheque for review or edit.</summary>
     Task<CheckDetailDto?> GetCheckByIdAsync(Guid id);
 

@@ -8,9 +8,10 @@ namespace IIROSA.Infrastructure.Data.SeedData;
 /// Seeds organisation-owned buildings and their flats — the §11.S.2 رقم العماره /
 /// رقم الشقه drop-downs would be unusable empty.
 ///
-/// Buildings are an HQ catalogue, NOT per-charity rows (decision recorded in story 6-5):
-/// chapter 11 has no building-maintenance screen, so the catalogue is maintained via
-/// seeds/admin, never by charity users.
+/// Buildings are an HQ catalogue, NOT per-charity rows (decision recorded in story 6-5).
+/// The initial catalogue (4 buildings × 12 flats of 100 m²) is initiation data the
+/// migration inserts with explicit ids; this seeder is the empty-table fallback and
+/// must stay in sync with it.
 /// </summary>
 public static class HousingLookupSeedData
 {
@@ -27,22 +28,43 @@ public static class HousingLookupSeedData
         if (await context.Set<HousingBuilding>().AnyAsync())
             return; // Already seeded
 
-        var building1 = new HousingBuilding { NameAr = "مبنى القاهرة ١", NameEn = "Cairo Building 1", Location = "القاهرة - مدينة نصر", IsActive = true, SortOrder = 1 };
-        var building2 = new HousingBuilding { NameAr = "مبنى القاهرة ٢", NameEn = "Cairo Building 2", Location = "القاهرة - مدينة نصر", IsActive = true, SortOrder = 2 };
-        var building3 = new HousingBuilding { NameAr = "مبنى الجيزة", NameEn = "Giza Building", Location = "الجيزة - الدقي", IsActive = true, SortOrder = 3 };
+        // (title, number, address, description) — العمارات 7/8/13/14 بمدينه نصر
+        var buildingSpecs = new (string Title, int Number, string Address, string Description)[]
+        {
+            ("العماره رقم 7", 7, "مدينه نصر", "العماره رقم 7"),
+            ("العماره رقم 8", 8, "مدينه نصر", "العماره رقم 8"),
+            ("العماره رقم 13", 13, "مدينه نصر", "العماره رقم 13"),
+            ("العماره رقم 14", 14, "مدينه نصر", "العماره رقم 14")
+        };
 
-        await context.Set<HousingBuilding>().AddRangeAsync(building1, building2, building3);
+        var buildings = buildingSpecs
+            .Select((spec, index) => new HousingBuilding
+            {
+                NameAr = spec.Title,
+                NameEn = $"Building No. {spec.Number}",
+                BuildingNumber = spec.Number,
+                BuildingAddress = spec.Address,
+                BuildingDescription = spec.Description,
+                IsActive = true,
+                SortOrder = index + 1
+            })
+            .ToList();
+
+        await context.Set<HousingBuilding>().AddRangeAsync(buildings);
         await context.SaveChangesAsync();
 
+        // 12 flats of 100 m² per building, numbered 1..12
         var flats = new List<HousingFlat>();
-        foreach (var building in new[] { building1, building2, building3 })
+        foreach (var building in buildings)
         {
-            for (var i = 1; i <= 8; i++)
+            for (var i = 1; i <= 12; i++)
             {
                 flats.Add(new HousingFlat
                 {
-                    NameAr = $"شقة {ToArabicDigits(i)}",
-                    NameEn = $"Flat {i}",
+                    NameAr = i.ToString(),
+                    NameEn = i.ToString(),
+                    Number = i,
+                    SizeInMtr = 100,
                     BuildingId = building.Id,
                     IsActive = true,
                     SortOrder = i
@@ -52,11 +74,5 @@ public static class HousingLookupSeedData
 
         await context.Set<HousingFlat>().AddRangeAsync(flats);
         await context.SaveChangesAsync();
-    }
-
-    private static string ToArabicDigits(int value)
-    {
-        var arabicDigits = "٠١٢٣٤٥٦٧٨٩";
-        return string.Concat(value.ToString().Select(d => arabicDigits[d - '0']));
     }
 }

@@ -13,12 +13,6 @@ public class IncomingConfiguration : IEntityTypeConfiguration<Incoming>
     {
         builder.ToTable(nameof(Incoming), MappingDefaults.IIROSA_SCHEMA);
 
-        // An incoming letter can reference one outgoing letter (ردا على)
-        builder.HasOne(i => i.OutgoingLetter)
-            .WithMany()
-            .HasForeignKey(i => i.OutgoingId)
-            .OnDelete(DeleteBehavior.Restrict);
-
         // An incoming letter can have many outgoing replies — blocks deleting a letter
         // that was replied to (16-7 referential guard)
         builder.HasMany(i => i.Replies)

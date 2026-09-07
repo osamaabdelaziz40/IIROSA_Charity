@@ -62,6 +62,20 @@ export class OrphanPaymentService {
   }
 
   /**
+   * Export the payment-group list to Excel — the server ignores paging and writes
+   * every row matching the same filters as the list read.
+   */
+  exportToExcel(searchRequest: OrphanPaymentSearchRequest): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/export`, {
+      headers: this.getHeaders(),
+      params: this.buildHttpParams(searchRequest),
+      responseType: 'blob'
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Get a specific orphan payment group by ID
    */
   getOrphanPayment(id: string): Observable<OrphanPaymentDto> {

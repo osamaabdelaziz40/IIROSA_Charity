@@ -34,10 +34,6 @@ public class SeasonalAidCampaignDto
     public int? CenterId { get; set; }
     public string? CenterName { get; set; }
 
-    // Charity Assignment
-    public Guid? CharityId { get; set; }
-    public string? CharityName { get; set; }
-
     // Beneficiary Criteria
     public int? MaximumFamilies { get; set; }
     public string? FamilyType { get; set; }

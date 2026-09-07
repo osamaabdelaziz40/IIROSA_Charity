@@ -78,6 +78,9 @@ public class FamilyDto
     public FatherDto? Father { get; set; }
     public MotherDto? Mother { get; set; }
     public ProviderDto? Provider { get; set; }
+    /// <summary>§11.S.2 multi-guardian set (اضافة الاباء), primary-first; Provider above
+    /// mirrors the first row for the legacy single-seat consumers.</summary>
+    public List<ProviderDto> Providers { get; set; } = new();
     public List<RelativeListDto> Relatives { get; set; } = new();
     public List<OrphanListDto> Orphans { get; set; } = new();
     public int RelativesCount { get; set; }

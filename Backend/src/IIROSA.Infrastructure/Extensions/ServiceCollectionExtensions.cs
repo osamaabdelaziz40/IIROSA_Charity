@@ -185,6 +185,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IIROSA.Application.Interfaces.IOfficeProjectTypeService, IIROSA.Application.Services.OfficeProjectTypeService>();
         services.AddScoped<IIROSA.Application.Interfaces.IHousingBuildingService, IIROSA.Application.Services.HousingBuildingService>();
         services.AddScoped<IIROSA.Application.Interfaces.IHousingFlatService, IIROSA.Application.Services.HousingFlatService>();
+        services.AddScoped<IIROSA.Application.Interfaces.IOutgoingCategoryService, IIROSA.Application.Services.OutgoingCategoryService>();
         services.AddScoped<IIROSA.Application.Interfaces.IBankService, IIROSA.Application.Services.BankService>();
         services.AddScoped<IIROSA.Application.Interfaces.INGOTypeService, IIROSA.Application.Services.NGOTypeService>();
         services.AddScoped<IIROSA.Application.Interfaces.IEducationLevelService, IIROSA.Application.Services.EducationLevelService>();
@@ -251,6 +252,9 @@ public static class ServiceCollectionExtensions
         // until dedicated IXRepository interfaces exist.
         services.AddScoped<IIROSA.Domain.Interfaces.ILookupRepository<IIROSA.Domain.Entities.Lookups.HousingBuilding>, IIROSA.Infrastructure.Data.Repository.HousingBuildingRepository>();
         services.AddScoped<IIROSA.Domain.Interfaces.ILookupRepository<IIROSA.Domain.Entities.Lookups.HousingFlat>, IIROSA.Infrastructure.Data.Repository.HousingFlatRepository>();
+        // The lookup-management summary service consumes the closed ILookupRepository<> for
+        // office project types too (UC-14.5 card counts / table export).
+        services.AddScoped<IIROSA.Domain.Interfaces.ILookupRepository<IIROSA.Domain.Entities.Lookups.OfficeProjectType>, IIROSA.Infrastructure.Data.Repository.OfficeProjectTypeRepository>();
         services.AddScoped<IIROSA.Domain.Interfaces.IOutgoingCategoryRepository, IIROSA.Infrastructure.Data.Repository.OutgoingCategoryRepository>();
 
         // Technical Support repositories (UC-13.1 through UC-13.10)

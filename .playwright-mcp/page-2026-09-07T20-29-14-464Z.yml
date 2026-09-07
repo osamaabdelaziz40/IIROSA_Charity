@@ -1,0 +1,23 @@
+- generic [active] [ref=f6e1]:
+  - generic [ref=f6e232]:
+    - button "English " [ref=f6e235] [cursor=pointer]:
+      - generic [ref=f6e236]: 
+      - text: English 
+    - generic [ref=f6e238]:
+      - link [ref=f6e239] [cursor=pointer]:
+        - /url: "#"
+      - heading "Sign in" [level=1] [ref=f6e245]
+      - generic [ref=f6e246]:
+        - generic [ref=f6e247]: Email address
+        - textbox "Email address" [ref=f6e248]: Admin@IIROSA.com
+      - generic [ref=f6e249]:
+        - generic [ref=f6e250]: Password
+        - textbox "Password" [ref=f6e251]: P@ssw0rd@2022
+      - generic [ref=f6e253]:
+        - checkbox "Stay logged in" [ref=f6e254]
+        - text: Stay logged in
+      - button "Let me in" [ref=f6e255] [cursor=pointer]
+      - paragraph [ref=f6e256]: © 2025 IIROSA
+  - alert [ref=f6e257]:
+    - 'heading "Error: Failed to load financial transfers" [level=2] [ref=f6e262]'
+    - text: "!"

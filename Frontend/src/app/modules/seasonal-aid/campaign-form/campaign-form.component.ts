@@ -1,13 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService, LangChangeEvent } from '@ngx-translate/core';
 
 import { SeasonalAidService } from '../services/seasonal-aid.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
-import { CharityService } from '../../charities/services/charity.service';
 import {
   SeasonalAidCampaign,
   CreateSeasonalAidCampaignRequest,
@@ -25,7 +24,7 @@ import { SharedModule } from '../../../shared/shared.module';
   templateUrl: './campaign-form.component.html',
   styleUrls: ['./campaign-form.component.scss']
 })
-export class CampaignFormComponent implements OnInit {
+export class CampaignFormComponent implements OnInit, OnDestroy {
   breadcrumbs: BreadcrumbItem[] = [
     { label: 'common.home', url: '/dashboard' },
     { label: 'seasonalAid.title', url: '/seasonal-aid' }
@@ -44,20 +43,14 @@ export class CampaignFormComponent implements OnInit {
   loading = false;
   saving = false;
 
-  // Lookup dropdown data (LookupBase format for the shared drop-down component)
+  // Lookup dropdown data (LookupBase format for the shared drop-down component).
+  // Region/center lists are children of the selected parent — the cascade mirrors
+  // office-development-projects.
   countryOptions: LookupBase[] = [];
   regionOptions: LookupBase[] = [];
   centerOptions: LookupBase[] = [];
-  charityOptions: LookupBase[] = [];
 
-  campaignTypeOptions: LookupBase[] = [
-    { id: 'Ramadan', name: 'seasonalAid.campaignTypes.Ramadan' },
-    { id: 'EidAlFitr', name: 'seasonalAid.campaignTypes.EidAlFitr' },
-    { id: 'EidAlAdha', name: 'seasonalAid.campaignTypes.EidAlAdha' },
-    { id: 'Winter', name: 'seasonalAid.campaignTypes.Winter' },
-    { id: 'SchoolSupplies', name: 'seasonalAid.campaignTypes.SchoolSupplies' },
-    { id: 'Other', name: 'seasonalAid.campaignTypes.Other' }
-  ];
+  campaignTypeOptions: LookupBase[] = [];
 
   currencyOptions: LookupBase[] = [
     { id: 'EGP', name: 'EGP' },
@@ -65,11 +58,7 @@ export class CampaignFormComponent implements OnInit {
     { id: 'USD', name: 'USD' }
   ];
 
-  familyTypeOptions: LookupBase[] = [
-    { id: 'All', name: 'seasonalAid.familyTypes.All' },
-    { id: 'Orphan Families', name: 'seasonalAid.familyTypes.OrphanFamilies' },
-    { id: 'Needy Families', name: 'seasonalAid.familyTypes.NeedyFamilies' }
-  ];
+  familyTypeOptions: LookupBase[] = [];
 
   // Page actions for header
   pageActions = [
@@ -81,13 +70,14 @@ export class CampaignFormComponent implements OnInit {
     }
   ];
 
+  private langChangeSubscription: any;
+
   constructor(
     private fb: FormBuilder,
     private router: Router,
     private route: ActivatedRoute,
     private seasonalAidService: SeasonalAidService,
     private lookupManagementService: LookupManagementService,
-    private charityService: CharityService,
     private notification: NotificationService,
     private translate: TranslateService
   ) {
@@ -95,8 +85,14 @@ export class CampaignFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // The drop-down component renders option names raw, so translated values are
+    // resolved here and re-resolved whenever the language flips.
+    this.buildTranslatedOptions();
+    this.langChangeSubscription = this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
+      this.buildTranslatedOptions();
+    });
+
     this.loadCountries();
-    this.loadCharities();
 
     this.route.params.subscribe(params => {
       if (params['id']) {
@@ -105,6 +101,12 @@ export class CampaignFormComponent implements OnInit {
         this.loadCampaign(params['id']);
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.langChangeSubscription) {
+      this.langChangeSubscription.unsubscribe();
+    }
   }
 
   createForm(): FormGroup {
@@ -120,13 +122,26 @@ export class CampaignFormComponent implements OnInit {
       countryId: [null],
       regionId: [null],
       centerId: [null],
-      charityId: [''],
       maximumFamilies: [null, Validators.min(1)],
       familyType: ['All'],
       minChildrenAge: [null, [Validators.min(0), Validators.max(18)]],
       maxChildrenAge: [null, [Validators.min(0), Validators.max(18)]],
       isActive: [true]
     });
+  }
+
+  /** Campaign/family-type labels resolved through the translator — the ids stay the stored values. */
+  private buildTranslatedOptions(): void {
+    this.campaignTypeOptions = (['Ramadan', 'EidAlFitr', 'EidAlAdha', 'Winter', 'SchoolSupplies', 'Other'] as const)
+      .map(id => ({ id, name: this.translate.instant(`seasonalAid.campaignTypes.${id}`) }));
+
+    const familyTypeKeys: Record<string, string> = {
+      'All': 'All',
+      'Orphan Families': 'OrphanFamilies',
+      'Needy Families': 'NeedyFamilies'
+    };
+    this.familyTypeOptions = Object.keys(familyTypeKeys)
+      .map(id => ({ id, name: this.translate.instant(`seasonalAid.familyTypes.${familyTypeKeys[id]}`) }));
   }
 
   loadCampaign(id: string): void {
@@ -157,7 +172,6 @@ export class CampaignFormComponent implements OnInit {
       countryId: campaign.countryId,
       regionId: campaign.regionId,
       centerId: campaign.centerId,
-      charityId: campaign.charityId,
       maximumFamilies: campaign.maximumFamilies,
       familyType: campaign.familyType,
       minChildrenAge: campaign.minChildrenAge,
@@ -216,32 +230,36 @@ export class CampaignFormComponent implements OnInit {
     });
   }
 
-  private loadCharities(): void {
-    this.charityService.getCharities({ pageNumber: 1, pageSize: 1000, isActive: true }).subscribe({
-      next: response => {
-        this.charityOptions = (response.items || []).map(c => ({
-          id: c.id,
-          name: c.name
-        }));
-      },
-      error: () => (this.charityOptions = [])
-    });
-  }
+  // Drop-down handlers — the component emits the selected ITEM, not its id
+  // (same contract as office-development-projects).
+  onCountryDropDownChanged(value: any): void {
+    if (value && value.id !== undefined && value.id !== null) {
+      const countryId = typeof value.id === 'string' ? parseInt(value.id, 10) : value.id;
 
-  onCountryChange(countryId: number): void {
-    this.campaignForm.patchValue({ regionId: null, centerId: null });
-    this.regionOptions = [];
-    this.centerOptions = [];
-    if (countryId) {
+      this.campaignForm.get('countryId')?.setValue(countryId, { emitEvent: false });
+      this.campaignForm.patchValue({ regionId: null, centerId: null });
+      this.centerOptions = [];
+
       this.loadRegions(countryId);
+    } else {
+      // Country cleared — the whole cascade resets
+      this.campaignForm.patchValue({ countryId: null, regionId: null, centerId: null });
+      this.regionOptions = [];
+      this.centerOptions = [];
     }
   }
 
-  onRegionChange(regionId: number): void {
-    this.campaignForm.patchValue({ centerId: null });
-    this.centerOptions = [];
-    if (regionId) {
+  onRegionDropDownChanged(value: any): void {
+    if (value && value.id !== undefined && value.id !== null) {
+      const regionId = typeof value.id === 'string' ? parseInt(value.id, 10) : value.id;
+
+      this.campaignForm.get('regionId')?.setValue(regionId, { emitEvent: false });
+      this.campaignForm.patchValue({ centerId: null });
+
       this.loadCenters(regionId);
+    } else {
+      this.campaignForm.patchValue({ regionId: null, centerId: null });
+      this.centerOptions = [];
     }
   }
 
@@ -267,7 +285,6 @@ export class CampaignFormComponent implements OnInit {
       countryId: formValue.countryId || null,
       regionId: formValue.regionId || null,
       centerId: formValue.centerId || null,
-      charityId: formValue.charityId || null,
       maximumFamilies: formValue.maximumFamilies || null,
       familyType: formValue.familyType || null,
       minChildrenAge: formValue.minChildrenAge ?? null,

@@ -96,19 +96,6 @@
           </div>
         </div>
 
-        <!-- Reply To Outgoing Letter -->
-        <div class="row" *ngIf="letter.outgoingId">
-          <div class="col-md-12 mb-3">
-            <label class="text-muted small mb-1">{{ 'incomingOutgoing.replyToOutgoing' | translate }}</label>
-            <div>
-              <a [routerLink]="['/incoming-outgoing/outgoing', letter.outgoingId]" class="btn btn-sm btn-outline-primary">
-                <i class="fe fe-external-link mr-1"></i>
-                {{ letter.outgoingLetterNumber || ('incomingOutgoing.outgoingLetter' | translate) }}
-              </a>
-            </div>
-          </div>
-        </div>
-
         <!-- Letter Description -->
         <div class="row" *ngIf="letter.letterDescription">
           <div class="col-md-12 mb-3">

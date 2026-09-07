@@ -261,14 +261,14 @@ export class CampaignListComponent implements OnInit, OnDestroy {
       const sheet = workbook.addWorksheet('Campaigns');
       sheet.addRow(['#', 'Name', 'Type', 'Start', 'End', 'Budget', 'Currency',
         'Allocated', 'Distributed', 'Registered', 'Distributed Beneficiaries',
-        'Charity', 'Status']);
+        'Status']);
       this.campaigns.forEach((c, i) => sheet.addRow([
         i + 1, c.name, c.campaignType,
         new Date(c.startDate).toLocaleDateString(),
         new Date(c.endDate).toLocaleDateString(),
         c.totalBudget, c.budgetCurrency, c.allocatedBudget, c.distributedBudget,
         c.registeredBeneficiariesCount, c.distributedBeneficiariesCount,
-        c.charityName ?? '', this.getStatusText(c)
+        this.getStatusText(c)
       ]));
 
       workbook.xlsx.writeBuffer().then(buffer => {

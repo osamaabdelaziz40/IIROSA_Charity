@@ -457,38 +457,30 @@
           <ul class="collapse list-unstyled pl-4 w-100"
               [class.show]="isActive('/reports')"
               id="reports">
-            <!-- All Reports hub — card directory of every report below; gated by the section
-                 itself (Reports.View OR Families.FollowUp), cards filter per-report inside. -->
             <li class="nav-item" routerLinkActive="active"
                 [routerLinkActiveOptions]="{ exact: true }">
               <a class="nav-link pl-3" routerLink="/reports/all">
                 <span class="ml-1 item-text">{{ "reports.allReports.title" | translate }}</span>
               </a>
             </li>
-            <!-- UC-FAM-11: family follow-up activity (legacy screen name kept verbatim) -->
-            <li class="nav-item" *ngIf="hasPermission('Families.FollowUp')" routerLinkActive="active"
+            <!-- <li class="nav-item" *ngIf="hasPermission('Families.FollowUp')" routerLinkActive="active"
                 [routerLinkActiveOptions]="{ exact: true }">
               <a class="nav-link pl-3" routerLink="/reports/family-orphans">
                 <span class="ml-1 item-text">{{ "families.followUp.title" | translate }}</span>
               </a>
             </li>
-            <!-- UC-RPT-01: orphan data بيانات الأيتام (EP-18) -->
             <li class="nav-item" *ngIf="hasPermission('Reports.View')" routerLinkActive="active"
                 [routerLinkActiveOptions]="{ exact: true }">
               <a class="nav-link pl-3" routerLink="/reports/orphans">
                 <span class="ml-1 item-text">{{ "reports.orphanData.title" | translate }}</span>
               </a>
             </li>
-            <!-- UC-RPT-03: excluded orphans الايتام المستبعدين (EP-18) -->
             <li class="nav-item" *ngIf="hasPermission('Reports.View')" routerLinkActive="active"
                 [routerLinkActiveOptions]="{ exact: true }">
               <a class="nav-link pl-3" routerLink="/reports/excluded-orphans">
                 <span class="ml-1 item-text">{{ "reports.excludedOrphans.title" | translate }}</span>
               </a>
             </li>
-            <!-- UC-RPT-04/05: orphan status reports. Review P27 2026-08-26: the entries now
-                 follow the ROUTE gates (Reports.View only) — the extra menu-side HQ role gate
-                 hid routes the guard let through, and the endpoint enforces HQ regardless. -->
             <li class="nav-item" *ngIf="hasPermission('Reports.View')"
                 routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
               <a class="nav-link pl-3" routerLink="/reports/finished-sponsorship-orphans">
@@ -501,16 +493,13 @@
                 <span class="ml-1 item-text">{{ "reports.unsponsoredOrphans.title" | translate }}</span>
               </a>
             </li>
-            <!-- UC-RPT-06: widows requiring sponsorship ارامل مطلوب لهم كفاله (EP-18) -->
             <li class="nav-item" *ngIf="hasPermission('Reports.View')" routerLinkActive="active"
                 [routerLinkActiveOptions]="{ exact: true }">
               <a class="nav-link pl-3" routerLink="/reports/widows-allowing-sponsorship">
                 <span class="ml-1 item-text">{{ "reports.widowsSponsorship.title" | translate }}</span>
               </a>
             </li>
-            <!-- UC-RPT-07: registered Meza cards تقرير الكروت المسجله (EP-18). Review P27
-                 2026-08-26: route-gated (Reports.View) — the menu's extra HQ role gate hid a
-                 reachable route; the endpoint enforces HQ server-side. -->
+          
             <li class="nav-item" *ngIf="hasPermission('Reports.View')"
                 routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
               <a class="nav-link pl-3" routerLink="/reports/meza-cards">
@@ -523,8 +512,7 @@
                 <span class="ml-1 item-text">{{ "reports.beneficiaryFamilyDetails.title" | translate }}</span>
               </a>
             </li>
-            <!-- Review P27 2026-08-26: same route-alignment rule — the HQ role gate hid a
-                 Reports.View-gated route from users the guard admits. -->
+          
             <li class="nav-item" *ngIf="hasPermission('Reports.View')"
                 routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
               <a class="nav-link pl-3" routerLink="/reports/registered-family-projects">
@@ -615,8 +603,7 @@
                 <span class="ml-1 item-text">{{ "reports.missingOutgoingAttachments.title" | translate }}</span>
               </a>
             </li>
-            <!-- Review P27 2026-08-26: three routed screens had NO menu entry — reachable by
-                 URL only. Entries added, gated like their routes (Reports.View). -->
+           
             <li class="nav-item" *ngIf="hasPermission('Reports.View')"
                 routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
               <a class="nav-link pl-3" routerLink="/reports/cheque-statement">
@@ -634,7 +621,7 @@
               <a class="nav-link pl-3" routerLink="/reports/family-orphans-by-date">
                 <span class="ml-1 item-text">{{ "reports.familyOrphansByDate.title" | translate }}</span>
               </a>
-            </li>
+            </li> -->
           </ul>
         </li>
 

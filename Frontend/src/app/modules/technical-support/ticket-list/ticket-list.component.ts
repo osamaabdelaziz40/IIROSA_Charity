@@ -174,6 +174,12 @@ export class TicketListComponent implements OnInit, OnDestroy {
       cssClass: 'btn-primary'
     },
     {
+      label: 'common.exportToExcel',
+      icon: 'fe fe-download',
+      action: 'export',
+      cssClass: 'btn-success'
+    },
+    {
       label: 'technicalSupport.reports.title',
       icon: 'fe fe-bar-chart-2',
       action: 'reports',
@@ -403,6 +409,9 @@ export class TicketListComponent implements OnInit, OnDestroy {
       case 'reports':
         this.router.navigate(['/technical-support', 'reports']);
         break;
+      case 'export':
+        this.exportToExcel();
+        break;
     }
   }
 
@@ -410,6 +419,46 @@ export class TicketListComponent implements OnInit, OnDestroy {
     this.viewMode = mode;
     this.searchRequest.pageNumber = 1;
     this.loadTickets();
+  }
+
+  /**
+   * Export the current filtered register to Excel (charity-list pattern). The
+   * current filters ride along; the server widens the page to every matching row
+   * and decides my-tickets vs. all-tickets scope from the caller's roles.
+   */
+  exportToExcel(): void {
+    this.loading = true;
+    const filters = this.filterForm.value;
+
+    const searchParams: TicketSearchRequest = {
+      ...this.searchRequest,
+      pageNumber: 1,
+      pageSize: 100000,
+      searchTerm: filters.searchTerm || undefined,
+      categoryId: this.filterIdOrUndefined(filters.selectedCategoryId),
+      priorityId: this.filterIdOrUndefined(filters.selectedPriorityId),
+      statusId: this.filterIdOrUndefined(filters.selectedStatusId)
+    };
+
+    this.technicalSupportService.exportToExcel(searchParams).subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `support-tickets_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        this.notification.success(this.translate.instant('common.operationSuccess'));
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+        this.notification.error(this.translate.instant('common.operationFailed'));
+      }
+    });
   }
 
   closeTicket(ticket: SupportTicket): void {

@@ -116,6 +116,14 @@ export class MissionService {
   }
 
   /**
+   * Export the register to Excel — POST /export with the §20.S.1 filter; the server
+   * ignores paging and writes every matching row.
+   */
+  exportToExcel(search: MissionSearchRequest): Observable<Blob> {
+    return this.http.post(`${this.apiBaseUrl}/export`, search, { responseType: 'blob' });
+  }
+
+  /**
    * Get available mission types (UC-MSN-03)
    */
   getMissionTypes(): Observable<MissionLookupItem[]> {

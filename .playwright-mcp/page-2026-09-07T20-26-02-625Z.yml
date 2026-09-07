@@ -1,0 +1,19 @@
+- generic [ref=e72]:
+  - button "English " [ref=e75] [cursor=pointer]:
+    - generic [ref=e76]: 
+    - text: English 
+  - generic [ref=e78]:
+    - link [ref=e79] [cursor=pointer]:
+      - /url: "#"
+    - heading "Sign in" [level=1] [ref=e85]
+    - generic [ref=e86]:
+      - generic [ref=e87]: Email address
+      - textbox "Email address" [ref=e88]: Admin@IIROSA.com
+    - generic [ref=e89]:
+      - generic [ref=e90]: Password
+      - textbox "Password" [ref=e91]: P@ssw0rd@2022
+    - generic [ref=e93]:
+      - checkbox "Stay logged in" [ref=e94]
+      - text: Stay logged in
+    - button "Let me in" [ref=e95] [cursor=pointer]
+    - paragraph [ref=e96]: © 2025 IIROSA

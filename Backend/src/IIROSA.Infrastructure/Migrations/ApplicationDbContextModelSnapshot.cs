@@ -1287,9 +1287,6 @@ namespace IIROSA.Infrastructure.Migrations
                     b.Property<string>("LetterNumber")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid?>("OutgoingId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<int?>("Serial")
                         .HasColumnType("int");
 
@@ -1322,8 +1319,6 @@ namespace IIROSA.Infrastructure.Migrations
                     b.HasIndex("FK_DepartmentId");
 
                     b.HasIndex("FK_UserId");
-
-                    b.HasIndex("OutgoingId");
 
                     b.HasIndex("UploadedFileId");
 
@@ -1893,6 +1888,17 @@ namespace IIROSA.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("BuildingAddress")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("BuildingDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("BuildingNumber")
+                        .HasColumnType("int");
+
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
 
@@ -1901,10 +1907,6 @@ namespace IIROSA.Infrastructure.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
-
-                    b.Property<string>("Location")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("NameAr")
                         .IsRequired()
@@ -1948,6 +1950,10 @@ namespace IIROSA.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -1959,6 +1965,12 @@ namespace IIROSA.Infrastructure.Migrations
                     b.Property<string>("NameEn")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SizeInMtr")
+                        .HasColumnType("int");
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
@@ -3993,9 +4005,7 @@ namespace IIROSA.Infrastructure.Migrations
                     b.HasIndex("EducationLevelId");
 
                     b.HasIndex("FamilyId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Provider_FamilyId")
-                        .HasFilter("[IsDeleted] = 0");
+                        .HasDatabaseName("IX_Provider_FamilyId");
 
                     b.HasIndex("HealthStatusId");
 
@@ -4207,9 +4217,6 @@ namespace IIROSA.Infrastructure.Migrations
                     b.Property<int?>("CenterId")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("CharityId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime?>("ClosedDate")
                         .HasColumnType("datetime2");
 
@@ -4283,8 +4290,6 @@ namespace IIROSA.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CenterId");
-
-                    b.HasIndex("CharityId");
 
                     b.HasIndex("CountryId");
 
@@ -5162,11 +5167,6 @@ namespace IIROSA.Infrastructure.Migrations
                         .HasForeignKey("FK_UserId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("IIROSA.Domain.Entities.Outgoing", "OutgoingLetter")
-                        .WithMany()
-                        .HasForeignKey("OutgoingId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("IIROSA.Domain.Entities.UploadedFile", "UploadedFile")
                         .WithMany("IncomingLetters")
                         .HasForeignKey("UploadedFileId");
@@ -5176,8 +5176,6 @@ namespace IIROSA.Infrastructure.Migrations
                     b.Navigation("Charity");
 
                     b.Navigation("Department");
-
-                    b.Navigation("OutgoingLetter");
 
                     b.Navigation("UploadedFile");
                 });
@@ -5552,8 +5550,8 @@ namespace IIROSA.Infrastructure.Migrations
                         .HasForeignKey("EducationLevelId");
 
                     b.HasOne("IIROSA.Domain.Entities.Family", "Family")
-                        .WithOne("Provider")
-                        .HasForeignKey("IIROSA.Domain.Entities.Provider", "FamilyId")
+                        .WithMany("Providers")
+                        .HasForeignKey("FamilyId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("IIROSA.Domain.Entities.Lookups.HealthStatus", "HealthStatus")
@@ -5642,10 +5640,6 @@ namespace IIROSA.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("CenterId");
 
-                    b.HasOne("IIROSA.Domain.Entities.Charity", "Charity")
-                        .WithMany()
-                        .HasForeignKey("CharityId");
-
                     b.HasOne("IIROSA.Domain.Entities.Lookups.Country", "Country")
                         .WithMany()
                         .HasForeignKey("CountryId");
@@ -5655,8 +5649,6 @@ namespace IIROSA.Infrastructure.Migrations
                         .HasForeignKey("RegionId");
 
                     b.Navigation("Center");
-
-                    b.Navigation("Charity");
 
                     b.Navigation("Country");
 
@@ -5755,7 +5747,7 @@ namespace IIROSA.Infrastructure.Migrations
 
                     b.Navigation("Orphans");
 
-                    b.Navigation("Provider");
+                    b.Navigation("Providers");
 
                     b.Navigation("Relatives");
                 });

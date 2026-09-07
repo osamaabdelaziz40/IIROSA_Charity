@@ -1,0 +1,21 @@
+- generic [ref=e1]:
+  - generic [ref=e7]:
+    - button "English " [ref=e10] [cursor=pointer]
+    - generic [ref=e12]:
+      - link [ref=e13] [cursor=pointer]:
+        - /url: "#"
+      - heading "Sign in" [level=1] [ref=e19]
+      - generic [ref=e20]:
+        - generic [ref=e21]: Email address
+        - textbox "Email address" [active] [ref=e22]: Admin@IIROSA.com
+      - generic [ref=e23]:
+        - generic [ref=e24]: Password
+        - textbox "Password" [ref=e25]: P@ssw0rd@2022
+      - generic [ref=e27]:
+        - checkbox "Stay logged in" [ref=e28]
+        - text: Stay logged in
+      - button "Let me in" [ref=e29] [cursor=pointer]
+      - paragraph [ref=e30]: © 2025 IIROSA
+  - alert [ref=e31]:
+    - 'heading "Error: Failed to load the transfer details" [level=2] [ref=e36]'
+    - text: "!"

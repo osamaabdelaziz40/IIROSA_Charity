@@ -263,6 +263,39 @@ public class SupportTicketsController : ControllerBase
     }
 
     /// <summary>
+    /// Export tickets to Excel — the caller's own tickets; Admin/Super Admin
+    /// export the full register (the list page's two view modes).
+    /// </summary>
+    [HttpGet("export")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ExportTickets([FromQuery] SupportTicketFilterDto filter)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { message = "User not found" });
+            }
+
+            var isAdmin = User.IsInRole("Admin") || User.IsInRole("SuperAdmin");
+            var content = await _ticketService.ExportTicketsToExcelAsync(filter, userId, isAdmin);
+
+            _logger.LogInformation("Tickets exported to Excel by {ExportedBy}", User.Identity?.Name);
+
+            return File(
+                content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"support-tickets_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting tickets to Excel");
+            return StatusCode(500, new { message = "Error exporting tickets to Excel" });
+        }
+    }
+
+    /// <summary>
     /// Delete ticket
     /// Admin/Super Admin only
     /// </summary>

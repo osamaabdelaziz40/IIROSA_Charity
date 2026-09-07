@@ -72,11 +72,22 @@ export class HqTransferDetailsComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.transferId = this.route.snapshot.params['id'] ?? null;
     this.canEdit = this.authService.hasPermission('HqTransfers.Edit');
-    if (this.transferId) {
-      this.loadDetails(this.transferId);
-    }
+
+    // paramMap, not the snapshot: moving from one transfer's details straight to
+    // another's reuses this component instance, and a snapshot read runs once —
+    // the first transfer's rows stayed on screen under the second transfer's URL.
+    this.route.paramMap
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        this.transferId = params.get('id');
+        this.header = null;
+        this.rows = [];
+        this.notFound = false;
+        if (this.transferId) {
+          this.loadDetails(this.transferId);
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -192,7 +203,7 @@ export class HqTransferDetailsComponent implements OnInit, OnDestroy {
 
   /**
    * Map the server's field→messages (PascalCase keys → the row's camelCase fields) onto the
-   * row; the sum rule (a plain message, no map) toasts as-is
+   * row; the sum rule (a plain message, no map) toasts localized
    */
   private handleRowError(row: DetailRow, httpError: any): void {
     row.saving = false;
@@ -206,7 +217,31 @@ export class HqTransferDetailsComponent implements OnInit, OnDestroy {
     }
 
     this.notification.error(
-      httpError?.error?.message || this.translate.instant('hqTransfers.details.lineSaveFailed'));
+      this.localizeServerMessage(httpError?.error?.message)
+      || this.translate.instant('hqTransfers.details.lineSaveFailed'));
+  }
+
+  /**
+   * Known server business-rule messages arrive as canonical English strings ({ message } on
+   * the 400). Recognized ones are swapped for their translated equivalents — amounts ride
+   * through verbatim (the server's own formatting); anything unrecognized passes unchanged.
+   */
+  private localizeServerMessage(message: string | undefined): string | undefined {
+    if (!message) {
+      return undefined;
+    }
+
+    // HqTransferService.SaveTransferDetailLineAsync — the Σ-lines rule
+    const sumMatch = message.match(
+      /^The sum of detail line amounts \(([\d.,]+)\) exceeds the transfer's payment amount \(([\d.,]+)\)$/);
+    if (sumMatch) {
+      return this.translate.instant('hqTransfers.details.sumExceedsPayment', {
+        sum: sumMatch[1],
+        payment: sumMatch[2]
+      });
+    }
+
+    return message;
   }
 
   /** مصير الحوالة display label */

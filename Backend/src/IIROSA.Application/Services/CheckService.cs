@@ -245,6 +245,56 @@ public class CheckService : ICheckService
     }
 
     /// <inheritdoc />
+    public async Task<byte[]> ExportChecksToExcelAsync(CheckFilterDto filter)
+    {
+        filter ??= new CheckFilterDto();
+        _filterValidator.ValidateAndThrow(filter);
+
+        // Every filtered row — the register's §16.S.1 grid columns, no paging
+        // (OrphanPaymentService.ExportPaymentGroupsToExcelAsync pattern).
+        var checks = _mapper.Map<List<CheckListDto>>(
+            await ApplyFilters(ScopedQuery(), filter).ToListAsync());
+
+        using (var package = new OfficeOpenXml.ExcelPackage())
+        {
+            var worksheet = package.Workbook.Worksheets.Add("الشيكات العامة");
+
+            worksheet.Cells[1, 1].Value = "الرقم";
+            worksheet.Cells[1, 2].Value = "رقم الشيك";
+            worksheet.Cells[1, 3].Value = "تاريخ الشيك";
+            worksheet.Cells[1, 4].Value = "اسم المستفيد";
+            worksheet.Cells[1, 5].Value = "المبلغ";
+            worksheet.Cells[1, 6].Value = "العملة";
+            worksheet.Cells[1, 7].Value = "البنك";
+
+            using (var range = worksheet.Cells[1, 1, 1, 7])
+            {
+                range.Style.Font.Bold = true;
+                range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
+            }
+
+            var row = 2;
+            var serial = 1;
+            foreach (var check in checks)
+            {
+                worksheet.Cells[row, 1].Value = serial++;
+                worksheet.Cells[row, 2].Value = check.CheckNumber;
+                worksheet.Cells[row, 3].Value = check.CheckDate.ToString("yyyy-MM-dd");
+                worksheet.Cells[row, 4].Value = check.BeneficiaryName;
+                worksheet.Cells[row, 5].Value = check.Amount;
+                worksheet.Cells[row, 6].Value = check.Currency;
+                worksheet.Cells[row, 7].Value = check.BankName ?? "";
+                row++;
+            }
+
+            worksheet.Cells[1, 1, row - 1, 7].AutoFitColumns();
+
+            return package.GetAsByteArray();
+        }
+    }
+
+    /// <inheritdoc />
     public Task<AmountInWordsDto> GetAmountInWordsAsync(decimal amount, string currency)
     {
         if (amount < 0)

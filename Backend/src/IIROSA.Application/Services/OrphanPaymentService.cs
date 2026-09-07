@@ -564,6 +564,69 @@ public class OrphanPaymentService : IOrphanPaymentService
     }
 
     /// <summary>
+    /// Export payment groups to Excel — §15.S.1's grid columns, every filtered row
+    /// (OfficeProjectService.ExportProjectsToExcelAsync pattern).
+    /// </summary>
+    public async Task<byte[]> ExportPaymentGroupsToExcelAsync(OrphanPaymentFilterDto filter, Guid? userCharityId = null, string? userRole = null)
+    {
+        _logger.LogInformation("Exporting payment groups to Excel with filter: {@Filter}", filter);
+
+        var exportFilter = filter ?? new OrphanPaymentFilterDto();
+        exportFilter.PageNumber = 1;
+        exportFilter.PageSize = int.MaxValue;
+
+        var (groups, _) = await GetPaymentGroupsAsync(exportFilter, userCharityId, userRole);
+
+        using (var package = new OfficeOpenXml.ExcelPackage())
+        {
+            var worksheet = package.Workbook.Worksheets.Add("دفعات الأيتام");
+
+            worksheet.Cells[1, 1].Value = "الرقم";
+            worksheet.Cells[1, 2].Value = "رقم الحصة";
+            worksheet.Cells[1, 3].Value = "اسم المجموعة";
+            worksheet.Cells[1, 4].Value = "فترة الدفع من";
+            worksheet.Cells[1, 5].Value = "فترة الدفع إلى";
+            worksheet.Cells[1, 6].Value = "عدد الأيتام";
+            worksheet.Cells[1, 7].Value = "سعر الصرف";
+            worksheet.Cells[1, 8].Value = "العملة";
+            worksheet.Cells[1, 9].Value = "حالة الرفع";
+            worksheet.Cells[1, 10].Value = "تاريخ المجموعة";
+            worksheet.Cells[1, 11].Value = "تاريخ بدء التوزيع";
+            worksheet.Cells[1, 12].Value = "أنشئ بواسطة";
+
+            using (var range = worksheet.Cells[1, 1, 1, 12])
+            {
+                range.Style.Font.Bold = true;
+                range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
+            }
+
+            var row = 2;
+            var serial = 1;
+            foreach (var group in groups)
+            {
+                worksheet.Cells[row, 1].Value = serial++;
+                worksheet.Cells[row, 2].Value = group.BatchNo ?? "";
+                worksheet.Cells[row, 3].Value = group.GroupName;
+                worksheet.Cells[row, 4].Value = group.PaymentPeriodFrom.ToString("yyyy-MM-dd");
+                worksheet.Cells[row, 5].Value = group.PaymentPeriodTo.ToString("yyyy-MM-dd");
+                worksheet.Cells[row, 6].Value = group.OrphanCount;
+                worksheet.Cells[row, 7].Value = group.ExchangeRate;
+                worksheet.Cells[row, 8].Value = group.Currency ?? "";
+                worksheet.Cells[row, 9].Value = group.IsBatchUploaded ? "مرفوع" : "معلق";
+                worksheet.Cells[row, 10].Value = group.GroupDate.ToString("yyyy-MM-dd");
+                worksheet.Cells[row, 11].Value = group.PaymentDate?.ToString("yyyy-MM-dd") ?? "";
+                worksheet.Cells[row, 12].Value = group.CreatedByName ?? "";
+                row++;
+            }
+
+            worksheet.Cells[1, 1, row - 1, 12].AutoFitColumns();
+
+            return package.GetAsByteArray();
+        }
+    }
+
+    /// <summary>
     /// UC-ORP-08 — the payment history of one orphan: the payment groups containing it, filtered
     /// by the caller's other constraints, newest batch first.
     /// </summary>

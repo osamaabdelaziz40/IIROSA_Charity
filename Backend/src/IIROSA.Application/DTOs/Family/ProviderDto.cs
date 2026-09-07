@@ -50,6 +50,12 @@ public class ProviderDto
 /// </summary>
 public class CreateProviderDto
 {
+    /// <summary>UC-HOU-04 edit-sync key (CreateOrphanDto precedent): on the housing
+    /// composite PUT a guardian carrying an id updates that row; one without is added;
+    /// an existing live guardian absent from the payload is soft-removed. Null on every
+    /// other caller.</summary>
+    public Guid? Id { get; set; }
+
     [Required(ErrorMessage = "Full name is required")]
     [StringLength(200, ErrorMessage = "Full name cannot exceed 200 characters")]
     public string FullName { get; set; } = string.Empty;

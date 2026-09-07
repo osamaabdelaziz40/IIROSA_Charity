@@ -31,13 +31,11 @@ public class Incoming : FullAuditedEntity
     // Foreign Keys
     public int? FK_DepartmentId { get; set; }
     public Guid? FK_UserId { get; set; }  // The employee the letter is routed to (الموظف المناط به)
-    public Guid? OutgoingId { get; set; }  // Linked outgoing letter (ردا على)
     public Guid? UploadedFileId { get; set; }
     public Guid? FK_CharityId { get; set; }  // Owning charity — tenancy (stamped server-side)
 
     // Navigation Properties
     public virtual Department? Department { get; set; }
-    public virtual Outgoing? OutgoingLetter { get; set; }
     public virtual UploadedFile? UploadedFile { get; set; }
     public virtual ApplicationUser? AssignedUser { get; set; }
     public virtual Charity? Charity { get; set; }

@@ -1,0 +1,156 @@
+- generic [ref=f6e32]:
+  - navigation [ref=f6e33]:
+    - button "" [ref=f6e34] [cursor=pointer]
+    - list [ref=f6e36]:
+      - listitem [ref=f6e37]:
+        - link "English " [ref=f6e38] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f6e39]: 
+          - text: English 
+      - listitem [ref=f6e40]:
+        - link "" [ref=f6e41] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f6e43]:
+        - link "" [ref=f6e44] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f6e47]:
+        - button [ref=f6e48] [cursor=pointer]:
+          - generic [ref=f6e49]:
+            - text: Welcome System Admin
+            - img "..." [ref=f6e50]
+          - text: 
+  - complementary [ref=f6e51]:
+    - generic [ref=f6e56]:
+      - text: 
+      - navigation [ref=f6e57]:
+        - link [ref=f6e59] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f6e60]
+        - paragraph [ref=f6e61]: Website Elements
+        - list [ref=f6e62]:
+          - listitem [ref=f6e63]:
+            - link " Home Page (current) " [ref=f6e64] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f6e65]: 
+              - generic [ref=f6e66]: Home Page
+              - generic [ref=f6e67]: (current)
+              - text: 
+            - list [ref=f6e68]:
+              - listitem [ref=f6e69]:
+                - link "Home" [ref=f6e70] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f6e71]:
+            - link " Settings " [ref=f6e72] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=f6e73]: 
+              - generic [ref=f6e74]: Settings
+              - text: 
+          - listitem [ref=f6e75]:
+            - link " Technical Support " [ref=f6e76] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f6e77]: 
+              - generic [ref=f6e78]: Technical Support
+              - text: 
+          - listitem [ref=f6e79]:
+            - link " Missions " [ref=f6e80] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f6e81]: 
+              - generic [ref=f6e82]: Missions
+              - text: 
+          - listitem [ref=f6e83]:
+            - link " Orphan Payments " [ref=f6e84] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f6e85]: 
+              - generic [ref=f6e86]: Orphan Payments
+              - text: 
+          - listitem [ref=f6e87]:
+            - link " Office Projects " [ref=f6e88] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f6e89]: 
+              - generic [ref=f6e90]: Office Projects
+              - text: 
+          - listitem [ref=f6e91]:
+            - link " Housing Projects " [ref=f6e92] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f6e93]: 
+              - generic [ref=f6e94]: Housing Projects
+              - text: 
+          - listitem [ref=f6e95]:
+            - link " Seasonal Aid " [ref=f6e96] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f6e97]: 
+              - generic [ref=f6e98]: Seasonal Aid
+              - text: 
+          - listitem [ref=f6e99]:
+            - link " Incoming & Outgoing " [ref=f6e100] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f6e101]: 
+              - generic [ref=f6e102]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=f6e103]:
+            - link " Families " [ref=f6e104] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f6e105]: 
+              - generic [ref=f6e106]: Families
+              - text: 
+          - listitem [ref=f6e107]:
+            - link " Reports " [ref=f6e108] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f6e109]: 
+              - generic [ref=f6e110]: Reports
+              - text: 
+          - listitem [ref=f6e111]:
+            - link " General Cheques " [ref=f6e112] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f6e113]: 
+              - generic [ref=f6e114]: General Cheques
+              - text: 
+          - listitem [ref=f6e115]:
+            - link " Periodic Orphan Reports " [ref=f6e116] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f6e117]: 
+              - generic [ref=f6e118]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=f6e119]:
+            - link " Financial Transfers " [ref=f6e120] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f6e121]: 
+              - generic [ref=f6e122]: Financial Transfers
+              - text: 
+            - list [ref=f6e123]:
+              - listitem [ref=f6e124]:
+                - link "Financial Transfers" [ref=f6e125] [cursor=pointer]:
+                  - /url: "#/hq-transfers"
+  - main [ref=f6e126]:
+    - generic [ref=f6e203]:
+      - navigation "breadcrumb" [ref=f6e205]:
+        - list [ref=f6e206]:
+          - listitem [ref=f6e207]:
+            - link "Home" [ref=f6e208] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=f6e209]:
+            - text: /
+            - generic [ref=f6e210]: Financial Transfers
+      - generic [ref=f6e212]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f6e213]:
+          - generic [ref=f6e214]:
+            - generic [ref=f6e215]: 
+            - generic [ref=f6e216]:
+              - heading "Financial Transfers" [level=3] [ref=f6e217]
+              - paragraph [ref=f6e218]: Financial transfers issued by the HQ Financial Department
+          - generic [ref=f6e219]:
+            - button "Add Transfer" [ref=f6e220] [cursor=pointer]:
+              - generic [ref=f6e221]: 
+              - text: Add Transfer
+            - button "Export to Excel" [ref=f6e222] [cursor=pointer]:
+              - generic [ref=f6e223]: 
+              - text: Export to Excel
+      - status [ref=f6e227]:
+        - generic [ref=f6e228]: Loading...
+  - contentinfo [ref=f6e196]:
+    - generic [ref=f6e198]:
+      - paragraph [ref=f6e200]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f6e202]: Version 1.0.0

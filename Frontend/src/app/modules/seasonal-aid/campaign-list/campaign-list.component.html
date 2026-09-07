@@ -82,7 +82,6 @@
             <th>{{ 'seasonalAid.period' | translate }}</th>
             <th>{{ 'seasonalAid.budget' | translate }}</th>
             <th>{{ 'seasonalAid.beneficiaries' | translate }}</th>
-            <th>{{ 'seasonalAid.assignedCharity' | translate }}</th>
             <th>{{ 'seasonalAid.status' | translate }}</th>
             <th>{{ 'common.actions' | translate }}</th>
           </tr>
@@ -118,14 +117,6 @@
                 <span class="badge badge-primary">{{ campaign.registeredBeneficiariesCount }}</span>
                 <div class="small text-muted">{{ campaign.distributedBeneficiariesCount }} {{ 'seasonalAid.distributedLabel' | translate }}</div>
               </div>
-            </td>
-            <td>
-              <div *ngIf="campaign.charityName; else noCharity">
-                {{ campaign.charityName }}
-              </div>
-              <ng-template #noCharity>
-                <span class="text-muted">{{ 'seasonalAid.allCharities' | translate }}</span>
-              </ng-template>
             </td>
             <td>
               <span class="badge" [ngClass]="getStatusBadgeClass(campaign)">

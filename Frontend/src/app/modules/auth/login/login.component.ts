@@ -1,6 +1,6 @@
 import { Component, HostListener } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { TranslateService } from '@ngx-translate/core';
@@ -21,6 +21,7 @@ export class LoginComponent {
     private formBuilder: FormBuilder,
     private authService: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
     private languageService: LanguageService,
     private translateService: TranslateService
   ) {
@@ -57,13 +58,25 @@ export class LoginComponent {
       rememberMe: this.f['rememberMe'].value
     }).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']);
+        this.router.navigateByUrl(this.postLoginUrl());
         this.loading = false;
       },
       error: () => {
         this.loading = false;
       }
     });
+  }
+
+  /**
+   * Where a successful login lands: the returnUrl the 401 redirect preserved,
+   * falling back to the dashboard. Only in-app paths count — anything external
+   * or pointing back at the auth pages (the stale nested chains) is ignored.
+   */
+  private postLoginUrl(): string {
+    const requested = this.route.snapshot.queryParamMap.get('returnUrl') ?? '';
+    const isAppRoute = requested.startsWith('/') && !requested.startsWith('//')
+      && !requested.startsWith('/auth');
+    return isAppRoute ? requested : '/dashboard';
   }
 
   /**

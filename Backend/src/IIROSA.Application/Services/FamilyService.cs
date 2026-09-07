@@ -176,8 +176,16 @@ public class FamilyService : IFamilyService
             // saved, mirroring the refugee branch above (review 2026-08-24, High): the
             // create flow commits the family at the SaveChanges below, and a late guard
             // inside AddProviderToFamilyInternalAsync left a phantom guardian-less family
-            // behind on every refused retry.
-            if (dto.Provider != null && await _providerRepository.IsNationalIdExistsAsync(dto.Provider.NationalId))
+            // behind on every refused retry. §11.S.2 multi-guardian: every row is checked
+            // against the register, and the payload itself must not repeat a national id.
+            foreach (var guardian in EffectiveHousingGuardians(dto))
+            {
+                if (await _providerRepository.IsNationalIdExistsAsync(guardian.NationalId))
+                {
+                    throw new Exceptions.BusinessException("أحد المعيلين مكرر من قبل أكثر من مرة");
+                }
+            }
+            if (EffectiveHousingGuardians(dto).GroupBy(g => g.NationalId?.Trim()).Any(g => g.Count() > 1))
             {
                 throw new Exceptions.BusinessException("أحد المعيلين مكرر من قبل أكثر من مرة");
             }
@@ -233,12 +241,13 @@ public class FamilyService : IFamilyService
         await _unitOfWork.SaveChangesAsync();
 
         // A refugee family (§12.S.2) and a housing family (§11.S.2) have no father/mother
-        // sections — guardian (provider) + children instead.
+        // sections — guardian (provider) + children instead. §11.S.2 multi-guardian: every
+        // payload guardian becomes its own Provider row (اضافة الاباء · AddNewParent() always).
         if (isHouseholdRegister)
         {
-            if (dto.Provider != null)
+            foreach (var guardian in EffectiveHousingGuardians(dto))
             {
-                await AddProviderToFamilyInternalAsync(family.Id, dto.Provider);
+                await AddProviderToFamilyInternalAsync(family.Id, guardian);
             }
         }
         else
@@ -305,6 +314,10 @@ public class FamilyService : IFamilyService
     {
         // Server-side discriminator stamp — never trusted from the client.
         dto.FamilyType = nameof(Domain.Enums.FamilyType.Housing);
+
+        // §11.S.2 multi-guardian: row 1 mirrors onto the legacy Provider field before any
+        // validation runs, so the validator's Provider contract covers the primary guardian.
+        NormalizeHousingGuardianPayload(dto);
 
         if (dto.HousingBuildingId is null || dto.HousingFlatId is null)
         {
@@ -397,19 +410,25 @@ public class FamilyService : IFamilyService
             Age = o.DateOfBirth.HasValue ? CalculateAge(o.DateOfBirth.Value) : null
         }).ToList();
 
-        // The guardian row joins only the unfiltered listing — a code query resolves children
-        // alone, and a guardian carries no code by design.
-        if (string.IsNullOrWhiteSpace(code) && family.Provider is { IsDeleted: false })
+        // The guardian rows join only the unfiltered listing — a code query resolves children
+        // alone, and a guardian carries no code by design. §11.S.2 multi-guardian: every live
+        // guardian becomes a Parent row (اضافة الاباء), primary first.
+        if (string.IsNullOrWhiteSpace(code))
         {
-            beneficiaries.Add(new DTOs.Family.HousingBeneficiaryDto
+            foreach (var guardian in family.Providers
+                .Where(p => !p.IsDeleted)
+                .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id))
             {
-                BeneficiaryId = family.Provider.Id,
-                ChildOrParent = nameof(Domain.Enums.ReportBeneficiaryType.Parent),
-                Code = null,
-                FullName = family.Provider.FullName,
-                NationalId = family.Provider.NationalId,
-                Age = family.Provider.DateOfBirth.HasValue ? CalculateAge(family.Provider.DateOfBirth.Value) : null
-            });
+                beneficiaries.Add(new DTOs.Family.HousingBeneficiaryDto
+                {
+                    BeneficiaryId = guardian.Id,
+                    ChildOrParent = nameof(Domain.Enums.ReportBeneficiaryType.Parent),
+                    Code = null,
+                    FullName = guardian.FullName,
+                    NationalId = guardian.NationalId,
+                    Age = guardian.DateOfBirth.HasValue ? CalculateAge(guardian.DateOfBirth.Value) : null
+                });
+            }
         }
 
         return beneficiaries;
@@ -426,6 +445,10 @@ public class FamilyService : IFamilyService
         // Review 2026-08-24: the charity write guard the regular update runs — a locked or
         // add-disabled charity must not rewrite through the housing register either.
         await _charityWriteGuard.EnsureCanUpdateAsync();
+
+        // §11.S.2 multi-guardian: row 1 mirrors onto the legacy Provider field before the
+        // validator runs (same normalization as the create branch).
+        NormalizeHousingGuardianPayload(dto);
 
         var family = await _familyRepository.IncludeNavigationProperties()
             .FirstOrDefaultAsync(f => f.Id == id && !f.IsDeleted
@@ -468,6 +491,7 @@ public class FamilyService : IFamilyService
 
         // Family-level §11.S.2 fields. FK_CharityId and FamilyType are deliberately NOT
         // stamped: ownership never moves and the discriminator is immutable.
+        family.CountryId = dto.CountryId;
         family.CityVillage = dto.CityVillage;
         family.RegionId = dto.RegionId;
         family.CenterId = dto.CenterId;
@@ -486,49 +510,78 @@ public class FamilyService : IFamilyService
         }
         _familyRepository.Update(family);
 
-        // Guardian block — update the family's provider, or create it when the register
-        // predates the guardian (none exists).
-        if (dto.Provider != null)
+        // Guardian sync (§11.S.2 multi-guardian · AddNewParent() always): a payload
+        // guardian carrying an id updates that row; one without is added (the duplicate
+        // rule «أحد المعيلين مكرر من قبل أكثر من مرة» runs per row before any write); a
+        // live guardian absent from the payload is soft-removed — the same edit-sync
+        // contract the children below run.
+        var payloadGuardians = EffectiveHousingGuardians(dto);
+        if (payloadGuardians.GroupBy(g => g.NationalId?.Trim()).Any(g => g.Count() > 1))
         {
-            var provider = await _providerRepository.GetByFamilyIdAsync(family.Id);
-            if (provider == null)
+            throw new Exceptions.BusinessException("أحد المعيلين مكرر من قبل أكثر من مرة");
+        }
+
+        var existingGuardians = await _providerRepository.GetAllByFamilyIdAsync(family.Id);
+        var guardianIds = new HashSet<Guid>();
+
+        foreach (var guardian in payloadGuardians)
+        {
+            if (guardian.Id.HasValue && guardian.Id.Value != Guid.Empty)
             {
-                // AddProviderToFamilyInternalAsync runs the duplicate-guardian guard
-                // («أحد المعيلين مكرر من قبل أكثر من مرة») before any write.
-                await AddProviderToFamilyInternalAsync(family.Id, dto.Provider);
-            }
-            else
-            {
-                // The rule re-checked against the NEW national id, excluding this provider
+                var row = existingGuardians.FirstOrDefault(p => p.Id == guardian.Id.Value);
+                if (row == null)
+                {
+                    // Foreign guardian id on this family's update — refuse, never silently skip
+                    throw new Exceptions.BusinessException("أحد المعيلين لا ينتمي لهذه الأسرة");
+                }
+
+                // The rule re-checked against the NEW national id, excluding this row
                 // itself — editing another field of the same guardian is not a duplication.
-                if (await _providerRepository.IsNationalIdExistsAsync(dto.Provider.NationalId, provider.Id))
+                if (await _providerRepository.IsNationalIdExistsAsync(guardian.NationalId, row.Id))
                 {
                     throw new Exceptions.BusinessException("أحد المعيلين مكرر من قبل أكثر من مرة");
                 }
 
-                provider.FullName = dto.Provider.FullName;
-                provider.RelationshipToFamily = dto.Provider.RelationshipToFamily;
-                provider.NationalId = dto.Provider.NationalId;
-                provider.Phone = dto.Provider.Phone;
-                provider.Address = dto.Provider.Address;
-                provider.Job = dto.Provider.Job;
-                provider.MonthlyIncome = dto.Provider.MonthlyIncome;
-                provider.Notes = dto.Provider.Notes;
-                provider.DateOfBirth = dto.Provider.DateOfBirth;
-                provider.NationalityCountryId = dto.Provider.NationalityCountryId;
-                provider.ReasonOfRelationId = dto.Provider.ReasonOfRelationId;
+                row.FullName = guardian.FullName;
+                row.RelationshipToFamily = guardian.RelationshipToFamily;
+                row.NationalId = guardian.NationalId;
+                row.Phone = guardian.Phone;
+                row.Address = guardian.Address;
+                row.Job = guardian.Job;
+                row.MonthlyIncome = guardian.MonthlyIncome;
+                row.Notes = guardian.Notes;
+                row.DateOfBirth = guardian.DateOfBirth;
+                row.NationalityCountryId = guardian.NationalityCountryId;
+                row.ReasonOfRelationId = guardian.ReasonOfRelationId;
                 // Housing register extensions (§11.S.2 اضافة معيل)
-                provider.RelationId = dto.Provider.RelationId;
-                provider.MainRelation = dto.Provider.MainRelation;
-                provider.SocialStatusId = dto.Provider.SocialStatusId;
-                provider.HealthStatusId = dto.Provider.HealthStatusId;
-                provider.EducationLevelId = dto.Provider.EducationLevelId;
-                provider.WidowSponsorship = dto.Provider.WidowSponsorship;
-                provider.AnotherSponsor = dto.Provider.AnotherSponsor;
-                provider.MotherIsMar = dto.Provider.MotherIsMar;
-                provider.IsCaring = dto.Provider.IsCaring;
-                _providerRepository.Update(provider);
+                row.RelationId = guardian.RelationId;
+                row.MainRelation = guardian.MainRelation;
+                row.SocialStatusId = guardian.SocialStatusId;
+                row.HealthStatusId = guardian.HealthStatusId;
+                row.EducationLevelId = guardian.EducationLevelId;
+                row.WidowSponsorship = guardian.WidowSponsorship;
+                row.AnotherSponsor = guardian.AnotherSponsor;
+                row.MotherIsMar = guardian.MotherIsMar;
+                row.IsCaring = guardian.IsCaring;
+                _providerRepository.Update(row);
+                guardianIds.Add(row.Id);
             }
+            else
+            {
+                // AddProviderToFamilyInternalAsync runs the duplicate-guardian guard
+                // («أحد المعيلين مكرر من قبل أكثر من مرة») before any write.
+                var created = await AddProviderToFamilyInternalAsync(family.Id, guardian);
+                guardianIds.Add(created.Id);
+            }
+        }
+
+        foreach (var removed in existingGuardians.Where(p => !guardianIds.Contains(p.Id)))
+        {
+            // Soft delete (platform convention + full deletion audit, matching the child sync).
+            removed.IsDeleted = true;
+            removed.DeletedOn = DateTime.UtcNow;
+            removed.DeletedBy = userName ?? "HQ";
+            _providerRepository.Update(removed);
         }
 
         // Children sync: a payload child carrying an id updates that orphan; one without an id
@@ -565,6 +618,11 @@ public class FamilyService : IFamilyService
                 orphan.DepartmentName = child.DepartmentName;
                 orphan.FacultyName = child.FacultyName;
                 orphan.EducationalQualificationId = child.EducationalQualificationId;
+                // §11.S.2 child attachments — assign-if-provided: an untouched edit keeps
+                // the stored file ids (absent keys never blank them).
+                if (child.PhotoAttachmentId.HasValue) orphan.PhotoAttachmentId = child.PhotoAttachmentId;
+                if (child.BirthCertificateAttachmentId.HasValue) orphan.BirthCertificateAttachmentId = child.BirthCertificateAttachmentId;
+                if (child.EnrollmentAttachmentId.HasValue) orphan.EnrollmentAttachmentId = child.EnrollmentAttachmentId;
                 _orphanRepository.Update(orphan);
                 payloadIds.Add(orphan.Id);
             }
@@ -1225,7 +1283,7 @@ public class FamilyService : IFamilyService
                     query = query.Where(f =>
                         (f.Father != null && f.Father.NationalId != null && f.Father.NationalId.Contains(term)) ||
                         (f.Mother != null && f.Mother.NationalId != null && f.Mother.NationalId.Contains(term)) ||
-                        (f.Provider != null && !f.Provider.IsDeleted && f.Provider.NationalId != null && f.Provider.NationalId.Contains(term)) ||
+                        f.Providers.Any(p => !p.IsDeleted && p.NationalId != null && p.NationalId.Contains(term)) ||
                         f.Orphans.Any(o => !o.IsDeleted && o.NationalId != null && o.NationalId.Contains(term)));
                     break;
                 case "code":
@@ -1236,14 +1294,14 @@ public class FamilyService : IFamilyService
                     break;
                 case "provider":
                     // UC-REF-02: إسم المعيل — a detached (soft-deleted) guardian is not searchable
-                    query = query.Where(f => f.Provider != null && !f.Provider.IsDeleted && f.Provider.FullName.Contains(term));
+                    query = query.Where(f => f.Providers.Any(p => !p.IsDeleted && p.FullName.Contains(term)));
                     break;
                 case "phone":
                     query = query.Where(f =>
                         (f.PhoneNumber != null && f.PhoneNumber.Contains(term)) ||
                         (f.Father != null && f.Father.Phone != null && f.Father.Phone.Contains(term)) ||
                         (f.Mother != null && f.Mother.Phone != null && f.Mother.Phone.Contains(term)) ||
-                        (f.Provider != null && !f.Provider.IsDeleted && f.Provider.Phone != null && f.Provider.Phone.Contains(term)) ||
+                        f.Providers.Any(p => !p.IsDeleted && p.Phone != null && p.Phone.Contains(term)) ||
                         f.Orphans.Any(o => !o.IsDeleted && o.Phone != null && o.Phone.Contains(term)));
                     break;
                 default:
@@ -1345,6 +1403,72 @@ public class FamilyService : IFamilyService
         }).ToList();
 
         return (familyDtos, totalCount);
+    }
+
+    /// <summary>
+    /// Export the family list to Excel — widens the list page to all matching rows and
+    /// reuses <see cref="GetFamiliesAsync"/> so the sheet always matches what the caller
+    /// can see on screen (same scoping, same filters, same ordering).
+    /// </summary>
+    public async Task<byte[]> ExportFamiliesToExcelAsync(FamilyFilterDto filter, Guid? userCharityId, string? userRole)
+    {
+        _logger.LogInformation("Exporting families to Excel for user role: {Role}", userRole);
+
+        var exportFilter = filter ?? new FamilyFilterDto();
+        exportFilter.PageNumber = 1;
+        exportFilter.PageSize = int.MaxValue;
+
+        var (families, _) = await GetFamiliesAsync(exportFilter, userCharityId, userRole);
+
+        using (var package = new OfficeOpenXml.ExcelPackage())
+        {
+            var worksheet = package.Workbook.Worksheets.Add("سجل الأسر");
+
+            worksheet.Cells[1, 1].Value = "الرقم";
+            worksheet.Cells[1, 2].Value = "كود الأسرة";
+            worksheet.Cells[1, 3].Value = "اسم الأب";
+            worksheet.Cells[1, 4].Value = "اسم الأم";
+            worksheet.Cells[1, 5].Value = "عدد الأيتام";
+            worksheet.Cells[1, 6].Value = "عدد الأقارب";
+            worksheet.Cells[1, 7].Value = "نوع المعيل";
+            worksheet.Cells[1, 8].Value = "نوع السجل";
+            worksheet.Cells[1, 9].Value = "الهاتف";
+            worksheet.Cells[1, 10].Value = "المدينة / القرية";
+            worksheet.Cells[1, 11].Value = "الجمعية";
+            worksheet.Cells[1, 12].Value = "تاريخ التسجيل";
+            worksheet.Cells[1, 13].Value = "الحالة";
+
+            using (var range = worksheet.Cells[1, 1, 1, 13])
+            {
+                range.Style.Font.Bold = true;
+                range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
+            }
+
+            var row = 2;
+            var serial = 1;
+            foreach (var family in families)
+            {
+                worksheet.Cells[row, 1].Value = serial++;
+                worksheet.Cells[row, 2].Value = family.Code;
+                worksheet.Cells[row, 3].Value = family.FatherName ?? "";
+                worksheet.Cells[row, 4].Value = family.MotherName ?? "";
+                worksheet.Cells[row, 5].Value = family.OrphansCount;
+                worksheet.Cells[row, 6].Value = family.RelativesCount;
+                worksheet.Cells[row, 7].Value = family.ProviderType ?? "";
+                worksheet.Cells[row, 8].Value = family.FamilyType ?? "";
+                worksheet.Cells[row, 9].Value = family.PhoneNumber ?? "";
+                worksheet.Cells[row, 10].Value = family.CityVillage ?? "";
+                worksheet.Cells[row, 11].Value = family.CharityName ?? "";
+                worksheet.Cells[row, 12].Value = family.RegistrationDate.ToString("yyyy-MM-dd");
+                worksheet.Cells[row, 13].Value = family.IsActive ? "نشطة" : "غير نشطة";
+                row++;
+            }
+
+            worksheet.Cells[1, 1, row - 1, 13].AutoFitColumns();
+
+            return package.GetAsByteArray();
+        }
     }
 
     #endregion
@@ -2337,11 +2461,13 @@ public class FamilyService : IFamilyService
             dto.Mother = _mapper.Map<MotherDto>(mother);
         }
 
-        // Load provider
-        var provider = await _providerRepository.GetByFamilyIdAsync(family.Id);
-        if (provider != null)
+        // Load providers — §11.S.2 multi-guardian set primary-first; Provider mirrors the
+        // first row for the legacy single-seat consumers (families module, refugee screens).
+        var providers = await _providerRepository.GetAllByFamilyIdAsync(family.Id);
+        dto.Providers = providers.Select(p => _mapper.Map<ProviderDto>(p)).ToList();
+        if (dto.Providers.Count > 0)
         {
-            dto.Provider = _mapper.Map<ProviderDto>(provider);
+            dto.Provider = dto.Providers[0];
         }
 
         // Load relatives
@@ -2384,6 +2510,42 @@ public class FamilyService : IFamilyService
         }).ToList();
 
         return dto;
+    }
+
+    /// <summary>
+    /// The §11.S.2 guardian set in payload order: the multi-guardian list when sent
+    /// (اضافة الاباء), the single Provider as a one-row list otherwise (refugee shape),
+    /// empty when neither. Housing create/update both run the effective list so the
+    /// multi-guardian register and the legacy single-seat callers share one path.
+    /// </summary>
+    private static List<DTOs.Family.CreateProviderDto> EffectiveHousingGuardians(CreateFamilyDto dto)
+    {
+        if (dto.Providers is { Count: > 0 })
+        {
+            return dto.Providers;
+        }
+        return dto.Provider != null
+            ? new List<DTOs.Family.CreateProviderDto> { dto.Provider }
+            : new List<DTOs.Family.CreateProviderDto>();
+    }
+
+    /// <summary>
+    /// Mirror the first multi-guardian row onto the legacy single Provider field so the
+    /// §11.S.2 validator contract (which keys on Provider) always sees row 1, and every
+    /// single-seat consumer of the dto keeps working. Runs before validation.
+    /// </summary>
+    private static void NormalizeHousingGuardianPayload(CreateFamilyDto dto)
+    {
+        if (dto.Providers is { Count: > 0 })
+        {
+            dto.Provider ??= dto.Providers[0];
+        }
+        // The register's display column (إسم الأسرة) follows the primary guardian when
+        // the caller didn't compose one — the SPA always sends it, direct API callers may not.
+        if (string.IsNullOrWhiteSpace(dto.HeadOfFamily) && !string.IsNullOrWhiteSpace(dto.Provider?.FullName))
+        {
+            dto.HeadOfFamily = dto.Provider.FullName.Trim();
+        }
     }
 
     private async Task<string> GenerateFamilyCodeAsync()
@@ -2861,9 +3023,11 @@ public class FamilyService : IFamilyService
         {
             return (family.Code ?? string.Empty, family.Mother.FullName ?? string.Empty, "mother");
         }
-        if (family.Provider != null && string.Equals(family.Provider.Phone?.Trim(), number, StringComparison.Ordinal))
+        var guardianMatch = family.Providers?
+            .FirstOrDefault(p => !p.IsDeleted && string.Equals(p.Phone?.Trim(), number, StringComparison.Ordinal));
+        if (guardianMatch != null)
         {
-            return (family.Code ?? string.Empty, family.Provider.FullName ?? string.Empty, "provider");
+            return (family.Code ?? string.Empty, guardianMatch.FullName ?? string.Empty, "provider");
         }
         var orphan = family.Orphans?.FirstOrDefault(o => string.Equals(o.Phone?.Trim(), number, StringComparison.Ordinal));
         if (orphan != null)
@@ -2904,7 +3068,6 @@ public class FamilyService : IFamilyService
         var query = _familyRepository.IncludeNavigationProperties()
             .Include(f => f.Father)
             .Include(f => f.Mother)
-            .Include(f => f.Provider)
             .Where(f => f.Id != familyId && !f.IsDeleted);
         if (scopeCharityId.HasValue)
         {
@@ -2918,7 +3081,7 @@ public class FamilyService : IFamilyService
             (f.PhoneNumber != null && f.PhoneNumber.Trim() == number) ||
             (f.Father != null && !f.Father.IsDeleted && f.Father.Phone != null && f.Father.Phone.Trim() == number) ||
             (f.Mother != null && !f.Mother.IsDeleted && f.Mother.Phone != null && f.Mother.Phone.Trim() == number) ||
-            (f.Provider != null && !f.Provider.IsDeleted && f.Provider.Phone != null && f.Provider.Phone.Trim() == number) ||
+            f.Providers.Any(p => !p.IsDeleted && p.Phone != null && p.Phone.Trim() == number) ||
             f.Orphans.Any(o => !o.IsDeleted && o.Phone != null && o.Phone.Trim() == number));
 
         var match = await query.FirstOrDefaultAsync();

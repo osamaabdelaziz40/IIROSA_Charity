@@ -54,6 +54,15 @@
 
       <div class="row">
         <div class="col-md-4">
+          <!-- البلد — drives the regions cascade (same cascade as the office-development register) -->
+          <app-drop-down [fg]="familyForm" fcn="countryId"
+                         [label]="'housingProjects.form.country'"
+                         [initialData]="countries"
+                         [required]="true"
+                         (onDropDownChanged)="onCountryChanged()">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
           <!-- المنطقة — repopulates المركز on change -->
           <app-drop-down [fg]="familyForm" fcn="regionId"
                          [label]="'housingProjects.form.region'"
@@ -69,20 +78,20 @@
                          [required]="true">
           </app-drop-down>
         </div>
+      </div>
+
+      <div class="row">
         <div class="col-md-4">
           <app-input-text [fg]="familyForm" fcn="nearBy"
                           [label]="'housingProjects.form.nearBy'">
           </app-input-text>
         </div>
-      </div>
-
-      <div class="row">
         <div class="col-md-4">
           <app-input-text [fg]="familyForm" fcn="street"
                           [label]="'housingProjects.form.street'">
           </app-input-text>
         </div>
-        <div class="col-md-8">
+        <div class="col-md-4">
           <app-input-text [fg]="familyForm" fcn="address"
                           [label]="'housingProjects.form.address'"
                           [required]="true">
@@ -181,13 +190,10 @@
               <input class="form-control" formControlName="number" maxlength="20">
             </td>
             <td>
-              <select class="form-select" formControlName="belongsTo">
-                <option value="">{{ 'validation.selectAnOption' | translate }}</option>
-                <option *ngFor="let option of phoneBelongsToOptions; trackBy: trackByStaticValue"
-                        [value]="option.value">
-                  {{ option.labelKey | translate }}
-                </option>
-              </select>
+              <!-- يخص من — select2 via the shared drop-down (ids are the Arabic literals) -->
+              <app-drop-down [fg]="row" fcn="belongsTo"
+                             [initialData]="phoneBelongsToSelectOptions">
+              </app-drop-down>
             </td>
             <td class="text-center">
               <input type="checkbox" formControlName="isDefault"
@@ -231,19 +237,12 @@
           </app-drop-down>
         </div>
         <div class="col-md-4">
-          <div class="form-group">
-            <label class="form-label">
-              {{ 'housingProjects.form.guardian.mainRelation' | translate }} <span class="text-danger">*</span>
-            </label>
-            <select class="form-select" formControlName="mainRelation"
-                    [class.is-invalid]="isFieldInvalid(guardianForm, 'mainRelation')">
-              <option value="">{{ 'validation.selectAnOption' | translate }}</option>
-              <option *ngFor="let option of mainRelationOptions; trackBy: trackByStaticValue"
-                      [value]="option.value">
-                {{ option.labelKey | translate }}
-              </option>
-            </select>
-          </div>
+          <!-- العلاقة — select2 via the shared drop-down (ids are the Arabic literals) -->
+          <app-drop-down [fg]="guardianForm" fcn="mainRelation"
+                         [label]="'housingProjects.form.guardian.mainRelation'"
+                         [initialData]="mainRelationSelectOptions"
+                         [required]="true">
+          </app-drop-down>
         </div>
       </div>
 
@@ -362,13 +361,59 @@
       </div>
 
       <div class="d-flex justify-content-end">
+        <!-- §11.S.2 اضافة الاباء — تم captures the row and reopens the form for the next one -->
+        <button type="button" class="btn btn-outline-secondary me-2" *ngIf="editingGuardianIndex >= 0"
+                (click)="cancelGuardianEdit()">
+          {{ 'common.cancel' | translate }}
+        </button>
         <button type="button" class="btn btn-primary" (click)="confirmGuardian()">
-          <i class="fe fe-check"></i> {{ 'housingProjects.form.guardian.confirm' | translate }}
+          <i class="fe fe-check"></i>
+          {{ (editingGuardianIndex >= 0
+              ? 'housingProjects.form.guardian.update'
+              : 'housingProjects.form.guardian.confirm') | translate }}
         </button>
       </div>
     </div>
   </div>
 </form>
+
+<!-- Captured guardians — §11.S.2 اضافة الاباء rows (rows drive the payload) -->
+<div class="card mb-3" *ngIf="guardians.length > 0">
+  <div class="card-header">
+    <h4 class="mb-0">{{ 'housingProjects.form.sections.guardiansTable' | translate }}</h4>
+  </div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-bordered align-middle">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>{{ 'housingProjects.form.guardiansTable.name' | translate }}</th>
+            <th>{{ 'housingProjects.form.guardiansTable.nationalId' | translate }}</th>
+            <th>{{ 'housingProjects.form.guardiansTable.mainRelation' | translate }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let guardian of guardians; let i = index; trackBy: trackByGuardianIndex">
+            <td>{{ i + 1 }}</td>
+            <td>{{ guardianDisplayName(guardian) }}</td>
+            <td>{{ guardian.value.nationalId }}</td>
+            <td>{{ guardian.value.mainRelation }}</td>
+            <td class="text-center">
+              <button type="button" class="btn btn-sm btn-outline-primary me-1" (click)="editGuardian(i)">
+                <i class="fe fe-edit-2"></i>
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeGuardian(i)">
+                <i class="fe fe-trash-2"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
 <!-- ==================== اضافة ابن (§11.S.2) ==================== -->
 <form [formGroup]="childForm">
@@ -404,19 +449,12 @@
 
       <div class="row">
         <div class="col-md-4">
-          <div class="form-group">
-            <label class="form-label">
-              {{ 'housingProjects.form.child.gender' | translate }} <span class="text-danger">*</span>
-            </label>
-            <select class="form-select" formControlName="gender"
-                    [class.is-invalid]="isFieldInvalid(childForm, 'gender')">
-              <option value="">{{ 'validation.selectAnOption' | translate }}</option>
-              <option *ngFor="let option of genderOptions; trackBy: trackByStaticValue"
-                      [value]="option.value">
-                {{ option.labelKey | translate }}
-              </option>
-            </select>
-          </div>
+          <!-- النوع — select2 via the shared drop-down (ids are the Arabic literals) -->
+          <app-drop-down [fg]="childForm" fcn="gender"
+                         [label]="'housingProjects.form.child.gender'"
+                         [initialData]="genderSelectOptions"
+                         [required]="true">
+          </app-drop-down>
         </div>
         <div class="col-md-4">
           <app-drop-down [fg]="childForm" fcn="healthStatusId"
@@ -463,6 +501,37 @@
                          [initialData]="educationLevels"
                          [required]="true">
           </app-drop-down>
+        </div>
+      </div>
+
+      <!-- §11.S.2 اضافة ابن attachments — shared attachment component, one file each -->
+      <div class="row">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">{{ 'housingProjects.form.child.photo' | translate }}</label>
+            <app-attachment [maxFiles]="1" [accept]="'image/*'" [multiple]="false"
+                            (onFileSelect)="onChildFileSelected('photoAttachmentId', $event)"
+                            (onFileRemove)="onChildFileRemoved('photoAttachmentId')">
+            </app-attachment>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">{{ 'housingProjects.form.child.birthCertificate' | translate }}</label>
+            <app-attachment [maxFiles]="1" [accept]="'image/*'" [multiple]="false"
+                            (onFileSelect)="onChildFileSelected('birthCertificateAttachmentId', $event)"
+                            (onFileRemove)="onChildFileRemoved('birthCertificateAttachmentId')">
+            </app-attachment>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">{{ 'housingProjects.form.child.enrollmentProof' | translate }}</label>
+            <app-attachment [maxFiles]="1" [accept]="'image/*'" [multiple]="false"
+                            (onFileSelect)="onChildFileSelected('enrollmentAttachmentId', $event)"
+                            (onFileRemove)="onChildFileRemoved('enrollmentAttachmentId')">
+            </app-attachment>
+          </div>
         </div>
       </div>
 

@@ -10,6 +10,7 @@ import { CheckListItem } from '../models/check.model';
 import { CharityService } from '../../charities/services/charity.service';
 import { CharityDto } from '../../charities/models/charity.model';
 import { AuthService } from '../../../core/services/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import {
   PaginationComponent,
   BreadcrumbComponent,
@@ -53,6 +54,12 @@ export class CheckListComponent implements OnInit, OnDestroy {
       type: 'primary',
       icon: 'fe-plus',
       click: () => this.addCheck()
+    },
+    {
+      label: 'common.exportToExcel',
+      type: 'success',
+      icon: 'fe-file-plus',
+      click: () => this.exportToExcel()
     }
   ];
 
@@ -81,6 +88,7 @@ export class CheckListComponent implements OnInit, OnDestroy {
     private generalChecksService: GeneralChecksService,
     private charityService: CharityService,
     private authService: AuthService,
+    private notification: NotificationService,
     private router: Router,
     private translate: TranslateService
   ) {
@@ -183,6 +191,37 @@ export class CheckListComponent implements OnInit, OnDestroy {
 
   addCheck(): void {
     this.router.navigate(['/general-checks', 'create']);
+  }
+
+  /**
+   * Export the register — the charity filter as currently applied; the server
+   * ignores paging and writes every matching row.
+   */
+  exportToExcel(): void {
+    this.loading = true;
+
+    const charityId = this.filterForm.value.charityId;
+    this.generalChecksService.exportToExcel({
+      charityId: charityId && charityId !== CheckListComponent.ALL_CHARITIES ? charityId : undefined
+    }).subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `general-checks_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        this.notification.success(this.translate.instant('common.operationSuccess'));
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+        this.notification.error(this.translate.instant('common.operationFailed'));
+      }
+    });
   }
 
   trackByCheck(index: number, check: CheckListItem): string {

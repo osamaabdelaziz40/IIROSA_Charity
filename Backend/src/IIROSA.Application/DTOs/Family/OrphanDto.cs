@@ -18,6 +18,10 @@ public class OrphanDto
     public int? Age { get; set; }
     public string? NationalId { get; set; }
     public Guid? PhotoAttachmentId { get; set; }
+    /// <summary>§11.S.2 اضافة ابن صوره شهاده الميلاد — UC-HOU-04 read round-trip.</summary>
+    public Guid? BirthCertificateAttachmentId { get; set; }
+    /// <summary>§11.S.2 اضافة ابن صوره إثبات القيد — UC-HOU-04 read round-trip.</summary>
+    public Guid? EnrollmentAttachmentId { get; set; }
     public Guid? FK_CharityId { get; set; }
     public string? OrphanType { get; set; }
     public string? SponsorshipStatus { get; set; }

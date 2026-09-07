@@ -207,12 +207,8 @@ public class SeasonalAidBeneficiaryRepository : Repository<SeasonalAidBeneficiar
             .Include(f => f.City)
             .Where(f => !f.IsDeleted && f.IsActive);
 
-        // Apply filters based on campaign criteria
-        if (campaign.CharityId.HasValue)
-        {
-            familiesQuery = familiesQuery.Where(f => f.FK_CharityId == campaign.CharityId.Value);
-        }
-
+        // Apply filters — campaigns carry no charity, so family charity scope comes from
+        // the caller (the service pins filter.CharityId for charity-bound callers).
         if (filter.CharityId.HasValue)
         {
             familiesQuery = familiesQuery.Where(f => f.FK_CharityId == filter.CharityId.Value);
@@ -409,14 +405,10 @@ public class SeasonalAidBeneficiaryRepository : Repository<SeasonalAidBeneficiar
             .Include(f => f.Charity)
             .Include(f => f.City);
 
-        // Apply filters based on campaign criteria.
+        // Apply filters. Campaigns carry no charity, so family charity scope comes from the
+        // charityId argument (the caller's own charity for charity-bound callers).
         // FK_CharityId is the populated charity column on Family — CharityId is a legacy
         // nullable that stays null, so filtering on it matches nothing.
-        if (campaign.CharityId.HasValue)
-        {
-            familiesQuery = familiesQuery.Where(f => f.FK_CharityId == campaign.CharityId.Value);
-        }
-
         if (charityId.HasValue)
         {
             familiesQuery = familiesQuery.Where(f => f.FK_CharityId == charityId.Value);

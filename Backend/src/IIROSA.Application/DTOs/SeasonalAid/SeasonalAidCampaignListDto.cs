@@ -24,7 +24,6 @@ public class SeasonalAidCampaignListDto
     // Status
     public bool IsActive { get; set; }
     public bool IsClosed { get; set; }
-    public string? CharityName { get; set; }
     public string? CountryName { get; set; }
 
     // Progress

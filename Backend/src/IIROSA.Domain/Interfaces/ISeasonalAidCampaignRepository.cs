@@ -15,7 +15,6 @@ public interface ISeasonalAidCampaignRepository : IRepository<SeasonalAidCampaig
     // Search and Filter (UC-9.6)
     Task<IEnumerable<SeasonalAidCampaign>> SearchAsync(string searchTerm);
     Task<IEnumerable<SeasonalAidCampaign>> GetActiveCampaignsAsync();
-    Task<IEnumerable<SeasonalAidCampaign>> GetByCharityAsync(Guid charityId);
     Task<IEnumerable<SeasonalAidCampaign>> GetByCountryAsync(int countryId);
     Task<IEnumerable<SeasonalAidCampaign>> GetByRegionAsync(int regionId);
     Task<IEnumerable<SeasonalAidCampaign>> GetByCenterAsync(int centerId);
@@ -23,7 +22,7 @@ public interface ISeasonalAidCampaignRepository : IRepository<SeasonalAidCampaig
     Task<(IEnumerable<SeasonalAidCampaign> Items, int TotalCount)> GetFilteredAsync(
         string? name = null, string? campaignType = null, bool? isActive = null,
         bool? isClosed = null, int? countryId = null, int? regionId = null,
-        int? centerId = null, Guid? charityId = null);
+        int? centerId = null);
 
     // Paged variant with the full filter surface. The DTO-typed overload lives on the concrete
     // class only — Domain interfaces cannot reference Application DTOs — so callers go through
@@ -31,7 +30,7 @@ public interface ISeasonalAidCampaignRepository : IRepository<SeasonalAidCampaig
     Task<(IEnumerable<SeasonalAidCampaign> Items, int TotalCount)> GetFilteredPaginatedAsync(
         string? searchTerm = null, string? campaignType = null, bool? isActive = null,
         bool? isClosed = null, int? countryId = null, int? regionId = null,
-        int? centerId = null, Guid? charityId = null,
+        int? centerId = null,
         DateTime? startDateFrom = null, DateTime? startDateTo = null,
         DateTime? endDateFrom = null, DateTime? endDateTo = null,
         int pageNumber = 1, int pageSize = 10, string? sortBy = null, bool sortDescending = false);

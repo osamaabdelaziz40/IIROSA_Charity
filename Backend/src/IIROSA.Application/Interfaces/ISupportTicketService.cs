@@ -26,6 +26,9 @@ public interface ISupportTicketService
     // UC-13.4: View All Tickets (Admin/Super Admin only)
     Task<(IEnumerable<SupportTicketListDto> Items, int TotalCount)> GetAllTicketsAsync(SupportTicketFilterDto filter);
 
+    // List export to Excel — allTickets selects the admin-wide read, otherwise the caller's own rows
+    Task<byte[]> ExportTicketsToExcelAsync(SupportTicketFilterDto filter, string userId, bool allTickets);
+
     // UC-13.5: Update Ticket Status (Admin/Super Admin only)
     Task UpdateTicketStatusAsync(UpdateTicketStatusDto dto, string adminUserId);
 

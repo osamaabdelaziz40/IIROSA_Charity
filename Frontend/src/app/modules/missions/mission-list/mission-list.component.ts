@@ -70,6 +70,12 @@ export class MissionListComponent implements OnInit, OnDestroy {
       icon: 'fe-plus',
       type: 'primary',
       click: () => this.createMission()
+    },
+    {
+      label: 'common.exportToExcel',
+      icon: 'fe-download',
+      type: 'secondary',
+      click: () => this.exportToExcel()
     }
   ];
 
@@ -347,5 +353,46 @@ export class MissionListComponent implements OnInit, OnDestroy {
   onPageChange(page: number): void {
     this.currentPage = page;
     this.loadMissions();
+  }
+
+  /**
+   * Export the §20.S.1 register to Excel (charity-list pattern) — the current
+   * filters ride along; the server ignores paging and writes every matching row.
+   */
+  exportToExcel(): void {
+    this.loading = true;
+    const filters = this.filterForm.value;
+
+    const request: MissionSearchRequest = {
+      charityId: filters.charityId && filters.charityId !== MissionListComponent.ALL ? filters.charityId : undefined,
+      assignedToUserId: filters.assignedToUserId && filters.assignedToUserId !== MissionListComponent.ALL ? filters.assignedToUserId : undefined,
+      search: filters.search?.trim() || undefined,
+      dateFrom: filters.dateFrom || undefined,
+      dateTo: filters.dateTo || undefined,
+      page: 1,
+      pageSize: 100000
+    };
+
+    this.missionService.exportToExcel(request)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob: Blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `missions_${new Date().toISOString().split('T')[0]}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+
+          this.notification.success(this.translate.instant('common.operationSuccess'));
+          this.loading = false;
+        },
+        error: () => {
+          this.loading = false;
+          this.notification.error(this.translate.instant('common.operationFailed'));
+        }
+      });
   }
 }

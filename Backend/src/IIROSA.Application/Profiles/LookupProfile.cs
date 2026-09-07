@@ -355,47 +355,75 @@ public class LookupProfile : Profile
 
         CreateMap<CreateLookupDto, OfficeProjectType>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.TypeDescription, opt => opt.MapFrom(src => src.Description))
             .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.Events, opt => opt.Ignore());
 
         CreateMap<UpdateLookupDto, OfficeProjectType>()
+            .ForMember(dest => dest.TypeDescription, opt => opt.MapFrom(src => src.Description))
             .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.Events, opt => opt.Ignore());
 
-        // HousingBuilding mappings (UC-HOU-05)
-        CreateMap<HousingBuilding, LookupDto>()
-            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-            .ForMember(dest => dest.NameAr, opt => opt.MapFrom(src => src.NameAr))
-            .ForMember(dest => dest.NameEn, opt => opt.MapFrom(src => src.NameEn))
-            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Location));
+        // OutgoingCategory mappings (UC-COR-17) — plain lookup: Description is a real
+        // column, so every field maps by convention
+        CreateMap<OutgoingCategory, LookupDto>();
 
-        CreateMap<CreateLookupDto, HousingBuilding>()
+        CreateMap<CreateLookupDto, OutgoingCategory>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.Events, opt => opt.Ignore());
+            .ForMember(dest => dest.Events, opt => opt.Ignore())
+            .ForMember(dest => dest.OutgoingLetters, opt => opt.Ignore());
 
-        CreateMap<UpdateLookupDto, HousingBuilding>()
-            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.Events, opt => opt.Ignore());
-
-        // HousingFlat mappings (UC-HOU-05)
-        CreateMap<HousingFlat, LookupDto>()
-            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-            .ForMember(dest => dest.NameAr, opt => opt.MapFrom(src => src.NameAr))
-            .ForMember(dest => dest.NameEn, opt => opt.MapFrom(src => src.NameEn))
-            .ForMember(dest => dest.Description, opt => opt.Ignore());
-
-        CreateMap<CreateLookupDto, HousingFlat>()
+        CreateMap<UpdateLookupDto, OutgoingCategory>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.Events, opt => opt.Ignore())
+            .ForMember(dest => dest.OutgoingLetters, opt => opt.Ignore());
+
+        // HousingBuilding mappings (UC-HOU-05) — rich DTOs for lookup management;
+        // Description carries BuildingDescription
+        CreateMap<HousingBuilding, HousingBuildingDto>()
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.NameAr, opt => opt.MapFrom(src => src.NameAr))
+            .ForMember(dest => dest.NameEn, opt => opt.MapFrom(src => src.NameEn))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.BuildingDescription));
+
+        CreateMap<CreateHousingBuildingDto, HousingBuilding>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.BuildingDescription, opt => opt.MapFrom(src => src.Description))
+            .ForMember(dest => dest.Flats, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.Events, opt => opt.Ignore());
 
-        CreateMap<UpdateLookupDto, HousingFlat>()
+        CreateMap<UpdateHousingBuildingDto, HousingBuilding>()
+            .ForMember(dest => dest.BuildingDescription, opt => opt.MapFrom(src => src.Description))
+            .ForMember(dest => dest.Flats, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.Events, opt => opt.Ignore());
+
+        // HousingFlat mappings (UC-HOU-05) — rich DTOs for lookup management
+        CreateMap<HousingFlat, HousingFlatDto>()
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.NameAr, opt => opt.MapFrom(src => src.NameAr))
+            .ForMember(dest => dest.NameEn, opt => opt.MapFrom(src => src.NameEn))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+            .ForMember(dest => dest.BuildingName, opt => opt.MapFrom(src => src.Building != null ? src.Building.NameAr : null));
+
+        CreateMap<CreateHousingFlatDto, HousingFlat>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.Building, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.Events, opt => opt.Ignore());
+
+        CreateMap<UpdateHousingFlatDto, HousingFlat>()
+            .ForMember(dest => dest.Building, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.Events, opt => opt.Ignore());

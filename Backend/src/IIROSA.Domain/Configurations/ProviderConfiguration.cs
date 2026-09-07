@@ -49,9 +49,13 @@ public class ProviderConfiguration : IEntityTypeConfiguration<Provider>
             .HasMaxLength(100);
 
         // ========== Relationships ==========
+        // §11.S.2 multi-guardian (اضافة الاباء · AddNewParent() always): 1:N from the
+        // housing register. The legacy one-live-seat rule (BR-06) remains enforced in code
+        // for the standalone member endpoint (AddProviderToFamilyAsync) and the
+        // guardian-change-request flows — not by the database.
         builder.HasOne(x => x.Family)
-            .WithOne(f => f.Provider)
-            .HasForeignKey<Provider>(x => x.FamilyId)
+            .WithMany(f => f.Providers)
+            .HasForeignKey(x => x.FamilyId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Country)
@@ -65,16 +69,12 @@ public class ProviderConfiguration : IEntityTypeConfiguration<Provider>
             .OnDelete(DeleteBehavior.Restrict);
 
         // ========== Indexes ==========
-        // The 1:1 Family↔Provider relationship conventionally makes this a PLAIN unique index
-        // spanning soft-deleted rows — so once a guardian was removed (5-13) no new provider
-        // could EVER be attached to that family, and 5-10's approve-on-empty-seat insert died
-        // with duplicate-key 2601 (found live, epic-5 battery 2026-08-24). The explicit index
-        // below supersedes the conventional one: one LIVE provider row per family (BR-06),
-        // soft-deleted history may accumulate beneath the filter.
+        // Was a filtered UNIQUE index (BR-06 one live seat, epic-5) — the §11.S.2 housing
+        // register now carries several live guardians per family (اضافة الاباء ·
+        // AddNewParent() always), so this is a plain lookup index; the seat rule for the
+        // regular register stays enforced in code (AddProviderToFamilyAsync).
         builder.HasIndex(x => x.FamilyId)
-            .IsUnique()
-            .HasDatabaseName("IX_Provider_FamilyId")
-            .HasFilter("[IsDeleted] = 0");
+            .HasDatabaseName("IX_Provider_FamilyId");
         builder.HasIndex(x => x.NationalId);
     }
 }

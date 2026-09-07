@@ -41,6 +41,15 @@ export class GeneralChecksService {
     return this.http.get<CheckDetail>(`${this.apiUrl}/${id}`);
   }
 
+  // Register export — same filters as the list, every row, as a workbook blob
+
+  exportToExcel(filter?: Partial<CheckFilter>): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/export`, {
+      params: this.buildParams(filter),
+      responseType: 'blob'
+    });
+  }
+
   // Issue / update (UC-CHQ-02, UC-CHQ-04) — update carries the id in the body
 
   createCheck(check: CreateCheckRequest): Observable<CheckDetail> {

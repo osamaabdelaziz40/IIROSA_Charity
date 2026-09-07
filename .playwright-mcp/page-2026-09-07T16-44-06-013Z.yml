@@ -1,0 +1,244 @@
+- generic [ref=f1e32]:
+  - navigation [ref=f1e33]:
+    - button "" [ref=f1e34] [cursor=pointer]
+    - list [ref=f1e36]:
+      - listitem [ref=f1e37]:
+        - link "English " [ref=f1e38] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f1e39]: 
+          - text: English 
+      - listitem [ref=f1e40]:
+        - link "" [ref=f1e41] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f1e43]:
+        - link "" [ref=f1e44] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f1e47]:
+        - button [ref=f1e48] [cursor=pointer]:
+          - generic [ref=f1e49]:
+            - text: Welcome Osama Abdelaziz
+            - img "..." [ref=f1e50]
+          - text: 
+  - complementary [ref=f1e51]:
+    - generic [ref=f1e56]:
+      - text: 
+      - navigation [ref=f1e57]:
+        - link [ref=f1e59] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f1e60]
+        - paragraph [ref=f1e61]: Website Elements
+        - list [ref=f1e62]:
+          - listitem [ref=f1e63]:
+            - link " Home Page (current) " [ref=f1e64] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f1e65]: 
+              - generic [ref=f1e66]: Home Page
+              - generic [ref=f1e67]: (current)
+              - text: 
+            - list [ref=f1e68]:
+              - listitem [ref=f1e69]:
+                - link "Home" [ref=f1e70] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f1e71]:
+            - link " Settings " [ref=f1e72] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=f1e73]: 
+              - generic [ref=f1e74]: Settings
+              - text: 
+          - listitem [ref=f1e75]:
+            - link " Technical Support " [ref=f1e76] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f1e77]: 
+              - generic [ref=f1e78]: Technical Support
+              - text: 
+          - listitem [ref=f1e79]:
+            - link " Missions " [ref=f1e80] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f1e81]: 
+              - generic [ref=f1e82]: Missions
+              - text: 
+          - listitem [ref=f1e83]:
+            - link " Orphan Payments " [ref=f1e84] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f1e85]: 
+              - generic [ref=f1e86]: Orphan Payments
+              - text: 
+          - listitem [ref=f1e87]:
+            - link " Office Projects " [ref=f1e88] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f1e89]: 
+              - generic [ref=f1e90]: Office Projects
+              - text: 
+          - listitem [ref=f1e91]:
+            - link " Housing Projects " [ref=f1e92] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f1e93]: 
+              - generic [ref=f1e94]: Housing Projects
+              - text: 
+          - listitem [ref=f1e95]:
+            - link " Seasonal Aid " [ref=f1e96] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f1e97]: 
+              - generic [ref=f1e98]: Seasonal Aid
+              - text: 
+            - list [ref=f1e488]:
+              - listitem [ref=f1e489]:
+                - link "All Seasonal Aid" [ref=f1e490] [cursor=pointer]:
+                  - /url: "#/seasonal-aid"
+              - listitem [ref=f1e491]:
+                - link "Add Seasonal Aid" [ref=f1e492] [cursor=pointer]:
+                  - /url: "#/seasonal-aid/create"
+          - listitem [ref=f1e99]:
+            - link " Incoming & Outgoing " [ref=f1e100] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f1e101]: 
+              - generic [ref=f1e102]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=f1e103]:
+            - link " Families " [ref=f1e104] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f1e105]: 
+              - generic [ref=f1e106]: Families
+              - text: 
+          - listitem [ref=f1e107]:
+            - link " Reports " [ref=f1e108] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f1e109]: 
+              - generic [ref=f1e110]: Reports
+              - text: 
+          - listitem [ref=f1e111]:
+            - link " General Cheques " [ref=f1e112] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f1e113]: 
+              - generic [ref=f1e114]: General Cheques
+              - text: 
+          - listitem [ref=f1e115]:
+            - link " Periodic Orphan Reports " [ref=f1e116] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f1e117]: 
+              - generic [ref=f1e118]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=f1e119]:
+            - link " Financial Transfers " [ref=f1e120] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f1e121]: 
+              - generic [ref=f1e122]: Financial Transfers
+              - text: 
+  - main [ref=f1e123]:
+    - generic [ref=f1e493]:
+      - navigation "breadcrumb" [ref=f1e495]:
+        - list [ref=f1e496]:
+          - listitem [ref=f1e497]:
+            - link "Home" [ref=f1e498] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=f1e499]:
+            - text: /
+            - link "Seasonal Aid" [ref=f1e500] [cursor=pointer]:
+              - /url: "#/seasonal-aid"
+          - listitem [ref=f1e501]:
+            - text: /
+            - generic [ref=f1e502]: Create Campaign
+      - generic [ref=f1e504]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f1e505]:
+          - heading "Create Campaign" [level=3] [ref=f1e508]
+          - button "Cancel" [ref=f1e510] [cursor=pointer]:
+            - generic [ref=f1e511]: 
+            - text: Cancel
+      - generic [ref=f1e517]:
+        - heading "Basic Information" [level=5] [ref=f1e518]
+        - generic [ref=f1e519]:
+          - generic [ref=f1e522]:
+            - generic [ref=f1e523]: Campaign Name *
+            - textbox "Campaign Name *" [ref=f1e524]:
+              - /placeholder: Enter campaign name (e.g., Ramadan 2026 Aid)
+          - generic [ref=f1e526]:
+            - generic [ref=f1e527]:
+              - generic [ref=f1e528]: Campaign Type *
+              - combobox [expanded] [ref=f1e531] [cursor=pointer]:
+                - textbox "Ramadan" [ref=f1e532]
+                - listbox [expanded] [ref=f1e642]:
+                  - option "Select" [disabled] [ref=f1e643]
+                  - option "Ramadan" [selected] [ref=f1e644]
+                  - option "Eid Al-Fitr" [ref=f1e645]
+                  - option "Eid Al-Adha" [ref=f1e646]
+                  - option "Winter" [ref=f1e647]
+                  - option "School Supplies" [ref=f1e648]
+                  - option "Other" [ref=f1e649]
+            - searchbox [active] [ref=f1e652]
+        - generic [ref=f1e536]:
+          - generic [ref=f1e537]: Description
+          - textbox "Description" [ref=f1e538]:
+            - /placeholder: Enter campaign description
+        - heading "Campaign Period" [level=5] [ref=f1e539]
+        - generic [ref=f1e540]:
+          - generic [ref=f1e543]:
+            - generic [ref=f1e544]: Start Date *
+            - generic [ref=f1e545]:
+              - textbox "Start Date *" [ref=f1e546]:
+                - /placeholder: MM/DD/YYYY
+              - generic [ref=f1e547]: 
+          - generic [ref=f1e552]:
+            - generic [ref=f1e553]: End Date *
+            - generic [ref=f1e554]:
+              - textbox "End Date *" [ref=f1e555]:
+                - /placeholder: MM/DD/YYYY
+              - generic [ref=f1e556]: 
+        - heading "Financial Information" [level=5] [ref=f1e559]
+        - generic [ref=f1e560]:
+          - generic [ref=f1e563]:
+            - generic [ref=f1e564]: Total Budget *
+            - spinbutton "Total Budget *" [ref=f1e565]
+          - generic [ref=f1e568]:
+            - generic [ref=f1e569]: Currency *
+            - combobox [ref=f1e572] [cursor=pointer]:
+              - textbox "EGP" [ref=f1e573]
+          - generic [ref=f1e576]:
+            - generic [ref=f1e577]: Per Family Allocation *
+            - spinbutton "Per Family Allocation *" [ref=f1e578]
+        - heading "Geographic Scope" [level=5] [ref=f1e579]
+        - generic [ref=f1e580]:
+          - generic [ref=f1e583]:
+            - generic [ref=f1e584]: Country
+            - combobox [ref=f1e587] [cursor=pointer]:
+              - textbox [ref=f1e588]
+          - generic [ref=f1e591]:
+            - generic [ref=f1e592]: Region
+            - combobox [disabled] [ref=f1e595]:
+              - textbox [disabled] [ref=f1e596]
+          - generic [ref=f1e599]:
+            - generic [ref=f1e600]: Center
+            - combobox [disabled] [ref=f1e603]:
+              - textbox [disabled] [ref=f1e604]
+        - heading "Beneficiary Criteria" [level=5] [ref=f1e605]
+        - generic [ref=f1e606]:
+          - generic [ref=f1e609]:
+            - generic [ref=f1e610]: Maximum Families
+            - spinbutton "Maximum Families" [ref=f1e611]
+          - generic [ref=f1e614]:
+            - generic [ref=f1e615]: Family Type
+            - combobox [ref=f1e618] [cursor=pointer]:
+              - textbox "All Families" [ref=f1e619]
+          - generic [ref=f1e622]:
+            - generic [ref=f1e623]: Age Range From
+            - spinbutton "Age Range From" [ref=f1e624]
+          - generic [ref=f1e627]:
+            - generic [ref=f1e628]: Age Range To
+            - spinbutton "Age Range To" [ref=f1e629]
+        - heading "Status" [level=5] [ref=f1e630]
+        - generic [ref=f1e633]:
+          - checkbox "Is Active" [checked] [ref=f1e634]
+          - generic [ref=f1e635]: Is Active
+        - generic [ref=f1e637]:
+          - button " Create" [ref=f1e638] [cursor=pointer]:
+            - generic [ref=f1e639]: 
+            - text: Create
+          - button " Cancel" [ref=f1e640] [cursor=pointer]:
+            - generic [ref=f1e641]: 
+            - text: Cancel
+  - contentinfo [ref=f1e479]:
+    - generic [ref=f1e481]:
+      - paragraph [ref=f1e483]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f1e485]: Version 1.0.0

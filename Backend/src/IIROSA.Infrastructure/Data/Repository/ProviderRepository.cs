@@ -20,12 +20,28 @@ public class ProviderRepository : Repository<Provider>, IProviderRepository
     }
 
     /// <summary>
-    /// Get provider by family ID
+    /// Get provider by family ID — the PRIMARY guardian (first live row by CreatedOn/Id).
+    /// Deterministic order matters: §11.S.2 housing families can carry several live
+    /// guardians, and every legacy seat-semantics caller must see the same primary row.
     /// </summary>
     public async Task<Provider?> GetByFamilyIdAsync(Guid familyId)
     {
         return await IncludeNavigationProperties()
-            .FirstOrDefaultAsync(p => p.FamilyId == familyId && !p.IsDeleted);
+            .Where(p => p.FamilyId == familyId && !p.IsDeleted)
+            .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+            .FirstOrDefaultAsync();
+    }
+
+    /// <summary>
+    /// All live providers of a family (§11.S.2 اضافة الاباء — multi-guardian) in
+    /// primary-first order. Callers wanting the legacy single seat read the first row.
+    /// </summary>
+    public async Task<List<Provider>> GetAllByFamilyIdAsync(Guid familyId)
+    {
+        return await IncludeNavigationProperties()
+            .Where(p => p.FamilyId == familyId && !p.IsDeleted)
+            .OrderBy(p => p.CreatedOn).ThenBy(p => p.Id)
+            .ToListAsync();
     }
 
     /// <summary>

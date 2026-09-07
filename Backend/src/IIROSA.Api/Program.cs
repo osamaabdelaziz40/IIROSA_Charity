@@ -27,6 +27,12 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+// EPPlus 5.x (via Framework.Core) refuses to build any workbook until the license context
+// is set — every server-side Excel export 500s with LicenseException without this.
+// NonCommercial covers charity internal use under EPPlus 5's Polyform license; revisit if
+// the org's usage is ever deemed commercial.
+OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
+
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 

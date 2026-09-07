@@ -198,7 +198,7 @@ export class TicketFormComponent implements OnInit {
         priorityId: Number(this.ticketForm.value.priority),
         userAction: this.ticketForm.value.userAction || undefined,
         browserInfo: this.browserInfo,
-        pageUrl: this.pageUrl
+        pageUrl: this.ticketForm.value.pageUrl || this.pageUrl
       };
 
       this.technicalSupportService.createTicket(request).subscribe({

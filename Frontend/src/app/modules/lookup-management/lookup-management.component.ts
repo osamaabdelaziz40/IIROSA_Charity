@@ -78,7 +78,11 @@ export class LookupManagementComponent implements OnInit {
       'MissionTypes': 'fe fe-activity',
       'ProjectTypes': 'fe fe-folder',
       'Banks': 'fe fe-credit-card',
-      'NGOTypes': 'fe fe-heart'
+      'NGOTypes': 'fe fe-heart',
+      'OfficeProjectTypes': 'fe fe-briefcase',
+      'HousingBuildings': 'fe fe-home',
+      'HousingFlats': 'fe fe-layout',
+      'OutgoingCategories': 'fe fe-send'
     };
     return icons[tableName] || 'fe fe-list';
   }
@@ -100,7 +104,11 @@ export class LookupManagementComponent implements OnInit {
       'Countries': '/lookup-management/countries',
       'Regions': '/lookup-management/regions',
       'Centers': '/lookup-management/centers',
-      'Departments': '/lookup-management/departments'
+      'Departments': '/lookup-management/departments',
+      'OfficeProjectTypes': '/lookup-management/office-project-types',
+      'HousingBuildings': '/lookup-management/housing-buildings',
+      'HousingFlats': '/lookup-management/housing-flats',
+      'OutgoingCategories': '/lookup-management/outgoing-categories'
       // TODO: Add routes for MissionTypes, ProjectTypes, Banks, NGOTypes when components are created
     };
     const route = routeMap[tableName];

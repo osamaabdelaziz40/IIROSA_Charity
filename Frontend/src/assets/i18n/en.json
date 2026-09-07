@@ -1232,6 +1232,8 @@
     "refugeeDetailSubtitle": "Detailed view of the family's refugee register file",
     "refugeeDetailLoadFailed": "Could not load the family's data",
     "refugeeListLoadFailed": "Could not load the refugee families list",
+    "exportSuccess": "Families exported successfully",
+    "exportFailed": "Failed to export families",
     "refugeeFormLoadFailed": "Could not load the refugee family's data",
     "refugeeCatalogueLoadFailed": "Could not load the lookup lists",
     "refugeeNotRefugeeFamily": "This family is not on the refugee register",
@@ -1840,7 +1842,14 @@
       "region": "Region",
       "departmentCode": "Department Code",
       "isActive": "Is Active",
-      "sortOrder": "Sort Order"
+      "sortOrder": "Sort Order",
+      "description": "Description",
+      "buildingNumber": "Building No.",
+      "buildingAddress": "Building Address",
+      "flatNumber": "Flat No.",
+      "number": "Number",
+      "sizeInMtr": "Size (m²)",
+      "building": "Building"
     },
     "placeholders": {
       "name": "Enter name",
@@ -1852,10 +1861,45 @@
       "regionCode": "Enter region code",
       "centerCode": "Enter center code",
       "departmentCode": "Enter department code",
-      "sortOrder": "Enter sort order"
+      "sortOrder": "Enter sort order",
+      "nameEn": "Name in English",
+      "description": "Enter description",
+      "buildingNumber": "e.g. 7",
+      "buildingAddress": "e.g. Nasr City",
+      "flatNumber": "e.g. 5",
+      "sizeInMtr": "e.g. 100"
     },
     "selectCountry": "Select a country",
-    "selectRegion": "Select a region"
+    "selectRegion": "Select a region",
+    "addOfficeProjectType": "Add Project Type",
+    "editOfficeProjectType": "Edit Project Type",
+    "officeProjectTypeDetails": "Project Type Details",
+    "noOfficeProjectTypesFound": "No project types found",
+    "addHousingBuilding": "Add Building",
+    "editHousingBuilding": "Edit Building",
+    "housingBuildingDetails": "Building Details",
+    "noHousingBuildingsFound": "No buildings found",
+    "addHousingFlat": "Add Flat",
+    "editHousingFlat": "Edit Flat",
+    "housingFlatDetails": "Flat Details",
+    "noHousingFlatsFound": "No flats found",
+    "selectBuilding": "Select Building",
+    "addOutgoingCategory": "Add Category",
+    "editOutgoingCategory": "Edit Category",
+    "outgoingCategoryDetails": "Category Details",
+    "noOutgoingCategoriesFound": "No categories found",
+    "officeProjectTypes": {
+      "title": "Office Development Project Types"
+    },
+    "housingBuildings": {
+      "title": "Housing Buildings"
+    },
+    "housingFlats": {
+      "title": "Housing Flats"
+    },
+    "outgoingCategories": {
+      "title": "Outgoing Letter Categories"
+    }
   },
   "missions": {
     "title": "Missions",
@@ -2066,7 +2110,8 @@
       "failedOperation": "Execution and arrival data can only be entered when the transfer status is «Executed»",
       "lineSaved": "Detail line saved successfully",
       "lineSaveFailed": "Failed to save the detail line",
-      "loadFailed": "Failed to load the transfer details"
+      "loadFailed": "Failed to load the transfer details",
+      "sumExceedsPayment": "The sum of detail line amounts ({{sum}}) exceeds the transfer's payment amount ({{payment}})"
     },
     "backToList": "Back to list",
     "transferNotFound": "The requested transfer was not found",
@@ -2176,7 +2221,7 @@
     "donorName": "Donor Name",
     "beneficiariesCount": "Beneficiaries Count",
     "beneficiariesType": "Beneficiaries Type",
-    "assignedCharity": "Assigned Charity",
+    "assignedCharity": "Cooperating Charity",
     "attachedFile": "Attached File",
     "projectReportFile": "Project Report File",
     "isFinished": "Is Finished",
@@ -2616,6 +2661,8 @@
     },
     "loadFailed": "Failed to load housing families",
     "empty": "No housing families registered",
+    "nothingToExport": "Nothing to export",
+    "exportFailed": "Failed to export housing families",
     "filters": {
       "charity": "Charity",
       "allCharities": "All Charities",
@@ -2650,7 +2697,8 @@
         "phones": "Contact numbers",
         "guardian": "Add guardian",
         "child": "Add child",
-        "childrenTable": "Registered children"
+        "childrenTable": "Registered children",
+        "guardiansTable": "Registered guardians"
       },
       "charity": "Charity",
       "familyCode": "Register code",
@@ -2728,7 +2776,8 @@
         "motherIsMar": "Mother is married",
         "isCaring": "Is the carer",
         "confirm": "Done",
-        "saved": "Guardian captured"
+        "saved": "Guardian captured",
+        "update": "Update"
       },
       "child": {
         "birthDate": "Date of birth",
@@ -2747,7 +2796,11 @@
         "school": "Educational institution",
         "notes": "Notes",
         "add": "Add",
-        "update": "Update"
+        "update": "Update",
+        "photo": "Personal photo",
+        "birthCertificate": "Birth certificate photo",
+        "enrollmentProof": "Enrollment proof photo",
+        "attachmentUploadFailed": "File upload failed"
       },
       "childrenTable": {
         "name": "Name",
@@ -2765,7 +2818,14 @@
         "updated": "Housing family updated",
         "createFailed": "Failed to register the housing family",
         "loadFailed": "Failed to load the housing family",
-        "nationalIdTooLong": "National ID must not exceed 14 digits"
+        "nationalIdTooLong": "National ID must not exceed 14 digits",
+        "guardianRequired": "Add at least one guardian"
+      },
+      "country": "Country",
+      "guardiansTable": {
+        "name": "Name",
+        "nationalId": "National ID",
+        "mainRelation": "Relation"
       }
     },
     "detail": {
@@ -3184,6 +3244,7 @@
     "placeholders": {
       "userAction": "What were you doing when the issue occurred?",
       "userActionHelp": "Describe what action you were performing when the issue happened",
+      "pageUrlHelp": "Auto-detected and editable",
       "response": "Enter your response here...",
       "resolution": "Describe how the issue was resolved...",
       "solutionSteps": "Optional: List the steps taken to resolve..."

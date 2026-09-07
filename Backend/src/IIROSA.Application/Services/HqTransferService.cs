@@ -109,6 +109,89 @@ public class HqTransferService : IHqTransferService
         }
     }
 
+    /// <summary>
+    /// Export the §22.S.1 register to Excel (the OrphanPaymentService.ExportPaymentGroupsToExcelAsync
+    /// pattern): the grid's serial + 11 data columns, every row in the caller's country scope.
+    /// The repository is read directly — GetHqTransfersAsync clamps PageSize to 200 and an
+    /// export must not cap there.
+    /// </summary>
+    public async Task<byte[]> ExportHqTransfersToExcelAsync(HqTransferFilterDto filter)
+    {
+        try
+        {
+            filter ??= new HqTransferFilterDto();
+
+            // Same pin-never-widen rule as the list read
+            ApplyCallerScope(filter);
+
+            _logger.LogInformation("Exporting HQ transfers to Excel with filter: {@Filter}", filter);
+
+            System.Linq.Expressions.Expression<Func<HqTransfer, bool>>? filterExpression =
+                filter.CountryId.HasValue
+                    ? t => t.FK_CountryId == filter.CountryId.Value
+                    : null;
+
+            var (items, _) = await _transferRepository.GetTransfersPagedAsync(
+                filterExpression,
+                q => q.OrderByDescending(t => t.TransactionDate).ThenByDescending(t => t.CreatedOn),
+                1,
+                int.MaxValue);
+
+            var transfers = _mapper.Map<List<HqTransferListDto>>(items);
+
+            using (var package = new OfficeOpenXml.ExcelPackage())
+            {
+                var worksheet = package.Workbook.Worksheets.Add("الحوالات المالية");
+
+                worksheet.Cells[1, 1].Value = "الرقم";
+                worksheet.Cells[1, 2].Value = "رقم العملية";
+                worksheet.Cells[1, 3].Value = "السنة المالية";
+                worksheet.Cells[1, 4].Value = "رقم الدفعة";
+                worksheet.Cells[1, 5].Value = "من تاريخ";
+                worksheet.Cells[1, 6].Value = "الى تاريخ";
+                worksheet.Cells[1, 7].Value = "مبلغ الدفعة";
+                worksheet.Cells[1, 8].Value = "البيان";
+                worksheet.Cells[1, 9].Value = "عدد المستفيدين";
+                worksheet.Cells[1, 10].Value = "رقم المعاملة";
+                worksheet.Cells[1, 11].Value = "تاريخ المعاملة";
+
+                using (var range = worksheet.Cells[1, 1, 1, 11])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
+                }
+
+                var row = 2;
+                var serial = 1;
+                foreach (var transfer in transfers)
+                {
+                    worksheet.Cells[row, 1].Value = serial++;
+                    worksheet.Cells[row, 2].Value = transfer.OperationNumber ?? "";
+                    worksheet.Cells[row, 3].Value = transfer.FinYear ?? "";
+                    worksheet.Cells[row, 4].Value = transfer.PaymentNumber;
+                    worksheet.Cells[row, 5].Value = transfer.DateFrom.ToString("yyyy-MM-dd");
+                    worksheet.Cells[row, 6].Value = transfer.DateTo.ToString("yyyy-MM-dd");
+                    worksheet.Cells[row, 7].Value = transfer.AmountOfPayment;
+                    worksheet.Cells[row, 8].Value = transfer.Statement ?? "";
+                    worksheet.Cells[row, 9].Value = transfer.BeneficiariesNumber;
+                    worksheet.Cells[row, 10].Value = transfer.TransactionNumber ?? "";
+                    worksheet.Cells[row, 11].Value = transfer.TransactionDate.ToString("yyyy-MM-dd");
+                    row++;
+                }
+
+                worksheet.Cells[1, 1, row - 1, 11].AutoFitColumns();
+
+                return package.GetAsByteArray();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while exporting HQ transfers to Excel with filter: {@Filter}", filter);
+            throw;
+        }
+    }
+
     // ========== Updates (UC-TRF-04) ==========
 
     /// <summary>
