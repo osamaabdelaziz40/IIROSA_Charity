@@ -60,6 +60,11 @@ public class EmployeeProfile : Profile
             .ForMember(dest => dest.DeletedOn, opt => opt.Ignore())
             .ForMember(dest => dest.DeletedBy, opt => opt.Ignore())
             .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
-            .ForMember(dest => dest.Events, opt => opt.Ignore());
+            .ForMember(dest => dest.Events, opt => opt.Ignore())
+            // PUT semantics (review decision 2026-08-24): the edit screen owns the whole
+            // record, so an explicit null/empty value is written — clearing a field on
+            // screen clears it in the database. Status changes ride the dedicated
+            // activate/deactivate endpoints, never the PUT.
+            .ForMember(dest => dest.IsActive, opt => opt.Ignore());
     }
 }

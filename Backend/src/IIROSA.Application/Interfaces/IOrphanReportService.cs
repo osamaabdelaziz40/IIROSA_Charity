@@ -141,4 +141,54 @@ public class OrphanStatisticsDto
     public int PendingCount { get; set; }
     public int MaleCount { get; set; }
     public int FemaleCount { get; set; }
+
+    /// <summary>
+    /// §14.S.3 grouped rows (UC-ORR-10): one row per
+    /// (الحاله التعليميه × المرحله الدراسه) with الاناث/الذكور/الاجمالي counts.
+    /// 9-15 extends this response with its numbers-in-period section — do not fork the DTO.
+    /// </summary>
+    public List<OrphanReportGroupCountRow> Groups { get; set; } = new();
+
+    /// <summary>
+    /// §14.U.15 أرقام التقارير المضافة (UC-ORR-15) — the ReportNo values created in the
+    /// window, newest first (capped at 1000; <see cref="ReportNumbersCount"/> is uncapped).
+    /// Filled only when the request sets <c>IncludeReportNumbers</c> with a date window.
+    /// </summary>
+    public List<OrphanReportNumberRow> ReportNumbers { get; set; } = new();
+
+    /// <summary>Matching in-window reports before the numbers cap.</summary>
+    public int ReportNumbersCount { get; set; }
+
+    /// <summary>In-window reports with a null ReportNo (legacy rows) — listed under a — bucket.</summary>
+    public int UnnumberedReportsCount { get; set; }
+}
+
+/// <summary>
+/// One §14.S.3 grouped-statistics row. The educational-status token is stable
+/// (studying/graduated/dropout/unspecified); the level name is resolved
+/// server-side (NameAr ?? NameEn), null when the report carries no level.
+/// </summary>
+public class OrphanReportGroupCountRow
+{
+    public string EducationalStatus { get; set; } = "unspecified";
+    public string? EducationalLevelName { get; set; }
+    public int FemaleCount { get; set; }
+    public int MaleCount { get; set; }
+    public int TotalCount { get; set; }
+}
+
+/// <summary>
+/// One §14.U.15 numbers-in-period row — the registered number with its orphan identity,
+/// dates and review state.
+/// </summary>
+public class OrphanReportNumberRow
+{
+    public Guid ReportId { get; set; }
+    /// <summary>رقم التقرير — null ReportNo renders under a — bucket (legacy rows).</summary>
+    public string? ReportNo { get; set; }
+    public string OrphanCode { get; set; } = string.Empty;
+    public string OrphanName { get; set; } = string.Empty;
+    public DateTime ReportDate { get; set; }
+    public DateTime CreatedOn { get; set; }
+    public string ReviewStatus { get; set; } = "Pending";
 }

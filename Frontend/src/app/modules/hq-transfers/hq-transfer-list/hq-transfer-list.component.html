@@ -1,0 +1,113 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'hqTransfers.title' | translate"
+  [subtitle]="'hqTransfers.description' | translate"
+  [icon]="'fe fe-dollar-sign'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="card">
+  <div class="card-body">
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- §22.S.1 grid: serial + 11 data columns + الاجراءات, in spec order -->
+    <div *ngIf="!loading" class="table-responsive">
+      <table class="table table-hover table-striped">
+        <thead>
+          <tr>
+            <th>{{ 'hqTransfers.serial' | translate }}</th>
+            <th>{{ 'hqTransfers.operationNumber' | translate }}</th>
+            <th>{{ 'hqTransfers.finYear' | translate }}</th>
+            <th>{{ 'hqTransfers.paymentNumber' | translate }}</th>
+            <th>{{ 'hqTransfers.dateFrom' | translate }}</th>
+            <th>{{ 'hqTransfers.dateTo' | translate }}</th>
+            <th>{{ 'hqTransfers.amountOfPayment' | translate }}</th>
+            <th>{{ 'hqTransfers.statement' | translate }}</th>
+            <th>{{ 'hqTransfers.beneficiariesNumber' | translate }}</th>
+            <th>{{ 'hqTransfers.transactionNumber' | translate }}</th>
+            <th>{{ 'hqTransfers.transactionDate' | translate }}</th>
+            <th>{{ 'common.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let transfer of transfers; let i = index; trackBy: trackTransfer">
+            <!-- الرقم — continuous across pages -->
+            <td>{{ serial(i) }}</td>
+            <!-- رقم العملية -->
+            <td>{{ transfer.operationNumber }}</td>
+            <!-- السنة المالية -->
+            <td>{{ transfer.finYear }}</td>
+            <!-- رقم الدفعة -->
+            <td><span class="badge badge-light">{{ transfer.paymentNumber }}</span></td>
+            <!-- من تاريخ -->
+            <td>{{ transfer.dateFrom | date:'mediumDate' }}</td>
+            <!-- الى تاريخ -->
+            <td>{{ transfer.dateTo | date:'mediumDate' }}</td>
+            <!-- مبلغ الدفعة -->
+            <td class="text-nowrap"><strong>{{ transfer.amountOfPayment | number:'1.2-2' }}</strong></td>
+            <!-- البيان -->
+            <td class="text-truncate" style="max-width: 220px;" [title]="transfer.statement || ''">
+              {{ transfer.statement || '-' }}
+            </td>
+            <!-- عدد المستفيدين -->
+            <td>{{ transfer.beneficiariesNumber }}</td>
+            <!-- رقم المعاملة -->
+            <td>{{ transfer.transactionNumber }}</td>
+            <!-- تاريخ المعاملة -->
+            <td>{{ transfer.transactionDate | date:'mediumDate' }}</td>
+            <!-- الاجراءات — view (17-3), edit (17-4) and details (17-8) wired; add lives in the page header (17-2) -->
+            <td>
+              <div class="btn-group">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light"
+                  [title]="'hqTransfers.viewTransfer' | translate"
+                  (click)="viewTransfer(transfer.id)">
+                  <i class="fe fe-eye"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light"
+                  [title]="'hqTransfers.editTransfer' | translate"
+                  (click)="editTransfer(transfer.id)">
+                  <i class="fe fe-edit"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light"
+                  [title]="'hqTransfers.details.title' | translate"
+                  (click)="viewTransferDetails(transfer.id)">
+                  <i class="fe fe-list"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="transfers.length === 0">
+            <td colspan="12" class="text-center py-5">
+              <div class="empty-state">
+                <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+                <p class="text-muted">{{ 'hqTransfers.noTransfersFound' | translate }}</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <app-pagination
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
+  </div>
+</div>

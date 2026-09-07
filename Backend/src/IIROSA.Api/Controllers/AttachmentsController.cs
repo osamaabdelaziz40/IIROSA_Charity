@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Framework.Core.SharedServices.Services;
+using System.Drawing;
 
 namespace IIROSA.Api.Controllers
 {
@@ -13,6 +14,8 @@ namespace IIROSA.Api.Controllers
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class AttachmentsController : ControllerBase
     {
+        private const int BatchIdsCap = 50;
+
         private readonly AttachmentService _attachmentService;
         private readonly AppSettingsService _appSettingsService;
         private readonly ILogger<AttachmentsController> _logger;
@@ -25,6 +28,167 @@ namespace IIROSA.Api.Controllers
             _attachmentService = attachmentService;
             _appSettingsService = appSettingsService;
             this._logger = _logger;
+        }
+
+        /// <summary>
+        /// UC-SYS-01: Upload a file. Storage destination (database vs file system) follows the
+        /// SaveFilesToDatabase system setting; size / allowed-type / image-dimension limits come
+        /// from the Attachments* system settings and are enforced before the write.
+        /// </summary>
+        [HttpPost("upload")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public IActionResult Upload(IFormFile file)
+        {
+            if (file == null || file.Length <= 0)
+            {
+                return BadRequest(new { message = "No file was uploaded", errors = new { file = "No file was uploaded" } });
+            }
+
+            // Size limit (AttachmentsMaxSize is configured in megabytes; 0 = unlimited)
+            var maxSizeMb = _appSettingsService.AttachmentsMaxSize;
+            if (maxSizeMb > 0 && file.Length > maxSizeMb * 1024L * 1024L)
+            {
+                return BadRequest(new
+                {
+                    message = $"File exceeds the maximum allowed size of {maxSizeMb} MB",
+                    errors = new { file = $"File exceeds the maximum allowed size of {maxSizeMb} MB" }
+                });
+            }
+
+            // Allowed types (comma-separated extensions, e.g. ".pdf,.png"; empty = unrestricted)
+            var allowedTypes = _appSettingsService.AttachmentsAllowedTypes;
+            if (!string.IsNullOrWhiteSpace(allowedTypes))
+            {
+                var extension = System.IO.Path.GetExtension(file.FileName)?.ToLowerInvariant() ?? string.Empty;
+                var allowed = allowedTypes
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(t => t.ToLowerInvariant())
+                    .ToList();
+                if (allowed.Count > 0 && !allowed.Contains(extension))
+                {
+                    return BadRequest(new
+                    {
+                        message = $"File type '{extension}' is not allowed",
+                        errors = new { file = $"File type '{extension}' is not allowed" }
+                    });
+                }
+            }
+
+            // Image dimension limits (apply only to images; 0 = unlimited)
+            var maxWidth = _appSettingsService.AttachmentsAllowedWidth;
+            var maxHeight = _appSettingsService.AttachmentsAllowedHeight;
+            if ((maxWidth > 0 || maxHeight > 0)
+                && !string.IsNullOrEmpty(file.ContentType)
+                && file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    using var image = Image.FromStream(file.OpenReadStream());
+                    if (maxWidth > 0 && image.Width > maxWidth)
+                    {
+                        return BadRequest(new
+                        {
+                            message = $"Image width {image.Width}px exceeds the maximum of {maxWidth}px",
+                            errors = new { file = $"Image width {image.Width}px exceeds the maximum of {maxWidth}px" }
+                        });
+                    }
+                    if (maxHeight > 0 && image.Height > maxHeight)
+                    {
+                        return BadRequest(new
+                        {
+                            message = $"Image height {image.Height}px exceeds the maximum of {maxHeight}px",
+                            errors = new { file = $"Image height {image.Height}px exceeds the maximum of {maxHeight}px" }
+                        });
+                    }
+                }
+                catch (ArgumentException)
+                {
+                    return BadRequest(new
+                    {
+                        message = "The uploaded file is not a valid image",
+                        errors = new { file = "The uploaded file is not a valid image" }
+                    });
+                }
+                catch (OutOfMemoryException)
+                {
+                    // GDI+ reports corrupt image bytes as OOM — same refusal as the decode
+                    // failure above, never a 500 (review finding P5, 2026-08-26).
+                    return BadRequest(new
+                    {
+                        message = "The uploaded file is not a valid image",
+                        errors = new { file = "The uploaded file is not a valid image" }
+                    });
+                }
+            }
+
+            try
+            {
+                var result = _attachmentService.AddAttachment(file, file.FileName, file.ContentType);
+                if (!result.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        message = "The file was rejected",
+                        errors = result.Errors.GroupBy(e => e.Name).ToDictionary(g => g.Key, g => string.Join("; ", g.Select(e => e.Value)))
+                    });
+                }
+
+                var attachment = result.Value;
+                return Ok(new
+                {
+                    id = attachment.Id.ToString(),
+                    fileName = attachment.FileName,
+                    contentType = attachment.ContentType,
+                    fileSizeBytes = file.Length,
+                    createdOn = attachment.CreatedOn
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error uploading attachment '{FileName}'", file.FileName);
+                return StatusCode(500, new { message = "Error uploading attachment" });
+            }
+        }
+
+        /// <summary>
+        /// UC-SYS-03: Batch metadata read for a set of attachment ids (report file manifests,
+        /// detail screens). Unknown ids are omitted; capped at 50 ids per call.
+        /// </summary>
+        [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> GetAttachmentsBatch([FromQuery] List<Guid> ids)
+        {
+            try
+            {
+                if (ids == null || ids.Count == 0)
+                {
+                    return Ok(Array.Empty<object>());
+                }
+
+                if (ids.Count > BatchIdsCap)
+                {
+                    return BadRequest(new { message = $"A maximum of {BatchIdsCap} attachment ids per request is allowed" });
+                }
+
+                var attachments = await _attachmentService.GetAttachmentsMetadataAsync(ids);
+                var sizes = await _attachmentService.GetAttachmentSizesAsync(ids);
+
+                return Ok(attachments.Select(a => new
+                {
+                    id = a.Id.ToString(),
+                    fileName = a.FileName,
+                    contentType = a.ContentType,
+                    fileSizeBytes = sizes.TryGetValue(a.Id, out var size) ? size : 0,
+                    createdOn = a.CreatedOn
+                }).ToList());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reading attachment batch metadata");
+                return StatusCode(500, new { message = "Error reading attachment metadata" });
+            }
         }
 
         /// <summary>
@@ -73,7 +237,7 @@ namespace IIROSA.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error downloading attachment: {Id}", id);
-                return StatusCode(500, new { message = "Error downloading attachment", error = ex.Message });
+                return StatusCode(500, new { message = "Error downloading attachment" });
             }
         }
 
@@ -105,7 +269,7 @@ namespace IIROSA.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving attachment info: {Id}", id);
-                return StatusCode(500, new { message = "Error retrieving attachment info", error = ex.Message });
+                return StatusCode(500, new { message = "Error retrieving attachment info" });
             }
         }
 
@@ -158,7 +322,7 @@ namespace IIROSA.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving attachment image: {Id}", id);
-                return StatusCode(500, new { message = "Error retrieving attachment image", error = ex.Message });
+                return StatusCode(500, new { message = "Error retrieving attachment image" });
             }
         }
     }

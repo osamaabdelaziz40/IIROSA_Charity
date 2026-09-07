@@ -105,4 +105,55 @@ public class UpdateFamilyDto
     /// Monthly assistance
     /// </summary>
     public decimal? MonthlyAssistance { get; set; }
+
+    // Refugee register household fields (epic 7, UC-REF-03 §12.S.2; applied when present)
+
+    /// <summary>
+    /// Register discriminator: Regular | Housing | Refugee (string on the wire, parsed with
+    /// Enum.TryParse in the service — 6-1 convention). Absent ⇒ unchanged.
+    /// </summary>
+    [StringLength(20, ErrorMessage = "Family type cannot exceed 20 characters")]
+    public string? FamilyType { get; set; }
+
+    /// <summary>
+    /// Governorate / region (المنطقة /المحافظة)
+    /// </summary>
+    public int? RegionId { get; set; }
+
+    /// <summary>
+    /// Center / city (المركز/ المدينة)
+    /// </summary>
+    public int? CenterId { get; set; }
+
+    /// <summary>
+    /// Nearby landmark (بجوار)
+    /// </summary>
+    [StringLength(100, ErrorMessage = "Nearby cannot exceed 100 characters")]
+    public string? NearBy { get; set; }
+
+    /// <summary>
+    /// Street (الشارع)
+    /// </summary>
+    [StringLength(100, ErrorMessage = "Street cannot exceed 100 characters")]
+    public string? Street { get; set; }
+
+    /// <summary>
+    /// Monthly rent (قيمة الإيجار)
+    /// </summary>
+    public decimal? RentAmount { get; set; }
+
+    /// <summary>
+    /// House ownership (ملكية السكن)
+    /// </summary>
+    public int? HouseOwnershipId { get; set; }
+
+    /// <summary>
+    /// House contents status (حالة محتويات السكن)
+    /// </summary>
+    public int? HouseStatusId { get; set; }
+
+    /// <summary>
+    /// Income type (نوع الدخل)
+    /// </summary>
+    public int? IncomeTypeId { get; set; }
 }

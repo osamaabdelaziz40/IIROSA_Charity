@@ -144,6 +144,91 @@ public class DepartmentRepository : LookupRepository<Department>, IDepartmentRep
     }
 }
 
+public class EducationLevelRepository : LookupRepository<EducationLevel>, IEducationLevelRepository
+{
+    public EducationLevelRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
+public class HealthStatusRepository : LookupRepository<HealthStatus>, IHealthStatusRepository
+{
+    public HealthStatusRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
+public class RefuseReasonRepository : LookupRepository<RefuseReason>, IRefuseReasonRepository
+{
+    public RefuseReasonRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
+// Refugee register lookups (epic 7, UC-REF-03)
+
+public class HouseOwnershipRepository : LookupRepository<HouseOwnership>, IHouseOwnershipRepository
+{
+    public HouseOwnershipRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
+public class HouseStatusRepository : LookupRepository<HouseStatus>, IHouseStatusRepository
+{
+    public HouseStatusRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
+public class IncomeTypeRepository : LookupRepository<IncomeType>, IIncomeTypeRepository
+{
+    public IncomeTypeRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
+public class SocialStatusRepository : LookupRepository<SocialStatus>, ISocialStatusRepository
+{
+    public SocialStatusRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
+public class RelationRepository : LookupRepository<Relation>, IRelationRepository
+{
+    public RelationRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
+public class ReasonOfRelRepository : LookupRepository<ReasonOfRel>, IReasonOfRelRepository
+{
+    public ReasonOfRelRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
+public class HousingTypeRepository : LookupRepository<HousingType>, IHousingTypeRepository
+{
+    public HousingTypeRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
+public class MaritalStatusRepository : LookupRepository<MaritalStatus>, IMaritalStatusRepository
+{
+    public MaritalStatusRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+public class JobRepository : LookupRepository<Job>, IJobRepository
+{
+    public JobRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
 public class MissionTypeRepository : LookupRepository<MissionType>, IMissionTypeRepository
 {
     public MissionTypeRepository(ApplicationDbContext context) : base(context)
@@ -154,6 +239,26 @@ public class MissionTypeRepository : LookupRepository<MissionType>, IMissionType
     {
         return await _dbSet
             .FirstOrDefaultAsync(m => m.TypeCode == typeCode);
+    }
+}
+
+public class MissionInterviewTypeRepository : LookupRepository<MissionInterviewType>, IMissionInterviewTypeRepository
+{
+    public MissionInterviewTypeRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
+public class MissionTimeTypeRepository : LookupRepository<MissionTimeType>, IMissionTimeTypeRepository
+{
+    public MissionTimeTypeRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+
+    public async Task<MissionTimeType?> GetByTimeTypeCodeAsync(string timeTypeCode)
+    {
+        return await _dbSet
+            .FirstOrDefaultAsync(m => m.TimeTypeCode == timeTypeCode);
     }
 }
 
@@ -199,5 +304,35 @@ public class NGOTypeRepository : LookupRepository<NGOType>, INGOTypeRepository
     {
         return await _dbSet
             .FirstOrDefaultAsync(n => n.TypeCode == typeCode);
+    }
+}
+
+/// <summary>
+/// Outgoing letter category lookup repository (epic 16, UC-COR-14)
+/// </summary>
+public class OutgoingCategoryRepository : LookupRepository<OutgoingCategory>, IOutgoingCategoryRepository
+{
+    public OutgoingCategoryRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
+/// <summary>
+/// Housing building lookup repository (epic 6) — auto-registers ILookupRepository&lt;HousingBuilding&gt;
+/// </summary>
+public class HousingBuildingRepository : LookupRepository<HousingBuilding>
+{
+    public HousingBuildingRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
+/// <summary>
+/// Housing flat lookup repository (epic 6) — auto-registers ILookupRepository&lt;HousingFlat&gt;
+/// </summary>
+public class HousingFlatRepository : LookupRepository<HousingFlat>
+{
+    public HousingFlatRepository(ApplicationDbContext context) : base(context)
+    {
     }
 }

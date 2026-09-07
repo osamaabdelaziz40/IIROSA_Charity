@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FamilyDto, FatherDto, MotherDto, ProviderDto, OrphanDto, FamilyAttachmentDto } from '../models/family.model';
 import { FamilyService } from '../services/family.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
@@ -69,9 +70,74 @@ export class FamilyDetailComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private familyService: FamilyService,
+    private auth: AuthService,
     private notification: NotificationService,
     private translate: TranslateService
   ) {}
+
+  // UC-FAM-07 — «تعديل اعضاء الاسرة» (members screen) is an HQ correction, permission-gated.
+  canManageMembers = this.auth.hasPermission('Families.Members');
+
+  // UC-FAM-09 — «طلب تعديل العائل»: the charity-side raise hook. The queue itself lives at
+  // #/families/provider-requests; this button proposes a new guardian for THIS family.
+  canRaiseProviderRequest = this.auth.hasPermission('Families.ProviderRequests');
+
+  // Raise-modal state (house idiom: *ngIf-toggled modal-backdrop + modal-dialog divs).
+  showProviderRequestModal = false;
+  raisingProviderRequest = false;
+  requestNewGuardianName = '';
+  requestNewGuardianNationalId = '';
+  requestRelationship = '';
+  requestReason = '';
+
+  openProviderRequestModal(): void {
+    this.requestNewGuardianName = '';
+    this.requestNewGuardianNationalId = '';
+    this.requestRelationship = '';
+    this.requestReason = '';
+    this.showProviderRequestModal = true;
+  }
+
+  closeProviderRequestModal(): void {
+    this.showProviderRequestModal = false;
+  }
+
+  submitProviderRequest(): void {
+    if (this.raisingProviderRequest || !this.familyId) {
+      return;
+    }
+    const name = this.requestNewGuardianName.trim();
+    const nationalId = this.requestNewGuardianNationalId.trim();
+    const relationship = this.requestRelationship.trim();
+    const reason = this.requestReason.trim();
+    if (!name || !nationalId || !relationship || !reason) {
+      this.notification.error(this.translate.instant('families.providerRequests.allFieldsRequired'));
+      return;
+    }
+
+    this.raisingProviderRequest = true;
+    this.familyService
+      .raiseGuardianChangeRequest(this.familyId, {
+        newGuardianName: name,
+        newGuardianNationalId: nationalId,
+        relationship,
+        reason
+      })
+      .subscribe({
+        next: () => {
+          this.raisingProviderRequest = false;
+          this.showProviderRequestModal = false;
+          this.notification.success(this.translate.instant('families.providerRequests.raiseSuccess'));
+        },
+        error: (error: any) => {
+          this.raisingProviderRequest = false;
+          console.error('Error raising guardian-change request:', error);
+          // The pending-duplicate guard returns the literal legacy message — surface it verbatim.
+          this.notification.error(error?.error?.message || error?.message ||
+            this.translate.instant('families.providerRequests.raiseFailed'));
+        }
+      });
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');

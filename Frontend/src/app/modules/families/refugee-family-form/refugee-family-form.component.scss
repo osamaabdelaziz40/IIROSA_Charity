@@ -1,0 +1,17 @@
+/* UC-REF-03 (7-3) — staged اضافة ابن / اضافة مرافق rows */
+
+.stage-row {
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px dashed var(--border-color, #e3e7ed);
+
+  &:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+}
+
+/* RTL-first: keep the delete affordance pinned to the row's trailing edge */
+:host-context([dir="rtl"]) .stage-row .btn-danger {
+  margin-right: auto;
+}

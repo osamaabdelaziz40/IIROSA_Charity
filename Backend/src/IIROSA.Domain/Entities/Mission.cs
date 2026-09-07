@@ -44,6 +44,11 @@ public class Mission : FullAuditedEntity
     /// </summary>
     public int? FK_MissionTimeTypeId { get; set; }
 
+    /// <summary>
+    /// Foreign key to MissionInterviewType lookup (UC-MSN-04, §20.S.2 mandatory field)
+    /// </summary>
+    public int? FK_MissionInterviewTypeId { get; set; }
+
     // ========== Scheduling (UC-8.2) ==========
 
     /// <summary>
@@ -102,6 +107,12 @@ public class Mission : FullAuditedEntity
     /// </summary>
     public Guid? FK_UserId { get; set; }
 
+    /// <summary>
+    /// Foreign key to the owning Charity (UC-MSN-01 — the register is scoped to the
+    /// caller's charity and country). Stamped server-side from the caller's claim.
+    /// </summary>
+    public Guid? FK_CharityId { get; set; }
+
     // ========== Event Information (UC-8.9) ==========
 
     /// <summary>
@@ -127,6 +138,11 @@ public class Mission : FullAuditedEntity
     public virtual MissionTimeType? MissionTimeType { get; set; }
 
     /// <summary>
+    /// Navigation to MissionInterviewType lookup
+    /// </summary>
+    public virtual MissionInterviewType? MissionInterviewType { get; set; }
+
+    /// <summary>
     /// Navigation to Country lookup
     /// </summary>
     public virtual Country? Country { get; set; }
@@ -145,4 +161,9 @@ public class Mission : FullAuditedEntity
     /// Navigation to assigned ApplicationUser
     /// </summary>
     public virtual ApplicationUser? AssignedUser { get; set; }
+
+    /// <summary>
+    /// Navigation to the owning Charity
+    /// </summary>
+    public virtual Charity? Charity { get; set; }
 }

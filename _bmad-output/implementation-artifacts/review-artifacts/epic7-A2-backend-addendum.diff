@@ -1,0 +1,295 @@
+diff --git a/Backend/src/IIROSA.Domain/Configurations/FamilyConfiguration.cs b/Backend/src/IIROSA.Domain/Configurations/FamilyConfiguration.cs
+index dd59e6b..5c762eb 100644
+--- a/Backend/src/IIROSA.Domain/Configurations/FamilyConfiguration.cs
++++ b/Backend/src/IIROSA.Domain/Configurations/FamilyConfiguration.cs
+@@ -35,6 +35,16 @@ public class FamilyConfiguration : IEntityTypeConfiguration<Family>
+         builder.Property(x => x.Notes)
+             .HasMaxLength(1000);
+ 
++        // Refugee register household fields (epic 7, UC-REF-03) — all nullable
++        builder.Property(x => x.NearBy)
++            .HasMaxLength(100);
++
++        builder.Property(x => x.Street)
++            .HasMaxLength(100);
++
++        builder.Property(x => x.RentAmount)
++            .HasColumnType("decimal(18,2)");
++
+         // Relationships
+         builder.HasOne(x => x.Country)
+             .WithMany()
+@@ -46,11 +56,48 @@ public class FamilyConfiguration : IEntityTypeConfiguration<Family>
+             .HasForeignKey(x => x.CityId)
+             .OnDelete(DeleteBehavior.Restrict);
+ 
++        // Refugee register navigations (epic 7, UC-REF-03)
++        builder.HasOne(x => x.Region)
++            .WithMany()
++            .HasForeignKey(x => x.RegionId)
++            .OnDelete(DeleteBehavior.Restrict);
++
++        builder.HasOne(x => x.Center)
++            .WithMany()
++            .HasForeignKey(x => x.CenterId)
++            .OnDelete(DeleteBehavior.Restrict);
++
++        builder.HasOne(x => x.HouseOwnership)
++            .WithMany()
++            .HasForeignKey(x => x.HouseOwnershipId)
++            .OnDelete(DeleteBehavior.Restrict);
++
++        builder.HasOne(x => x.HouseStatus)
++            .WithMany()
++            .HasForeignKey(x => x.HouseStatusId)
++            .OnDelete(DeleteBehavior.Restrict);
++
++        builder.HasOne(x => x.IncomeType)
++            .WithMany()
++            .HasForeignKey(x => x.IncomeTypeId)
++            .OnDelete(DeleteBehavior.Restrict);
++
+         builder.HasOne(x => x.Charity)
+             .WithMany(x => x.Families)
+             .HasForeignKey(x => x.CharityId)
+             .OnDelete(DeleteBehavior.Restrict);
+ 
++        // UC-HOU-05 allocation: building + flat (nullable; Regular/Refugee families have neither)
++        builder.HasOne(x => x.HousingBuilding)
++            .WithMany()
++            .HasForeignKey(x => x.FK_HousingBuildingId)
++            .OnDelete(DeleteBehavior.Restrict);
++
++        builder.HasOne(x => x.HousingFlat)
++            .WithMany()
++            .HasForeignKey(x => x.FK_HousingFlatId)
++            .OnDelete(DeleteBehavior.Restrict);
++
+         // Indexes
+         builder.HasIndex(x => x.Code).IsUnique();
+         builder.HasIndex(x => x.CharityId);
+diff --git a/Backend/src/IIROSA.Domain/Configurations/OrphanConfiguration.cs b/Backend/src/IIROSA.Domain/Configurations/OrphanConfiguration.cs
+index 3e3ac3c..945240f 100644
+--- a/Backend/src/IIROSA.Domain/Configurations/OrphanConfiguration.cs
++++ b/Backend/src/IIROSA.Domain/Configurations/OrphanConfiguration.cs
+@@ -50,6 +50,12 @@ public class OrphanConfiguration : IEntityTypeConfiguration<Orphan>
+             .HasForeignKey(x => x.HealthStatusId)
+             .OnDelete(DeleteBehavior.Restrict);
+ 
++        // Refugee register extension (epic 7, UC-REF-03)
++        builder.HasOne(x => x.SocialStatus)
++            .WithMany()
++            .HasForeignKey(x => x.SocialStatusId)
++            .OnDelete(DeleteBehavior.Restrict);
++
+         // Indexes
+         builder.HasIndex(x => x.Code).IsUnique();
+         builder.HasIndex(x => x.FamilyId);
+diff --git a/Backend/src/IIROSA.Domain/Configurations/ProviderConfiguration.cs b/Backend/src/IIROSA.Domain/Configurations/ProviderConfiguration.cs
+index 8e2e807..b5c24aa 100644
+--- a/Backend/src/IIROSA.Domain/Configurations/ProviderConfiguration.cs
++++ b/Backend/src/IIROSA.Domain/Configurations/ProviderConfiguration.cs
+@@ -44,12 +44,26 @@ public class ProviderConfiguration : IEntityTypeConfiguration<Provider>
+         builder.Property(x => x.Notes)
+             .HasMaxLength(1000);
+ 
++        // Refugee register extensions (epic 7, UC-REF-03) — all nullable
++        builder.Property(x => x.DeathReason)
++            .HasMaxLength(100);
++
+         // ========== Relationships ==========
+         builder.HasOne(x => x.Family)
+             .WithOne(f => f.Provider)
+             .HasForeignKey<Provider>(x => x.FamilyId)
+             .OnDelete(DeleteBehavior.Restrict);
+ 
++        builder.HasOne(x => x.Country)
++            .WithMany()
++            .HasForeignKey(x => x.NationalityCountryId)
++            .OnDelete(DeleteBehavior.Restrict);
++
++        builder.HasOne(x => x.ReasonOfRelation)
++            .WithMany()
++            .HasForeignKey(x => x.ReasonOfRelationId)
++            .OnDelete(DeleteBehavior.Restrict);
++
+         // ========== Indexes ==========
+         builder.HasIndex(x => x.FamilyId);
+         builder.HasIndex(x => x.NationalId);
+diff --git a/Backend/src/IIROSA.Domain/Enums/FamilyType.cs b/Backend/src/IIROSA.Domain/Enums/FamilyType.cs
+new file mode 100644
+index 0000000..b6643e7
+--- /dev/null
++++ b/Backend/src/IIROSA.Domain/Enums/FamilyType.cs
+@@ -0,0 +1,15 @@
++namespace IIROSA.Domain.Enums;
++
++/// <summary>
++/// Family register discriminator (UC-HOU / chapter 11).
++/// Regular = the orphan-sponsorship register (epic 5);
++/// Housing = families housed in organisation-owned buildings (epic 6);
++/// Refugee = the refugee register (epic 7).
++/// Note: NOT the living-condition HousingType lookup — that stays on Family.HousingTypeId.
++/// </summary>
++public enum FamilyType
++{
++    Regular = 1,
++    Housing = 2,
++    Refugee = 3
++}
+diff --git a/Backend/src/IIROSA.Domain/Configurations/HouseOwnershipConfiguration.cs b/Backend/src/IIROSA.Domain/Configurations/HouseOwnershipConfiguration.cs
+new file mode 100644
+index 0000000..492c9a3
+--- /dev/null
++++ b/Backend/src/IIROSA.Domain/Configurations/HouseOwnershipConfiguration.cs
+@@ -0,0 +1,20 @@
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Metadata.Builders;
++using IIROSA.Domain.Entities.Lookups;
++
++namespace IIROSA.Domain.Configurations;
++
++/// <summary>
++/// Entity Framework Configuration for HouseOwnership lookup entity (epic 7, UC-REF-03)
++/// </summary>
++public class HouseOwnershipConfiguration : IEntityTypeConfiguration<HouseOwnership>
++{
++    public void Configure(EntityTypeBuilder<HouseOwnership> builder)
++    {
++        builder.ToTable(nameof(HouseOwnership), MappingDefaults.LOOKUP_SCHEMA);
++
++        builder.HasKey(x => x.Id);
++
++        // All properties (NameAr, NameEn, Name, IsActive, SortOrder, etc.) are inherited from LookupEntityBase
++    }
++}
+diff --git a/Backend/src/IIROSA.Domain/Configurations/HouseStatusConfiguration.cs b/Backend/src/IIROSA.Domain/Configurations/HouseStatusConfiguration.cs
+new file mode 100644
+index 0000000..d67918b
+--- /dev/null
++++ b/Backend/src/IIROSA.Domain/Configurations/HouseStatusConfiguration.cs
+@@ -0,0 +1,20 @@
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Metadata.Builders;
++using IIROSA.Domain.Entities.Lookups;
++
++namespace IIROSA.Domain.Configurations;
++
++/// <summary>
++/// Entity Framework Configuration for HouseStatus lookup entity (epic 7, UC-REF-03)
++/// </summary>
++public class HouseStatusConfiguration : IEntityTypeConfiguration<HouseStatus>
++{
++    public void Configure(EntityTypeBuilder<HouseStatus> builder)
++    {
++        builder.ToTable(nameof(HouseStatus), MappingDefaults.LOOKUP_SCHEMA);
++
++        builder.HasKey(x => x.Id);
++
++        // All properties (NameAr, NameEn, Name, IsActive, SortOrder, etc.) are inherited from LookupEntityBase
++    }
++}
+diff --git a/Backend/src/IIROSA.Domain/Configurations/IncomeTypeConfiguration.cs b/Backend/src/IIROSA.Domain/Configurations/IncomeTypeConfiguration.cs
+new file mode 100644
+index 0000000..2cc04da
+--- /dev/null
++++ b/Backend/src/IIROSA.Domain/Configurations/IncomeTypeConfiguration.cs
+@@ -0,0 +1,20 @@
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Metadata.Builders;
++using IIROSA.Domain.Entities.Lookups;
++
++namespace IIROSA.Domain.Configurations;
++
++/// <summary>
++/// Entity Framework Configuration for IncomeType lookup entity (epic 7, UC-REF-03)
++/// </summary>
++public class IncomeTypeConfiguration : IEntityTypeConfiguration<IncomeType>
++{
++    public void Configure(EntityTypeBuilder<IncomeType> builder)
++    {
++        builder.ToTable(nameof(IncomeType), MappingDefaults.LOOKUP_SCHEMA);
++
++        builder.HasKey(x => x.Id);
++
++        // All properties (NameAr, NameEn, Name, IsActive, SortOrder, etc.) are inherited from LookupEntityBase
++    }
++}
+diff --git a/Backend/src/IIROSA.Domain/Configurations/ReasonOfRelConfiguration.cs b/Backend/src/IIROSA.Domain/Configurations/ReasonOfRelConfiguration.cs
+new file mode 100644
+index 0000000..33c794e
+--- /dev/null
++++ b/Backend/src/IIROSA.Domain/Configurations/ReasonOfRelConfiguration.cs
+@@ -0,0 +1,20 @@
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Metadata.Builders;
++using IIROSA.Domain.Entities.Lookups;
++
++namespace IIROSA.Domain.Configurations;
++
++/// <summary>
++/// Entity Framework Configuration for ReasonOfRel lookup entity (epic 7, UC-REF-03)
++/// </summary>
++public class ReasonOfRelConfiguration : IEntityTypeConfiguration<ReasonOfRel>
++{
++    public void Configure(EntityTypeBuilder<ReasonOfRel> builder)
++    {
++        builder.ToTable(nameof(ReasonOfRel), MappingDefaults.LOOKUP_SCHEMA);
++
++        builder.HasKey(x => x.Id);
++
++        // All properties (NameAr, NameEn, Name, IsActive, SortOrder, etc.) are inherited from LookupEntityBase
++    }
++}
+diff --git a/Backend/src/IIROSA.Domain/Configurations/RelationConfiguration.cs b/Backend/src/IIROSA.Domain/Configurations/RelationConfiguration.cs
+new file mode 100644
+index 0000000..4d432c4
+--- /dev/null
++++ b/Backend/src/IIROSA.Domain/Configurations/RelationConfiguration.cs
+@@ -0,0 +1,20 @@
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Metadata.Builders;
++using IIROSA.Domain.Entities.Lookups;
++
++namespace IIROSA.Domain.Configurations;
++
++/// <summary>
++/// Entity Framework Configuration for Relation lookup entity (epic 7, UC-REF-03)
++/// </summary>
++public class RelationConfiguration : IEntityTypeConfiguration<Relation>
++{
++    public void Configure(EntityTypeBuilder<Relation> builder)
++    {
++        builder.ToTable(nameof(Relation), MappingDefaults.LOOKUP_SCHEMA);
++
++        builder.HasKey(x => x.Id);
++
++        // All properties (NameAr, NameEn, Name, IsActive, SortOrder, etc.) are inherited from LookupEntityBase
++    }
++}
+diff --git a/Backend/src/IIROSA.Domain/Configurations/SocialStatusConfiguration.cs b/Backend/src/IIROSA.Domain/Configurations/SocialStatusConfiguration.cs
+new file mode 100644
+index 0000000..92424f3
+--- /dev/null
++++ b/Backend/src/IIROSA.Domain/Configurations/SocialStatusConfiguration.cs
+@@ -0,0 +1,20 @@
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Metadata.Builders;
++using IIROSA.Domain.Entities.Lookups;
++
++namespace IIROSA.Domain.Configurations;
++
++/// <summary>
++/// Entity Framework Configuration for SocialStatus lookup entity (epic 7, UC-REF-03)
++/// </summary>
++public class SocialStatusConfiguration : IEntityTypeConfiguration<SocialStatus>
++{
++    public void Configure(EntityTypeBuilder<SocialStatus> builder)
++    {
++        builder.ToTable(nameof(SocialStatus), MappingDefaults.LOOKUP_SCHEMA);
++
++        builder.HasKey(x => x.Id);
++
++        // All properties (NameAr, NameEn, Name, IsActive, SortOrder, etc.) are inherited from LookupEntityBase
++    }
++}

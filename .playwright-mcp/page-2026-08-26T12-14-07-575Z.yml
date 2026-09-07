@@ -1,0 +1,17 @@
+- generic [ref=f4e7]:
+  - button "English " [ref=f4e10] [cursor=pointer]
+  - generic [ref=f4e12]:
+    - link [ref=f4e13] [cursor=pointer]:
+      - /url: "#"
+    - heading "تسجيل الدخول" [level=1] [ref=f4e19]
+    - generic [ref=f4e20]:
+      - generic [ref=f4e21]: عنوان البريد الإلكتروني
+      - textbox "عنوان البريد الإلكتروني" [active] [ref=f4e22]
+    - generic [ref=f4e23]:
+      - generic [ref=f4e24]: كلمة المرور
+      - textbox "كلمة المرور" [ref=f4e25]
+    - generic [ref=f4e27]:
+      - checkbox "البقاء متصلاً" [ref=f4e28]
+      - text: البقاء متصلاً
+    - button "دعني أدخل" [ref=f4e29] [cursor=pointer]
+    - paragraph [ref=f4e30]: © 2025 IIROSA

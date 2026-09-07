@@ -1,0 +1,221 @@
+- generic [ref=f136e5]:
+  - navigation [ref=f136e6]:
+    - button "" [ref=f136e401] [cursor=pointer]
+    - list [ref=f136e9]:
+      - listitem [ref=f136e10]:
+        - link "English " [ref=f136e402] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f136e403]: 
+          - text: English 
+      - listitem [ref=f136e12]:
+        - link "" [ref=f136e404] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f136e15]:
+        - link "" [ref=f136e405] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f136e18]:
+        - button [ref=f136e19] [cursor=pointer]:
+          - generic [ref=f136e20]:
+            - text: Welcome System Admin
+            - img "..." [ref=f136e21]
+          - text: 
+  - complementary [ref=f136e22]:
+    - generic [ref=f136e411]:
+      - text: 
+      - navigation [ref=f136e23]:
+        - link [ref=f136e25] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f136e26]
+        - paragraph [ref=f136e27]: Website Elements
+        - list [ref=f136e28]:
+          - listitem [ref=f136e29]:
+            - link " Home Page (current) " [ref=f136e412] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f136e413]: 
+              - generic [ref=f136e31]: Home Page
+              - generic [ref=f136e32]: (current)
+              - text: 
+            - list [ref=f136e33]:
+              - listitem [ref=f136e34]:
+                - link "Home" [ref=f136e35] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f136e36]:
+            - link " Users " [ref=f136e414] [cursor=pointer]:
+              - /url: "#user-management"
+              - generic [ref=f136e415]: 
+              - generic [ref=f136e38]: Users
+              - text: 
+          - listitem [ref=f136e39]:
+            - link " Employees " [ref=f136e416] [cursor=pointer]:
+              - /url: "#employees"
+              - generic [ref=f136e417]: 
+              - generic [ref=f136e41]: Employees
+              - text: 
+          - listitem [ref=f136e42]:
+            - link " NGOs " [ref=f136e418] [cursor=pointer]:
+              - /url: "#charities"
+              - generic [ref=f136e419]: 
+              - generic [ref=f136e44]: NGOs
+              - text: 
+          - listitem [ref=f136e45]:
+            - link " Office Projects " [ref=f136e420] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f136e421]: 
+              - generic [ref=f136e47]: Office Projects
+              - text: 
+          - listitem [ref=f136e48]:
+            - link " Housing Projects " [ref=f136e422] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f136e423]: 
+              - generic [ref=f136e50]: Housing Projects
+              - text: 
+          - listitem [ref=f136e51]:
+            - link " Seasonal Aid " [ref=f136e424] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f136e425]: 
+              - generic [ref=f136e53]: Seasonal Aid
+              - text: 
+          - listitem [ref=f136e54]:
+            - link " Incoming & Outgoing " [ref=f136e426] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f136e427]: 
+              - generic [ref=f136e56]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=f136e57]:
+            - link " Orphan Payments " [ref=f136e428] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f136e429]: 
+              - generic [ref=f136e59]: Orphan Payments
+              - text: 
+            - list [ref=f136e916]:
+              - listitem [ref=f136e917]:
+                - link "Manage Payment Groups" [ref=f136e918] [cursor=pointer]:
+                  - /url: "#/orphan-payments"
+              - listitem [ref=f136e919]:
+                - link "Add New Payment Group" [ref=f136e920] [cursor=pointer]:
+                  - /url: "#/orphan-payments/create"
+          - listitem [ref=f136e60]:
+            - link " Families " [ref=f136e430] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f136e431]: 
+              - generic [ref=f136e62]: Families
+              - text: 
+          - listitem [ref=f136e63]:
+            - link " Reports " [ref=f136e432] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f136e433]: 
+              - generic [ref=f136e65]: Reports
+              - text: 
+          - listitem [ref=f136e66]:
+            - link " General Cheques " [ref=f136e434] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f136e435]: 
+              - generic [ref=f136e68]: General Cheques
+              - text: 
+          - listitem [ref=f136e69]:
+            - link " Missions " [ref=f136e436] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f136e437]: 
+              - generic [ref=f136e71]: Missions
+              - text: 
+          - listitem [ref=f136e72]:
+            - link " Periodic Orphan Reports " [ref=f136e438] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f136e439]: 
+              - generic [ref=f136e74]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=f136e75]:
+            - link " Financial Transfers " [ref=f136e440] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f136e441]: 
+              - generic [ref=f136e77]: Financial Transfers
+              - text: 
+          - listitem [ref=f136e78]:
+            - link " Technical Support " [ref=f136e442] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f136e443]: 
+              - generic [ref=f136e80]: Technical Support
+              - text: 
+          - listitem [ref=f136e81]:
+            - link " Lookup Management " [ref=f136e444] [cursor=pointer]:
+              - /url: "#lookup-management"
+              - generic [ref=f136e445]: 
+              - generic [ref=f136e83]: Lookup Management
+              - text: 
+  - main [ref=f136e84]:
+    - generic [ref=f136e921]:
+      - navigation "breadcrumb" [ref=f136e923]:
+        - list [ref=f136e924]:
+          - listitem [ref=f136e925]:
+            - link "Home" [ref=f136e926] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=f136e927]:
+            - text: /
+            - generic [ref=f136e928]: Orphan Payments
+      - generic [ref=f136e930]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f136e931]:
+          - generic [ref=f136e932]:
+            - generic [ref=f136e933]: 
+            - generic [ref=f136e934]:
+              - heading "Orphan Payments" [level=3] [ref=f136e935]
+              - paragraph [ref=f136e936]: Manage orphan payment groups for manual payment processing
+          - generic [ref=f136e937]:
+            - button "Add New Payment Group" [ref=f136e938] [cursor=pointer]:
+              - generic [ref=f136e939]: 
+              - text: Add New Payment Group
+            - button "Refresh" [ref=f136e940] [cursor=pointer]:
+              - generic [ref=f136e941]: 
+              - text: Refresh
+      - generic [ref=f136e944]:
+        - generic [ref=f136e945]:
+          - generic [ref=f136e946]:
+            - generic [ref=f136e947]: Search
+            - textbox "Search by group name or batch number..." [ref=f136e948]
+          - generic [ref=f136e949]:
+            - generic [ref=f136e950]: Payment Period From
+            - textbox [ref=f136e951]: 2026-07-31
+          - generic [ref=f136e952]:
+            - generic [ref=f136e953]: Payment Period To
+            - textbox [ref=f136e954]: 2026-08-30
+          - generic [ref=f136e957]:
+            - generic [ref=f136e958]: Upload Status
+            - combobox [ref=f136e961] [cursor=pointer]:
+              - textbox [ref=f136e1007]
+            - generic [ref=f136e1008]: Looks good!
+          - generic [ref=f136e965]:
+            - generic [ref=f136e966]: Charity
+            - combobox [ref=f136e969] [cursor=pointer]:
+              - textbox [ref=f136e970]
+        - generic [ref=f136e972]:
+          - button " Search" [active] [ref=f136e973] [cursor=pointer]:
+            - generic [ref=f136e974]: 
+            - text: Search
+          - button " Clear Filters" [ref=f136e975] [cursor=pointer]:
+            - generic [ref=f136e976]: 
+            - text: Clear Filters
+      - table [ref=f136e1010]:
+        - rowgroup [ref=f136e1011]:
+          - row [ref=f136e1012]:
+            - columnheader "No." [ref=f136e1013]
+            - columnheader "Batch Number" [ref=f136e1014]
+            - columnheader "Group Name" [ref=f136e1015]
+            - columnheader "Payment Period" [ref=f136e1016]
+            - columnheader "Orphan Count" [ref=f136e1017]
+            - columnheader "Exchange Rate" [ref=f136e1018]
+            - columnheader "Currency" [ref=f136e1019]
+            - columnheader "Is Uploaded" [ref=f136e1020]
+            - columnheader "Group Date" [ref=f136e1021]
+            - columnheader "Actions" [ref=f136e1022]
+        - rowgroup [ref=f136e1023]:
+          - row [ref=f136e1024]:
+            - cell " No payment groups found" [ref=f136e1025]:
+              - generic [ref=f136e1026]:
+                - generic [ref=f136e1027]: 
+                - paragraph [ref=f136e1028]: No payment groups found
+  - contentinfo [ref=f136e394]:
+    - generic [ref=f136e396]:
+      - paragraph [ref=f136e398]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f136e400]: Version 1.0.0

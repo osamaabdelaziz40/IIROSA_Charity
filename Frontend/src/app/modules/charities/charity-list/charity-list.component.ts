@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -60,6 +60,26 @@ export class CharityListComponent implements OnInit, OnDestroy {
 
   // Status options for dropdown - localized
   statusOptions: Array<{ id: string; name: string }> = [];
+
+  // Row actions menu: id of the charity whose menu is open (null = all closed).
+  // Driven by Angular state instead of Bootstrap's global jQuery data-api — its
+  // document-level delegated handler does not fire reliably for clicks inside
+  // this table, so the table manages its own menus.
+  openRowMenuId: string | null = null;
+
+  toggleRowMenu(charity: CharityDto): void {
+    this.openRowMenuId = this.openRowMenuId === charity.id ? null : (charity.id ?? null);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    // Close when clicking outside any dropdown, or on a menu item (after its
+    // action handler has fired — document listeners run last in the bubble phase).
+    if (!target.closest('.dropdown') || target.closest('.dropdown-item')) {
+      this.openRowMenuId = null;
+    }
+  }
 
   pageActions = [
     {

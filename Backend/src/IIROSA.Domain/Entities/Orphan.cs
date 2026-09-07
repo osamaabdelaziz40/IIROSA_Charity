@@ -103,6 +103,14 @@ public class Orphan : FullAuditedEntity
     /// </summary>
     public string? AcademicPerformance { get; set; }
 
+    /// <summary>
+    /// §11.S.2 child mandatory field «حاصل على مؤهل دراسى» — the educational qualification
+    /// the child holds (review decision D3, 2026-08-24: reuse the EducationLevel catalogue;
+    /// no new lookup — 19-6 owns the reasons catalogue). Nullable column so legacy rows
+    /// survive; the housing create validator requires it for NEW children.
+    /// </summary>
+    public int? EducationalQualificationId { get; set; }
+
     // Health
     /// <summary>
     /// Foreign key to Health Status lookup
@@ -146,10 +154,49 @@ public class Orphan : FullAuditedEntity
     /// </summary>
     public string? Notes { get; set; }
 
+    // Refugee register extension (epic 7, UC-REF-03 §12.S.2 اضافة ابن)
+
+    /// <summary>
+    /// Social status (الحالة الاجتماعية)
+    /// </summary>
+    public int? SocialStatusId { get; set; }
+
+    // Housing register extensions (epic 6, UC-HOU-03 §11.S.2 اضافة ابن) — all nullable
+
+    /// <summary>
+    /// Occupation (نوعية العمل) — free text; no Profession lookup entity exists on this stack
+    /// (deviation recorded in story 6-3, same deferral class as epic 8's prayer/hobby lookups)
+    /// </summary>
+    public string? Profession { get; set; }
+
+    /// <summary>
+    /// Department inside the educational institution (القسم)
+    /// </summary>
+    public string? DepartmentName { get; set; }
+
+    /// <summary>
+    /// Faculty (الكلية)
+    /// </summary>
+    public string? FacultyName { get; set; }
+
+    /// <summary>
+    /// Birth certificate attachment (شهاده الميلاد)
+    /// </summary>
+    public Guid? BirthCertificateAttachmentId { get; set; }
+
+    /// <summary>
+    /// School enrolment proof attachment (القيد الدراسي)
+    /// </summary>
+    public Guid? EnrollmentAttachmentId { get; set; }
+
     // Navigation Properties
     public virtual Family? Family { get; set; }
     public virtual Sponsor? Sponsor { get; set; }
     public virtual EducationLevel? EducationLevel { get; set; }
+    /// <summary>«حاصل على مؤهل دراسى» — second EducationLevel edge, configured explicitly in
+    /// OrphanConfiguration so it cannot collide with the EducationLevel nav above.</summary>
+    public virtual EducationLevel? EducationalQualification { get; set; }
     public virtual HealthStatus? HealthStatus { get; set; }
+    public virtual SocialStatus? SocialStatus { get; set; }
     public virtual ICollection<PeriodicOrphanReport> PeriodicReports { get; set; } = new List<PeriodicOrphanReport>();
 }

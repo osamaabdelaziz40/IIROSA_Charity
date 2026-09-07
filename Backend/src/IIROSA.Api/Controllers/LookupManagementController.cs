@@ -1,3 +1,4 @@
+using IIROSA.Application.DTOs.CheckManagement;
 using IIROSA.Application.DTOs.LookupManagement;
 using IIROSA.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -10,11 +11,13 @@ namespace IIROSA.Api.Controllers;
 /// <summary>
 /// Lookup Management API Controller
 /// Implements UC-14.1 to UC-14.15: Lookup Management operations
-/// Only accessible by Super Admin users
+/// Reads are open to any authenticated user — countries/regions/centers feed the filter
+/// dropdowns of ordinary list pages (charities, families, ...), not just this module.
+/// Write operations are restricted to Super Admin (see the per-action policies below).
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "SuperAdminOnly", AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class LookupManagementController : ControllerBase
 {
     private readonly ICountryService _countryService;
@@ -22,12 +25,37 @@ public class LookupManagementController : ControllerBase
     private readonly ICenterService _centerService;
     private readonly IDepartmentService _departmentService;
     private readonly IMissionTypeService _missionTypeService;
+    private readonly IMissionInterviewTypeService _missionInterviewTypeService;
     private readonly IProjectTypeService _projectTypeService;
     private readonly IOfficeProjectTypeService _officeProjectTypeService;
+    private readonly IHousingBuildingService _housingBuildingService;
+    private readonly IHousingFlatService _housingFlatService;
     private readonly IBankService _bankService;
     private readonly INGOTypeService _ngoTypeService;
+    private readonly IEducationLevelService _educationLevelService;
+    private readonly IHealthStatusService _healthStatusService;
+    private readonly IRefuseReasonService _refuseReasonService;
+    // Refugee register lookups (epic 7, UC-REF-03)
+    private readonly IHouseOwnershipService _houseOwnershipService;
+    private readonly IHouseStatusService _houseStatusService;
+    private readonly IIncomeTypeService _incomeTypeService;
+    private readonly ISocialStatusService _socialStatusService;
+    private readonly IRelationService _relationService;
+    private readonly IReasonOfRelService _reasonOfRelService;
+    private readonly IHousingTypeService _housingTypeService;
+    // Guardian reference data (epic 19, UC-SYS-05)
+    private readonly IMaritalStatusService _maritalStatusService;
+    // Guardian job / profession catalogue (epic 19, UC-SYS-09)
+    private readonly IJobService _jobService;
     private readonly ILookupManagementService _lookupManagementService;
     private readonly ILogger<LookupManagementController> _logger;
+
+    /// <summary>
+    /// Dropdown "get all" page size (19-4) — equal to LookupFilterDto.MaxPageSize, so a
+    /// catalogue that outgrows the ceiling is detectable on the paged endpoints (their
+    /// totalCount is the true count) instead of being silently truncated here.
+    /// </summary>
+    private const int DropdownPageSize = LookupFilterDto.MaxPageSize;
 
     public LookupManagementController(
         ICountryService countryService,
@@ -35,10 +63,25 @@ public class LookupManagementController : ControllerBase
         ICenterService centerService,
         IDepartmentService departmentService,
         IMissionTypeService missionTypeService,
+        IMissionInterviewTypeService missionInterviewTypeService,
         IProjectTypeService projectTypeService,
         IOfficeProjectTypeService officeProjectTypeService,
+        IHousingBuildingService housingBuildingService,
+        IHousingFlatService housingFlatService,
         IBankService bankService,
         INGOTypeService ngoTypeService,
+        IEducationLevelService educationLevelService,
+        IHealthStatusService healthStatusService,
+        IRefuseReasonService refuseReasonService,
+        IHouseOwnershipService houseOwnershipService,
+        IHouseStatusService houseStatusService,
+        IIncomeTypeService incomeTypeService,
+        ISocialStatusService socialStatusService,
+        IRelationService relationService,
+        IReasonOfRelService reasonOfRelService,
+        IHousingTypeService housingTypeService,
+        IMaritalStatusService maritalStatusService,
+        IJobService jobService,
         ILookupManagementService lookupManagementService,
         ILogger<LookupManagementController> logger)
     {
@@ -47,10 +90,25 @@ public class LookupManagementController : ControllerBase
         _centerService = centerService;
         _departmentService = departmentService;
         _missionTypeService = missionTypeService;
+        _missionInterviewTypeService = missionInterviewTypeService;
         _projectTypeService = projectTypeService;
         _officeProjectTypeService = officeProjectTypeService;
+        _housingBuildingService = housingBuildingService;
+        _housingFlatService = housingFlatService;
         _bankService = bankService;
         _ngoTypeService = ngoTypeService;
+        _educationLevelService = educationLevelService;
+        _healthStatusService = healthStatusService;
+        _refuseReasonService = refuseReasonService;
+        _houseOwnershipService = houseOwnershipService;
+        _houseStatusService = houseStatusService;
+        _incomeTypeService = incomeTypeService;
+        _socialStatusService = socialStatusService;
+        _relationService = relationService;
+        _reasonOfRelService = reasonOfRelService;
+        _housingTypeService = housingTypeService;
+        _maritalStatusService = maritalStatusService;
+        _jobService = jobService;
         _lookupManagementService = lookupManagementService;
         _logger = logger;
     }
@@ -76,7 +134,10 @@ public class LookupManagementController : ControllerBase
 
     /// <summary>
     /// Export lookup table data (UC-14.14)
+    /// 19-4: bulk table export is HQ-admin only (read-widening gate); the summary above
+    /// stays readable to any authenticated role — the overview cards must keep rendering.
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpGet("tables/{tableName}/export")]
     public async Task<IActionResult> ExportLookupTable(string tableName, [FromQuery] BulkExportDto exportDto)
     {
@@ -141,6 +202,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// UC-14.1: Create new country
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPost("countries")]
     public async Task<ActionResult<CountryDto>> CreateCountry([FromBody] CreateCountryDto model)
     {
@@ -159,6 +221,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// UC-14.2: Update country
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPut("countries/{id}")]
     public async Task<ActionResult<CountryDto>> UpdateCountry(int id, [FromBody] UpdateCountryDto model)
     {
@@ -181,6 +244,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// UC-14.3: Deactivate country
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPatch("countries/{id}/deactivate")]
     public async Task<ActionResult> DeactivateCountry(int id)
     {
@@ -204,6 +268,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// Activate country
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPatch("countries/{id}/activate")]
     public async Task<ActionResult> ActivateCountry(int id)
     {
@@ -227,6 +292,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// UC-14.4: Set country sort order
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPatch("countries/{id}/sortorder")]
     public async Task<ActionResult> UpdateCountrySortOrder(int id, [FromBody] int sortOrder)
     {
@@ -306,6 +372,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// Create new region (UC-14.7)
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPost("regions")]
     public async Task<ActionResult<RegionDto>> CreateRegion([FromBody] CreateRegionDto model)
     {
@@ -324,6 +391,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// Update region (UC-14.7)
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPut("regions/{id}")]
     public async Task<ActionResult<RegionDto>> UpdateRegion(int id, [FromBody] UpdateRegionDto model)
     {
@@ -407,6 +475,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// Create new center (UC-14.6)
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPost("centers")]
     public async Task<ActionResult<CenterDto>> CreateCenter([FromBody] CreateCenterDto model)
     {
@@ -425,6 +494,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// Update center (UC-14.6)
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPut("centers/{id}")]
     public async Task<ActionResult<CenterDto>> UpdateCenter(int id, [FromBody] UpdateCenterDto model)
     {
@@ -490,6 +560,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// Create new department (UC-14.9)
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPost("departments")]
     public async Task<ActionResult<DepartmentDto>> CreateDepartment([FromBody] CreateDepartmentDto model)
     {
@@ -508,6 +579,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// Update department (UC-14.9)
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPut("departments/{id}")]
     public async Task<ActionResult<DepartmentDto>> UpdateDepartment(int id, [FromBody] UpdateDepartmentDto model)
     {
@@ -573,6 +645,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// Create new bank
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPost("banks")]
     public async Task<ActionResult<BankDto>> CreateBank([FromBody] CreateBankDto model)
     {
@@ -591,6 +664,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// Update bank
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPut("banks/{id}")]
     public async Task<ActionResult<BankDto>> UpdateBank(int id, [FromBody] UpdateBankDto model)
     {
@@ -613,6 +687,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// Delete bank
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpDelete("banks/{id}")]
     public async Task<ActionResult> DeleteBank(int id)
     {
@@ -636,6 +711,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// Activate bank
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPatch("banks/{id}/activate")]
     public async Task<ActionResult> ActivateBank(int id)
     {
@@ -659,6 +735,7 @@ public class LookupManagementController : ControllerBase
     /// <summary>
     /// Deactivate bank
     /// </summary>
+    [Authorize(Policy = "SuperAdminOnly")]
     [HttpPatch("banks/{id}/deactivate")]
     public async Task<ActionResult> DeactivateBank(int id)
     {
@@ -679,6 +756,68 @@ public class LookupManagementController : ControllerBase
         }
     }
 
+    // ==================== CHEQUE SUPPORT LOOKUPS (chapter 16, UC-CHQ) ====================
+
+    /// <summary>
+    /// UC-CHQ-05 — cheque beneficiary type-ahead for the cheque form (§16.S.2).
+    /// </summary>
+    [HttpGet("cheque-beneficiaries")]
+    [Authorize(Roles = "SuperAdmin,Admin,Accountant,FinancialOfficer")]
+    public async Task<ActionResult<List<ChequeBeneficiaryOptionDto>>> GetChequeBeneficiaries(
+        [FromQuery] string? term,
+        [FromQuery] int take = 20)
+    {
+        try
+        {
+            return Ok(await _lookupManagementService.GetChequeBeneficiariesAsync(term, take));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving cheque beneficiaries");
+            return StatusCode(500, new { message = "An error occurred while retrieving cheque beneficiaries" });
+        }
+    }
+
+    /// <summary>
+    /// UC-CHQ-06 — the distinct currencies configured on countries, for the cheque form.
+    /// </summary>
+    [HttpGet("currencies")]
+    [Authorize(Roles = "SuperAdmin,Admin,Accountant,FinancialOfficer")]
+    public async Task<ActionResult<List<CurrencyOptionDto>>> GetCurrencies()
+    {
+        try
+        {
+            return Ok(await _lookupManagementService.GetCurrenciesAsync());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving currencies");
+            return StatusCode(500, new { message = "An error occurred while retrieving currencies" });
+        }
+    }
+
+    /// <summary>
+    /// UC-CHQ-08 — a bank's cheque stationery print offsets (طباعة مصري alignment data).
+    /// </summary>
+    [HttpGet("banks/{bankId}/cheque-positions")]
+    [Authorize(Roles = "SuperAdmin,Admin,Accountant,FinancialOfficer")]
+    public async Task<ActionResult<BankChequePositionsDto>> GetBankChequePositions(int bankId)
+    {
+        try
+        {
+            return Ok(await _lookupManagementService.GetBankChequePositionsAsync(bankId));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving cheque positions for bank {BankId}", bankId);
+            return StatusCode(500, new { message = "An error occurred while retrieving cheque positions" });
+        }
+    }
+
     // ==================== OFFICE PROJECT TYPES ====================
 
     /// <summary>
@@ -695,7 +834,7 @@ public class LookupManagementController : ControllerBase
             {
                 IsActive = true,
                 Page = 1,
-                PageSize = 1000 // Get all active types
+                PageSize = DropdownPageSize // Get all active types
             };
             var result = await _officeProjectTypeService.GetLookupItemsAsync(filter);
             return Ok(result.Items);
@@ -707,8 +846,86 @@ public class LookupManagementController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// UC-HOU-05: Select building and flat — the §11.S.2 رقم العماره drop-down source.
+    /// Active-only housing buildings (organisation-owned catalogue). Charity callers read
+    /// this for the housing family form, so the action admits the module's full role set.
+    /// </summary>
+    [HttpGet("housing-buildings")]
+    [Authorize(Roles = "Admin,SuperAdmin,Charity")]
+    public async Task<ActionResult<List<LookupDto>>> GetHousingBuildings()
+    {
+        try
+        {
+            var filter = new LookupFilterDto
+            {
+                IsActive = true,
+                Page = 1,
+                PageSize = DropdownPageSize // Get all active buildings
+            };
+            var result = await _housingBuildingService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving housing buildings");
+            return StatusCode(500, new { message = "An error occurred while retrieving housing buildings" });
+        }
+    }
+
+    /// <summary>
+    /// UC-HOU-05: flats of one building — the §11.S.2 رقم الشقه cascade (republished on
+    /// رقم العماره change). buildingId is required; absent or non-positive is a 400.
+    /// </summary>
+    [HttpGet("housing-flats")]
+    [Authorize(Roles = "Admin,SuperAdmin,Charity")]
+    public async Task<ActionResult<List<LookupDto>>> GetHousingFlats([FromQuery] int? buildingId)
+    {
+        if (!buildingId.HasValue || buildingId.Value <= 0)
+        {
+            return BadRequest(new { message = "buildingId is required" });
+        }
+
+        try
+        {
+            var flats = await _housingFlatService.GetFlatsByBuildingAsync(buildingId.Value);
+            return Ok(flats);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving housing flats for building {BuildingId}", buildingId.Value);
+            return StatusCode(500, new { message = "An error occurred while retrieving housing flats" });
+        }
+    }
+
     // ==================== OTHER LOOKUP TYPES ====================
     // Similar endpoints for MissionType, ProjectType, Bank, NGOType would follow the same pattern
+
+    /// <summary>
+    /// Get all active mission interview types for dropdown (UC-MSN-04)
+    /// Accessible by Admin and SuperAdmin roles
+    /// </summary>
+    [HttpGet("mission-interview-types")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
+    public async Task<ActionResult<List<MissionInterviewTypeDto>>> GetMissionInterviewTypes()
+    {
+        try
+        {
+            var filter = new LookupFilterDto
+            {
+                IsActive = true,
+                Page = 1,
+                PageSize = DropdownPageSize // Get all active types
+            };
+            var result = await _missionInterviewTypeService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving mission interview types");
+            return StatusCode(500, new { message = "An error occurred while retrieving mission interview types" });
+        }
+    }
 
     /// <summary>
     /// Get all lookup types
@@ -729,5 +946,247 @@ public class LookupManagementController : ControllerBase
         };
 
         return Ok(types);
+    }
+
+    // ==================== ORPHAN REFERENCE DATA (UC-ORP-11) ====================
+
+    /// <summary>
+    /// Get all active education levels for the orphan-form dropdown (UC-ORP-11).
+    /// Global reference data — no charity scoping; an empty list is a valid answer.
+    /// </summary>
+    [HttpGet("education-levels")]
+    public async Task<ActionResult<List<EducationLevelDto>>> GetEducationLevels()
+    {
+        try
+        {
+            var filter = new LookupFilterDto
+            {
+                IsActive = true,
+                Page = 1,
+                PageSize = DropdownPageSize // Get all active levels
+            };
+            var result = await _educationLevelService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving education levels");
+            return StatusCode(500, new { message = "An error occurred while retrieving education levels" });
+        }
+    }
+
+    /// <summary>
+    /// Get all active health statuses for the orphan-form dropdown (UC-ORP-11).
+    /// Global reference data — no charity scoping; an empty list is a valid answer.
+    /// </summary>
+    [HttpGet("health-statuses")]
+    public async Task<ActionResult<List<HealthStatusDto>>> GetHealthStatuses()
+    {
+        try
+        {
+            var filter = new LookupFilterDto
+            {
+                IsActive = true,
+                Page = 1,
+                PageSize = DropdownPageSize // Get all active statuses
+            };
+            var result = await _healthStatusService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving health statuses");
+            return StatusCode(500, new { message = "An error occurred while retrieving health statuses" });
+        }
+    }
+
+    /// <summary>
+    /// Get all active refuse reasons for the periodic report refusal dropdown (epic 9, UC-ORR-08).
+    /// Global reference data — no charity scoping; an empty list is a valid answer.
+    /// </summary>
+    [HttpGet("refuse-reasons")]
+    public async Task<ActionResult<List<RefuseReasonDto>>> GetRefuseReasons()
+    {
+        try
+        {
+            var filter = new LookupFilterDto
+            {
+                IsActive = true,
+                Page = 1,
+                PageSize = DropdownPageSize // Get all active reasons
+            };
+            var result = await _refuseReasonService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving refuse reasons");
+            return StatusCode(500, new { message = "An error occurred while retrieving refuse reasons" });
+        }
+    }
+
+    // ==================== REFUGEE REGISTER REFERENCE DATA (epic 7, UC-REF-03) ====================
+    // Global catalogues for the refugee form's drop-downs (§12.S.2) — same shape as
+    // education-levels/health-statuses above: active items, no charity scoping, empty is valid.
+
+    /// <summary>House ownerships — ملكية السكن (§12.S.2)</summary>
+    [HttpGet("house-ownerships")]
+    public async Task<ActionResult<List<HouseOwnershipDto>>> GetHouseOwnerships()
+    {
+        try
+        {
+            var filter = new LookupFilterDto { IsActive = true, Page = 1, PageSize = DropdownPageSize };
+            var result = await _houseOwnershipService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving house ownerships");
+            return StatusCode(500, new { message = "An error occurred while retrieving house ownerships" });
+        }
+    }
+
+    /// <summary>House contents statuses — حالة محتويات السكن (§12.S.2)</summary>
+    [HttpGet("house-statuses")]
+    public async Task<ActionResult<List<HouseStatusDto>>> GetHouseStatuses()
+    {
+        try
+        {
+            var filter = new LookupFilterDto { IsActive = true, Page = 1, PageSize = DropdownPageSize };
+            var result = await _houseStatusService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving house statuses");
+            return StatusCode(500, new { message = "An error occurred while retrieving house statuses" });
+        }
+    }
+
+    /// <summary>Income types — نوع الدخل (§12.S.2)</summary>
+    [HttpGet("income-types")]
+    public async Task<ActionResult<List<IncomeTypeDto>>> GetIncomeTypes()
+    {
+        try
+        {
+            var filter = new LookupFilterDto { IsActive = true, Page = 1, PageSize = DropdownPageSize };
+            var result = await _incomeTypeService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving income types");
+            return StatusCode(500, new { message = "An error occurred while retrieving income types" });
+        }
+    }
+
+    /// <summary>Social statuses — الحالة الاجتماعية of an اضافة ابن / اضافة مرافق (§12.S.2)</summary>
+    [HttpGet("social-statuses")]
+    public async Task<ActionResult<List<SocialStatusDto>>> GetSocialStatuses()
+    {
+        try
+        {
+            var filter = new LookupFilterDto { IsActive = true, Page = 1, PageSize = DropdownPageSize };
+            var result = await _socialStatusService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving social statuses");
+            return StatusCode(500, new { message = "An error occurred while retrieving social statuses" });
+        }
+    }
+
+    /// <summary>Relations — نوع العلاقة of a provider, نوعها (§12.S.2)</summary>
+    [HttpGet("relations")]
+    public async Task<ActionResult<List<RelationDto>>> GetRelations()
+    {
+        try
+        {
+            var filter = new LookupFilterDto { IsActive = true, Page = 1, PageSize = DropdownPageSize };
+            var result = await _relationService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving relations");
+            return StatusCode(500, new { message = "An error occurred while retrieving relations" });
+        }
+    }
+
+    /// <summary>Reasons of relation — السبب of a provider's link to the family (§12.S.2)</summary>
+    [HttpGet("reasons-of-relation")]
+    public async Task<ActionResult<List<ReasonOfRelDto>>> GetReasonsOfRelation()
+    {
+        try
+        {
+            var filter = new LookupFilterDto { IsActive = true, Page = 1, PageSize = DropdownPageSize };
+            var result = await _reasonOfRelService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving reasons of relation");
+            return StatusCode(500, new { message = "An error occurred while retrieving reasons of relation" });
+        }
+    }
+
+    /// <summary>Housing types — نوع السكن, shared catalogue (§12.S.2 refugee form / legacy Family.HousingTypeId)</summary>
+    [HttpGet("housing-types")]
+    public async Task<ActionResult<List<HousingTypeDto>>> GetHousingTypes()
+    {
+        try
+        {
+            var filter = new LookupFilterDto { IsActive = true, Page = 1, PageSize = DropdownPageSize };
+            var result = await _housingTypeService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving housing types");
+            return StatusCode(500, new { message = "An error occurred while retrieving housing types" });
+        }
+    }
+
+    // ==================== GUARDIAN REFERENCE DATA (epic 19, UC-SYS-05) ====================
+
+    /// <summary>
+    /// Get all active marital statuses for the guardian (provider/parent) sections of the
+    /// family forms. Global reference data — no charity scoping; an empty list is a valid answer.
+    /// </summary>
+    [HttpGet("marital-statuses")]
+    public async Task<ActionResult<List<MaritalStatusDto>>> GetMaritalStatuses()
+    {
+        try
+        {
+            var filter = new LookupFilterDto { IsActive = true, Page = 1, PageSize = DropdownPageSize };
+            var result = await _maritalStatusService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving marital statuses");
+            return StatusCode(500, new { message = "An error occurred while retrieving marital statuses" });
+        }
+    }
+
+    /// <summary>
+    /// Get all active jobs (professions) for the guardian (provider/parent) sections of the
+    /// family forms. Global reference data — no charity scoping; an empty list is a valid answer.
+    /// </summary>
+    [HttpGet("jobs")]
+    public async Task<ActionResult<List<JobDto>>> GetJobs()
+    {
+        try
+        {
+            var filter = new LookupFilterDto { IsActive = true, Page = 1, PageSize = DropdownPageSize };
+            var result = await _jobService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving jobs");
+            return StatusCode(500, new { message = "An error occurred while retrieving jobs" });
+        }
     }
 }

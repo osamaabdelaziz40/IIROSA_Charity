@@ -1,16 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, ActivatedRoute } from '@angular/router';
-import { IncomingDto } from '../models/incoming.model';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
+import { IncomingDto, CorrespondenceStatusOption } from '../models/incoming.model';
 import { IncomingService } from '../services/incoming.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
 import { FileViewerComponent } from '../../../shared/components/file-viewer';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { OutgoingService } from '../services/outgoing.service';
-import { OutgoingDto } from '../models/outgoing.model';
-import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-incoming-letter-detail',
@@ -22,8 +20,10 @@ import { RouterModule } from '@angular/router';
 export class IncomingLetterDetailComponent implements OnInit {
   letter: IncomingDto | null = null;
   loading = false;
-  relatedOutgoingLetter: OutgoingDto | null = null;
-  loadingRelated = false;
+
+  // The endpoint-served tri-state palette — the stored status value is the
+  // Arabic term itself, so it renders raw; this map only supplies the color.
+  private statusColors: { [key: string]: string } = {};
 
   // Page actions for header
   pageActions = [
@@ -32,6 +32,16 @@ export class IncomingLetterDetailComponent implements OnInit {
       type: 'primary',
       icon: 'fe-edit',
       click: () => this.editLetter()
+    },
+    {
+      // UC-COR-09 entry point — the §21.S.3 employee-attachment screen, opened on
+      // this letter.
+      label: 'incomingOutgoing.attachEmployeesTitle',
+      type: 'secondary',
+      icon: 'fe-users',
+      click: () => this.router.navigate(['/incoming-outgoing/export/incoming'], {
+        queryParams: { incomingId: this.letter?.id }
+      })
     },
     {
       label: 'common.delete',
@@ -51,13 +61,28 @@ export class IncomingLetterDetailComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private incomingService: IncomingService,
-    private outgoingService: OutgoingService,
+    private authService: AuthService,
     private notification: NotificationService,
     private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
+    // UC-COR-07: deletes are the General Director's alone — SuperAdmin only. The
+    // endpoint enforces the role regardless of what the UI shows.
+    if (!this.authService.hasRole('SuperAdmin')) {
+      this.pageActions = this.pageActions.filter(a => a.label !== 'common.delete');
+    }
+    this.loadStatusPalette();
     this.loadLetter();
+  }
+
+  private loadStatusPalette(): void {
+    this.incomingService.getAvailableStatuses().subscribe({
+      next: (statuses: CorrespondenceStatusOption[]) => {
+        this.statusColors = statuses.reduce((map, s) => ({ ...map, [s.id]: `badge-${s.color}` }), {});
+      },
+      error: () => console.error('Error loading statuses')
+    });
   }
 
   private loadLetter(): void {
@@ -72,29 +97,11 @@ export class IncomingLetterDetailComponent implements OnInit {
       next: (letter: IncomingDto) => {
         this.letter = letter;
         this.loading = false;
-
-        // Load related outgoing letter if exists
-        if (letter.outgoingId) {
-          this.loadRelatedOutgoingLetter(letter.outgoingId);
-        }
       },
       error: (error: any) => {
         console.error('Error loading letter:', error);
         this.notification.error(this.translate.instant('incomingOutgoing.loadLetterFailed'));
         this.loading = false;
-      }
-    });
-  }
-
-  private loadRelatedOutgoingLetter(outgoingId: string): void {
-    this.loadingRelated = true;
-    this.outgoingService.getOutgoingLetter(outgoingId).subscribe({
-      next: (letter: OutgoingDto) => {
-        this.relatedOutgoingLetter = letter;
-        this.loadingRelated = false;
-      },
-      error: () => {
-        this.loadingRelated = false;
       }
     });
   }
@@ -108,19 +115,18 @@ export class IncomingLetterDetailComponent implements OnInit {
   async deleteLetter(): Promise<void> {
     if (!this.letter) return;
 
-    const confirmed = await this.notification.confirm(
-      this.translate.instant('incomingOutgoing.confirmDelete', { subject: this.letter.subject })
-    );
+    const message = this.translate.instant('incomingOutgoing.deleteConfirm', { subject: this.letter.subject });
+    const confirmed = await this.notification.confirm(message, this.translate.instant('common.delete'));
 
     if (confirmed) {
       this.incomingService.deleteIncomingLetter(this.letter.id).subscribe({
         next: () => {
-          this.notification.success(this.translate.instant('incomingOutgoing.deleteSuccess'));
+          this.notification.success(this.translate.instant('incomingOutgoing.letterDeleted'));
           this.router.navigate(['/incoming-outgoing/incoming']);
         },
         error: (error: any) => {
           console.error('Error deleting letter:', error);
-          this.notification.error(this.translate.instant('incomingOutgoing.deleteFailed'));
+          this.notification.error(error.message || this.translate.instant('incomingOutgoing.deleteFailed'));
         }
       });
     }
@@ -131,33 +137,16 @@ export class IncomingLetterDetailComponent implements OnInit {
   }
 
   getStatusBadgeClass(): string {
-    if (!this.letter) return 'badge-secondary';
-    const status = this.letter.status || 'Received';
-
-    const statusMap: { [key: string]: string } = {
-      'Received': 'badge-success',
-      'Processing': 'badge-info',
-      'Completed': 'badge-primary',
-      'Closed': 'badge-secondary',
-      'Pending': 'badge-warning'
-    };
-
-    return statusMap[status] || 'badge-secondary';
+    return this.statusColors[this.letter?.status || ''] || 'badge-secondary';
   }
 
-  getStatusText(): string {
-    if (!this.letter) return '';
-    const status = this.letter.status || 'Received';
-    return this.translate.instant(`incomingOutgoing.status${status}`);
-  }
-
-  formatDate(date: Date | string | undefined): string {
+  formatDate(date: string | undefined): string {
     if (!date) return '-';
     const d = new Date(date);
     return d.toLocaleDateString('en-GB');
   }
 
-  formatDateTime(date: Date | string | undefined): string {
+  formatDateTime(date: string | undefined): string {
     if (!date) return '-';
     const d = new Date(date);
     return d.toLocaleString('en-GB');

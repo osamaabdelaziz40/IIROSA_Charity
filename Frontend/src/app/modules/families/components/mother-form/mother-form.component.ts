@@ -3,6 +3,7 @@ import { FormGroup } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { SharedModule } from '../../../../shared/shared.module';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { PhoneCheckState } from '../../models/family.model';
 
 @Component({
   selector: 'app-mother-form',
@@ -21,6 +22,8 @@ export class MotherFormComponent implements OnInit {
   @Input() educationLevelOptions: Array<{ id: string; name: string }> = [];
   @Input() healthStatusOptions: Array<{ id: string; name: string }> = [];
   @Input() familyId: string | null = null;
+  /** UC-ORP-10 — duplicate-phone flag state, owned by the parent family form */
+  @Input() phoneCheck?: PhoneCheckState;
   @Output() save = new EventEmitter<void>();
 
   constructor() {}

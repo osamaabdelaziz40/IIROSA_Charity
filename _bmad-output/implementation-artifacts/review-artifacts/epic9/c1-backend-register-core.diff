@@ -1,0 +1,4007 @@
+### CHUNK C1 - Backend register core (stories 9-1..9-8 + 9-17 backend on the PeriodicOrphanReport vertical)
+### NOTE: ServiceCollectionExtensions.cs is SHARED with other epics - attribute hunks carefully
+diff --git a/Backend/src/IIROSA.Api/Controllers/PeriodicOrphanReportsController.cs b/Backend/src/IIROSA.Api/Controllers/PeriodicOrphanReportsController.cs
+index bb11be6..1ce6b8e 100644
+--- a/Backend/src/IIROSA.Api/Controllers/PeriodicOrphanReportsController.cs
++++ b/Backend/src/IIROSA.Api/Controllers/PeriodicOrphanReportsController.cs
+@@ -1,36 +1,39 @@
+-using Microsoft.AspNetCore.Mvc;
++using Microsoft.AspNetCore.Authentication.JwtBearer;
+ using Microsoft.AspNetCore.Authorization;
+-using System.ComponentModel.DataAnnotations;
+-using IIROSA.Application.Interfaces;
++using Microsoft.AspNetCore.Mvc;
+ using IIROSA.Application.DTOs.PeriodicOrphanReport;
+-using Microsoft.AspNetCore.Authentication.JwtBearer;
++using IIROSA.Application.Exceptions;
++using IIROSA.Application.Interfaces;
+ 
+ namespace IIROSA.Api.Controllers;
+ 
+ /// <summary>
+-/// Periodic Orphan Reports Controller
+-/// Implements UC-6.11 through UC-6.17 for Periodic Orphan Reports
++/// Periodic Orphan Reports Controller — epic 9 (UC-ORR-01 … UC-ORR-17, from WAR UC-6.11–6.17).
++/// Authorisation is enforced per endpoint (roles); data scoping to the caller's
++/// charity/country is enforced in the service layer, never here.
+ /// </summary>
+ [ApiController]
+ [Route("api/[controller]")]
+ [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+-public class PeriodicOrphanReportsController : ControllerBase
++public class PeriodicOrphanReportsController : ApiController
+ {
+     private readonly IPeriodicOrphanReportService _periodicReportService;
+     private readonly ILogger<PeriodicOrphanReportsController> _logger;
+ 
+     public PeriodicOrphanReportsController(
+         IPeriodicOrphanReportService periodicReportService,
++        ILogger<ApiController> baseLogger,
+         ILogger<PeriodicOrphanReportsController> logger)
++        : base(baseLogger)
+     {
+         _periodicReportService = periodicReportService;
+         _logger = logger;
+     }
+ 
+-    #region CRUD Operations (UC-6.11)
++    #region CRUD Operations (UC-ORR-03 … UC-ORR-06)
+ 
+     /// <summary>
+-    /// Create new periodic orphan report - UC-6.11
++    /// Create new periodic orphan report - UC-ORR-03
+     /// </summary>
+     [HttpPost]
+     [Authorize(Roles = "SuperAdmin,Admin,Charity")]
+@@ -40,29 +43,38 @@ public class PeriodicOrphanReportsController : ControllerBase
+     {
+         try
+         {
+-            if (!ModelState.IsValid)
+-                return BadRequest(ModelState);
+-
+             var report = await _periodicReportService.CreateReportAsync(dto);
+             return CreatedAtAction(nameof(GetReport), new { id = report.Id }, report);
+         }
+-        catch (KeyNotFoundException ex)
++        catch (FluentValidation.ValidationException ex)
++        {
++            return BadRequest(new
++            {
++                message = "One or more fields are invalid",
++                errors = ex.Errors
++                    .GroupBy(error => error.PropertyName ?? string.Empty)
++                    .ToDictionary(
++                        group => group.Key,
++                        group => group.Select(error => error.ErrorMessage).ToArray())
++            });
++        }
++        catch (NotFoundException ex)
+         {
+             return NotFound(new { message = ex.Message });
+         }
+-        catch (InvalidOperationException ex)
++        catch (BusinessException ex)
+         {
+             return BadRequest(new { message = ex.Message });
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error creating periodic orphan report");
+-            return StatusCode(500, new { message = "Error creating periodic orphan report", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while creating the periodic report" });
+         }
+     }
+ 
+     /// <summary>
+-    /// Get report by ID - UC-6.11, UC-6.13, UC-6.14, UC-6.15, UC-6.16
++    /// Get report by ID - UC-ORR-04 (view a periodic report)
+     /// </summary>
+     [HttpGet("{id}")]
+     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
+@@ -81,12 +93,12 @@ public class PeriodicOrphanReportsController : ControllerBase
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error retrieving periodic orphan report: {Id}", id);
+-            return StatusCode(500, new { message = "Error retrieving report", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while retrieving the report" });
+         }
+     }
+ 
+     /// <summary>
+-    /// Update periodic orphan report - UC-6.11
++    /// Update periodic orphan report - UC-ORR-05
+     /// </summary>
+     [HttpPut("{id}")]
+     [Authorize(Roles = "SuperAdmin,Admin,Charity")]
+@@ -98,33 +110,43 @@ public class PeriodicOrphanReportsController : ControllerBase
+         try
+         {
+             dto.Id = id;
+-            if (!ModelState.IsValid)
+-                return BadRequest(ModelState);
+-
+             var report = await _periodicReportService.UpdateReportAsync(dto);
+             return Ok(report);
+         }
+-        catch (KeyNotFoundException ex)
++        catch (FluentValidation.ValidationException ex)
++        {
++            return BadRequest(new
++            {
++                message = "One or more fields are invalid",
++                errors = ex.Errors
++                    .GroupBy(error => error.PropertyName ?? string.Empty)
++                    .ToDictionary(
++                        group => group.Key,
++                        group => group.Select(error => error.ErrorMessage).ToArray())
++            });
++        }
++        catch (NotFoundException ex)
+         {
+             return NotFound(new { message = ex.Message });
+         }
+-        catch (InvalidOperationException ex)
++        catch (BusinessException ex)
+         {
+             return BadRequest(new { message = ex.Message });
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error updating periodic orphan report: {Id}", id);
+-            return StatusCode(500, new { message = "Error updating report", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while updating the report" });
+         }
+     }
+ 
+     /// <summary>
+-    /// Delete periodic orphan report - UC-6.11
++    /// Delete periodic orphan report (soft delete) - UC-ORR-06
+     /// </summary>
+     [HttpDelete("{id}")]
+     [Authorize(Roles = "SuperAdmin,Admin")]
+     [ProducesResponseType(StatusCodes.Status204NoContent)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+     [ProducesResponseType(StatusCodes.Status404NotFound)]
+     public async Task<ActionResult> DeleteReport(Guid id)
+     {
+@@ -133,27 +155,57 @@ public class PeriodicOrphanReportsController : ControllerBase
+             await _periodicReportService.DeleteReportAsync(id);
+             return NoContent();
+         }
+-        catch (KeyNotFoundException ex)
++        catch (NotFoundException ex)
+         {
+             return NotFound(new { message = ex.Message });
+         }
+-        catch (InvalidOperationException ex)
++        catch (BusinessException ex)
+         {
+             return BadRequest(new { message = ex.Message });
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error deleting periodic orphan report: {Id}", id);
+-            return StatusCode(500, new { message = "Error deleting report", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while deleting the report" });
+         }
+     }
+ 
+     #endregion
+ 
+-    #region Review Operations (UC-6.13)
++    #region Orphan Lookup (UC-ORR-02)
+ 
+     /// <summary>
+-    /// Review periodic report (approve or reject) - UC-6.13
++    /// Look up an orphan by sponsorship code - UC-ORR-02.
++    /// Returns the orphan identity plus report counters, or 404 when the code is
++    /// unknown or outside the caller's scope.
++    /// </summary>
++    [HttpGet("by-code/{code}")]
++    [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
++    [ProducesResponseType(typeof(OrphanLookupDto), StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status404NotFound)]
++    public async Task<ActionResult<OrphanLookupDto>> GetOrphanByCode(string code)
++    {
++        try
++        {
++            var orphan = await _periodicReportService.GetOrphanByCodeAsync(code);
++            if (orphan == null)
++                return NotFound(new { message = $"No orphan found with code '{code}'" });
++
++            return Ok(orphan);
++        }
++        catch (Exception ex)
++        {
++            _logger.LogError(ex, "Error looking up orphan by code: {Code}", code);
++            return StatusCode(500, new { message = "An error occurred while looking up the orphan" });
++        }
++    }
++
++    #endregion
++
++    #region Review Operations (UC-ORR-07, UC-ORR-08)
++
++    /// <summary>
++    /// Review periodic report (accept or refuse) - UC-ORR-07 / UC-ORR-08
+     /// Only Super Admin, Admin, Accountant, and Employee can review
+     /// </summary>
+     [HttpPost("{id}/review")]
+@@ -166,118 +218,203 @@ public class PeriodicOrphanReportsController : ControllerBase
+         try
+         {
+             dto.ReportId = id;
+-            if (!ModelState.IsValid)
+-                return BadRequest(ModelState);
+-
+             var report = await _periodicReportService.ReviewReportAsync(dto);
+             return Ok(report);
+         }
+-        catch (KeyNotFoundException ex)
++        catch (FluentValidation.ValidationException ex)
++        {
++            return BadRequest(new
++            {
++                message = "One or more fields are invalid",
++                errors = ex.Errors
++                    .GroupBy(error => error.PropertyName ?? string.Empty)
++                    .ToDictionary(
++                        group => group.Key,
++                        group => group.Select(error => error.ErrorMessage).ToArray())
++            });
++        }
++        catch (NotFoundException ex)
+         {
+             return NotFound(new { message = ex.Message });
+         }
+-        catch (InvalidOperationException ex)
++        catch (BusinessException ex)
+         {
+             return BadRequest(new { message = ex.Message });
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error reviewing periodic orphan report: {Id}", id);
+-            return StatusCode(500, new { message = "Error reviewing report", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while reviewing the report" });
+         }
+     }
+ 
+     #endregion
+ 
+-    #region List and Filter Operations (UC-6.14, UC-6.15, UC-6.16)
++    #region List and Filter Operations (UC-ORR-01, UC-ORR-09, UC-ORR-12, UC-ORR-13)
+ 
+     /// <summary>
+-    /// Get periodic reports with filtering and pagination - UC-6.14, UC-6.15, UC-6.16
++    /// Get periodic reports with filtering and pagination - UC-ORR-01 / UC-ORR-09
+     /// </summary>
+     [HttpGet]
+     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
+-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+-    public async Task<ActionResult> GetReports([FromQuery] PeriodicOrphanReportFilterDto filter)
++    [ProducesResponseType(typeof(PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>), StatusCodes.Status200OK)]
++    public async Task<ActionResult<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>>> GetReports(
++        [FromQuery] PeriodicOrphanReportFilterDto filter)
+     {
+         try
+         {
+             var result = await _periodicReportService.GetReportsAsync(filter);
+-            return Ok(new { result.Items, result.TotalCount });
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            return BadRequest(new
++            {
++                message = "One or more fields are invalid",
++                errors = ex.Errors
++                    .GroupBy(error => error.PropertyName ?? string.Empty)
++                    .ToDictionary(
++                        group => group.Key,
++                        group => group.Select(error => error.ErrorMessage).ToArray())
++            });
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error retrieving periodic orphan reports");
+-            return StatusCode(500, new { message = "Error retrieving reports", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while retrieving reports" });
+         }
+     }
+ 
+     /// <summary>
+-    /// Get approved reports - UC-6.14
++    /// Get accepted reports - UC-ORR-12
+     /// </summary>
+     [HttpGet("approved")]
+     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
+-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+-    public async Task<ActionResult> GetApprovedReports([FromQuery] PeriodicOrphanReportFilterDto filter)
++    [ProducesResponseType(typeof(PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>), StatusCodes.Status200OK)]
++    public async Task<ActionResult<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>>> GetApprovedReports(
++        [FromQuery] PeriodicOrphanReportFilterDto filter)
+     {
+         try
+         {
+             var result = await _periodicReportService.GetApprovedReportsAsync(filter);
+-            return Ok(new { result.Items, result.TotalCount });
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            return BadRequest(new
++            {
++                message = "One or more fields are invalid",
++                errors = ex.Errors
++                    .GroupBy(error => error.PropertyName ?? string.Empty)
++                    .ToDictionary(
++                        group => group.Key,
++                        group => group.Select(error => error.ErrorMessage).ToArray())
++            });
+         }
+         catch (Exception ex)
+         {
+-            _logger.LogError(ex, "Error retrieving approved periodic orphan reports");
+-            return StatusCode(500, new { message = "Error retrieving approved reports", error = ex.Message });
++            _logger.LogError(ex, "Error retrieving accepted periodic orphan reports");
++            return StatusCode(500, new { message = "An error occurred while retrieving accepted reports" });
+         }
+     }
+ 
+     /// <summary>
+-    /// Get rejected reports - UC-6.15
++    /// Get refused reports - UC-ORR-13
+     /// </summary>
+     [HttpGet("rejected")]
+     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
+-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+-    public async Task<ActionResult> GetRejectedReports([FromQuery] PeriodicOrphanReportFilterDto filter)
++    [ProducesResponseType(typeof(PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>), StatusCodes.Status200OK)]
++    public async Task<ActionResult<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>>> GetRejectedReports(
++        [FromQuery] PeriodicOrphanReportFilterDto filter)
+     {
+         try
+         {
+             var result = await _periodicReportService.GetRejectedReportsAsync(filter);
+-            return Ok(new { result.Items, result.TotalCount });
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            return BadRequest(new
++            {
++                message = "One or more fields are invalid",
++                errors = ex.Errors
++                    .GroupBy(error => error.PropertyName ?? string.Empty)
++                    .ToDictionary(
++                        group => group.Key,
++                        group => group.Select(error => error.ErrorMessage).ToArray())
++            });
+         }
+         catch (Exception ex)
+         {
+-            _logger.LogError(ex, "Error retrieving rejected periodic orphan reports");
+-            return StatusCode(500, new { message = "Error retrieving rejected reports", error = ex.Message });
++            _logger.LogError(ex, "Error retrieving refused periodic orphan reports");
++            return StatusCode(500, new { message = "An error occurred while retrieving refused reports" });
+         }
+     }
+ 
+     /// <summary>
+-    /// Get reports by orphan - UC-6.16
+-    /// Returns orphan's complete periodic report history ordered by creation date (newest first)
++    /// Get reports by orphan - UC-ORR-01 (+ UC-HOU-06 §11.S.3 through the childOrParent param)
++    /// Returns the beneficiary's complete periodic report history, newest first. Without the
++    /// discriminator param this is the epic-9 orphan read, byte-identical. childOrParent=Child
++    /// keeps the strict child filter; childOrParent=Parent resolves the housing family's
++    /// guardian (beneficiaryId = provider id) and lists the family's guardian reports.
+     /// </summary>
+     [HttpGet("by-orphan/{orphanId}")]
+     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
+-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+-    public async Task<ActionResult> GetReportsByOrphan(Guid orphanId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
++    [ProducesResponseType(typeof(PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>), StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status404NotFound)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    public async Task<ActionResult<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>>> GetReportsByOrphan(
++        Guid orphanId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20,
++        [FromQuery] string? childOrParent = null)
+     {
+         try
+         {
++            // §11.S.3 discriminator: absent → epic-9 behaviour unchanged; Child/Parent → the
++            // housing read (strict ChildOrParent filter, guardian branch for Parent).
++            if (!string.IsNullOrWhiteSpace(childOrParent))
++            {
++                if (string.Equals(childOrParent, "Child", StringComparison.OrdinalIgnoreCase))
++                {
++                    var childResult = await _periodicReportService.GetHousingBeneficiaryReportsAsync(
++                        orphanId, IIROSA.Domain.Enums.ReportBeneficiaryType.Child, pageNumber, pageSize);
++                    return Ok(childResult);
++                }
++
++                if (string.Equals(childOrParent, "Parent", StringComparison.OrdinalIgnoreCase))
++                {
++                    var parentResult = await _periodicReportService.GetHousingBeneficiaryReportsAsync(
++                        orphanId, IIROSA.Domain.Enums.ReportBeneficiaryType.Parent, pageNumber, pageSize);
++                    return Ok(parentResult);
++                }
++
++                return BadRequest(new
++                {
++                    message = "Invalid childOrParent value",
++                    errors = new { childOrParent = new[] { "childOrParent must be 'Child' or 'Parent'" } }
++                });
++            }
++
+             var result = await _periodicReportService.GetReportsByOrphanAsync(orphanId, pageNumber, pageSize);
+-            return Ok(new { result.Items, result.TotalCount });
++            return Ok(result);
++        }
++        catch (NotFoundException ex)
++        {
++            return NotFound(new { message = ex.Message });
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error retrieving periodic orphan reports for orphan: {OrphanId}", orphanId);
+-            return StatusCode(500, new { message = "Error retrieving orphan reports", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while retrieving the orphan's reports" });
+         }
+     }
+ 
+     /// <summary>
+-    /// Get orphan report summary - UC-6.16
++    /// Get orphan report counters - UC-ORR-01
+     /// </summary>
+     [HttpGet("by-orphan/{orphanId}/summary")]
+     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
+     [ProducesResponseType(typeof(PeriodicOrphanReportSummaryDto), StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status404NotFound)]
+     public async Task<ActionResult<PeriodicOrphanReportSummaryDto>> GetOrphanReportSummary(Guid orphanId)
+     {
+         try
+@@ -285,39 +422,45 @@ public class PeriodicOrphanReportsController : ControllerBase
+             var summary = await _periodicReportService.GetOrphanReportSummaryAsync(orphanId);
+             return Ok(summary);
+         }
++        catch (NotFoundException ex)
++        {
++            return NotFound(new { message = ex.Message });
++        }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error retrieving orphan report summary: {OrphanId}", orphanId);
+-            return StatusCode(500, new { message = "Error retrieving summary", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while retrieving the summary" });
+         }
+     }
+ 
+     #endregion
+ 
+-    #region Export Operations (UC-6.17)
++    #region Export Operations (UC-ORR-11)
+ 
+     /// <summary>
+-    /// Export periodic reports to Excel - UC-6.17
++    /// Export periodic reports to Excel - UC-ORR-11
+     /// </summary>
+     [HttpPost("export")]
+     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
+     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+-    public async Task<IActionResult> ExportToExcel([FromBody] PeriodicOrphanReportFilterDto filter, [FromQuery] bool includeAllFields = false)
++    public async Task<IActionResult> ExportToExcel(
++        [FromBody] PeriodicOrphanReportFilterDto filter, [FromQuery] bool includeAllFields = false)
+     {
+         try
+         {
+             var content = await _periodicReportService.ExportToExcelAsync(filter, includeAllFields);
+-            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "PeriodicOrphanReports.xlsx");
++            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
++                "PeriodicOrphanReports.xlsx");
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error exporting periodic orphan reports to Excel");
+-            return StatusCode(500, new { message = "Error exporting reports", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while exporting reports" });
+         }
+     }
+ 
+     /// <summary>
+-    /// Export orphan's report history to Excel - UC-6.16, UC-6.17
++    /// Export orphan's report history to Excel - UC-ORR-01 / UC-ORR-11
+     /// </summary>
+     [HttpPost("by-orphan/{orphanId}/export")]
+     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
+@@ -327,21 +470,22 @@ public class PeriodicOrphanReportsController : ControllerBase
+         try
+         {
+             var content = await _periodicReportService.ExportOrphanHistoryToExcelAsync(orphanId);
+-            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Orphan_{orphanId}_Reports.xlsx");
++            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
++                $"Orphan_{orphanId}_Reports.xlsx");
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error exporting orphan report history to Excel: {OrphanId}", orphanId);
+-            return StatusCode(500, new { message = "Error exporting history", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while exporting the history" });
+         }
+     }
+ 
+     #endregion
+ 
+-    #region Status Management (UC-6.11)
++    #region Status Management
+ 
+     /// <summary>
+-    /// Lock report - UC-6.11
++    /// Lock report (prevent modifications)
+     /// </summary>
+     [HttpPost("{id}/lock")]
+     [Authorize(Roles = "SuperAdmin,Admin,Charity")]
+@@ -354,20 +498,19 @@ public class PeriodicOrphanReportsController : ControllerBase
+             await _periodicReportService.LockReportAsync(id);
+             return Ok(new { message = "Report locked successfully" });
+         }
+-        catch (KeyNotFoundException ex)
++        catch (NotFoundException ex)
+         {
+             return NotFound(new { message = ex.Message });
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error locking periodic orphan report: {Id}", id);
+-            return StatusCode(500, new { message = "Error locking report", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while locking the report" });
+         }
+     }
+ 
+     /// <summary>
+-    /// Unlock report - UC-6.11
+-    /// Only Super Admin and Admin can unlock
++    /// Unlock report - Only Super Admin and Admin can unlock
+     /// </summary>
+     [HttpPost("{id}/unlock")]
+     [Authorize(Roles = "SuperAdmin,Admin")]
+@@ -380,19 +523,19 @@ public class PeriodicOrphanReportsController : ControllerBase
+             await _periodicReportService.UnlockReportAsync(id);
+             return Ok(new { message = "Report unlocked successfully" });
+         }
+-        catch (KeyNotFoundException ex)
++        catch (NotFoundException ex)
+         {
+             return NotFound(new { message = ex.Message });
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error unlocking periodic orphan report: {Id}", id);
+-            return StatusCode(500, new { message = "Error unlocking report", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while unlocking the report" });
+         }
+     }
+ 
+     /// <summary>
+-    /// Activate report - UC-6.11
++    /// Activate report
+     /// </summary>
+     [HttpPost("{id}/activate")]
+     [Authorize(Roles = "SuperAdmin,Admin")]
+@@ -405,19 +548,19 @@ public class PeriodicOrphanReportsController : ControllerBase
+             await _periodicReportService.ActivateReportAsync(id);
+             return Ok(new { message = "Report activated successfully" });
+         }
+-        catch (KeyNotFoundException ex)
++        catch (NotFoundException ex)
+         {
+             return NotFound(new { message = ex.Message });
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error activating periodic orphan report: {Id}", id);
+-            return StatusCode(500, new { message = "Error activating report", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while activating the report" });
+         }
+     }
+ 
+     /// <summary>
+-    /// Deactivate report - UC-6.11
++    /// Deactivate report
+     /// </summary>
+     [HttpPost("{id}/deactivate")]
+     [Authorize(Roles = "SuperAdmin,Admin")]
+@@ -430,23 +573,23 @@ public class PeriodicOrphanReportsController : ControllerBase
+             await _periodicReportService.DeactivateReportAsync(id);
+             return Ok(new { message = "Report deactivated successfully" });
+         }
+-        catch (KeyNotFoundException ex)
++        catch (NotFoundException ex)
+         {
+             return NotFound(new { message = ex.Message });
+         }
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error deactivating periodic orphan report: {Id}", id);
+-            return StatusCode(500, new { message = "Error deactivating report", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while deactivating the report" });
+         }
+     }
+ 
+     #endregion
+ 
+-    #region Helper Methods
++    #region Helper Endpoints
+ 
+     /// <summary>
+-    /// Check if report can be edited
++    /// Check if report can be edited (not locked, not accepted)
+     /// </summary>
+     [HttpGet("{id}/can-edit")]
+     [Authorize(Roles = "SuperAdmin,Admin,Charity")]
+@@ -461,7 +604,30 @@ public class PeriodicOrphanReportsController : ControllerBase
+         catch (Exception ex)
+         {
+             _logger.LogError(ex, "Error checking if report can be edited: {Id}", id);
+-            return StatusCode(500, new { message = "Error checking edit status", error = ex.Message });
++            return StatusCode(500, new { message = "An error occurred while checking edit status" });
++        }
++    }
++
++    /// <summary>
++    /// Check if the current user can review reports - UC-ORR-07 / UC-ORR-08 gate
++    /// </summary>
++    [HttpGet("can-review")]
++    [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
++    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
++    public async Task<ActionResult<bool>> CanReviewReports()
++    {
++        try
++        {
++            var userId = CurrentUserId is { Length: > 0 } && Guid.TryParse(CurrentUserId, out var parsed)
++                ? parsed
++                : Guid.Empty;
++            var canReview = await _periodicReportService.CanUserReviewReportsAsync(userId);
++            return Ok(new { canReview });
++        }
++        catch (Exception ex)
++        {
++            _logger.LogError(ex, "Error checking review permission");
++            return StatusCode(500, new { message = "An error occurred while checking review permission" });
+         }
+     }
+ 
+diff --git a/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/CreatePeriodicOrphanReportDto.cs b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/CreatePeriodicOrphanReportDto.cs
+index e4d79d3..f7fef4d 100644
+--- a/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/CreatePeriodicOrphanReportDto.cs
++++ b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/CreatePeriodicOrphanReportDto.cs
+@@ -43,6 +43,38 @@ public class CreatePeriodicOrphanReportDto
+ 
+     #endregion
+ 
++    #region Housing beneficiary (UC-HOU-08, §11.S.4)
++
++    /// <summary>
++    /// §11.U.6 discriminator on the wire: "Child" (default) or "Parent" (the housing
++    /// family's guardian). Absent/null ⇒ the epic-9 regular orphan report, unchanged.
++    /// </summary>
++    public string? ChildOrParent { get; set; }
++
++    /// <summary>
++    /// The housing family the report belongs to (the §11.S.4 route context). Required for
++    /// a guardian (Parent) report; optional for Child — when present the family is
++    /// validated (Housing type, caller scope, child membership) and the link is stamped.
++    /// </summary>
++    public Guid? HousingFamilyId { get; set; }
++
++    /// <summary>
++    /// The UC-HOU-07 picker's beneficiary id. Parent ⇒ the guardian's Provider id
++    /// (resolved to the family server-side); Child ⇒ equals <see cref="OrphanId"/>.
++    /// </summary>
++    public Guid? HousingBeneficiaryId { get; set; }
++
++    /// <summary>§11.S.4 الموافقه علي التقرير — stored as data; the review WORKFLOW endpoints are epic 9 (9-7/9-8).</summary>
++    public bool? IsAccepted { get; set; }
++
++    /// <summary>§11.S.4 رفض التقرير — mutually exclusive with <see cref="IsAccepted"/>.</summary>
++    public bool? IsRefused { get; set; }
++
++    /// <summary>§11.S.4 سبب الرفض — required when <see cref="IsRefused"/> is set (RefuseReasons lookup).</summary>
++    public int? RefuseReasonId { get; set; }
++
++    #endregion
++
+     #region Religious & Behavioral Tracking (UC-6.11)
+ 
+     public string? PrayerStatus { get; set; }
+diff --git a/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportDto.cs b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportDto.cs
+index 40d4b92..69aba92 100644
+--- a/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportDto.cs
++++ b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportDto.cs
+@@ -20,6 +20,12 @@ public class PeriodicOrphanReportDto
+     public Guid? CharityId { get; set; }
+     public string? CharityName { get; set; }
+ 
++    /// <summary>UC-HOU-06 discriminator — "Child" or "Parent" (a guardian report linked by HousingFamilyId).</summary>
++    public string? ChildOrParent { get; set; }
++
++    /// <summary>The housing family link (§11.S.4) — null on regular (epic-9) reports.</summary>
++    public Guid? HousingFamilyId { get; set; }
++
+     #endregion
+ 
+     #region Religious & Behavioral Tracking
+@@ -133,6 +139,7 @@ public class PeriodicOrphanReportDto
+     public string? RefuseReason { get; set; }
+     public int? RefuseReasonId { get; set; }
+     public string? RefuseReasonName { get; set; }
++    public string? ReviewComments { get; set; }
+     public int? MessageId { get; set; }
+ 
+     /// <summary>
+diff --git a/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportFilterDto.cs b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportFilterDto.cs
+index 63c0b9f..3bca5d9 100644
+--- a/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportFilterDto.cs
++++ b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportFilterDto.cs
+@@ -10,16 +10,44 @@ public class PeriodicOrphanReportFilterDto
+     /// </summary>
+     public string? SearchTerm { get; set; }
+ 
++    /// <summary>
++    /// Filter by orphan code (كود اليتيم) — §14.S.1 dedicated filter
++    /// </summary>
++    public string? OrphanCode { get; set; }
++
++    /// <summary>
++    /// Filter by orphan name (اسم اليتيم) — §14.S.1 dedicated filter
++    /// </summary>
++    public string? OrphanName { get; set; }
++
+     /// <summary>
+     /// Filter by specific orphan - UC-6.16
+     /// </summary>
+     public Guid? OrphanId { get; set; }
+ 
++    /// <summary>
++    /// UC-HOU-06 (§11.S.3) — the ChildOrParent discriminator: Child (family's children) or
++    /// Parent (the housing family's guardian). Null = both (the epic-9 default).
++    /// </summary>
++    public Domain.Enums.ReportBeneficiaryType? ChildOrParent { get; set; }
++
++    /// <summary>
++    /// UC-HOU-06 (§11.S.3) — the housing family whose reports are listed (guardian-subject
++    /// reports are linked through this, not through OrphanId).
++    /// </summary>
++    public Guid? HousingFamilyId { get; set; }
++
+     /// <summary>
+     /// Filter by charity (Admin/Super Admin only) - UC-6.14, UC-6.15
+     /// </summary>
+     public Guid? CharityId { get; set; }
+ 
++    /// <summary>
++    /// رقم التقرير — dedicated partial-match filter (UC-ORR-12/13 extract criterion);
++    /// SearchTerm above also matches it, but the extract criteria name it alone.
++    /// </summary>
++    public string? ReportNo { get; set; }
++
+     /// <summary>
+     /// Filter by review status - UC-6.14 (Approved), UC-6.15 (Rejected)
+     /// Values: "Pending", "Approved", "Rejected", "All"
+@@ -67,6 +95,38 @@ public class PeriodicOrphanReportFilterDto
+     /// </summary>
+     public string? MedicalStatus { get; set; }
+ 
++    // ---- §14.S.4 orphan-status search (UC-ORR-09) --------------------------------
++    // The status family below combines with && or || per <see cref="AndOr"/>; the
++    // base filters above (scope, charity, dates, orphan) always AND.
++
++    /// <summary>
++    /// How the §14.S.4 status predicates combine: "and" (default) = all must hold,
++    /// "or" = any. The legacy contract's only surviving name (OrphanStatusRefinedContract).
++    /// </summary>
++    public string? AndOr { get; set; }
++
++    /// <summary>
++    /// نوع التعليم — matches the stored free-text value (حكومي / أهلي)
++    /// </summary>
++    public string? SchoolType { get; set; }
++
++    /// <summary>
++    /// الحالة الاجتماعية — tri-state token: married / single / deceased,
++    /// mapping to the report's Married / Dead flags
++    /// </summary>
++    public string? MaritalStatus { get; set; }
++
++    /// <summary>
++    /// الحالة التعليمية — tri-state token: studying / graduated / dropout,
++    /// mapping to IsOrphanStudent / HighestEducationalLevel / DropOut
++    /// </summary>
++    public string? EducationalStatus { get; set; }
++
++    /// <summary>
++    /// اخر تقدير — matches the stored free-text grade (ممتاز / جيد جدا / جيد / مقبول / ضعيف)
++    /// </summary>
++    public string? EducationDegree { get; set; }
++
+     /// <summary>
+     /// Show only active reports
+     /// </summary>
+diff --git a/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportListDto.cs b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportListDto.cs
+index cdcb622..a9b007b 100644
+--- a/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportListDto.cs
++++ b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportListDto.cs
+@@ -6,6 +6,11 @@ namespace IIROSA.Application.DTOs.PeriodicOrphanReport;
+ public class PeriodicOrphanReportListDto
+ {
+     public Guid Id { get; set; }
++
++    /// <summary>UC-HOU-06 (§11.S.3): which kind of housing beneficiary this report is for —
++    /// "Child" or "Parent" (guardian report riding a carrier child's OrphanId).</summary>
++    public string? ChildOrParent { get; set; }
++
+     public string? ReportNo { get; set; }
+     public DateTime ReportDate { get; set; }
+     public DateTime? ReportPeriodFrom { get; set; }
+@@ -22,6 +27,7 @@ public class PeriodicOrphanReportListDto
+ 
+     // Key Progress Fields for Summary View
+     public string? PrayerStatus { get; set; }
++    public int? EducationalLevelId { get; set; }
+     public string? EducationalLevelName { get; set; }
+     public string? MedicalStatus { get; set; }
+ 
+@@ -29,9 +35,15 @@ public class PeriodicOrphanReportListDto
+     public bool Reviewed { get; set; }
+     public bool IsAccepted { get; set; }
+     public bool IsRefused { get; set; }
++    public Guid? ReviewerId { get; set; }
+     public string? ReviewerName { get; set; }
+     public DateTime? ReviewedDate { get; set; }
+ 
++    // Refusal evidence — the correction worklist columns (UC-ORR-13, epic 9)
++    public int? RefuseReasonId { get; set; }
++    public string? RefuseReason { get; set; }
++    public string? ReviewComments { get; set; }
++
+     /// <summary>
+     /// Computed review status for filtering and display
+     /// </summary>
+@@ -41,6 +53,44 @@ public class PeriodicOrphanReportListDto
+     public bool? Married { get; set; }
+     public bool? Dead { get; set; }
+ 
++    // ---- §14.S.4 orphan-status wide grid (UC-ORR-09) ----------------------------
++    // Flattened Orphan → Family (→ Provider / Region / Center) plus the
++    // report-dimension columns. Nullable: the register grid (§14.S.1) simply
++    // ignores them; columns whose source field does not exist on this stack
++    // (مشروع تنموى للمعيل, الاستبعاد pair) render "—" client-side.
++
++    // Orphan dimension
++    public DateTime? OrphanDateOfBirth { get; set; }
++    public string? OrphanGender { get; set; }
++    public string? OrphanNationalId { get; set; }
++    public string? OrphanPhone { get; set; }
++
++    // Family / address dimension
++    public string? FamilyCode { get; set; }
++    public string? GuardianName { get; set; }
++    public string? GuardianRelation { get; set; }
++    public string? GuardianNationalId { get; set; }
++    public string? GuardianJob { get; set; }
++    public string? GuardianEducationLevelName { get; set; }
++    public string? RegionName { get; set; }
++    public string? CenterName { get; set; }
++    public string? CityVillage { get; set; }
++    public string? Address { get; set; }
++    public string? HomePhone { get; set; }
++
++    // Report dimension
++    public string? SchoolType { get; set; }
++    public string? Faculty { get; set; }
++    public string? School { get; set; }
++    public DateTime? MarriageDate { get; set; }
++    public DateTime? DeathDate { get; set; }
++    public string? Disease { get; set; }
++    public string? Disability { get; set; }
++    public string? Grade { get; set; }
++    public string? Specialization { get; set; }
++    public string? EducationDegree { get; set; }
++    public DateTime? UpdatedOn { get; set; }
++
+     // Timestamp for ordering - UC-6.16
+     public DateTime CreatedOn { get; set; }
+ }
+diff --git a/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportSummaryDto.cs b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportSummaryDto.cs
+index 820cc08..6c226df 100644
+--- a/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportSummaryDto.cs
++++ b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportSummaryDto.cs
+@@ -1,18 +1,15 @@
+ namespace IIROSA.Application.DTOs.PeriodicOrphanReport;
+ 
+ /// <summary>
+-/// Summary statistics for Periodic Orphan Reports
++/// Report counters for one orphan — the summary that rides the report-history view (UC-ORR-06/16, epic 9).
+ /// </summary>
+ public class PeriodicOrphanReportSummaryDto
+ {
++    public Guid OrphanId { get; set; }
++    public string? OrphanName { get; set; }
+     public int TotalReports { get; set; }
+     public int PendingReports { get; set; }
+     public int ApprovedReports { get; set; }
+     public int RejectedReports { get; set; }
+     public int LockedReports { get; set; }
+-
+-    // Orphan-specific summary - UC-6.16
+-    public int OrphanId { get; set; }
+-    public string? OrphanName { get; set; }
+-    public int TotalReportsForOrphan { get; set; }
+ }
+diff --git a/Backend/src/IIROSA.Application/Interfaces/IPeriodicOrphanReportService.cs b/Backend/src/IIROSA.Application/Interfaces/IPeriodicOrphanReportService.cs
+index f173fd4..3312752 100644
+--- a/Backend/src/IIROSA.Application/Interfaces/IPeriodicOrphanReportService.cs
++++ b/Backend/src/IIROSA.Application/Interfaces/IPeriodicOrphanReportService.cs
+@@ -4,112 +4,139 @@ namespace IIROSA.Application.Interfaces;
+ 
+ /// <summary>
+ /// Periodic Orphan Report Service Interface
+-/// Implements use cases UC-6.11 through UC-6.17 for Periodic Orphan Reports
++/// Implements epic 9 use cases (UC-ORR-01 … UC-ORR-17, from WAR.IIROSA UC-6.11–6.17)
+ /// </summary>
+ public interface IPeriodicOrphanReportService
+ {
+-    #region CRUD Operations (UC-6.11)
++    #region CRUD Operations (UC-ORR-03, UC-ORR-04, UC-ORR-05, UC-ORR-06)
+ 
+     /// <summary>
+-    /// Create new periodic orphan report - UC-6.11
++    /// Create new periodic orphan report - UC-ORR-03 (create a periodic report)
++    /// Duplicate reports for the same orphan/month/year are rejected.
+     /// </summary>
+     Task<PeriodicOrphanReportDto> CreateReportAsync(CreatePeriodicOrphanReportDto dto);
+ 
+     /// <summary>
+-    /// Update existing periodic orphan report - UC-6.11
+-    /// Only allowed if report is not locked or reviewed
++    /// Update existing periodic orphan report - UC-ORR-05
++    /// Allowed while unlocked and not accepted; a refused report resubmits as pending.
+     /// </summary>
+     Task<PeriodicOrphanReportDto> UpdateReportAsync(UpdatePeriodicOrphanReportDto dto);
+ 
+     /// <summary>
+-    /// Get report by ID - UC-6.11, UC-6.13, UC-6.14, UC-6.15, UC-6.16
++    /// Get report by ID - UC-ORR-04 (view a periodic report) and the review screens
+     /// </summary>
+     Task<PeriodicOrphanReportDto?> GetByIdAsync(Guid id);
+ 
+     /// <summary>
+-    /// Delete report (soft delete) - UC-6.11
+-    /// Only allowed if report is not locked or reviewed
++    /// UC-ORR-17 (§14.U.17 طباعة التقرير الدوري) — compose the print payload: the caller-scoped
++    /// 9-4 detail data, the resolved layout variant (the collapsed 24-template matrix) and the
++    /// attachment ids present. Read-only; null when unknown, deleted, or outside the caller's
++    /// scope (there is nothing to produce — AC 4/5).
++    /// </summary>
++    Task<OrphanReportFormPrintDto?> GetPrintFormAsync(Guid id);
++
++    /// <summary>
++    /// Delete report (soft delete) - UC-ORR-06
++    /// Only allowed while the report is not locked and not accepted.
+     /// </summary>
+     Task DeleteReportAsync(Guid id);
+ 
+     #endregion
+ 
+-    #region Review Operations (UC-6.13)
++    #region Orphan Lookup (UC-ORR-02)
++
++    /// <summary>
++    /// Look up an orphan by sponsorship code - UC-ORR-02.
++    /// Returns null when no live orphan matches, or the orphan is outside the caller's scope.
++    /// </summary>
++    Task<OrphanLookupDto?> GetOrphanByCodeAsync(string code);
++
++    #endregion
++
++    #region Review Operations (UC-ORR-07, UC-ORR-08)
+ 
+     /// <summary>
+-    /// Review periodic report (approve or reject) - UC-6.13
+-    /// Only Super Admin, Admin, Accountant, and Employee can review
++    /// Review periodic report (accept or refuse) - UC-ORR-07 / UC-ORR-08
++    /// Reviewer is always resolved from the current user, never from the payload.
+     /// </summary>
+     Task<PeriodicOrphanReportDto> ReviewReportAsync(ReviewPeriodicReportDto dto);
+ 
+     #endregion
+ 
+-    #region List and Filter Operations (UC-6.14, UC-6.15, UC-6.16)
++    #region List and Filter Operations (UC-ORR-01, UC-ORR-09, UC-ORR-12, UC-ORR-13)
++
++    /// <summary>
++    /// Get periodic reports with filtering and pagination - UC-ORR-01 / UC-ORR-09
++    /// Every query is scoped server-side to the caller's charity/country.
++    /// </summary>
++    Task<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>> GetReportsAsync(PeriodicOrphanReportFilterDto filter);
+ 
+     /// <summary>
+-    /// Get periodic reports with filtering and pagination - UC-6.14 (Approved), UC-6.15 (Rejected), UC-6.16 (Search)
+-    /// Charity users see only their charity's reports
+-    /// Admin/Super Admin see all reports with optional charity filter
++    /// Get accepted (approved) reports - UC-ORR-12
+     /// </summary>
+-    Task<(IEnumerable<PeriodicOrphanReportListDto> Items, int TotalCount)> GetReportsAsync(PeriodicOrphanReportFilterDto filter);
++    Task<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>> GetApprovedReportsAsync(PeriodicOrphanReportFilterDto filter);
+ 
+     /// <summary>
+-    /// Get approved reports - UC-6.14
++    /// Get refused (rejected) reports - UC-ORR-13
+     /// </summary>
+-    Task<(IEnumerable<PeriodicOrphanReportListDto> Items, int TotalCount)> GetApprovedReportsAsync(PeriodicOrphanReportFilterDto filter);
++    Task<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>> GetRejectedReportsAsync(PeriodicOrphanReportFilterDto filter);
+ 
+     /// <summary>
+-    /// Get rejected reports - UC-6.15
++    /// Get reports by orphan - UC-ORR-01
++    /// Returns the orphan's complete periodic report history, newest first.
+     /// </summary>
+-    Task<(IEnumerable<PeriodicOrphanReportListDto> Items, int TotalCount)> GetRejectedReportsAsync(PeriodicOrphanReportFilterDto filter);
++    Task<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>> GetReportsByOrphanAsync(Guid orphanId, int pageNumber = 1, int pageSize = 20);
+ 
+     /// <summary>
+-    /// Get reports by orphan - UC-6.16
+-    /// Returns orphan's complete periodic report history ordered by creation date (newest first)
++    /// UC-HOU-06 (§11.S.3): one housing beneficiary's report history, selected by the
++    /// ChildOrParent discriminator. Child ⇒ beneficiaryId is an orphan id; Parent ⇒ it is the
++    /// housing family's guardian (Provider) id, resolved to the family and read through
++    /// FK_HousingFamilyId. Unknown / non-housing / out-of-scope ⇒ NotFoundException.
++    /// Served by GET /api/PeriodicOrphanReports/by-orphan/{beneficiaryId}?childOrParent=.
+     /// </summary>
+-    Task<(IEnumerable<PeriodicOrphanReportListDto> Items, int TotalCount)> GetReportsByOrphanAsync(Guid orphanId, int pageNumber = 1, int pageSize = 20);
++    Task<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>> GetHousingBeneficiaryReportsAsync(
++        Guid beneficiaryId, Domain.Enums.ReportBeneficiaryType beneficiaryType, int pageNumber = 1, int pageSize = 20);
+ 
+     /// <summary>
+-    /// Get orphan's report summary - UC-6.16
++    /// Get orphan's report counters - UC-ORR-01
+     /// </summary>
+     Task<PeriodicOrphanReportSummaryDto> GetOrphanReportSummaryAsync(Guid orphanId);
+ 
+     #endregion
+ 
+-    #region Export Operations (UC-6.17)
++    #region Export Operations (UC-ORR-11)
+ 
+     /// <summary>
+-    /// Export periodic reports to Excel - UC-6.17
++    /// Export periodic reports to Excel - UC-ORR-11
+     /// </summary>
+     Task<byte[]> ExportToExcelAsync(PeriodicOrphanReportFilterDto filter, bool includeAllFields = false);
+ 
+     /// <summary>
+-    /// Export orphan's report history to Excel - UC-6.16, UC-6.17
++    /// Export orphan's report history to Excel - UC-ORR-01 / UC-ORR-11
+     /// </summary>
+     Task<byte[]> ExportOrphanHistoryToExcelAsync(Guid orphanId);
+ 
+     #endregion
+ 
+-    #region Status Management (UC-6.11)
++    #region Status Management (UC-ORR-03 lifecycle)
+ 
+     /// <summary>
+-    /// Lock report (prevent modifications) - UC-6.11
++    /// Lock report (prevent modifications)
+     /// </summary>
+     Task LockReportAsync(Guid id);
+ 
+     /// <summary>
+-    /// Unlock report (allow modifications) - UC-6.11
+-    /// Only Admin/Super Admin can unlock
++    /// Unlock report (allow modifications) - Admin/Super Admin only
+     /// </summary>
+     Task UnlockReportAsync(Guid id);
+ 
+     /// <summary>
+-    /// Activate report - UC-6.11
++    /// Activate report
+     /// </summary>
+     Task ActivateReportAsync(Guid id);
+ 
+     /// <summary>
+-    /// Deactivate report - UC-6.11
++    /// Deactivate report
+     /// </summary>
+     Task DeactivateReportAsync(Guid id);
+ 
+@@ -118,17 +145,17 @@ public interface IPeriodicOrphanReportService
+     #region Helper Methods
+ 
+     /// <summary>
+-    /// Check if report can be edited (not locked and not reviewed)
++    /// Check if report can be edited (not locked and not accepted)
+     /// </summary>
+     Task<bool> CanEditReportAsync(Guid id);
+ 
+     /// <summary>
+-    /// Check if user can review reports (Admin, Super Admin, Accountant, Employee)
++    /// Check if the current user can review reports (Admin, Super Admin, Accountant, Employee)
+     /// </summary>
+     Task<bool> CanUserReviewReportsAsync(Guid userId);
+ 
+     /// <summary>
+-    /// Check if Periodic Reports feature is enabled for charity - UC-6.12
++    /// Check if Periodic Reports feature is enabled for charity - UC-6.12 / epic 19 (configuration)
+     /// </summary>
+     Task<bool> IsPeriodicReportsEnabledForCharityAsync(Guid charityId);
+ 
+diff --git a/Backend/src/IIROSA.Application/Services/PeriodicOrphanReportService.cs b/Backend/src/IIROSA.Application/Services/PeriodicOrphanReportService.cs
+index 6ad9e76..a377c5c 100644
+--- a/Backend/src/IIROSA.Application/Services/PeriodicOrphanReportService.cs
++++ b/Backend/src/IIROSA.Application/Services/PeriodicOrphanReportService.cs
+@@ -1,86 +1,179 @@
++using System.Linq.Expressions;
++using FluentValidation;
++using Framework.Identity.Data.Entities;
+ using IIROSA.Application.DTOs.PeriodicOrphanReport;
++using IIROSA.Application.Exceptions;
+ using IIROSA.Application.Interfaces;
++using IIROSA.Domain.Contracts.Persistence;
+ using IIROSA.Domain.Entities;
+-using IIROSA.Infrastructure.Data.Repository;
++using IIROSA.Domain.Entities.Lookups;
++using IIROSA.Domain.Interfaces;
+ using Microsoft.EntityFrameworkCore;
+ using Microsoft.Extensions.Logging;
+-using System.Text.Json;
+ 
+ namespace IIROSA.Application.Services;
+ 
+ /// <summary>
+-/// Service for managing Periodic Orphan Reports
+-/// Implements UC-6.11 through UC-6.17
++/// Periodic Orphan Report service — epic 9 (UC-ORR-01 … UC-ORR-17, from WAR.IIROSA UC-6.11–6.17).
++///
++/// Platform invariants honoured here:
++/// - Every read/write is scoped server-side to the caller's charity/country
++///   (claims pin, never widen; out-of-scope records read as NotFound).
++/// - Paged reads return <see cref="PeriodicOrphanReportPagedResult{T}"/> — the platform envelope.
++/// - Only <see cref="IUnitOfWork"/> saves; repositories never call SaveChanges.
++/// - Deletes are soft (audit interceptor sets IsDeleted via the global query filter).
++/// - Validation runs in this layer via FluentValidation, not in the controller.
+ /// </summary>
+ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
+ {
+-    private readonly IUnitOfWork _unitOfWork;
+     private readonly IRepository<PeriodicOrphanReport> _reportRepository;
+     private readonly IRepository<Orphan> _orphanRepository;
+     private readonly IRepository<Charity> _charityRepository;
++    private readonly IRepository<ApplicationUser> _userRepository;
++    private readonly IRepository<EducationLevel> _educationLevelRepository;
++    private readonly IRepository<RefuseReason> _refuseReasonRepository;
++    private readonly IUnitOfWork _unitOfWork;
++    private readonly ICurrentUserService _currentUser;
++    private readonly IValidator<CreatePeriodicOrphanReportDto> _createValidator;
++    private readonly IValidator<UpdatePeriodicOrphanReportDto> _updateValidator;
++    private readonly IValidator<ReviewPeriodicReportDto> _reviewValidator;
+     private readonly ILogger<PeriodicOrphanReportService> _logger;
++    // UC-HOU-06 (6-6): the guardian branch resolves Provider → housing Family before reading
++    private readonly IRepository<Provider> _providerRepository;
++    private readonly IRepository<Family> _familyRepository;
++    private readonly IValidator<PeriodicOrphanReportFilterDto> _filterValidator;
+ 
+     public PeriodicOrphanReportService(
+-        IUnitOfWork unitOfWork,
+         IRepository<PeriodicOrphanReport> reportRepository,
+         IRepository<Orphan> orphanRepository,
+         IRepository<Charity> charityRepository,
+-        ILogger<PeriodicOrphanReportService> logger)
++        IRepository<ApplicationUser> userRepository,
++        IRepository<EducationLevel> educationLevelRepository,
++        IRepository<RefuseReason> refuseReasonRepository,
++        IUnitOfWork unitOfWork,
++        ICurrentUserService currentUser,
++        IValidator<CreatePeriodicOrphanReportDto> createValidator,
++        IValidator<UpdatePeriodicOrphanReportDto> updateValidator,
++        IValidator<ReviewPeriodicReportDto> reviewValidator,
++        IValidator<PeriodicOrphanReportFilterDto> filterValidator,
++        ILogger<PeriodicOrphanReportService> logger,
++        IRepository<Provider> providerRepository,
++        IRepository<Family> familyRepository)
+     {
+-        _unitOfWork = unitOfWork;
+         _reportRepository = reportRepository;
+         _orphanRepository = orphanRepository;
+         _charityRepository = charityRepository;
++        _userRepository = userRepository;
++        _educationLevelRepository = educationLevelRepository;
++        _refuseReasonRepository = refuseReasonRepository;
++        _unitOfWork = unitOfWork;
++        _currentUser = currentUser;
++        _createValidator = createValidator;
++        _updateValidator = updateValidator;
++        _reviewValidator = reviewValidator;
++        _filterValidator = filterValidator;
+         _logger = logger;
++        _providerRepository = providerRepository;
++        _familyRepository = familyRepository;
+     }
+ 
+-    #region CRUD Operations (UC-6.11)
++    #region CRUD Operations
+ 
++    /// <summary>
++    /// Create a periodic report (UC-ORR-03; UC-HOU-08 through the §11.U.6 discriminator).
++    /// Absent housing fields ⇒ the epic-9 regular orphan report, byte-identical.
++    /// </summary>
+     public async Task<PeriodicOrphanReportDto> CreateReportAsync(CreatePeriodicOrphanReportDto dto)
+     {
+-        // Validate orphan exists
+-        var orphan = await _orphanRepository.GetByIdAsync(dto.OrphanId);
+-        if (orphan == null)
+-            throw new KeyNotFoundException($"Orphan with ID '{dto.OrphanId}' not found.");
++        await _createValidator.ValidateAndThrowAsync(dto);
++
++        // §11.U.6 discriminator (6-8): Child ⇒ the orphan rules as before; Parent ⇒ the
++        // §11.S.4 guardian report — the branch resolves who is reported on and stamps the
++        // housing link; the orphan identity never comes straight from the client payload.
++        var beneficiaryType = ParseBeneficiaryType(dto.ChildOrParent);
++
++        var reportYear = dto.ReportDate.Year;
++        var reportMonth = dto.ReportDate.Month;
+ 
+-        // Check if feature is enabled for charity (UC-6.12)
+-        if (orphan.FK_CharityId.HasValue && !await IsPeriodicReportsEnabledForCharityAsync(orphan.FK_CharityId.Value))
+-            throw new InvalidOperationException("Periodic Reports feature is not enabled for your charity. Please contact administrator.");
++        Guid orphanId;
++        Guid? charityId;
++        Guid? housingFamilyId = null;
+ 
+-        // Generate report number if not provided
+-        if (string.IsNullOrWhiteSpace(dto.ReportNo))
++        if (beneficiaryType == Domain.Enums.ReportBeneficiaryType.Parent)
++        {
++            (orphanId, charityId, housingFamilyId) =
++                await ResolveGuardianReportTargetAsync(dto, reportYear, reportMonth);
++        }
++        else
+         {
+-            dto.ReportNo = await GenerateReportNumberAsync();
++            // Review 2026-08-24: GetByIdAsync is unfiltered FindAsync — a soft-deleted
++            // orphan must read as not-found, never as a reportable beneficiary.
++            var orphan = await _orphanRepository.AsQueryable()
++                .FirstOrDefaultAsync(o => o.Id == dto.OrphanId && !o.IsDeleted)
++                ?? throw new NotFoundException(nameof(Orphan), dto.OrphanId);
++
++            // Scope: a charity user can only report on their own orphans (pin, never widen).
++            if (!await IsOrphanInCallerScopeAsync(orphan))
++                throw new NotFoundException(nameof(Orphan), dto.OrphanId);
++
++            await EnsureNoDuplicateAsync(orphan.Id, reportYear, reportMonth, excludeReportId: null);
++
++            orphanId = orphan.Id;
++            charityId = orphan.FK_CharityId;
++
++            // §11.S.4 child path: a housing family context stamps the link (validated Housing
++            // type + caller scope + the child belongs to it). The 6-6 Child read filters by
++            // orphan id, so the stamp is register context, not a read dependency.
++            if (dto.HousingFamilyId.HasValue)
++            {
++                var family = await GetScopedHousingFamilyAsync(dto.HousingFamilyId.Value);
++                if (orphan.FamilyId != family.Id)
++                    throw new NotFoundException(nameof(Family), family.Id);
++                housingFamilyId = family.Id;
++            }
+         }
+ 
++        // Review 2026-08-24: restore the charity feature flag the story's reality check
++        // said to preserve — it gates both branches (the flag is charity-level, never
++        // beneficiary-level). No-op until epic 19 wires a real configuration source.
++        if (charityId.HasValue && !await IsPeriodicReportsEnabledForCharityAsync(charityId.Value))
++            throw new BusinessException("Periodic reports are not enabled for this charity.");
++
+         var report = new PeriodicOrphanReport
+         {
+-            OrphanId = dto.OrphanId,
++            Id = Guid.NewGuid(),
++            OrphanId = orphanId,
+             OrphanPaymentId = dto.OrphanPaymentId,
++            CharityId = charityId,
++            ChildOrParent = beneficiaryType,
++            FK_HousingFamilyId = housingFamilyId,
+             ReportDate = dto.ReportDate,
+             ReportPeriodFrom = dto.ReportPeriodFrom,
+             ReportPeriodTo = dto.ReportPeriodTo,
+-            ReportNo = dto.ReportNo,
+-            CharityId = orphan.FK_CharityId,
+-
+-            // Religious & Behavioral
++            // Review 2026-08-24 (binding decision 3 enforced): the number is server-owned —
++            // a client-sent ReportNo is ignored on create AND update, so direct API callers
++            // can neither forge nor collide numbers.
++            ReportNo = await GenerateReportNumberAsync(reportYear),
++            ReportYear = reportYear,
++            ReportMonth = reportMonth,
++            ReviewStatus = "Pending",
++            Reviewed = false,
++            IsAccepted = false,
++            IsRefused = false,
++            Locked = false,
++            Active = true,
++            ActiveDate = DateTime.UtcNow,
+             PrayerStatus = dto.PrayerStatus,
+             MannersStatus = dto.MannersStatus,
+             HadeethStatus = dto.HadeethStatus,
+-
+-            // Quran Education
+             QuranParts = dto.QuranParts,
+             QuranVerses = dto.QuranVerses,
+-
+-            // Health & Medical
+             MedicalStatus = dto.MedicalStatus,
+             Disease = dto.Disease,
+             Disability = dto.Disability,
+             DisabilityDescription = dto.DisabilityDescription,
+             DiseaseDescription = dto.DiseaseDescription,
+             MedicalReportImageId = dto.MedicalReportImageId,
+-
+-            // Personal Development
+             Hobby = dto.Hobby,
+             Course = dto.Course,
+             CourseName = dto.CourseName,
+@@ -91,8 +184,6 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
+             Wish = dto.Wish,
+             WishArr = dto.WishArr,
+             OrphanMessage = dto.OrphanMessage,
+-
+-            // Education Details
+             EducationalStageId = dto.EducationalStageId,
+             EducationalLevelId = dto.EducationalLevelId,
+             Grade = dto.Grade,
+@@ -113,538 +204,1184 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
+             Faculty = dto.Faculty,
+             Department = dto.Department,
+             Specialization = dto.Specialization,
+-
+-            // Life Events
+             Married = dto.Married,
+             MarriageDate = dto.MarriageDate,
+             OrphanMarriageImageId = dto.OrphanMarriageImageId,
+             Dead = dto.Dead,
+             DeathDate = dto.DeathDate,
+             OrphanDeadImageId = dto.OrphanDeadImageId,
+-
+-            // Attachments
+             OrphanCertificateImageId = dto.OrphanCertificateImageId,
+             OrphanImageId = dto.OrphanImageId,
+             MissingDocuments = dto.MissingDocuments,
+-            MissingDocumentsName = dto.MissingDocumentsName,
+-
+-            // Status Tracking - UC-6.11
+-            Reviewed = false,
+-            IsAccepted = false,
+-            IsRefused = false,
+-            Locked = false,
+-            Active = true,
+-            ActiveDate = DateTime.UtcNow,
+-            Deleted = false
++            MissingDocumentsName = dto.MissingDocumentsName
+         };
+ 
+-        await _reportRepository.AddAsync(report);
++        // §11.S.4 review flags are DATA on create (the workflow endpoints are 9-7/9-8): an
++        // unticked form stays Pending exactly like the epic-9 create; a ticked decision is
++        // stored coherently — reviewed, dated, reasoned — mirroring ReviewReportAsync.
++        await ApplyCreateReviewFlagsAsync(report, dto);
++
++        await _reportRepository.InsertAsync(report);
+         await _unitOfWork.SaveChangesAsync();
+ 
+-        _logger.LogInformation("Created Periodic Orphan Report {ReportId} for Orphan {OrphanId}", report.Id, report.OrphanId);
++        _logger.LogInformation("Periodic report {ReportNo} created for orphan {OrphanId} by {UserId}",
++            report.ReportNo, report.OrphanId, _currentUser.UserId);
+ 
+-        return await MapToDtoAsync(report);
++        return (await GetByIdAsync(report.Id))!;
+     }
+ 
++    /// <summary>
++    /// Update a periodic report (UC-ORR-05). Locked and accepted reports are immutable;
++    /// updating a refused report resets it to Pending (resubmission).
++    /// </summary>
+     public async Task<PeriodicOrphanReportDto> UpdateReportAsync(UpdatePeriodicOrphanReportDto dto)
+     {
+-        var report = await _reportRepository.GetByIdAsync(dto.Id);
+-        if (report == null)
+-            throw new KeyNotFoundException($"Report with ID '{dto.Id}' not found.");
+-
+-        // Check if report can be edited (UC-6.11)
+-        if (report.Locked || report.Reviewed)
+-            throw new InvalidOperationException("Cannot edit a locked or reviewed report.");
+-
+-        // Update fields
+-        report.OrphanPaymentId = dto.OrphanPaymentId ?? report.OrphanPaymentId;
+-        report.ReportDate = dto.ReportDate ?? report.ReportDate;
+-        report.ReportPeriodFrom = dto.ReportPeriodFrom ?? report.ReportPeriodFrom;
+-        report.ReportPeriodTo = dto.ReportPeriodTo ?? report.ReportPeriodTo;
+-        report.ReportNo = dto.ReportNo ?? report.ReportNo;
+-
+-        // Religious & Behavioral
+-        report.PrayerStatus = dto.PrayerStatus ?? report.PrayerStatus;
+-        report.MannersStatus = dto.MannersStatus ?? report.MannersStatus;
+-        report.HadeethStatus = dto.HadeethStatus ?? report.HadeethStatus;
+-
+-        // Quran Education
+-        report.QuranParts = dto.QuranParts ?? report.QuranParts;
+-        report.QuranVerses = dto.QuranVerses ?? report.QuranVerses;
+-
+-        // Health & Medical
+-        report.MedicalStatus = dto.MedicalStatus ?? report.MedicalStatus;
+-        report.Disease = dto.Disease ?? report.Disease;
+-        report.Disability = dto.Disability ?? report.Disability;
+-        report.DisabilityDescription = dto.DisabilityDescription ?? report.DisabilityDescription;
+-        report.DiseaseDescription = dto.DiseaseDescription ?? report.DiseaseDescription;
+-        report.MedicalReportImageId = dto.MedicalReportImageId ?? report.MedicalReportImageId;
+-
+-        // Personal Development
+-        report.Hobby = dto.Hobby ?? report.Hobby;
+-        report.Course = dto.Course ?? report.Course;
+-        report.CourseName = dto.CourseName ?? report.CourseName;
+-        report.SportName = dto.SportName ?? report.SportName;
+-        report.ProfessionName = dto.ProfessionName ?? report.ProfessionName;
+-        report.Achievement = dto.Achievement ?? report.Achievement;
+-        report.AchievementArr = dto.AchievementArr ?? report.AchievementArr;
+-        report.Wish = dto.Wish ?? report.Wish;
+-        report.WishArr = dto.WishArr ?? report.WishArr;
+-        report.OrphanMessage = dto.OrphanMessage ?? report.OrphanMessage;
+-
+-        // Education Details
+-        report.EducationalStageId = dto.EducationalStageId ?? report.EducationalStageId;
+-        report.EducationalLevelId = dto.EducationalLevelId ?? report.EducationalLevelId;
+-        report.Grade = dto.Grade ?? report.Grade;
+-        report.School = dto.School ?? report.School;
+-        report.SchoolType = dto.SchoolType ?? report.SchoolType;
+-        report.EducationDegree = dto.EducationDegree ?? report.EducationDegree;
+-        report.HighestEducationalLevel = dto.HighestEducationalLevel ?? report.HighestEducationalLevel;
+-        report.HighestEducationalLevelYear = dto.HighestEducationalLevelYear ?? report.HighestEducationalLevelYear;
+-        report.IsOrphanStudent = dto.IsOrphanStudent ?? report.IsOrphanStudent;
+-        report.EducationalYear = dto.EducationalYear ?? report.EducationalYear;
+-        report.AnnualFeeForStudy = dto.AnnualFeeForStudy ?? report.AnnualFeeForStudy;
+-        report.StudyingYears = dto.StudyingYears ?? report.StudyingYears;
+-        report.RestStudyingYears = dto.RestStudyingYears ?? report.RestStudyingYears;
+-        report.GraduationYear = dto.GraduationYear ?? report.GraduationYear;
+-        report.DropOut = dto.DropOut ?? report.DropOut;
+-        report.DropOutYear = dto.DropOutYear ?? report.DropOutYear;
+-        report.DropOutStageId = dto.DropOutStageId ?? report.DropOutStageId;
+-        report.Faculty = dto.Faculty ?? report.Faculty;
+-        report.Department = dto.Department ?? report.Department;
+-        report.Specialization = dto.Specialization ?? report.Specialization;
+-
+-        // Life Events
+-        report.Married = dto.Married ?? report.Married;
+-        report.MarriageDate = dto.MarriageDate ?? report.MarriageDate;
+-        report.OrphanMarriageImageId = dto.OrphanMarriageImageId ?? report.OrphanMarriageImageId;
+-        report.Dead = dto.Dead ?? report.Dead;
+-        report.DeathDate = dto.DeathDate ?? report.DeathDate;
+-        report.OrphanDeadImageId = dto.OrphanDeadImageId ?? report.OrphanDeadImageId;
+-
+-        // Attachments
+-        report.OrphanCertificateImageId = dto.OrphanCertificateImageId ?? report.OrphanCertificateImageId;
+-        report.OrphanImageId = dto.OrphanImageId ?? report.OrphanImageId;
+-        report.MissingDocuments = dto.MissingDocuments ?? report.MissingDocuments;
+-        report.MissingDocumentsName = dto.MissingDocumentsName ?? report.MissingDocumentsName;
++        await _updateValidator.ValidateAndThrowAsync(dto);
++
++        var report = await GetScopedReportAsync(dto.Id);
++
++        // §14.U.5 exception flow — locked or accepted reports are "old" and immutable.
++        // Legacy wording preserved verbatim; the SPA maps it to its translated key.
++        if (report.Locked || report.IsAccepted)
++            throw new BusinessException("You can not update old report");
++
++        // Period keys follow the (possibly new) report date.
++        if (dto.ReportDate.HasValue && dto.ReportDate.Value != report.ReportDate)
++        {
++            report.ReportDate = dto.ReportDate.Value;
++            report.ReportYear = dto.ReportDate.Value.Year;
++            report.ReportMonth = dto.ReportDate.Value.Month;
++            await EnsureNoDuplicateAsync(report.OrphanId, report.ReportYear!.Value, report.ReportMonth!.Value,
++                excludeReportId: report.Id);
++        }
++
++        // Full-replace contract (9-5): the SPA loads the report into the §14.S.2 form
++        // and PUTs every control, so sent values — including explicit nulls — are
++        // stored as-is; a cleared optional field actually clears. The update validator
++        // enforces the mandatory subset so an incomplete payload cannot wipe a record.
++        // ReportNo stays server-owned and the orphan identity is immutable on update.
++        report.OrphanPaymentId = dto.OrphanPaymentId;
++        report.ReportPeriodFrom = dto.ReportPeriodFrom;
++        report.ReportPeriodTo = dto.ReportPeriodTo;
++        // Review 2026-08-24 (binding decision 3 enforced): ReportNo is server-owned —
++        // the number is assigned once on create; a client-sent value is ignored here too.
++        report.PrayerStatus = dto.PrayerStatus;
++        report.MannersStatus = dto.MannersStatus;
++        report.HadeethStatus = dto.HadeethStatus;
++        report.QuranParts = dto.QuranParts;
++        report.QuranVerses = dto.QuranVerses;
++        report.MedicalStatus = dto.MedicalStatus;
++        report.Disease = dto.Disease;
++        report.Disability = dto.Disability;
++        report.DisabilityDescription = dto.DisabilityDescription;
++        report.DiseaseDescription = dto.DiseaseDescription;
++        report.MedicalReportImageId = dto.MedicalReportImageId;
++        report.Hobby = dto.Hobby;
++        report.Course = dto.Course;
++        report.CourseName = dto.CourseName;
++        report.SportName = dto.SportName;
++        report.ProfessionName = dto.ProfessionName;
++        report.Achievement = dto.Achievement;
++        report.AchievementArr = dto.AchievementArr;
++        report.Wish = dto.Wish;
++        report.WishArr = dto.WishArr;
++        report.OrphanMessage = dto.OrphanMessage;
++        report.EducationalStageId = dto.EducationalStageId;
++        report.EducationalLevelId = dto.EducationalLevelId;
++        report.Grade = dto.Grade;
++        report.School = dto.School;
++        report.SchoolType = dto.SchoolType;
++        report.EducationDegree = dto.EducationDegree;
++        report.HighestEducationalLevel = dto.HighestEducationalLevel;
++        report.HighestEducationalLevelYear = dto.HighestEducationalLevelYear;
++        report.IsOrphanStudent = dto.IsOrphanStudent;
++        report.EducationalYear = dto.EducationalYear;
++        report.AnnualFeeForStudy = dto.AnnualFeeForStudy;
++        report.StudyingYears = dto.StudyingYears;
++        report.RestStudyingYears = dto.RestStudyingYears;
++        report.GraduationYear = dto.GraduationYear;
++        report.DropOut = dto.DropOut;
++        report.DropOutYear = dto.DropOutYear;
++        report.DropOutStageId = dto.DropOutStageId;
++        report.Faculty = dto.Faculty;
++        report.Department = dto.Department;
++        report.Specialization = dto.Specialization;
++        report.Married = dto.Married;
++        report.MarriageDate = dto.MarriageDate;
++        report.OrphanMarriageImageId = dto.OrphanMarriageImageId;
++        report.Dead = dto.Dead;
++        report.DeathDate = dto.DeathDate;
++        report.OrphanDeadImageId = dto.OrphanDeadImageId;
++        report.OrphanCertificateImageId = dto.OrphanCertificateImageId;
++        report.OrphanImageId = dto.OrphanImageId;
++        report.MissingDocuments = dto.MissingDocuments;
++        report.MissingDocumentsName = dto.MissingDocumentsName;
++
++        // Resubmission: correcting a refused report sends it back to the review queue.
++        if (report.IsRefused)
++        {
++            report.Reviewed = false;
++            report.IsAccepted = false;
++            report.IsRefused = false;
++            report.ReviewStatus = "Pending";
++            report.ReviewedDate = null;
++            report.ReviewerId = null;
++            report.RefuseReason = null;
++            report.RefuseReasonId = null;
++            report.ReviewComments = null;
++        }
+ 
+         await _reportRepository.UpdateAsync(report);
+         await _unitOfWork.SaveChangesAsync();
+ 
+-        _logger.LogInformation("Updated Periodic Orphan Report {ReportId}", report.Id);
++        _logger.LogInformation("Periodic report {ReportId} updated by {UserId}", report.Id, _currentUser.UserId);
+ 
+-        return await MapToDtoAsync(report);
++        return (await GetByIdAsync(report.Id))!;
+     }
+ 
++    /// <summary>Fetch a single report with its navigations, enforcing caller scope.</summary>
+     public async Task<PeriodicOrphanReportDto?> GetByIdAsync(Guid id)
+     {
+-        var report = await _reportRepository.GetByIdAsync(id);
+-        return report == null ? null : await MapToDtoAsync(report);
+-    }
++        var report = await _reportRepository.AsQueryable()
++            .Include(r => r.Orphan)
++            .Include(r => r.Charity)
++            .FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted);
+ 
+-    public async Task DeleteReportAsync(Guid id)
+-    {
+-        var report = await _reportRepository.GetByIdAsync(id);
+-        if (report == null)
+-            throw new KeyNotFoundException($"Report with ID '{id}' not found.");
++        if (report == null || !await IsWithinCallerScopeAsync(report))
++            return null;
+ 
+-        // Check if report can be deleted (not locked and not reviewed) - UC-6.11
+-        if (report.Locked || report.Reviewed)
+-            throw new InvalidOperationException("Cannot delete a locked or reviewed report.");
++        return await MapToDetailDtoAsync(report);
++    }
+ 
+-        // Soft delete
+-        report.Deleted = true;
+-        report.DeletedDate = DateTime.UtcNow;
+-        report.Active = false;
++    /// <summary>
++    /// UC-ORR-17 (§14.U.17 طباعة التقرير الدوري) — the print payload: caller-scoped detail
++    /// data + the resolved layout variant + the attachment slots present. Read-only; the SPA
++    /// renders the form (client-side print ruling). Null = nothing to produce (AC 4/5).
++    /// </summary>
++    public async Task<OrphanReportFormPrintDto?> GetPrintFormAsync(Guid id)
++    {
++        var report = await _reportRepository.AsQueryable()
++            .Include(r => r.Orphan)
++            .Include(r => r.Charity)
++            .FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted);
++
++        if (report == null || !await IsWithinCallerScopeAsync(report))
++            return null;
++
++        var attachments = new List<OrphanReportFormAttachmentSlotDto>(5);
++        if (report.OrphanImageId.HasValue)
++            attachments.Add(new OrphanReportFormAttachmentSlotDto { Slot = "orphanPhoto", Id = report.OrphanImageId.Value });
++        if (report.OrphanCertificateImageId.HasValue)
++            attachments.Add(new OrphanReportFormAttachmentSlotDto { Slot = "certificate", Id = report.OrphanCertificateImageId.Value });
++        if (report.MedicalReportImageId.HasValue)
++            attachments.Add(new OrphanReportFormAttachmentSlotDto { Slot = "medicalReport", Id = report.MedicalReportImageId.Value });
++        if (report.OrphanDeadImageId.HasValue)
++            attachments.Add(new OrphanReportFormAttachmentSlotDto { Slot = "deathCertificate", Id = report.OrphanDeadImageId.Value });
++        if (report.OrphanMarriageImageId.HasValue)
++            attachments.Add(new OrphanReportFormAttachmentSlotDto { Slot = "marriageContract", Id = report.OrphanMarriageImageId.Value });
++
++        return new OrphanReportFormPrintDto
++        {
++            Variant = OrphanReportFormVariantResolver.Resolve(report),
++            Report = await MapToDetailDtoAsync(report),
++            Attachments = attachments
++        };
++    }
+ 
++    /// <summary>
++    /// Soft-delete a periodic report (UC-ORR-06). Only a locked report is protected —
++    /// HQ deletes erroneous records including reviewed ones (§14.D-25.5 alternate A2).
++    /// </summary>
++    public async Task DeleteReportAsync(Guid id)
++    {
++        var report = await GetScopedReportAsync(id);
++
++        if (report.Locked)
++            throw new BusinessException("This report is locked and cannot be deleted. Unlock it first.");
++
++        // Review 2026-08-24: actually soft-delete — RepositoryBase.Delete is a hard
++        // DbSet.Remove, which contradicted both the log line and the platform convention.
++        // Reads filter IsDeleted; the (OrphanId, year, month) slot checks stay unfiltered
++        // by design — a soft-deleted row still holds its duplicate slot.
++        report.IsDeleted = true;
++        report.DeletedOn = DateTime.UtcNow;
++        report.DeletedBy = _currentUser.UserId;
+         await _reportRepository.UpdateAsync(report);
+         await _unitOfWork.SaveChangesAsync();
+ 
+-        _logger.LogInformation("Deleted Periodic Orphan Report {ReportId}", id);
++        _logger.LogInformation("Periodic report {ReportId} deleted (soft) by {UserId}", report.Id, _currentUser.UserId);
+     }
+ 
+     #endregion
+ 
+-    #region Review Operations (UC-6.13)
++    #region Orphan Lookup (UC-ORR-02)
+ 
+-    public async Task<PeriodicOrphanReportDto> ReviewReportAsync(ReviewPeriodicReportDto dto)
++    /// <summary>
++    /// Look an orphan up by sponsorship code (UC-ORR-02). Returns null for unknown codes
++    /// and for orphans outside the caller's scope — both read as "not found".
++    /// </summary>
++    public async Task<OrphanLookupDto?> GetOrphanByCodeAsync(string code)
+     {
+-        var report = await _reportRepository.GetByIdAsync(dto.ReportId);
+-        if (report == null)
+-            throw new KeyNotFoundException($"Report with ID '{dto.ReportId}' not found.");
++        if (string.IsNullOrWhiteSpace(code))
++            return null;
+ 
+-        // Check if already reviewed
+-        if (report.Reviewed)
+-            throw new InvalidOperationException("This report has already been reviewed.");
++        var normalized = code.Trim();
+ 
+-        // Update review status - UC-6.13
+-        report.Reviewed = true;
+-        report.ReviewedDate = DateTime.UtcNow;
+-        report.ReviewerId = Guid.Empty; // Will be set by the calling controller with current user ID
+-        report.IsAccepted = dto.IsApproved;
+-        report.IsRefused = !dto.IsApproved;
+-        report.RefuseReason = dto.IsApproved ? null : dto.RefuseReason;
+-        report.RefuseReasonId = dto.RefuseReasonId;
++        var orphan = await _orphanRepository.AsQueryable()
++            .Include(o => o.Family!)
++                .ThenInclude(f => f.Provider)
++            .FirstOrDefaultAsync(o => o.Code == normalized && !o.IsDeleted);
+ 
+-        await _reportRepository.UpdateAsync(report);
+-        await _unitOfWork.SaveChangesAsync();
++        if (orphan == null || !await IsOrphanInCallerScopeAsync(orphan))
++            return null;
+ 
+-        _logger.LogInformation("Reviewed Periodic Orphan Report {ReportId}: {Result}", dto.ReportId, dto.IsApproved ? "Approved" : "Rejected");
++        var scopedReports = ApplyCallerScope(_reportRepository.AsQueryable())
++            .Where(r => r.OrphanId == orphan.Id);
++        var totalReports = await scopedReports.CountAsync();
++        var pendingReports = await scopedReports.CountAsync(r => !r.Reviewed);
+ 
+-        return await MapToDtoAsync(report);
++        string? charityName = null;
++        if (orphan.FK_CharityId.HasValue)
++        {
++            var charity = await _charityRepository.GetByIdAsync(orphan.FK_CharityId.Value);
++            charityName = charity?.Name;
++        }
++
++        return new OrphanLookupDto
++        {
++            OrphanId = orphan.Id,
++            Code = orphan.Code,
++            FullName = orphan.FullName,
++            CharityId = orphan.FK_CharityId,
++            CharityName = charityName,
++            Gender = orphan.Gender,
++            Age = CalculateAge(orphan.DateOfBirth),
++            BirthDate = orphan.DateOfBirth,
++            FamilyId = orphan.FamilyId,
++            FamilyCode = orphan.Family?.Code,
++            GuardianName = orphan.Family?.Provider?.FullName,
++            TotalReports = totalReports,
++            PendingReports = pendingReports
++        };
+     }
+ 
+     #endregion
+ 
+-    #region List and Filter Operations (UC-6.14, UC-6.15, UC-6.16)
++    #region Review Operations (UC-ORR-07, UC-ORR-08)
+ 
+-    public async Task<(IEnumerable<PeriodicOrphanReportListDto> Items, int TotalCount)> GetReportsAsync(PeriodicOrphanReportFilterDto filter)
++    /// <summary>
++    /// Accept (UC-ORR-07) or refuse (UC-ORR-08) a report. The reviewer is always the
++    /// current user; refusing requires a reason from the lookup or free text.
++    /// </summary>
++    public async Task<PeriodicOrphanReportDto> ReviewReportAsync(ReviewPeriodicReportDto dto)
+     {
+-        var query = _reportRepository.GetQueryable()
+-            .Include(r => r.Orphan)
+-            .Include(r => r.Charity)
+-            .Where(r => !r.Deleted && r.Active);
++        await _reviewValidator.ValidateAndThrowAsync(dto);
+ 
+-        // Apply filters
+-        query = ApplyFilters(query, filter);
++        var report = await GetScopedReportAsync(dto.ReportId);
+ 
+-        // Get total count
+-        var totalCount = await query.CountAsync();
++        var reviewerId = _currentUser.UserId
++            ?? throw new BusinessException("Only authenticated head-office reviewers can review reports.");
+ 
+-        // Apply sorting (UC-6.16 - newest first by default)
+-        query = ApplySorting(query, filter);
++        // §25.5 — a decided report stays decided; re-deciding goes through the
++        // charity's edit-and-resubmit path (9-5), never a second review call.
++        if (report.Reviewed)
++            throw new BusinessException("This report has already been reviewed.");
+ 
+-        // Apply pagination
+-        var items = await query
+-            .Skip((filter.PageNumber - 1) * filter.PageSize)
+-            .Take(filter.PageSize)
+-            .ToListAsync();
++        if (dto.IsApproved)
++        {
++            report.Reviewed = true;
++            report.IsAccepted = true;
++            report.IsRefused = false;
++            report.ReviewStatus = "Approved";
++            report.ReviewedDate = DateTime.UtcNow;
++            report.ReviewerId = reviewerId;
++            report.RefuseReason = null;
++            report.RefuseReasonId = null;
++            report.ReviewComments = string.IsNullOrWhiteSpace(dto.ReviewComments) ? null : dto.ReviewComments.Trim();
++        }
++        else
++        {
++            // Resolve the refusal reason: explicit free text wins, otherwise the lookup entry.
++            string reasonText = (dto.RefuseReason ?? string.Empty).Trim();
++            if (dto.RefuseReasonId.HasValue)
++            {
++                var lookupReason = await _refuseReasonRepository.GetByIdAsync(dto.RefuseReasonId.Value)
++                    ?? throw new BusinessException("The selected refuse reason does not exist.");
++                if (!lookupReason.IsActive)
++                    throw new BusinessException("The selected refuse reason is not active.");
++                if (reasonText.Length == 0)
++                    reasonText = lookupReason.NameAr ?? lookupReason.NameEn ?? lookupReason.Name ?? string.Empty;
++            }
+ 
+-        var dtos = items.Select(MapToListDto).ToList();
++            report.Reviewed = true;
++            report.IsAccepted = false;
++            report.IsRefused = true;
++            report.ReviewStatus = "Rejected";
++            report.ReviewedDate = DateTime.UtcNow;
++            report.ReviewerId = reviewerId;
++            report.RefuseReason = reasonText;
++            report.RefuseReasonId = dto.RefuseReasonId;
++            report.ReviewComments = string.IsNullOrWhiteSpace(dto.ReviewComments) ? null : dto.ReviewComments.Trim();
++        }
++
++        await _reportRepository.UpdateAsync(report);
++        await _unitOfWork.SaveChangesAsync();
++
++        _logger.LogInformation("Periodic report {ReportId} reviewed ({Decision}) by {UserId}",
++            report.Id, dto.IsApproved ? "accepted" : "refused", reviewerId);
+ 
+-        return (dtos, totalCount);
++        return (await GetByIdAsync(report.Id))!;
+     }
+ 
+-    public async Task<(IEnumerable<PeriodicOrphanReportListDto> Items, int TotalCount)> GetApprovedReportsAsync(PeriodicOrphanReportFilterDto filter)
++    #endregion
++
++    #region List and Filter Operations
++
++    /// <summary>List/filter periodic reports (UC-ORR-01, UC-ORR-09).</summary>
++    public async Task<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>> GetReportsAsync(
++        PeriodicOrphanReportFilterDto filter)
++    {
++        return await GetPagedAsync(filter);
++    }
++
++    /// <summary>List accepted reports (UC-ORR-12).</summary>
++    public async Task<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>> GetApprovedReportsAsync(
++        PeriodicOrphanReportFilterDto filter)
+     {
+         filter.Reviewed = true;
+         filter.IsAccepted = true;
+-        return await GetReportsAsync(filter);
++        filter.IsRefused = false;
++        return await GetPagedAsync(filter);
+     }
+ 
+-    public async Task<(IEnumerable<PeriodicOrphanReportListDto> Items, int TotalCount)> GetRejectedReportsAsync(PeriodicOrphanReportFilterDto filter)
++    /// <summary>List refused reports (UC-ORR-13).</summary>
++    public async Task<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>> GetRejectedReportsAsync(
++        PeriodicOrphanReportFilterDto filter)
+     {
+         filter.Reviewed = true;
++        filter.IsAccepted = false;
+         filter.IsRefused = true;
+-        return await GetReportsAsync(filter);
++        return await GetPagedAsync(filter);
+     }
+ 
+-    public async Task<(IEnumerable<PeriodicOrphanReportListDto> Items, int TotalCount)> GetReportsByOrphanAsync(Guid orphanId, int pageNumber = 1, int pageSize = 20)
++    /// <summary>
++    /// An orphan's complete periodic report history, newest first (UC-ORR-01). Review
++    /// 2026-08-24: the discriminator is pinned to Child — a guardian report rides the
++    /// carrier child's OrphanId and must not appear in the child's own history (6-6).
++    /// </summary>
++    public async Task<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>> GetReportsByOrphanAsync(
++        Guid orphanId, int pageNumber = 1, int pageSize = 20)
+     {
+-        var query = _reportRepository.GetQueryable()
+-            .Include(r => r.Orphan)
+-            .Include(r => r.Charity)
+-            .Where(r => !r.Deleted && r.Active && r.OrphanId == orphanId);
++        var orphan = await _orphanRepository.AsQueryable()
++            .FirstOrDefaultAsync(o => o.Id == orphanId && !o.IsDeleted)
++            ?? throw new NotFoundException(nameof(Orphan), orphanId);
++        if (!await IsOrphanInCallerScopeAsync(orphan))
++            throw new NotFoundException(nameof(Orphan), orphanId);
+ 
+-        var totalCount = await query.CountAsync();
++        var filter = new PeriodicOrphanReportFilterDto
++        {
++            OrphanId = orphanId,
++            ChildOrParent = Domain.Enums.ReportBeneficiaryType.Child,
++            PageNumber = pageNumber,
++            PageSize = pageSize,
++            SortBy = "CreatedOn",
++            SortDirection = "DESC"
++        };
++        return await GetPagedAsync(filter);
++    }
+ 
+-        // Order by CreatedOn DESC (newest first) - UC-6.16
+-        var items = await query
+-            .OrderByDescending(r => r.CreatedOn)
+-            .Skip((pageNumber - 1) * pageSize)
+-            .Take(pageSize)
+-            .ToListAsync();
++    /// <summary>
++    /// UC-HOU-06 (§11.S.3 التقارير الدورية للأسر الساكنة): one housing beneficiary's report
++    /// history, selected by the ChildOrParent discriminator. Child ⇒ <paramref name="beneficiaryId"/>
++    /// is an orphan id (legacy rows included — every pre-housing report is a child report by
++    /// definition); Parent ⇒ <paramref name="beneficiaryId"/> is the housing family's guardian
++    /// (Provider) id — resolved to the family, then read through FK_HousingFamilyId +
++    /// ChildOrParent == Parent. Unknown / non-housing / out-of-scope beneficiaries all answer
++    /// <see cref="NotFoundException"/> (404-not-leak — a foreign id must not prove existence);
++    /// the report query itself carries the caller-scope pin via <see cref="ApplyCallerScope"/>.
++    /// </summary>
++    public async Task<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>> GetHousingBeneficiaryReportsAsync(
++        Guid beneficiaryId, Domain.Enums.ReportBeneficiaryType beneficiaryType, int pageNumber = 1, int pageSize = 20)
++    {
++        var filter = new PeriodicOrphanReportFilterDto
++        {
++            ChildOrParent = beneficiaryType,
++            PageNumber = pageNumber,
++            PageSize = pageSize,
++            SortBy = "CreatedOn",
++            SortDirection = "DESC"
++        };
+ 
+-        var dtos = items.Select(MapToListDto).ToList();
++        if (beneficiaryType == Domain.Enums.ReportBeneficiaryType.Parent)
++        {
++            // Guardian branch: the beneficiary is the Provider of a HOUSING family — resolve,
++            // scope-gate, then list the family's Parent reports (linked by family, not orphan).
++            var provider = await _providerRepository.AsQueryable()
++                .FirstOrDefaultAsync(p => p.Id == beneficiaryId && !p.IsDeleted)
++                ?? throw new NotFoundException(nameof(Provider), beneficiaryId);
++
++            var family = provider.FamilyId.HasValue
++                ? await _familyRepository.GetByIdAsync(provider.FamilyId.Value)
++                : null;
++
++            if (family == null || family.IsDeleted
++                || family.FamilyType != Domain.Enums.FamilyType.Housing
++                || !await IsFamilyInCallerScopeAsync(family))
++            {
++                throw new NotFoundException(nameof(Provider), beneficiaryId);
++            }
++
++            filter.HousingFamilyId = family.Id;
++        }
++        else
++        {
++            // Child branch: the beneficiary is an orphan — identical gate to the epic-9 read.
++            var orphan = await _orphanRepository.AsQueryable()
++                .FirstOrDefaultAsync(o => o.Id == beneficiaryId && !o.IsDeleted)
++                ?? throw new NotFoundException(nameof(Orphan), beneficiaryId);
++            if (!await IsOrphanInCallerScopeAsync(orphan))
++                throw new NotFoundException(nameof(Orphan), beneficiaryId);
++
++            filter.OrphanId = beneficiaryId;
++        }
+ 
+-        return (dtos, totalCount);
++        return await GetPagedAsync(filter);
+     }
+ 
++    /// <summary>Report counters for one orphan (UC-ORR-01).</summary>
+     public async Task<PeriodicOrphanReportSummaryDto> GetOrphanReportSummaryAsync(Guid orphanId)
+     {
+-        var reports = await _reportRepository.GetQueryable()
+-            .Where(r => !r.Deleted && r.Active && r.OrphanId == orphanId)
+-            .ToListAsync();
++        var orphan = await _orphanRepository.AsQueryable()
++            .FirstOrDefaultAsync(o => o.Id == orphanId && !o.IsDeleted)
++            ?? throw new NotFoundException(nameof(Orphan), orphanId);
++        if (!await IsOrphanInCallerScopeAsync(orphan))
++            throw new NotFoundException(nameof(Orphan), orphanId);
++
++        var scoped = ApplyCallerScope(_reportRepository.AsQueryable())
++            .Where(r => r.OrphanId == orphanId);
+ 
+         return new PeriodicOrphanReportSummaryDto
+         {
+             OrphanId = orphanId,
+-            TotalReports = reports.Count,
+-            PendingReports = reports.Count(r => !r.Reviewed),
+-            ApprovedReports = reports.Count(r => r.IsAccepted),
+-            RejectedReports = reports.Count(r => r.IsRefused),
+-            LockedReports = reports.Count(r => r.Locked)
++            OrphanName = orphan.FullName,
++            TotalReports = await scoped.CountAsync(),
++            PendingReports = await scoped.CountAsync(r => !r.Reviewed),
++            ApprovedReports = await scoped.CountAsync(r => r.Reviewed && r.IsAccepted),
++            RejectedReports = await scoped.CountAsync(r => r.Reviewed && r.IsRefused),
++            LockedReports = await scoped.CountAsync(r => r.Locked)
+         };
+     }
+ 
+     #endregion
+ 
+-    #region Export Operations (UC-6.17)
++    #region Export Operations (UC-ORR-11, UC-ORR-12, UC-ORR-13 — delivered with their stories)
+ 
+-    public async Task<byte[]> ExportToExcelAsync(PeriodicOrphanReportFilterDto filter, bool includeAllFields = false)
++    /// <summary>Export periodic reports to Excel. Implemented with UC-ORR-11 (epic 9 story 9-11).</summary>
++    public Task<byte[]> ExportToExcelAsync(PeriodicOrphanReportFilterDto filter, bool includeAllFields = false)
+     {
+-        // TODO: Implement Excel export using ClosedXML or similar library
+-        // For now, return empty byte array
+-        await Task.CompletedTask;
+-        return Array.Empty<byte>();
++        // TODO (9-11): ExcelJS client-side export reads the paged API; server workbook on request.
++        return Task.FromResult(Array.Empty<byte>());
+     }
+ 
+-    public async Task<byte[]> ExportOrphanHistoryToExcelAsync(Guid orphanId)
++    /// <summary>Export an orphan's report history to Excel. Implemented with UC-ORR-11.</summary>
++    public Task<byte[]> ExportOrphanHistoryToExcelAsync(Guid orphanId)
+     {
+-        // TODO: Implement Excel export for orphan history
+-        await Task.CompletedTask;
+-        return Array.Empty<byte>();
++        // TODO (9-11): ExcelJS client-side export reads the by-orphan API.
++        return Task.FromResult(Array.Empty<byte>());
+     }
+ 
+     #endregion
+ 
+-    #region Status Management (UC-6.11)
++    #region Status Management
+ 
+     public async Task LockReportAsync(Guid id)
+     {
+-        var report = await _reportRepository.GetByIdAsync(id);
+-        if (report == null)
+-            throw new KeyNotFoundException($"Report with ID '{id}' not found.");
+-
++        var report = await GetScopedReportAsync(id);
+         report.Locked = true;
+         report.LockedDate = DateTime.UtcNow;
+-
+         await _reportRepository.UpdateAsync(report);
+         await _unitOfWork.SaveChangesAsync();
+-
+-        _logger.LogInformation("Locked Periodic Orphan Report {ReportId}", id);
++        _logger.LogInformation("Periodic report {ReportId} locked by {UserId}", report.Id, _currentUser.UserId);
+     }
+ 
+     public async Task UnlockReportAsync(Guid id)
+     {
+-        var report = await _reportRepository.GetByIdAsync(id);
+-        if (report == null)
+-            throw new KeyNotFoundException($"Report with ID '{id}' not found.");
+-
++        var report = await GetScopedReportAsync(id);
+         report.Locked = false;
+         report.LockedDate = null;
+-
+         await _reportRepository.UpdateAsync(report);
+         await _unitOfWork.SaveChangesAsync();
+-
+-        _logger.LogInformation("Unlocked Periodic Orphan Report {ReportId}", id);
++        _logger.LogInformation("Periodic report {ReportId} unlocked by {UserId}", report.Id, _currentUser.UserId);
+     }
+ 
+     public async Task ActivateReportAsync(Guid id)
+     {
+-        var report = await _reportRepository.GetByIdAsync(id);
+-        if (report == null)
+-            throw new KeyNotFoundException($"Report with ID '{id}' not found.");
+-
++        var report = await GetScopedReportAsync(id);
+         report.Active = true;
+         report.ActiveDate = DateTime.UtcNow;
+-
+         await _reportRepository.UpdateAsync(report);
+         await _unitOfWork.SaveChangesAsync();
+-
+-        _logger.LogInformation("Activated Periodic Orphan Report {ReportId}", id);
+     }
+ 
+     public async Task DeactivateReportAsync(Guid id)
+     {
+-        var report = await _reportRepository.GetByIdAsync(id);
+-        if (report == null)
+-            throw new KeyNotFoundException($"Report with ID '{id}' not found.");
+-
++        var report = await GetScopedReportAsync(id);
+         report.Active = false;
+-
+         await _reportRepository.UpdateAsync(report);
+         await _unitOfWork.SaveChangesAsync();
+-
+-        _logger.LogInformation("Deactivated Periodic Orphan Report {ReportId}", id);
+     }
+ 
+     #endregion
+ 
+     #region Helper Methods
+ 
++    /// <summary>A report is editable while it is neither locked nor accepted (refused reports resubmit).</summary>
+     public async Task<bool> CanEditReportAsync(Guid id)
+     {
+-        var report = await _reportRepository.GetByIdAsync(id);
+-        return report != null && !report.Locked && !report.Reviewed;
++        var report = await _reportRepository.AsQueryable()
++            .FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted);
++        if (report == null || !await IsWithinCallerScopeAsync(report))
++            return false;
++        return !report.Locked && !report.IsAccepted;
+     }
+ 
+-    public async Task<bool> CanUserReviewReportsAsync(Guid userId)
++    /// <summary>
++    /// True when the named user may review reports. Roles come from the caller's token —
++    /// this answers for the current user and denies everyone else by default.
++    /// </summary>
++    public Task<bool> CanUserReviewReportsAsync(Guid userId)
+     {
+-        // TODO: Implement role checking logic
+-        // Only Super Admin, Admin, Accountant, and Employee can review (UC-6.13)
+-        await Task.CompletedTask;
+-        return true;
++        if (_currentUser.UserId != userId)
++            return Task.FromResult(false);
++
++        var canReview = _currentUser.IsInRole("SuperAdmin")
++                     || _currentUser.IsInRole("Admin")
++                     || _currentUser.IsInRole("Accountant")
++                     || _currentUser.IsInRole("Employee");
++        return Task.FromResult(canReview);
+     }
+ 
+-    public async Task<bool> IsPeriodicReportsEnabledForCharityAsync(Guid charityId)
++    /// <summary>
++    /// Whether periodic reports are enabled for a charity (UC-6.12). Charity-level feature
++    /// flags arrive with epic 19 (system configuration); until then the feature is on.
++    /// </summary>
++    public Task<bool> IsPeriodicReportsEnabledForCharityAsync(Guid charityId)
+     {
+-        // UC-6.12: Check Settings table for "PeriodicReportsEnabled_CharityId_[CharityId]"
+-        // For now, return true (feature enabled by default)
+-        await Task.CompletedTask;
+-        return true;
++        // TODO (epic 19): read the charity's PeriodicReportsEnabled configuration flag.
++        return Task.FromResult(true);
+     }
+ 
+-    private async Task<string> GenerateReportNumberAsync()
++    #endregion
++
++    #region Private helpers
++
++    /// <summary>
++    /// Core paged read shared by every list operation. Applies caller scope first,
++    /// then request filters — so a charity pin can never be widened by request data.
++    /// </summary>
++    private async Task<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>> GetPagedAsync(
++        PeriodicOrphanReportFilterDto filter)
+     {
+-        // Generate report number like: POR-2026-0001
+-        var year = DateTime.UtcNow.Year;
+-        var count = await _reportRepository.GetQueryable()
+-            .Where(r => r.ReportNo != null && r.ReportNo.StartsWith($"POR-{year}"))
+-            .CountAsync() + 1;
+-        return $"POR-{year}-{count:D4}";
++        // §23.S.1 closed-vocabulary tokens (UC-RPT-02) — fail loudly, never silently match nothing
++        await _filterValidator.ValidateAndThrowAsync(filter);
++
++        var page = Math.Max(filter.PageNumber, 1);
++        var pageSize = filter.PageSize <= 0 ? 20 : Math.Min(filter.PageSize, 100);
++
++        var query = ApplyCallerScope(_reportRepository.AsQueryable());
++        query = ApplyFilters(query, filter);
++        query = ApplySorting(query, filter.SortBy, filter.SortDirection);
++
++        var totalCount = await query.CountAsync();
++
++        var rows = await query
++            .Skip((page - 1) * pageSize)
++            .Take(pageSize)
++            .Select(r => new PeriodicOrphanReportListDto
++            {
++                Id = r.Id,
++                // Review 2026-08-24 (6-6): expose the discriminator so the housing grid can
++                // tell a child report from the guardian report riding a carrier child.
++                ChildOrParent = r.ChildOrParent == Domain.Enums.ReportBeneficiaryType.Parent
++                    ? "Parent"
++                    : "Child",
++                ReportNo = r.ReportNo,
++                ReportDate = r.ReportDate,
++                ReportPeriodFrom = r.ReportPeriodFrom,
++                ReportPeriodTo = r.ReportPeriodTo,
++                OrphanId = r.OrphanId,
++                OrphanCode = r.Orphan.Code,
++                OrphanName = r.Orphan.FullName,
++                CharityId = r.CharityId,
++                CharityName = r.Charity != null ? r.Charity.Name : null,
++                PrayerStatus = r.PrayerStatus,
++                EducationalLevelId = r.EducationalLevelId,
++                MedicalStatus = r.MedicalStatus,
++                Reviewed = r.Reviewed,
++                IsAccepted = r.IsAccepted,
++                IsRefused = r.IsRefused,
++                ReviewerId = r.ReviewerId,
++                ReviewedDate = r.ReviewedDate,
++                RefuseReasonId = r.RefuseReasonId,
++                RefuseReason = r.RefuseReason,
++                ReviewComments = r.ReviewComments,
++                ReviewStatus = r.ReviewStatus ?? "Pending",
++                Married = r.Married,
++                Dead = r.Dead,
++
++                // §14.S.4 orphan-status wide grid (UC-ORR-09) — one query; the nav
++                // traversals translate to LEFT JOINs, no N+1
++                OrphanDateOfBirth = r.Orphan.DateOfBirth,
++                OrphanGender = r.Orphan.Gender,
++                OrphanNationalId = r.Orphan.NationalId,
++                OrphanPhone = r.Orphan.Phone,
++                FamilyCode = r.Orphan.Family != null ? r.Orphan.Family.Code : null,
++                GuardianName = r.Orphan.Family != null && r.Orphan.Family.Provider != null
++                    ? r.Orphan.Family.Provider.FullName : null,
++                GuardianRelation = r.Orphan.Family != null && r.Orphan.Family.Provider != null
++                    ? r.Orphan.Family.Provider.RelationshipToFamily : null,
++                GuardianNationalId = r.Orphan.Family != null && r.Orphan.Family.Provider != null
++                    ? r.Orphan.Family.Provider.NationalId : null,
++                GuardianJob = r.Orphan.Family != null && r.Orphan.Family.Provider != null
++                    ? r.Orphan.Family.Provider.Job : null,
++                GuardianEducationLevelName = r.Orphan.Family != null
++                    && r.Orphan.Family.Provider != null
++                    && r.Orphan.Family.Provider.EducationLevel != null
++                        ? r.Orphan.Family.Provider.EducationLevel.NameAr : null,
++                RegionName = r.Orphan.Family != null && r.Orphan.Family.Region != null
++                    ? r.Orphan.Family.Region.NameAr : null,
++                CenterName = r.Orphan.Family != null && r.Orphan.Family.Center != null
++                    ? r.Orphan.Family.Center.NameAr : null,
++                CityVillage = r.Orphan.Family != null ? r.Orphan.Family.CityVillage : null,
++                Address = r.Orphan.Family != null ? r.Orphan.Family.Address : null,
++                HomePhone = r.Orphan.Family != null ? r.Orphan.Family.PhoneNumber : null,
++                SchoolType = r.SchoolType,
++                Faculty = r.Faculty,
++                School = r.School,
++                MarriageDate = r.MarriageDate,
++                DeathDate = r.DeathDate,
++                Disease = r.Disease,
++                Disability = r.Disability,
++                Grade = r.Grade,
++                Specialization = r.Specialization,
++                EducationDegree = r.EducationDegree,
++                UpdatedOn = r.UpdatedOn,
++                CreatedOn = r.CreatedOn
++            })
++            .ToListAsync();
++
++        await EnrichListAsync(rows);
++
++        return new PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>
++        {
++            Items = rows,
++            TotalCount = totalCount,
++            Page = page,
++            PageSize = pageSize
++        };
++    }
++
++    /// <summary>Charity claim pins to that charity; country claim pins through the charity; head office is unscoped.</summary>
++    private IQueryable<PeriodicOrphanReport> ApplyCallerScope(IQueryable<PeriodicOrphanReport> query)
++    {
++        // Review 2026-08-24: no global soft-delete filter exists on this platform — every
++        // scoped read drops soft-deleted rows here. Duplicate-slot checks and the report-
++        // number sequence bypass this helper deliberately (they must see deleted rows).
++        query = query.Where(r => !r.IsDeleted);
++
++        if (_currentUser.CharityId.HasValue)
++            return query.Where(r => r.CharityId == _currentUser.CharityId.Value);
++
++        if (_currentUser.CountryId.HasValue)
++            return query.Where(r => r.Charity != null && r.Charity.CountryId == _currentUser.CountryId.Value);
++
++        return query;
+     }
+ 
+-    private IQueryable<PeriodicOrphanReport> ApplyFilters(IQueryable<PeriodicOrphanReport> query, PeriodicOrphanReportFilterDto filter)
++    private static IQueryable<PeriodicOrphanReport> ApplyFilters(
++        IQueryable<PeriodicOrphanReport> query, PeriodicOrphanReportFilterDto filter)
+     {
+-        // Search term (orphan name or report number) - UC-6.14, UC-6.15, UC-6.16
+         if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+         {
++            var term = filter.SearchTerm.Trim();
+             query = query.Where(r =>
+-                (r.Orphan != null && r.Orphan.FullName.Contains(filter.SearchTerm)) ||
+-                (r.ReportNo != null && r.ReportNo.Contains(filter.SearchTerm)));
++                r.Orphan.Code.Contains(term) ||
++                r.Orphan.FullName.Contains(term) ||
++                (r.ReportNo != null && r.ReportNo.Contains(term)));
+         }
+ 
+-        // Orphan filter - UC-6.16
++        // §14.S.1 dedicated orphan filters (كود اليتيم / اسم اليتيم)
++        if (!string.IsNullOrWhiteSpace(filter.OrphanCode))
++            query = query.Where(r => r.Orphan.Code.Contains(filter.OrphanCode.Trim()));
++
++        if (!string.IsNullOrWhiteSpace(filter.OrphanName))
++            query = query.Where(r => r.Orphan.FullName.Contains(filter.OrphanName.Trim()));
++
+         if (filter.OrphanId.HasValue)
+-        {
+             query = query.Where(r => r.OrphanId == filter.OrphanId.Value);
+-        }
+ 
+-        // Charity filter - UC-6.14, UC-6.15
++        // §11.S.3 housing-beneficiary filters (6-6): discriminator + family link
++        if (filter.ChildOrParent.HasValue)
++            query = query.Where(r => r.ChildOrParent == filter.ChildOrParent.Value);
++        if (filter.HousingFamilyId.HasValue)
++            query = query.Where(r => r.FK_HousingFamilyId == filter.HousingFamilyId.Value);
++
++        // A charity-scoped caller is already pinned by ApplyCallerScope; for head office
++        // this is a plain filter over every charity.
+         if (filter.CharityId.HasValue)
+-        {
+             query = query.Where(r => r.CharityId == filter.CharityId.Value);
++
++        // رقم التقرير — dedicated partial match (UC-ORR-12/13 extract criterion)
++        if (!string.IsNullOrWhiteSpace(filter.ReportNo))
++        {
++            var reportNo = filter.ReportNo.Trim();
++            query = query.Where(r => r.ReportNo != null && r.ReportNo.Contains(reportNo));
+         }
+ 
+-        // Review status filter
+-        if (!string.IsNullOrWhiteSpace(filter.ReviewStatus))
++        switch (filter.ReviewStatus?.Trim().ToLowerInvariant())
+         {
+-            switch (filter.ReviewStatus.ToLower())
+-            {
+-                case "pending":
+-                    query = query.Where(r => !r.Reviewed);
+-                    break;
+-                case "approved":
+-                    query = query.Where(r => r.IsAccepted);
+-                    break;
+-                case "rejected":
+-                    query = query.Where(r => r.IsRefused);
+-                    break;
+-            }
++            case "pending":
++                query = query.Where(r => !r.Reviewed);
++                break;
++            case "approved":
++                query = query.Where(r => r.Reviewed && r.IsAccepted);
++                break;
++            case "rejected":
++            case "refused":
++                query = query.Where(r => r.Reviewed && r.IsRefused);
++                break;
+         }
+ 
+-        // Reviewed filter
+         if (filter.Reviewed.HasValue)
+-        {
+             query = query.Where(r => r.Reviewed == filter.Reviewed.Value);
++        if (filter.IsAccepted.HasValue)
++            query = query.Where(r => r.Reviewed && r.IsAccepted == filter.IsAccepted.Value);
++        if (filter.IsRefused.HasValue)
++            query = query.Where(r => r.Reviewed && r.IsRefused == filter.IsRefused.Value);
++
++        if (filter.ReviewerId.HasValue)
++            query = query.Where(r => r.ReviewerId == filter.ReviewerId.Value);
++
++        if (filter.ReportDateFrom.HasValue)
++            query = query.Where(r => r.ReportDate >= filter.ReportDateFrom.Value.Date);
++        if (filter.ReportDateTo.HasValue)
++            // Inclusive end date: the whole of "to", not midnight sharp.
++            query = query.Where(r => r.ReportDate < filter.ReportDateTo.Value.Date.AddDays(1));
++
++        // §14.S.4 orphan-status family (UC-ORR-09) — every status predicate is
++        // collected and then combined with && or || per AndOr (default and).
++        // Combine, never replace: the accumulated scope/date/orphan predicates above
++        // are untouched (the 15-1 defect-4 class).
++        var statusPredicates = new List<Expression<Func<PeriodicOrphanReport, bool>>>();
++
++        if (filter.EducationalStageId.HasValue)
++            statusPredicates.Add(r => r.EducationalStageId == filter.EducationalStageId.Value);
++        if (filter.EducationalLevelId.HasValue)
++            statusPredicates.Add(r => r.EducationalLevelId == filter.EducationalLevelId.Value);
++
++        if (!string.IsNullOrWhiteSpace(filter.MedicalStatus))
++        {
++            var medical = filter.MedicalStatus.Trim();
++            statusPredicates.Add(r => r.MedicalStatus != null && r.MedicalStatus.Contains(medical));
+         }
+ 
+-        // Accepted filter - UC-6.14
+-        if (filter.IsAccepted.HasValue)
++        if (!string.IsNullOrWhiteSpace(filter.SchoolType))
+         {
+-            query = query.Where(r => r.IsAccepted == filter.IsAccepted.Value);
++            var schoolType = filter.SchoolType.Trim();
++            statusPredicates.Add(r => r.SchoolType != null && r.SchoolType.Contains(schoolType));
+         }
+ 
+-        // Refused filter - UC-6.15
+-        if (filter.IsRefused.HasValue)
++        if (!string.IsNullOrWhiteSpace(filter.EducationDegree))
+         {
+-            query = query.Where(r => r.IsRefused == filter.IsRefused.Value);
++            var degree = filter.EducationDegree.Trim();
++            statusPredicates.Add(r => r.EducationDegree != null && r.EducationDegree.Contains(degree));
+         }
+ 
+-        // Reviewer filter - UC-6.14, UC-6.15
+-        if (filter.ReviewerId.HasValue)
++        switch (filter.MaritalStatus?.Trim().ToLowerInvariant())
+         {
+-            query = query.Where(r => r.ReviewerId == filter.ReviewerId.Value);
++            case "married":
++                statusPredicates.Add(r => r.Married == true);
++                break;
++            case "single":
++                statusPredicates.Add(r => r.Married != true && r.Dead != true);
++                break;
++            case "deceased":
++                statusPredicates.Add(r => r.Dead == true);
++                break;
+         }
+ 
+-        // Report date range filter - UC-6.14, UC-6.15
+-        if (filter.ReportDateFrom.HasValue)
++        switch (filter.EducationalStatus?.Trim().ToLowerInvariant())
+         {
+-            query = query.Where(r => r.ReportDate >= filter.ReportDateFrom.Value);
++            case "studying":
++                statusPredicates.Add(r => r.IsOrphanStudent == true);
++                break;
++            case "graduated":
++                statusPredicates.Add(r => !string.IsNullOrEmpty(r.HighestEducationalLevel));
++                break;
++            case "dropout":
++                statusPredicates.Add(r => r.DropOut == true);
++                break;
+         }
+-        if (filter.ReportDateTo.HasValue)
++
++        if (statusPredicates.Count > 0)
+         {
+-            query = query.Where(r => r.ReportDate <= filter.ReportDateTo.Value);
++            var useOr = string.Equals(filter.AndOr?.Trim(), "or", StringComparison.OrdinalIgnoreCase);
++            query = query.Where(CombinePredicates(statusPredicates, useOr));
+         }
+ 
+-        // Educational stage filter
+-        if (filter.EducationalStageId.HasValue)
++        if (filter.Active.HasValue)
++            query = query.Where(r => r.Active == filter.Active.Value);
++        if (filter.Locked.HasValue)
++            query = query.Where(r => r.Locked == filter.Locked.Value);
++
++        return query;
++    }
++
++    /// <summary>
++    /// Combines the §14.S.4 status predicates into one expression — AndAlso or
++    /// OrElse per the And/Or radio. Each body is parameter-rebound to the first
++    /// predicate's parameter so EF translates the result as a single WHERE.
++    /// </summary>
++    private static Expression<Func<T, bool>> CombinePredicates<T>(
++        IReadOnlyList<Expression<Func<T, bool>>> predicates, bool useOr)
++    {
++        var combined = predicates[0].Body;
++        var parameter = predicates[0].Parameters[0];
++
++        for (var i = 1; i < predicates.Count; i++)
+         {
+-            query = query.Where(r => r.EducationalStageId == filter.EducationalStageId.Value);
++            var rebound = new ParameterRebinder(predicates[i].Parameters[0], parameter)
++                .Visit(predicates[i].Body);
++            combined = useOr
++                ? Expression.OrElse(combined, rebound)
++                : Expression.AndAlso(combined, rebound);
+         }
+ 
+-        // Educational level filter
+-        if (filter.EducationalLevelId.HasValue)
++        return Expression.Lambda<Func<T, bool>>(combined, parameter);
++    }
++
++    /// <summary>Rebinds a lambda body's parameter onto another lambda's parameter.</summary>
++    private sealed class ParameterRebinder(ParameterExpression source, ParameterExpression target)
++        : ExpressionVisitor
++    {
++        protected override Expression VisitParameter(ParameterExpression node)
++            => node == source ? target : node;
++    }
++
++    /// <summary>Whitelisted sort keys only — keeps the EF translation a plain ORDER BY.</summary>
++    private static IQueryable<PeriodicOrphanReport> ApplySorting(
++        IQueryable<PeriodicOrphanReport> query, string? sortBy, string? sortDirection)
++    {
++        var descending = !string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase);
++
++        return (sortBy?.Trim().ToLowerInvariant()) switch
++        {
++            "reportno" => descending ? query.OrderByDescending(r => r.ReportNo) : query.OrderBy(r => r.ReportNo),
++            "reportdate" => descending ? query.OrderByDescending(r => r.ReportDate) : query.OrderBy(r => r.ReportDate),
++            "orphanname" => descending ? query.OrderByDescending(r => r.Orphan.FullName) : query.OrderBy(r => r.Orphan.FullName),
++            "revieweddate" => descending ? query.OrderByDescending(r => r.ReviewedDate) : query.OrderBy(r => r.ReviewedDate),
++            _ => descending ? query.OrderByDescending(r => r.CreatedOn) : query.OrderBy(r => r.CreatedOn)
++        };
++    }
++
++    /// <summary>
++    /// Resolve the names a projection cannot join inline: reviewer full names (identity table)
++    /// and education level names (lookup table reached only by id).
++    /// </summary>
++    private async Task EnrichListAsync(List<PeriodicOrphanReportListDto> rows)
++    {
++        if (rows.Count == 0)
++            return;
++
++        var reviewerIds = rows.Where(r => r.ReviewerId.HasValue)
++            .Select(r => r.ReviewerId!.Value)
++            .Distinct()
++            .ToList();
++        if (reviewerIds.Count > 0)
+         {
+-            query = query.Where(r => r.EducationalLevelId == filter.EducationalLevelId.Value);
++            var names = await _userRepository.AsQueryable()
++                .Where(u => reviewerIds.Contains(u.Id))
++                .ToDictionaryAsync(u => u.Id, u => u.FullName);
++            foreach (var row in rows.Where(r => r.ReviewerId.HasValue))
++                if (names.TryGetValue(row.ReviewerId!.Value, out var fullName))
++                    row.ReviewerName = fullName;
+         }
+ 
+-        // Medical status filter - UC-6.14, UC-6.15
+-        if (!string.IsNullOrWhiteSpace(filter.MedicalStatus))
++        var levelIds = rows.Where(r => r.EducationalLevelId.HasValue)
++            .Select(r => r.EducationalLevelId!.Value)
++            .Distinct()
++            .ToList();
++        if (levelIds.Count > 0)
+         {
+-            query = query.Where(r => r.MedicalStatus == filter.MedicalStatus);
++            var levels = await _educationLevelRepository.AsQueryable()
++                .Where(l => levelIds.Contains(l.Id))
++                .ToDictionaryAsync(l => l.Id, l => l.NameAr ?? l.NameEn ?? l.Name);
++            foreach (var row in rows.Where(r => r.EducationalLevelId.HasValue))
++                if (levels.TryGetValue(row.EducationalLevelId!.Value, out var levelName))
++                    row.EducationalLevelName = levelName;
+         }
++    }
+ 
+-        // Active filter
+-        if (filter.Active.HasValue)
++    /// <summary>Fetch a report for a write path, enforcing scope (out-of-scope reads as
++    /// NotFound). Review 2026-08-24: soft-deleted rows answer NotFound too — update,
++    /// review and delete must never operate on a deleted report.</summary>
++    private async Task<PeriodicOrphanReport> GetScopedReportAsync(Guid id)
++    {
++        var report = await _reportRepository.AsQueryable()
++            .FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted)
++            ?? throw new NotFoundException(nameof(PeriodicOrphanReport), id);
++
++        if (!await IsWithinCallerScopeAsync(report))
++            throw new NotFoundException(nameof(PeriodicOrphanReport), id);
++
++        return report;
++    }
++
++    /// <summary>Scope check for a single report, loading the charity lazily when needed.</summary>
++    private async Task<bool> IsWithinCallerScopeAsync(PeriodicOrphanReport report)
++    {
++        if (_currentUser.CharityId.HasValue)
++            return report.CharityId == _currentUser.CharityId.Value;
++
++        if (_currentUser.CountryId.HasValue)
+         {
+-            query = query.Where(r => r.Active == filter.Active.Value);
++            if (report.Charity == null && report.CharityId.HasValue)
++                report.Charity = await _charityRepository.GetByIdAsync(report.CharityId.Value);
++            return report.Charity?.CountryId == _currentUser.CountryId.Value;
+         }
+ 
+-        // Locked filter
+-        if (filter.Locked.HasValue)
++        return true;
++    }
++
++    /// <summary>
++    /// UC-HOU-06: scope check for a family — same pins as <see cref="IsOrphanInCallerScopeAsync"/>
++    /// (charity claim compares FK_CharityId; country claim resolves the charity; HQ unscoped).
++    /// </summary>
++    private async Task<bool> IsFamilyInCallerScopeAsync(Family family)
++    {
++        if (_currentUser.CharityId.HasValue)
++            return family.FK_CharityId == _currentUser.CharityId.Value;
++
++        if (_currentUser.CountryId.HasValue)
+         {
+-            query = query.Where(r => r.Locked == filter.Locked.Value);
++            if (family.FK_CharityId is null)
++                return false;
++            var charity = await _charityRepository.GetByIdAsync(family.FK_CharityId.Value);
++            return charity?.CountryId == _currentUser.CountryId.Value;
+         }
+ 
+-        return query;
++        return true;
+     }
+ 
+-    private IQueryable<PeriodicOrphanReport> ApplySorting(IQueryable<PeriodicOrphanReport> query, PeriodicOrphanReportFilterDto filter)
+-    {
+-        var sortBy = filter.SortBy ?? "CreatedOn";
+-        var sortDirection = filter.SortDirection ?? "DESC";
+-
+-        query = sortBy.ToLower() switch
+-        {
+-            "reportdate" => sortDirection == "ASC"
+-                ? query.OrderBy(r => r.ReportDate)
+-                : query.OrderByDescending(r => r.ReportDate),
+-            "reportno" => sortDirection == "ASC"
+-                ? query.OrderBy(r => r.ReportNo ?? "")
+-                : query.OrderByDescending(r => r.ReportNo ?? ""),
+-            "orphanname" => sortDirection == "ASC"
+-                ? query.OrderBy(r => r.Orphan != null ? r.Orphan.FullName : "")
+-                : query.OrderByDescending(r => r.Orphan != null ? r.Orphan.FullName : ""),
+-            "reviewstatus" => sortDirection == "ASC"
+-                ? query.OrderBy(r => r.Reviewed).ThenBy(r => r.IsAccepted)
+-                : query.OrderByDescending(r => r.Reviewed).ThenByDescending(r => r.IsAccepted),
+-            _ => sortDirection == "ASC"
+-                ? query.OrderBy(r => r.CreatedOn)
+-                : query.OrderByDescending(r => r.CreatedOn)
+-        };
++    /// <summary>Scope check for an orphan: charity pin compares FK_CharityId directly; country pin resolves the charity.
++    /// Review 2026-08-24: a child with no FK_CharityId of its own falls back to its family's
++    /// charity (the guardian path always scopes through the family) — without the fallback
++    /// such a child is invisible to its own charity.</summary>
++    private async Task<bool> IsOrphanInCallerScopeAsync(Orphan orphan)
++    {
++        var charityId = orphan.FK_CharityId;
++        if (charityId is null && orphan.FamilyId.HasValue)
++        {
++            var family = await _familyRepository.GetByIdAsync(orphan.FamilyId.Value);
++            charityId = family?.FK_CharityId;
++        }
+ 
+-        return query;
++        if (_currentUser.CharityId.HasValue)
++            return charityId == _currentUser.CharityId.Value;
++
++        if (_currentUser.CountryId.HasValue)
++        {
++            if (charityId is null)
++                return false;
++            var charity = await _charityRepository.GetByIdAsync(charityId.Value);
++            return charity?.CountryId == _currentUser.CountryId.Value;
++        }
++
++        return true;
+     }
+ 
+-    private async Task<PeriodicOrphanReportDto> MapToDtoAsync(PeriodicOrphanReport report)
++    /// <summary>Parse the §11.U.6 discriminator (blank or Child ⇒ Child). The validator gates the value.</summary>
++    private static Domain.Enums.ReportBeneficiaryType ParseBeneficiaryType(string? childOrParent)
+     {
+-        // Load related entities if not already loaded
+-        if (report.Orphan == null)
++        return string.Equals(childOrParent?.Trim(), "Parent", StringComparison.OrdinalIgnoreCase)
++            ? Domain.Enums.ReportBeneficiaryType.Parent
++            : Domain.Enums.ReportBeneficiaryType.Child;
++    }
++
++    /// <summary>
++    /// A housing family read for a write path: must exist, be live, be FamilyType.Housing and
++    /// sit inside the caller's scope — anything else reads as NotFound (404-not-leak).
++    /// </summary>
++    private async Task<Family> GetScopedHousingFamilyAsync(Guid familyId)
++    {
++        var family = await _familyRepository.GetByIdAsync(familyId);
++        if (family == null || family.IsDeleted
++            || family.FamilyType != Domain.Enums.FamilyType.Housing
++            || !await IsFamilyInCallerScopeAsync(family))
+         {
+-            await _reportRepository.GetEntry(report).Reference(r => r.Orphan).LoadAsync();
++            throw new NotFoundException(nameof(Family), familyId);
+         }
+-        if (report.Charity == null && report.CharityId.HasValue)
++        return family;
++    }
++
++    /// <summary>
++    /// UC-HOU-08 guardian branch: resolve the 6-7 picker's guardian (Provider) to the housing
++    /// family, guard the family-level one-guardian-report-per-month rule, then pick the carrier
++    /// child. Returns (carrierOrphanId, charityId, familyId) — OrphanId is NOT NULL on the
++    /// report, so a guardian report rides a family child with no report that month; the choice
++    /// respects the (OrphanId, ReportMonth, ReportYear) unique index, which spans soft-deleted
++    /// rows and is therefore checked with IgnoreQueryFilters.
++    /// </summary>
++    private async Task<(Guid OrphanId, Guid? CharityId, Guid FamilyId)> ResolveGuardianReportTargetAsync(
++        CreatePeriodicOrphanReportDto dto, int reportYear, int reportMonth)
++    {
++        var provider = await _providerRepository.AsQueryable()
++            .FirstOrDefaultAsync(p => p.Id == dto.HousingBeneficiaryId!.Value && !p.IsDeleted)
++            ?? throw new NotFoundException(nameof(Provider), dto.HousingBeneficiaryId.Value);
++
++        var family = provider.FamilyId.HasValue
++            ? await _familyRepository.GetByIdAsync(provider.FamilyId.Value)
++            : null;
++
++        // Unknown / non-housing / out-of-scope guardians all read as NotFound — and a route
++        // family id that disagrees with the guardian's actual family likewise proves nothing.
++        if (family == null || family.IsDeleted
++            || family.FamilyType != Domain.Enums.FamilyType.Housing
++            || !await IsFamilyInCallerScopeAsync(family)
++            || (dto.HousingFamilyId.HasValue && dto.HousingFamilyId.Value != family.Id))
+         {
+-            await _reportRepository.GetEntry(report).Reference(r => r.Charity).LoadAsync();
++            throw new NotFoundException(nameof(Provider), dto.HousingBeneficiaryId.Value);
+         }
+-        if (report.ReviewerId.HasValue)
++
++        // One guardian report per family per month (live rows — a deleted one may be re-entered;
++        // matches the filtered unique index backing this rule).
++        var guardianDuplicate = await _reportRepository.AsQueryable()
++            .AnyAsync(r => r.FK_HousingFamilyId == family.Id
++                        && !r.IsDeleted
++                        && r.ChildOrParent == Domain.Enums.ReportBeneficiaryType.Parent
++                        && r.ReportYear == reportYear
++                        && r.ReportMonth == reportMonth);
++        if (guardianDuplicate)
++            throw new BusinessException(
++                $"A periodic report already exists for this family's guardian in {reportYear}/{reportMonth:D2}.");
++
++        // Carrier child, ordered by name for a deterministic pick; the occupied check matches
++        // the unique index discipline (a soft-deleted row still holds the (OrphanId, month) slot).
++        var familyChildIds = await _orphanRepository.AsQueryable()
++            .Where(o => o.FamilyId == family.Id && !o.IsDeleted)
++            .OrderBy(o => o.FullName)
++            .Select(o => o.Id)
++            .ToListAsync();
++
++        // Review 2026-08-24: distinct refusal — a family with no children at all cannot
++        // carry a guardian report (OrphanId is NOT NULL); "every child has a report"
++        // would be false and confusing.
++        if (familyChildIds.Count == 0)
++            throw new BusinessException(
++                $"This housing family has no children on record, so the guardian report for {reportYear}/{reportMonth:D2} cannot be carried.");
++
++        var occupiedOrphanIds = await _reportRepository.AsQueryable()
++            .IgnoreQueryFilters()
++            .Where(r => r.ReportYear == reportYear
++                     && r.ReportMonth == reportMonth
++                     && familyChildIds.Contains(r.OrphanId))
++            .Select(r => r.OrphanId)
++            .ToListAsync();
++
++        var carrierId = familyChildIds.FirstOrDefault(id => !occupiedOrphanIds.Contains(id));
++        if (carrierId == Guid.Empty)
++            throw new BusinessException(
++                $"Every child of this housing family already has a report in {reportYear}/{reportMonth:D2}; " +
++                "the guardian report cannot be recorded for that month.");
++
++        return (carrierId, family.FK_CharityId, family.Id);
++    }
++
++    /// <summary>
++    /// §11.S.4 create-time review flags: only when the form ticked a decision. Mirrors
++    /// ReviewReportAsync so the 6-6 grid columns (تم الاعتماد / تاريخ الاعتماد) read true.
++    /// </summary>
++    private async Task ApplyCreateReviewFlagsAsync(PeriodicOrphanReport report, CreatePeriodicOrphanReportDto dto)
++    {
++        // Review 2026-08-24 (decision D1): a Charity-role caller cannot self-approve —
++        // the review workflow is HQ-only (9-7/9-8). isAccepted on a Charity token is
++        // ignored (the report stays Pending); HQ-role flags are honored as bound.
++        var accepts = dto.IsAccepted == true && !_currentUser.IsInRole("Charity");
++
++        if (!accepts && dto.IsRefused != true)
++            return; // plain create — the Pending defaults set by the initializer stand
++
++        report.Reviewed = true;
++        report.ReviewedDate = DateTime.UtcNow;
++        report.ReviewerId = _currentUser.UserId;
++
++        if (accepts)
++        {
++            report.IsAccepted = true;
++            report.IsRefused = false;
++            report.ReviewStatus = "Approved";
++            return;
++        }
++
++        report.IsAccepted = false;
++        report.IsRefused = true;
++        report.ReviewStatus = "Rejected";
++        report.RefuseReasonId = dto.RefuseReasonId;
++        if (dto.RefuseReasonId.HasValue)
+         {
+-            // Load reviewer navigation if needed
++            var lookupReason = await _refuseReasonRepository.GetByIdAsync(dto.RefuseReasonId.Value)
++                ?? throw new BusinessException("The selected refuse reason does not exist.");
++            if (!lookupReason.IsActive)
++                throw new BusinessException("The selected refuse reason is not active.");
++            report.RefuseReason = lookupReason.NameAr ?? lookupReason.NameEn ?? lookupReason.Name;
+         }
++    }
++
++    /// <summary>
++    /// Guard the (OrphanId, ReportMonth, ReportYear) unique index. The index spans
++    /// soft-deleted rows too, so the pre-check ignores the query filter to match it —
++    /// a duplicate must surface as a friendly 400, never a raw 500 from the index.
++    /// </summary>
++    private async Task EnsureNoDuplicateAsync(Guid orphanId, int reportYear, int reportMonth, Guid? excludeReportId)
++    {
++        var duplicate = await _reportRepository.AsQueryable()
++            .IgnoreQueryFilters()
++            .AnyAsync(r => r.OrphanId == orphanId
++                        && r.ReportYear == reportYear
++                        && r.ReportMonth == reportMonth
++                        && (excludeReportId == null || r.Id != excludeReportId.Value));
++
++        if (duplicate)
++            throw new BusinessException(
++                $"A periodic report already exists for this orphan in {reportYear}/{reportMonth:D2}.");
++    }
+ 
+-        return new PeriodicOrphanReportDto
++    /// <summary>POR-&lt;year&gt;-&lt;sequence&gt; report numbers, e.g. POR-2026-0007.</summary>
++    private async Task<string> GenerateReportNumberAsync(int reportYear)
++    {
++        var sameYearCount = await _reportRepository.AsQueryable()
++            .IgnoreQueryFilters()
++            .CountAsync(r => r.ReportYear == reportYear && r.ReportNo != null && r.ReportNo.StartsWith($"POR-{reportYear}-"));
++        return $"POR-{reportYear}-{sameYearCount + 1:D4}";
++    }
++
++    private static int? CalculateAge(DateTime? dateOfBirth)
++    {
++        if (!dateOfBirth.HasValue)
++            return null;
++
++        var today = DateTime.UtcNow.Date;
++        var born = dateOfBirth.Value.Date;
++        var age = today.Year - born.Year;
++        if (born > today.AddYears(-age))
++            age--;
++        return age < 0 ? null : age;
++    }
++
++    /// <summary>Map an entity (with Orphan/Charity loaded) onto the detail DTO, resolving display names.</summary>
++    private async Task<PeriodicOrphanReportDto> MapToDetailDtoAsync(PeriodicOrphanReport report)
++    {
++        var dto = new PeriodicOrphanReportDto
+         {
+             Id = report.Id,
+             OrphanId = report.OrphanId,
+@@ -657,6 +1394,8 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
+             ReportNo = report.ReportNo,
+             CharityId = report.CharityId,
+             CharityName = report.Charity?.Name,
++            ChildOrParent = report.ChildOrParent.ToString(),
++            HousingFamilyId = report.FK_HousingFamilyId,
+             PrayerStatus = report.PrayerStatus,
+             MannersStatus = report.MannersStatus,
+             HadeethStatus = report.HadeethStatus,
+@@ -679,6 +1418,7 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
+             WishArr = report.WishArr,
+             OrphanMessage = report.OrphanMessage,
+             EducationalStageId = report.EducationalStageId,
++            EducationalStageName = report.EducationStage,
+             EducationalLevelId = report.EducationalLevelId,
+             Grade = report.Grade,
+             School = report.School,
+@@ -722,40 +1462,53 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
+             RefuseReason = report.RefuseReason,
+             RefuseReasonId = report.RefuseReasonId,
+             MessageId = report.MessageId,
++            ReviewComments = report.ReviewComments,
+             CreatedOn = report.CreatedOn,
+             CreatedBy = report.CreatedBy,
+-            UpdatedOn = report.UpdatedOn,
++            UpdatedOn = report.UpdatedOn ?? report.CreatedOn,
+             UpdatedBy = report.UpdatedBy
+         };
+-    }
+ 
+-    private PeriodicOrphanReportListDto MapToListDto(PeriodicOrphanReport report)
+-    {
+-        return new PeriodicOrphanReportListDto
++        // EducationalLevelName: prefer the lookup, fall back to the legacy free-text column.
++        if (report.EducationalLevelId.HasValue)
+         {
+-            Id = report.Id,
+-            ReportNo = report.ReportNo,
+-            ReportDate = report.ReportDate,
+-            ReportPeriodFrom = report.ReportPeriodFrom,
+-            ReportPeriodTo = report.ReportPeriodTo,
+-            OrphanId = report.OrphanId,
+-            OrphanCode = report.Orphan?.Code,
+-            OrphanName = report.Orphan?.FullName,
+-            CharityId = report.CharityId,
+-            CharityName = report.Charity?.Name,
+-            PrayerStatus = report.PrayerStatus,
+-            EducationalLevelName = null, // Will be loaded via lookup if needed
+-            MedicalStatus = report.MedicalStatus,
+-            Reviewed = report.Reviewed,
+-            IsAccepted = report.IsAccepted,
+-            IsRefused = report.IsRefused,
+-            ReviewerName = report.ReviewerId.ToString(), // Will be loaded from user table
+-            ReviewedDate = report.ReviewedDate,
+-            ReviewStatus = !report.Reviewed ? "Pending" : report.IsAccepted ? "Approved" : "Rejected",
+-            Married = report.Married,
+-            Dead = report.Dead,
+-            CreatedOn = report.CreatedOn
+-        };
++            var level = await _educationLevelRepository.GetByIdAsync(report.EducationalLevelId.Value);
++            dto.EducationalLevelName = level?.NameAr ?? level?.NameEn ?? level?.Name ?? report.EducationLevel;
++        }
++        else
++        {
++            dto.EducationalLevelName = report.EducationLevel;
++        }
++
++        // RefuseReasonName: the canonical lookup label behind the stored reason.
++        if (report.RefuseReasonId.HasValue)
++        {
++            var reason = await _refuseReasonRepository.GetByIdAsync(report.RefuseReasonId.Value);
++            dto.RefuseReasonName = reason?.NameAr ?? reason?.NameEn ?? reason?.Name;
++        }
++
++        // ReviewerName: identity table, resolved by id.
++        if (report.ReviewerId.HasValue)
++        {
++            var reviewer = await _userRepository.GetByIdAsync(report.ReviewerId.Value);
++            dto.ReviewerName = reviewer?.FullName;
++        }
++
++        // UC-ORR-16: the ids are the single truth; the URL fields carry the relative
++        // attachment route for API consumers (the SPA still fetches by id as a blob —
++        // an <img> src cannot carry the Bearer header; see the 9-16 record).
++        dto.MedicalReportImageUrl = report.MedicalReportImageId.HasValue
++            ? $"/api/Attachments/{report.MedicalReportImageId.Value}/image" : null;
++        dto.OrphanMarriageImageUrl = report.OrphanMarriageImageId.HasValue
++            ? $"/api/Attachments/{report.OrphanMarriageImageId.Value}/image" : null;
++        dto.OrphanDeadImageUrl = report.OrphanDeadImageId.HasValue
++            ? $"/api/Attachments/{report.OrphanDeadImageId.Value}/image" : null;
++        dto.OrphanCertificateImageUrl = report.OrphanCertificateImageId.HasValue
++            ? $"/api/Attachments/{report.OrphanCertificateImageId.Value}/image" : null;
++        dto.OrphanImageUrl = report.OrphanImageId.HasValue
++            ? $"/api/Attachments/{report.OrphanImageId.Value}/image" : null;
++
++        return dto;
+     }
+ 
+     #endregion
+diff --git a/Backend/src/IIROSA.Infrastructure/Extensions/ServiceCollectionExtensions.cs b/Backend/src/IIROSA.Infrastructure/Extensions/ServiceCollectionExtensions.cs
+index dc95c03..7a81319 100644
+--- a/Backend/src/IIROSA.Infrastructure/Extensions/ServiceCollectionExtensions.cs
++++ b/Backend/src/IIROSA.Infrastructure/Extensions/ServiceCollectionExtensions.cs
+@@ -74,7 +74,12 @@ public static class ServiceCollectionExtensions
+                 {
+                     typesToRegister.serviceTypes.ForEach(typeToRegister => services.AddScoped(typeToRegister, typesToRegister.assignedType));
+                 });
+-        services.AddScoped<IAppDbContext, ApplicationDbContext>();
++        // Forward IAppDbContext to the AddDbContext-registered instance above. A plain
++        // AddScoped<IAppDbContext, ApplicationDbContext>() creates a SECOND scoped
++        // ApplicationDbContext per request (each descriptor caches separately), so the
++        // generic Repository<TEntity> tracked inserts on one context while UnitOfWork
++        // saved another — creates silently never persisted (found live, 6-8 battery).
++        services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
+         services.AddScoped<IUnitOfWork, UnitOfWork>();
+         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+@@ -165,16 +170,34 @@ public static class ServiceCollectionExtensions
+         // Office Project Management Service (UC-7.1 to UC-7.14)
+         services.AddScoped<IIROSA.Application.Interfaces.IOfficeProjectService, IIROSA.Application.Services.OfficeProjectService>();
+ 
++        // HQ Financial Transfers Service (UC-TRF-01 to UC-TRF-08)
++        services.AddScoped<IIROSA.Application.Interfaces.IHqTransferService, IIROSA.Application.Services.HqTransferService>();
++
+         // Lookup Management Services (UC-14)
+         services.AddScoped<IIROSA.Application.Interfaces.ICountryService, IIROSA.Application.Services.CountryService>();
+         services.AddScoped<IIROSA.Application.Interfaces.IRegionService, IIROSA.Application.Services.RegionService>();
+         services.AddScoped<IIROSA.Application.Interfaces.ICenterService, IIROSA.Application.Services.CenterService>();
+         services.AddScoped<IIROSA.Application.Interfaces.IDepartmentService, IIROSA.Application.Services.DepartmentService>();
+         services.AddScoped<IIROSA.Application.Interfaces.IMissionTypeService, IIROSA.Application.Services.MissionTypeService>();
++        services.AddScoped<IIROSA.Application.Interfaces.IMissionInterviewTypeService, IIROSA.Application.Services.MissionInterviewTypeService>();
++        services.AddScoped<IIROSA.Application.Interfaces.IMissionTimeTypeService, IIROSA.Application.Services.MissionTimeTypeService>();
+         services.AddScoped<IIROSA.Application.Interfaces.IProjectTypeService, IIROSA.Application.Services.ProjectTypeService>();
+         services.AddScoped<IIROSA.Application.Interfaces.IOfficeProjectTypeService, IIROSA.Application.Services.OfficeProjectTypeService>();
++        services.AddScoped<IIROSA.Application.Interfaces.IHousingBuildingService, IIROSA.Application.Services.HousingBuildingService>();
++        services.AddScoped<IIROSA.Application.Interfaces.IHousingFlatService, IIROSA.Application.Services.HousingFlatService>();
+         services.AddScoped<IIROSA.Application.Interfaces.IBankService, IIROSA.Application.Services.BankService>();
+         services.AddScoped<IIROSA.Application.Interfaces.INGOTypeService, IIROSA.Application.Services.NGOTypeService>();
++        services.AddScoped<IIROSA.Application.Interfaces.IEducationLevelService, IIROSA.Application.Services.EducationLevelService>();
++        services.AddScoped<IIROSA.Application.Interfaces.IHealthStatusService, IIROSA.Application.Services.HealthStatusService>();
++        services.AddScoped<IIROSA.Application.Interfaces.IRefuseReasonService, IIROSA.Application.Services.RefuseReasonService>();
++        // Refugee register lookups (epic 7, UC-REF-03)
++        services.AddScoped<IIROSA.Application.Interfaces.IHouseOwnershipService, IIROSA.Application.Services.HouseOwnershipService>();
++        services.AddScoped<IIROSA.Application.Interfaces.IHouseStatusService, IIROSA.Application.Services.HouseStatusService>();
++        services.AddScoped<IIROSA.Application.Interfaces.IIncomeTypeService, IIROSA.Application.Services.IncomeTypeService>();
++        services.AddScoped<IIROSA.Application.Interfaces.ISocialStatusService, IIROSA.Application.Services.SocialStatusService>();
++        services.AddScoped<IIROSA.Application.Interfaces.IRelationService, IIROSA.Application.Services.RelationService>();
++        services.AddScoped<IIROSA.Application.Interfaces.IReasonOfRelService, IIROSA.Application.Services.ReasonOfRelService>();
++        services.AddScoped<IIROSA.Application.Interfaces.IHousingTypeService, IIROSA.Application.Services.HousingTypeService>();
+         services.AddScoped<IIROSA.Application.Interfaces.ILookupManagementService, IIROSA.Application.Services.LookupManagementService>();
+ 
+         // Technical Support Services (UC-13.1 through UC-13.10)
+@@ -193,34 +216,55 @@ public static class ServiceCollectionExtensions
+         // Office Project Management Repository (UC-7.1 to UC-7.14)
+         services.AddScoped<IIROSA.Domain.Interfaces.IOfficeProjectRepository, IIROSA.Infrastructure.Data.Repository.OfficeProjectRepository>();
+ 
++        // HQ Financial Transfers Repository (UC-TRF-01 to UC-TRF-08)
++        services.AddScoped<IIROSA.Domain.Interfaces.IHqTransferRepository, IIROSA.Infrastructure.Data.Repository.HqTransferRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.IHqTransferDetailRepository, IIROSA.Infrastructure.Data.Repository.HqTransferDetailRepository>();
++
+         // Register Lookup repositories
+         services.AddScoped<IIROSA.Domain.Interfaces.ICountryRepository, IIROSA.Infrastructure.Data.Repository.CountryRepository>();
+         services.AddScoped<IIROSA.Domain.Interfaces.IRegionRepository, IIROSA.Infrastructure.Data.Repository.RegionRepository>();
+         services.AddScoped<IIROSA.Domain.Interfaces.ICenterRepository, IIROSA.Infrastructure.Data.Repository.CenterRepository>();
+         services.AddScoped<IIROSA.Domain.Interfaces.IDepartmentRepository, IIROSA.Infrastructure.Data.Repository.DepartmentRepository>();
+         services.AddScoped<IIROSA.Domain.Interfaces.IMissionTypeRepository, IIROSA.Infrastructure.Data.Repository.MissionTypeRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.IMissionInterviewTypeRepository, IIROSA.Infrastructure.Data.Repository.MissionInterviewTypeRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.IMissionTimeTypeRepository, IIROSA.Infrastructure.Data.Repository.MissionTimeTypeRepository>();
+         services.AddScoped<IIROSA.Domain.Interfaces.IProjectTypeRepository, IIROSA.Infrastructure.Data.Repository.ProjectTypeRepository>();
+         services.AddScoped<IIROSA.Domain.Interfaces.IOfficeProjectTypeRepository, IIROSA.Infrastructure.Data.Repository.OfficeProjectTypeRepository>();
+         services.AddScoped<IIROSA.Domain.Interfaces.IBankRepository, IIROSA.Infrastructure.Data.Repository.BankRepository>();
+         services.AddScoped<IIROSA.Domain.Interfaces.INGOTypeRepository, IIROSA.Infrastructure.Data.Repository.NGOTypeRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.IEducationLevelRepository, IIROSA.Infrastructure.Data.Repository.EducationLevelRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.IHealthStatusRepository, IIROSA.Infrastructure.Data.Repository.HealthStatusRepository>();
++        // Refugee register lookups (epic 7, UC-REF-03)
++        services.AddScoped<IIROSA.Domain.Interfaces.IHouseOwnershipRepository, IIROSA.Infrastructure.Data.Repository.HouseOwnershipRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.IHouseStatusRepository, IIROSA.Infrastructure.Data.Repository.HouseStatusRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.IIncomeTypeRepository, IIROSA.Infrastructure.Data.Repository.IncomeTypeRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.ISocialStatusRepository, IIROSA.Infrastructure.Data.Repository.SocialStatusRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.IRelationRepository, IIROSA.Infrastructure.Data.Repository.RelationRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.IReasonOfRelRepository, IIROSA.Infrastructure.Data.Repository.ReasonOfRelRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.IHousingTypeRepository, IIROSA.Infrastructure.Data.Repository.HousingTypeRepository>();
++        // Housing building/flat lookups (epic 6) — services were auto-registered before their
++        // repositories were, breaking DI validation at startup; register the closed generics
++        // until dedicated IXRepository interfaces exist.
++        services.AddScoped<IIROSA.Domain.Interfaces.ILookupRepository<IIROSA.Domain.Entities.Lookups.HousingBuilding>, IIROSA.Infrastructure.Data.Repository.HousingBuildingRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.ILookupRepository<IIROSA.Domain.Entities.Lookups.HousingFlat>, IIROSA.Infrastructure.Data.Repository.HousingFlatRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.IOutgoingCategoryRepository, IIROSA.Infrastructure.Data.Repository.OutgoingCategoryRepository>();
+ 
+         // Technical Support repositories (UC-13.1 through UC-13.10)
+         services.AddScoped<IIROSA.Domain.Interfaces.ISupportTicketRepository, IIROSA.Infrastructure.Data.Repository.SupportTicketRepository>();
+         services.AddScoped<IIROSA.Domain.Interfaces.ITicketResponseRepository, IIROSA.Infrastructure.Data.Repository.TicketResponseRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.ISupportTicketLookupRepository, IIROSA.Infrastructure.Data.Repository.SupportTicketLookupRepository>();
+ 
+-        // Incoming & Outgoing Correspondence Repositories (UC-12.1 through UC-12.14)
++        // Incoming & Outgoing Correspondence Repositories (epic 16, UC-COR-01…19)
+         services.AddScoped<IIROSA.Domain.Interfaces.IIncomingRepository, IIROSA.Infrastructure.Data.Repository.IncomingRepository>();
+         services.AddScoped<IIROSA.Domain.Interfaces.IOutgoingRepository, IIROSA.Infrastructure.Data.Repository.OutgoingRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.IIncomingEmployeeRepository, IIROSA.Infrastructure.Data.Repository.IncomingEmployeeRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.IOutgoingOrphanReportRepository, IIROSA.Infrastructure.Data.Repository.OutgoingOrphanReportRepository>();
+ 
+-        // Periodic Orphan Reports Services (UC-6.11 through UC-6.17)
+-        // NOTE: Service temporarily excluded due to Infrastructure layer dependency
+-        // TODO: Move service implementation to Infrastructure layer or create interface-based architecture
+-        // services.AddScoped<IIROSA.Application.Interfaces.IPeriodicOrphanReportService, IIROSA.Application.Services.PeriodicOrphanReportService>();
++        // Periodic Orphan Reports Services (epic 9, UC-ORR-01 … UC-ORR-17 from WAR UC-6.11–6.17)
++        services.AddScoped<IIROSA.Application.Interfaces.IPeriodicOrphanReportService, IIROSA.Application.Services.PeriodicOrphanReportService>();
+ 
+-        // Orphan Summary Reports Services (UC-6.1 through UC-6.10)
+-        // NOTE: Service temporarily excluded due to Infrastructure layer dependency
+-        // TODO: Move service implementation to Infrastructure layer or create interface-based architecture
+-        // services.AddScoped<IIROSA.Application.Interfaces.IOrphanReportService, IIROSA.Application.Services.OrphanReportService>();
++        // Orphan Summary Reports Services (UC-6.1 through UC-6.10 — reworked per epics 9/10 stories)
++        services.AddScoped<IIROSA.Application.Interfaces.IOrphanReportService, IIROSA.Application.Services.OrphanReportService>();
+ 
+         // TODO: Add UserManagement service once implemented
+         // services.AddScoped<IIROSA.Application.Services.UserManagement.IUserManagementService, IIROSA.Application.Services.UserManagement.UserManagementService>();
+diff --git a/Backend/src/IIROSA.Infrastructure/Data/Migrations/20260824103203_Epic09_RefuseReasonLookup.cs b/Backend/src/IIROSA.Infrastructure/Data/Migrations/20260824103203_Epic09_RefuseReasonLookup.cs
+new file mode 100644
+index 0000000..ea9b241
+--- /dev/null
++++ b/Backend/src/IIROSA.Infrastructure/Data/Migrations/20260824103203_Epic09_RefuseReasonLookup.cs
+@@ -0,0 +1,46 @@
++using Microsoft.EntityFrameworkCore.Migrations;
++
++#nullable disable
++
++namespace IIROSA.Infrastructure.Data.Migrations
++{
++    /// <inheritdoc />
++    public partial class Epic09_RefuseReasonLookup : Migration
++    {
++        /// <inheritdoc />
++        protected override void Up(MigrationBuilder migrationBuilder)
++        {
++            // Hand-authored: an earlier `migrations remove` left RefuseReason in the model
++            // snapshot, so the generated diff came out empty while the table does not yet
++            // exist in the database. Schema mirrors the snapshot entity exactly.
++            migrationBuilder.CreateTable(
++                name: "RefuseReason",
++                schema: "Lookup",
++                columns: table => new
++                {
++                    Id = table.Column<int>(type: "int", nullable: false)
++                        .Annotation("SqlServer:Identity", "1, 1"),
++                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
++                    CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
++                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
++                    UpdatedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
++                    NameAr = table.Column<string>(type: "nvarchar(max)", nullable: true),
++                    NameEn = table.Column<string>(type: "nvarchar(max)", nullable: true),
++                    IsActive = table.Column<bool>(type: "bit", nullable: false),
++                    SortOrder = table.Column<int>(type: "int", nullable: false)
++                },
++                constraints: table =>
++                {
++                    table.PrimaryKey("PK_RefuseReason", x => x.Id);
++                });
++        }
++
++        /// <inheritdoc />
++        protected override void Down(MigrationBuilder migrationBuilder)
++        {
++            migrationBuilder.DropTable(
++                name: "RefuseReason",
++                schema: "Lookup");
++        }
++    }
++}
+diff --git a/Backend/src/IIROSA.Infrastructure/Data/Migrations/20260824153802_Epic09_ReportTableRepair.cs b/Backend/src/IIROSA.Infrastructure/Data/Migrations/20260824153802_Epic09_ReportTableRepair.cs
+new file mode 100644
+index 0000000..e262c09
+--- /dev/null
++++ b/Backend/src/IIROSA.Infrastructure/Data/Migrations/20260824153802_Epic09_ReportTableRepair.cs
+@@ -0,0 +1,722 @@
++using Microsoft.EntityFrameworkCore.Migrations;
++
++#nullable disable
++
++namespace IIROSA.Infrastructure.Data.Migrations
++{
++    /// <summary>
++    /// Repairs the PeriodicOrphanReport table: the re-platform copy brought a reworked
++    /// §14.S.2 / §11.S.4 report entity (ReportNo, review flags, health/education/activities
++    /// blocks, five attachment ids) and a model snapshot already in that shape, but NO
++    /// migration ever materialized the delta — every later migrations add diffed against the
++    /// matching snapshot, so the table kept the InitialCreate legacy shape and every report
++    /// write/read failed at runtime (invalid column). Found live by the 6-8 battery
++    /// (2026-08-24); the table was EMPTY, so the four legacy columns are dropped data-free.
++    /// Column-exact against ApplicationDbContextModelSnapshot; indexes already conformed.
++    /// </summary>
++    public partial class Epic09_ReportTableRepair : Migration
++    {
++        protected override void Up(MigrationBuilder migrationBuilder)
++        {
++            // Legacy InitialCreate columns the reworked entity no longer maps (table was empty).
++            migrationBuilder.DropColumn(
++                name: "SubmittedBy",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "SubmissionDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "ReviewedBy",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "ReviewDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++
++            // The reworked §14.S.2/§11.S.4 report shape — present in the model snapshot since the
++            // re-platform copy, never materialized by any migration (snapshot-vs-database drift).
++            migrationBuilder.AddColumn<string>(
++                name: "Achievement",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "AchievementArr",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<bool>(
++                name: "Active",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "bit",
++                nullable: true);
++            migrationBuilder.AddColumn<DateTime?>(
++                name: "ActiveDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "datetime2",
++                nullable: true);
++            migrationBuilder.AddColumn<decimal?>(
++                name: "AnnualFeeForStudy",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "decimal(18,2)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "Course",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "CourseName",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<bool?>(
++                name: "Dead",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "bit",
++                nullable: true);
++            migrationBuilder.AddColumn<DateTime?>(
++                name: "DeathDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "datetime2",
++                nullable: true);
++            migrationBuilder.AddColumn<bool>(
++                name: "Deleted",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "bit",
++                nullable: true);
++            migrationBuilder.AddColumn<DateTime?>(
++                name: "DeletedDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "datetime2",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "Department",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "Disability",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "DisabilityDescription",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "Disease",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "DiseaseDescription",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<bool?>(
++                name: "DropOut",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "bit",
++                nullable: true);
++            migrationBuilder.AddColumn<int?>(
++                name: "DropOutStageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "int",
++                nullable: true);
++            migrationBuilder.AddColumn<int?>(
++                name: "DropOutYear",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "int",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "EducationDegree",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<int?>(
++                name: "EducationalLevelId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "int",
++                nullable: true);
++            migrationBuilder.AddColumn<int?>(
++                name: "EducationalStageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "int",
++                nullable: true);
++            migrationBuilder.AddColumn<int?>(
++                name: "EducationalYear",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "int",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "Faculty",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "Grade",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<int?>(
++                name: "GraduationYear",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "int",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "HadeethStatus",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "HighestEducationalLevel",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<int?>(
++                name: "HighestEducationalLevelYear",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "int",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "Hobby",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<bool>(
++                name: "IsAccepted",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "bit",
++                nullable: true);
++            migrationBuilder.AddColumn<bool?>(
++                name: "IsOrphanStudent",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "bit",
++                nullable: true);
++            migrationBuilder.AddColumn<bool>(
++                name: "IsRefused",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "bit",
++                nullable: true);
++            migrationBuilder.AddColumn<bool>(
++                name: "Locked",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "bit",
++                nullable: true);
++            migrationBuilder.AddColumn<DateTime?>(
++                name: "LockedDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "datetime2",
++                nullable: true);
++            migrationBuilder.AddColumn<DateTime?>(
++                name: "MarriageDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "datetime2",
++                nullable: true);
++            migrationBuilder.AddColumn<bool?>(
++                name: "Married",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "bit",
++                nullable: true);
++            migrationBuilder.AddColumn<Guid?>(
++                name: "MedicalReportImageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "uniqueidentifier",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "MedicalStatus",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<int?>(
++                name: "MessageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "int",
++                nullable: true);
++            migrationBuilder.AddColumn<bool?>(
++                name: "MissingDocuments",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "bit",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "MissingDocumentsName",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<Guid?>(
++                name: "OrphanCertificateImageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "uniqueidentifier",
++                nullable: true);
++            migrationBuilder.AddColumn<Guid?>(
++                name: "OrphanDeadImageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "uniqueidentifier",
++                nullable: true);
++            migrationBuilder.AddColumn<Guid?>(
++                name: "OrphanImageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "uniqueidentifier",
++                nullable: true);
++            migrationBuilder.AddColumn<Guid?>(
++                name: "OrphanMarriageImageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "uniqueidentifier",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "OrphanMessage",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "ProfessionName",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "QuranVerses",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "RefuseReason",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<int?>(
++                name: "RefuseReasonId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "int",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "ReportNo",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<DateTime?>(
++                name: "ReportPeriodFrom",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "datetime2",
++                nullable: true);
++            migrationBuilder.AddColumn<DateTime?>(
++                name: "ReportPeriodTo",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "datetime2",
++                nullable: true);
++            migrationBuilder.AddColumn<int?>(
++                name: "RestStudyingYears",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "int",
++                nullable: true);
++            migrationBuilder.AddColumn<bool>(
++                name: "Reviewed",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "bit",
++                nullable: true);
++            migrationBuilder.AddColumn<DateTime?>(
++                name: "ReviewedDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "datetime2",
++                nullable: true);
++            migrationBuilder.AddColumn<Guid?>(
++                name: "ReviewerId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "uniqueidentifier",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "School",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "SchoolType",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "Specialization",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "SportName",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<int?>(
++                name: "StudyingYears",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "int",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "Wish",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++            migrationBuilder.AddColumn<string>(
++                name: "WishArr",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "nvarchar(max)",
++                nullable: true);
++        }
++
++        protected override void Down(MigrationBuilder migrationBuilder)
++        {
++            // Inverse: remove the reworked columns and restore the legacy InitialCreate shape.
++            migrationBuilder.DropColumn(
++                name: "Achievement",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "AchievementArr",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Active",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "ActiveDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "AnnualFeeForStudy",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Course",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "CourseName",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Dead",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "DeathDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Deleted",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "DeletedDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Department",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Disability",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "DisabilityDescription",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Disease",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "DiseaseDescription",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "DropOut",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "DropOutStageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "DropOutYear",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "EducationDegree",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "EducationalLevelId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "EducationalStageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "EducationalYear",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Faculty",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Grade",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "GraduationYear",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "HadeethStatus",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "HighestEducationalLevel",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "HighestEducationalLevelYear",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Hobby",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "IsAccepted",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "IsOrphanStudent",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "IsRefused",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Locked",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "LockedDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "MarriageDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Married",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "MedicalReportImageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "MedicalStatus",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "MessageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "MissingDocuments",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "MissingDocumentsName",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "OrphanCertificateImageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "OrphanDeadImageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "OrphanImageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "OrphanMarriageImageId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "OrphanMessage",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "ProfessionName",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "QuranVerses",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "RefuseReason",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "RefuseReasonId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "ReportNo",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "ReportPeriodFrom",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "ReportPeriodTo",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "RestStudyingYears",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Reviewed",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "ReviewedDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "ReviewerId",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "School",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "SchoolType",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Specialization",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "SportName",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "StudyingYears",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "Wish",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.DropColumn(
++                name: "WishArr",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA");
++            migrationBuilder.AddColumn<Guid?>(
++                name: "SubmittedBy",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "uniqueidentifier",
++                nullable: true);
++            migrationBuilder.AddColumn<DateTime?>(
++                name: "SubmissionDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "datetime2",
++                nullable: true);
++            migrationBuilder.AddColumn<Guid?>(
++                name: "ReviewedBy",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "uniqueidentifier",
++                nullable: true);
++            migrationBuilder.AddColumn<DateTime?>(
++                name: "ReviewDate",
++                table: "PeriodicOrphanReport",
++                schema: "IIROSA",
++                type: "datetime2",
++                nullable: true);
++        }
++    }
++}
+diff --git a/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/OrphanLookupDto.cs b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/OrphanLookupDto.cs
+new file mode 100644
+index 0000000..f058b25
+--- /dev/null
++++ b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/OrphanLookupDto.cs
+@@ -0,0 +1,35 @@
++namespace IIROSA.Application.DTOs.PeriodicOrphanReport;
++
++/// <summary>
++/// Lightweight orphan identity for the by-code lookup that prefaces report entry
++/// (UC-ORR-02, epic 9). Carries enough to prefill the report header and confirm
++/// the charity scope before the form opens.
++/// </summary>
++public class OrphanLookupDto
++{
++    public Guid OrphanId { get; set; }
++
++    /// <summary>The sponsorship code the caller typed — empty when the orphan is uncoded.</summary>
++    public string? Code { get; set; }
++
++    public string? FullName { get; set; }
++    public Guid? CharityId { get; set; }
++    public string? CharityName { get; set; }
++    public string? Gender { get; set; }
++    public int? Age { get; set; }
++    public DateTime? BirthDate { get; set; }
++
++    /// <summary>Family reference for the report header (UC-ORR-02 prefill).</summary>
++    public Guid? FamilyId { get; set; }
++    public string? FamilyCode { get; set; }
++
++    /// <summary>The living معيل from the family register, when one is recorded.</summary>
++    public string? GuardianName { get; set; }
++
++    /// <summary>Report counters so the entry screen can warn about an existing report for the month.</summary>
++    public int TotalReports { get; set; }
++    public int PendingReports { get; set; }
++
++    /// <summary>True when the orphan carries a sponsorship code — the gate for report entry (BR-09).</summary>
++    public bool Coded => !string.IsNullOrWhiteSpace(Code);
++}
+diff --git a/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportPagedResult.cs b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportPagedResult.cs
+new file mode 100644
+index 0000000..4e96566
+--- /dev/null
++++ b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/PeriodicOrphanReportPagedResult.cs
+@@ -0,0 +1,15 @@
++namespace IIROSA.Application.DTOs.PeriodicOrphanReport;
++
++/// <summary>
++/// Paged result wrapper for periodic orphan report reads (epic 9).
++/// Wire shape: items / totalCount / page / pageSize / totalPages — the platform
++/// envelope used by missions and every shipped list screen.
++/// </summary>
++public class PeriodicOrphanReportPagedResult<T>
++{
++    public List<T> Items { get; set; } = new();
++    public int TotalCount { get; set; }
++    public int Page { get; set; }
++    public int PageSize { get; set; }
++    public int TotalPages => PageSize <= 0 ? 0 : (int)Math.Ceiling((decimal)TotalCount / PageSize);
++}
+diff --git a/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/OrphanReportFormPrint.cs b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/OrphanReportFormPrint.cs
+new file mode 100644
+index 0000000..07563aa
+--- /dev/null
++++ b/Backend/src/IIROSA.Application/DTOs/PeriodicOrphanReport/OrphanReportFormPrint.cs
+@@ -0,0 +1,69 @@
++using IIROSA.Domain.Entities;
++
++// The entity type is fully qualified below — inside this namespace the bare name
++// 'PeriodicOrphanReport' resolves to the namespace itself (CS0118).
++using ReportEntity = global::IIROSA.Domain.Entities.PeriodicOrphanReport;
++
++namespace IIROSA.Application.DTOs.PeriodicOrphanReport;
++
++/// <summary>
++/// UC-ORR-17 (§14.U.17 طباعة التقرير الدوري) — the print payload served by
++/// <c>POST /api/Reports/orphan-report-form/export/pdf</c>. Per the recorded client-side
++/// print ruling (epics 9/10/18) the endpoint returns composed data, not PDF bytes: the SPA
++/// renders the official form and the browser's print-to-PDF produces the file.
++/// </summary>
++public class OrphanReportFormPrintDto
++{
++    /// <summary>
++    /// The resolved layout variant — the legacy 24-template matrix collapsed to a stable key:
++    /// base (<c>disabled</c> &gt; <c>studying</c> &gt; <c>not-studying</c>) plus the document
++    /// sections present (<c>+marriage</c>, <c>+death</c>, <c>+medical</c>, <c>+cert</c>),
++    /// e.g. <c>studying+cert+medical</c>. Drives the client's section/image layout.
++    /// </summary>
++    public string Variant { get; set; } = "not-studying";
++
++    /// <summary>The full 9-4 detail data (caller-scoped read — the same shape as GET by id).</summary>
++    public PeriodicOrphanReportDto Report { get; set; } = new();
++
++    /// <summary>The attachment slots present on this report (BR-12 — ids only, never bytes).</summary>
++    public List<OrphanReportFormAttachmentSlotDto> Attachments { get; set; } = new();
++}
++
++/// <summary>One document slot carried into the print payload; the SPA fetches the bytes by id.</summary>
++public class OrphanReportFormAttachmentSlotDto
++{
++    /// <summary>Stable slot key: orphanPhoto · certificate · medicalReport · deathCertificate · marriageContract.</summary>
++    public string Slot { get; set; } = string.Empty;
++
++    /// <summary>The attachment id (the single truth — BR-12).</summary>
++    public Guid Id { get; set; }
++}
++
++/// <summary>
++/// Pure variant resolver for UC-ORR-17 (§14.1 printing rule) — no I/O, unit-testable.
++/// Base layout: a disabled orphan overrides studying; otherwise education flags decide;
++/// otherwise not-studying. Document sections join the key when their image id is present.
++/// </summary>
++public static class OrphanReportFormVariantResolver
++{
++    public static string Resolve(ReportEntity report)
++    {
++        var baseKey = !string.IsNullOrWhiteSpace(report.Disability)
++            ? "disabled"
++            : IsStudying(report) ? "studying" : "not-studying";
++
++        var sections = new List<string>(4);
++        if (report.OrphanMarriageImageId.HasValue) sections.Add("marriage");
++        if (report.OrphanDeadImageId.HasValue) sections.Add("death");
++        if (report.MedicalReportImageId.HasValue) sections.Add("medical");
++        if (report.OrphanCertificateImageId.HasValue) sections.Add("cert");
++
++        return sections.Count == 0 ? baseKey : $"{baseKey}+{string.Join("+", sections)}";
++    }
++
++    /// <summary>Studying = the orphan-student flag, or any live education anchor (level/school).</summary>
++    private static bool IsStudying(ReportEntity report) =>
++        report.IsOrphanStudent == true
++        || report.EducationalLevelId.HasValue
++        || !string.IsNullOrWhiteSpace(report.School);
++}

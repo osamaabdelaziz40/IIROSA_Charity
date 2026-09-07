@@ -15,5 +15,8 @@ public class OrphanPaymentListDto
     public string? Currency { get; set; }
     public bool IsBatchUploaded { get; set; }
     public DateTime GroupDate { get; set; }
+
+    // Distribution start date تاريخ بدء التوزيع — §15.S.1 التاريخ column; null on legacy rows
+    public DateTime? PaymentDate { get; set; }
     public string? CreatedByName { get; set; }
 }

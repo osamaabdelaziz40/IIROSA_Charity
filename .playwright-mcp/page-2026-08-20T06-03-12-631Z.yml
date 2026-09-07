@@ -1,0 +1,200 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e5]:
+    - navigation [ref=e6]:
+      - button [ref=e7] [cursor=pointer]
+      - list [ref=e9]:
+        - listitem [ref=e10]:
+          - link "العربية " [ref=e11] [cursor=pointer]:
+            - /url: "#"
+        - listitem [ref=e12]:
+          - link "" [ref=e13] [cursor=pointer]:
+            - /url: "#"
+        - listitem [ref=e15]:
+          - link [ref=e16] [cursor=pointer]:
+            - /url: ./#
+        - listitem [ref=e18]:
+          - button [ref=e19] [cursor=pointer]:
+            - generic [ref=e20]:
+              - text: مرحبا System Admin
+              - img "..." [ref=e21]
+            - text: 
+    - complementary [ref=e22]:
+      - navigation [ref=e23]:
+        - link [ref=e25] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=e26]
+        - paragraph [ref=e27]: عناصر الموقع
+        - list [ref=e28]:
+          - listitem [ref=e29]:
+            - link "الصفحة الرئيسية (current) " [ref=e30] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=e31]: الصفحة الرئيسية
+              - generic [ref=e32]: (current)
+              - text: 
+            - list [ref=e33]:
+              - listitem [ref=e34]:
+                - link "الرئيسية" [ref=e35] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=e36]:
+            - link "المستخدمون " [ref=e37] [cursor=pointer]:
+              - /url: "#user-management"
+              - generic [ref=e38]: المستخدمون
+              - text: 
+          - listitem [ref=e39]:
+            - link "الموظفون " [ref=e40] [cursor=pointer]:
+              - /url: "#employees"
+              - generic [ref=e41]: الموظفون
+              - text: 
+          - listitem [ref=e42]:
+            - link "الجمعيات " [ref=e43] [cursor=pointer]:
+              - /url: "#charities"
+              - generic [ref=e44]: الجمعيات
+              - text: 
+          - listitem [ref=e45]:
+            - link "مشاريع المكتب " [ref=e46] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=e47]: مشاريع المكتب
+              - text: 
+          - listitem [ref=e48]:
+            - link "مشاريع الإسكان " [ref=e49] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=e50]: مشاريع الإسكان
+              - text: 
+          - listitem [ref=e51]:
+            - link "المساعدات الموسمية " [ref=e52] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=e53]: المساعدات الموسمية
+              - text: 
+          - listitem [ref=e54]:
+            - link "الوارد والصادر " [ref=e55] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=e56]: الوارد والصادر
+              - text: 
+          - listitem [ref=e57]:
+            - link "مدفوعات الأيتام " [ref=e58] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=e59]: مدفوعات الأيتام
+              - text: 
+          - listitem [ref=e60]:
+            - link "Families " [ref=e61] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=e62]: Families
+              - text: 
+          - listitem [ref=e63]:
+            - link "الشيكات العامة " [ref=e64] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=e65]: الشيكات العامة
+              - text: 
+          - listitem [ref=e66]:
+            - link "المهام " [ref=e67] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=e68]: المهام
+              - text: 
+          - listitem [ref=e69]:
+            - link "العنوان " [ref=e70] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=e71]: العنوان
+              - text: 
+          - listitem [ref=e72]:
+            - link "إدارة الجداول المرجعية " [ref=e73] [cursor=pointer]:
+              - /url: "#lookup-management"
+              - generic [ref=e74]: إدارة الجداول المرجعية
+              - text: 
+    - main [ref=e75]:
+      - generic [ref=e77]:
+        - generic [ref=e80]:
+          - heading "لوحة التحكم" [level=3] [ref=e81]
+          - navigation "breadcrumb" [ref=e83]:
+            - list [ref=e84]:
+              - listitem [ref=e85]:
+                - link "الرئيسية" [ref=e86] [cursor=pointer]:
+                  - /url: "#/dashboard"
+        - generic [ref=e87]:
+          - generic [ref=e92]:
+            - heading "إجمالي الجمعيات" [level=6] [ref=e93]
+            - text: "152"
+          - generic [ref=e98]:
+            - heading "إجمالي الأيتام" [level=6] [ref=e99]
+            - text: "2840"
+          - generic [ref=e104]:
+            - heading "إجمالي الأسر" [level=6] [ref=e105]
+            - text: "485"
+          - generic [ref=e110]:
+            - heading "المهام النشطة" [level=6] [ref=e111]
+            - text: "24"
+        - generic [ref=e112]:
+          - strong [ref=e116]: Monthly Statistics
+          - strong [ref=e124]: Financial Overview
+        - generic [ref=e129]:
+          - strong [ref=e133]: Family Growth
+          - strong [ref=e141]: Budget Allocation
+          - strong [ref=e149]: Performance
+        - generic [ref=e154]:
+          - generic [ref=e156]:
+            - strong [ref=e158]: الأنشطة الأخيرة
+            - generic [ref=e160]:
+              - generic [ref=e162]:
+                - generic [ref=e163]: success
+                - generic [ref=e165]:
+                  - paragraph [ref=e166]: New charity registered
+                  - text: 5 minutes ago
+              - generic [ref=e168]:
+                - generic [ref=e169]: info
+                - generic [ref=e171]:
+                  - paragraph [ref=e172]: Orphan sponsorship updated
+                  - text: 15 minutes ago
+              - generic [ref=e174]:
+                - generic [ref=e175]: primary
+                - generic [ref=e177]:
+                  - paragraph [ref=e178]: Housing project completed
+                  - text: 1 hour ago
+              - generic [ref=e180]:
+                - generic [ref=e181]: warning
+                - generic [ref=e183]:
+                  - paragraph [ref=e184]: Mission report submitted
+                  - text: 2 hours ago
+          - generic [ref=e186]:
+            - strong [ref=e188]: الفعاليات القادمة
+            - generic [ref=e190]:
+              - generic [ref=e193]:
+                - heading "Board Meeting" [level=6] [ref=e194]
+                - text: 2026-05-15 at 10:00 AM
+              - generic [ref=e197]:
+                - heading "Charity Audit" [level=6] [ref=e198]
+                - text: 2026-05-18 at 09:00 AM
+              - generic [ref=e201]:
+                - heading "Orphanage Visit" [level=6] [ref=e202]
+                - text: 2026-05-20 at 02:00 PM
+    - contentinfo [ref=e203]:
+      - generic [ref=e205]:
+        - paragraph [ref=e207]: © 2026 IIROSA. جميع الحقوق محفوظة
+        - paragraph [ref=e209]: الإصدار 1.0.0
+  - iframe [ref=e210]:
+    - generic [ref=f1e2]:
+      - generic [ref=f1e3]: "Compiled with problems:"
+      - button "Dismiss" [ref=f1e4] [cursor=pointer]: ×
+      - generic [ref=f1e5]:
+        - generic [ref=f1e6]:
+          - generic [ref=f1e7]: ERROR
+          - generic [ref=f1e8]:
+            - text: src/app/modules/dashboard/dashboard.component.ts:10:65 - error
+            - generic [ref=f1e9]:
+              - text: "NG2012:"
+              - generic [ref=f1e10]: "Component imports must be standalone components, directives, pipes, or must be NgModules. 10 imports: [CommonModule, TranslateModule, BreadcrumbComponent, ApexChartComponent], ~~~~~~~~~~~~~~~~~~"
+        - generic [ref=f1e11]:
+          - generic [ref=f1e12]: ERROR
+          - generic [ref=f1e13]:
+            - text: src/app/shared/components/apex-chart/apex-chart.component.ts:2:34 - error
+            - generic [ref=f1e14]:
+              - text: "TS2307:"
+              - generic [ref=f1e15]: "Cannot find module '../../../core/services/apex-chart.service' or its corresponding type declarations. 2 import { ApexChartService } from '../../../core/services/apex-chart.service'; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        - generic [ref=f1e16]:
+          - generic [ref=f1e17]: ERROR
+          - generic [ref=f1e18]:
+            - text: src/app/shared/components/apex-chart/apex-chart.component.ts:62:13 - error
+            - generic [ref=f1e19]:
+              - text: "NG2003:"
+              - generic [ref=f1e20]: "No suitable injection token for parameter 'chartService' of class 'ApexChartComponent'. Consider using the @Inject decorator to specify an injection token. 62 private chartService: ApexChartService ~~~~~~~~~~~~"
+              - text: src/app/shared/components/apex-chart/apex-chart.component.ts:62:27
+              - generic [ref=f1e21]: "62 private chartService: ApexChartService ~~~~~~~~~~~~~~~~"
+              - text: This type does not have a value, so it cannot be used as injection token.

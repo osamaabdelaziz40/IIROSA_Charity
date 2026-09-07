@@ -185,6 +185,39 @@ public class SeasonalAidCampaignRepository : Repository<SeasonalAidCampaign>, IS
         return (items, totalCount);
     }
 
+    /// <summary>
+    /// Interface-facing paged variant — delegates to the DTO overload so the filter
+    /// logic lives in exactly one place.
+    /// </summary>
+    public async Task<(IEnumerable<SeasonalAidCampaign> Items, int TotalCount)> GetFilteredPaginatedAsync(
+        string? searchTerm = null, string? campaignType = null, bool? isActive = null,
+        bool? isClosed = null, int? countryId = null, int? regionId = null,
+        int? centerId = null, Guid? charityId = null,
+        DateTime? startDateFrom = null, DateTime? startDateTo = null,
+        DateTime? endDateFrom = null, DateTime? endDateTo = null,
+        int pageNumber = 1, int pageSize = 10, string? sortBy = null, bool sortDescending = false)
+    {
+        return await GetFilteredAsync(new SeasonalAidCampaignFilterDto
+        {
+            SearchTerm = searchTerm,
+            CampaignType = campaignType,
+            IsActive = isActive,
+            IsClosed = isClosed,
+            CountryId = countryId,
+            RegionId = regionId,
+            CenterId = centerId,
+            CharityId = charityId,
+            StartDateFrom = startDateFrom,
+            StartDateTo = startDateTo,
+            EndDateFrom = endDateFrom,
+            EndDateTo = endDateTo,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            SortBy = sortBy,
+            SortDescending = sortDescending
+        });
+    }
+
     #endregion
 
     #region Specific Queries

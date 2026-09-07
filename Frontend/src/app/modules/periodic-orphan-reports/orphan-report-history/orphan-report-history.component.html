@@ -1,8 +1,5 @@
 <div class="orphan-report-history">
-  <app-breadcrumb
-    [title]="'orphanReports.history' | translate"
-    [subtitle]="'orphanReports.historySubtitle' | translate">
-  </app-breadcrumb>
+  <app-breadcrumb [autoGenerate]="true"></app-breadcrumb>
 
   <!-- Filters -->
   <div class="card mb-3">
@@ -97,7 +94,7 @@
         *ngIf="reports.length === 0"
         [icon]="'fas fa-history'"
         [title]="'orphanReports.noHistory' | translate"
-        [message]="'orphanReports.noHistoryMessage' | translate">
+        [description]="'orphanReports.noHistoryMessage' | translate">
       </app-empty-state>
     </div>
 

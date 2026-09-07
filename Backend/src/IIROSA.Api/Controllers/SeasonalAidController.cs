@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using System.ComponentModel.DataAnnotations;
 using IIROSA.Application.Interfaces;
 using IIROSA.Application.DTOs.SeasonalAid;
 
@@ -8,12 +7,14 @@ namespace IIROSA.Api.Controllers;
 
 /// <summary>
 /// Seasonal Aid Controller
-/// Implements all seasonal aid management endpoints (UC-9.1 through UC-9.11)
-/// IMPORTANT: Charity users CANNOT access this module - only Admin and Super Admin
+/// Implements all seasonal aid management endpoints (UC-9.1 through UC-9.11, UC-PRJ-01 through UC-PRJ-12).
+/// Authorization is declared per action: campaign management is head-office only
+/// (SuperAdmin/Admin), while the family-selection and distribution surface is shared with
+/// charity users, whose data is scoped server-side by <see cref="ISeasonalAidService"/>.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "SuperAdmin,Admin")]
+[Authorize]
 public class SeasonalAidController : ControllerBase
 {
     private readonly ISeasonalAidService _seasonalAidService;
@@ -30,9 +31,10 @@ public class SeasonalAidController : ControllerBase
     #region CRUD Operations
 
     /// <summary>
-    /// Get all campaigns with filtering and pagination (UC-9.6)
+    /// Get all campaigns with filtering and pagination (UC-9.6 / UC-PRJ-01)
     /// </summary>
     [HttpGet("campaigns")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
     [ProducesResponseType(typeof(IEnumerable<SeasonalAidCampaignListDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<(IEnumerable<SeasonalAidCampaignListDto> Items, int TotalCount)>> GetCampaigns(
         [FromQuery] SeasonalAidCampaignFilterDto filter)
@@ -53,6 +55,7 @@ public class SeasonalAidController : ControllerBase
     /// Get active campaigns
     /// </summary>
     [HttpGet("campaigns/active")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
     [ProducesResponseType(typeof(IEnumerable<SeasonalAidCampaignListDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<SeasonalAidCampaignListDto>>> GetActiveCampaigns()
     {
@@ -69,9 +72,10 @@ public class SeasonalAidController : ControllerBase
     }
 
     /// <summary>
-    /// Get campaign by ID
+    /// Get campaign by ID (UC-PRJ-03)
     /// </summary>
     [HttpGet("campaigns/{id}")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
     [ProducesResponseType(typeof(SeasonalAidCampaignDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<SeasonalAidCampaignDto>> GetCampaign(Guid id)
@@ -94,22 +98,32 @@ public class SeasonalAidController : ControllerBase
     }
 
     /// <summary>
-    /// Create new campaign (UC-9.1)
+    /// Create new campaign (UC-9.1 / UC-PRJ-02)
     /// </summary>
     [HttpPost("campaigns")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [ProducesResponseType(typeof(SeasonalAidCampaignDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<SeasonalAidCampaignDto>> CreateCampaign([FromBody] CreateSeasonalAidCampaignDto dto)
     {
         try
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
             var campaign = await _seasonalAidService.CreateCampaignAsync(dto);
             return CreatedAtAction(nameof(GetCampaign), new { id = campaign.Id }, campaign);
+        }
+        // Must precede the catch-all: ValidationException derives from Exception, so without this
+        // it is swallowed into a 500, leaving the client no `errors` map to flag fields against.
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (InvalidOperationException ex)
         {
@@ -127,9 +141,10 @@ public class SeasonalAidController : ControllerBase
     }
 
     /// <summary>
-    /// Update campaign (UC-9.8)
+    /// Update campaign (UC-9.8 / UC-PRJ-04)
     /// </summary>
     [HttpPut("campaigns/{id}")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [ProducesResponseType(typeof(SeasonalAidCampaignDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -137,11 +152,6 @@ public class SeasonalAidController : ControllerBase
     {
         try
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
             if (id != dto.Id)
             {
                 return BadRequest(new { message = "ID mismatch" });
@@ -149,6 +159,18 @@ public class SeasonalAidController : ControllerBase
 
             var campaign = await _seasonalAidService.UpdateCampaignAsync(dto);
             return Ok(campaign);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (KeyNotFoundException ex)
         {
@@ -166,9 +188,10 @@ public class SeasonalAidController : ControllerBase
     }
 
     /// <summary>
-    /// Delete campaign
+    /// Delete campaign (UC-PRJ-05)
     /// </summary>
     [HttpDelete("campaigns/{id}")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> DeleteCampaign(Guid id)
@@ -201,6 +224,7 @@ public class SeasonalAidController : ControllerBase
     /// Set campaign period (UC-9.2)
     /// </summary>
     [HttpPut("campaigns/{id}/period")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> SetCampaignPeriod(Guid id, [FromBody] SetPeriodDto dto)
@@ -233,6 +257,7 @@ public class SeasonalAidController : ControllerBase
     /// Set campaign budget (UC-9.3)
     /// </summary>
     [HttpPut("campaigns/{id}/budget")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> SetCampaignBudget(Guid id, [FromBody] SetBudgetDto dto)
@@ -259,12 +284,13 @@ public class SeasonalAidController : ControllerBase
 
     #endregion
 
-    #region Beneficiary Management (UC-9.4, UC-9.7)
+    #region Beneficiary Management (UC-9.4, UC-9.7, UC-PRJ-06 through UC-PRJ-10)
 
     /// <summary>
-    /// Get eligible families for a campaign (UC-9.4)
+    /// Get eligible families for a campaign (UC-PRJ-10 — كافة الأسر للمشروع)
     /// </summary>
     [HttpGet("campaigns/{campaignId}/eligible-families")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
     [ProducesResponseType(typeof(IEnumerable<SeasonalAidBeneficiaryDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<(IEnumerable<SeasonalAidBeneficiaryDto> Items, int TotalCount)>> GetEligibleFamilies(
         Guid campaignId, [FromQuery] EligibleFamiliesFilterDto filter)
@@ -275,6 +301,10 @@ public class SeasonalAidController : ControllerBase
             var result = await _seasonalAidService.GetEligibleFamiliesAsync(filter);
             return Ok(new { result.Items, result.TotalCount });
         }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving eligible families for campaign: {CampaignId}", campaignId);
@@ -283,9 +313,10 @@ public class SeasonalAidController : ControllerBase
     }
 
     /// <summary>
-    /// Register beneficiaries for a campaign (UC-9.4)
+    /// Register beneficiaries for a campaign — quick add (UC-9.4 / UC-PRJ-07)
     /// </summary>
     [HttpPost("campaigns/{campaignId}/beneficiaries")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult> RegisterBeneficiaries(Guid campaignId, [FromBody] CreateSeasonalAidBeneficiaryDto dto)
@@ -304,6 +335,18 @@ public class SeasonalAidController : ControllerBase
                 budgetImpact = result.BudgetImpact
             });
         }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
+        }
         catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
@@ -320,9 +363,55 @@ public class SeasonalAidController : ControllerBase
     }
 
     /// <summary>
-    /// Get campaign beneficiaries (UC-9.7)
+    /// Full sync of a campaign's family registrations (UC-PRJ-07 — اختيار الأسر للمشروع).
+    /// The payload carries the desired final set of families; adds and removals are applied
+    /// as one diff, all-or-nothing.
+    /// </summary>
+    [HttpPut("campaigns/{campaignId}/beneficiaries")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
+    [ProducesResponseType(typeof(UpdateBeneficiariesResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UpdateBeneficiariesResultDto>> UpdateBeneficiaries(
+        Guid campaignId, [FromBody] UpdateSeasonalAidBeneficiariesDto dto)
+    {
+        try
+        {
+            var result = await _seasonalAidService.UpdateCampaignBeneficiariesAsync(campaignId, dto);
+            return Ok(result);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating beneficiaries for campaign: {CampaignId}", campaignId);
+            return StatusCode(500, new { message = "Error updating beneficiaries", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Get campaign beneficiaries (UC-9.7 / UC-PRJ-06, UC-PRJ-09)
     /// </summary>
     [HttpGet("campaigns/{campaignId}/beneficiaries")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
     [ProducesResponseType(typeof(IEnumerable<SeasonalAidBeneficiaryDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<(IEnumerable<SeasonalAidBeneficiaryDto> Items, int TotalCount)>> GetBeneficiaries(
         Guid campaignId, [FromQuery] SeasonalAidBeneficiaryFilterDto filter)
@@ -343,6 +432,7 @@ public class SeasonalAidController : ControllerBase
     /// Remove beneficiary from campaign
     /// </summary>
     [HttpDelete("beneficiaries/{beneficiaryId}")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> RemoveBeneficiary(Guid beneficiaryId)
@@ -369,12 +459,13 @@ public class SeasonalAidController : ControllerBase
 
     #endregion
 
-    #region Distribution Management (UC-9.5)
+    #region Distribution Management (UC-9.5, UC-PRJ-08)
 
     /// <summary>
     /// Record aid distribution (UC-9.5)
     /// </summary>
     [HttpPost("beneficiaries/{beneficiaryId}/distributions")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
     [ProducesResponseType(typeof(SeasonalAidDistributionDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<SeasonalAidDistributionDto>> RecordDistribution(
@@ -384,13 +475,20 @@ public class SeasonalAidController : ControllerBase
         {
             dto.BeneficiaryId = beneficiaryId;
 
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
             var distribution = await _seasonalAidService.RecordDistributionAsync(dto);
             return CreatedAtAction(nameof(GetBeneficiary), new { id = beneficiaryId }, distribution);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (KeyNotFoundException ex)
         {
@@ -411,19 +509,27 @@ public class SeasonalAidController : ControllerBase
     /// Record multiple distributions at once
     /// </summary>
     [HttpPost("distributions/batch")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult> RecordDistributionsBatch([FromBody] List<CreateSeasonalAidDistributionDto> distributions)
     {
         try
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
             await _seasonalAidService.RecordDistributionsAsync(distributions);
             return Ok(new { message = $"Successfully recorded {distributions.Count} distributions" });
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (Exception ex)
         {
@@ -440,6 +546,7 @@ public class SeasonalAidController : ControllerBase
     /// Close campaign (UC-9.9)
     /// </summary>
     [HttpPost("campaigns/{id}/close")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> CloseCampaign(Guid id, [FromBody] CloseCampaignDto dto)
@@ -469,6 +576,7 @@ public class SeasonalAidController : ControllerBase
     /// Reopen campaign
     /// </summary>
     [HttpPost("campaigns/{id}/reopen")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> ReopenCampaign(Guid id)
@@ -495,12 +603,13 @@ public class SeasonalAidController : ControllerBase
 
     #endregion
 
-    #region Reporting (UC-9.10)
+    #region Reporting (UC-9.10, UC-PRJ-11, UC-PRJ-12)
 
     /// <summary>
-    /// Generate campaign report (UC-9.10)
+    /// Generate campaign report (UC-9.10 / UC-PRJ-11, UC-PRJ-12)
     /// </summary>
     [HttpGet("campaigns/{id}/report")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [ProducesResponseType(typeof(SeasonalAidCampaignReportDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<SeasonalAidCampaignReportDto>> GenerateCampaignReport(Guid id)
@@ -525,6 +634,7 @@ public class SeasonalAidController : ControllerBase
     /// Export campaign report to PDF (UC-9.10)
     /// </summary>
     [HttpGet("campaigns/{id}/report/pdf")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> ExportCampaignReportToPdf(Guid id)
@@ -553,6 +663,7 @@ public class SeasonalAidController : ControllerBase
     /// Export campaign report to Excel (UC-9.10)
     /// </summary>
     [HttpGet("campaigns/{id}/report/excel")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> ExportCampaignReportToExcel(Guid id)
@@ -586,6 +697,7 @@ public class SeasonalAidController : ControllerBase
     /// Assign campaign to charity (UC-9.11)
     /// </summary>
     [HttpPut("campaigns/{id}/charity")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> AssignCampaignToCharity(Guid id, [FromBody] AssignCharityDto dto)
@@ -618,6 +730,7 @@ public class SeasonalAidController : ControllerBase
     /// Get beneficiary by ID
     /// </summary>
     [HttpGet("beneficiaries/{id}")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
     [ProducesResponseType(typeof(SeasonalAidBeneficiaryDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<SeasonalAidBeneficiaryDto>> GetBeneficiary(Guid id)
@@ -663,5 +776,10 @@ public class SetBudgetDto
 //{
 //    public Guid? CharityId { get; set; }
 //}
+
+public class AssignCharityDto
+{
+    public Guid? CharityId { get; set; }
+}
 
 #endregion

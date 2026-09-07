@@ -33,9 +33,10 @@ const routes: Routes = [
   {
     path: ':id',
     component: OrphanPaymentDetailComponent,
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, PermissionGuard],
     data: {
       title: 'orphanPayments.groupDetails',
+      permission: 'OrphanPayments.View',
       breadcrumb: 'orphanPayments.groupDetails'
     }
   },

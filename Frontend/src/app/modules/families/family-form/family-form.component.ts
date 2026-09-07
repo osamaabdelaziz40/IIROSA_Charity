@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl, AbstractControl } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FamilyService } from '../services/family.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -19,10 +19,13 @@ import {
   CreateProviderDto,
   RelativeDto,
   CreateRelativeDto,
-  AttachmentDto
+  AttachmentDto,
+  PhoneCheckDto,
+  PhoneCheckState
 } from '../models/family.model';
 import { SharedModule, AttachmentFileType } from '../../../shared/shared.module';
 import { Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import {
   FatherFormComponent,
   MotherFormComponent,
@@ -60,11 +63,26 @@ export class FamilyFormComponent implements OnInit, OnDestroy {
   providerForm: FormGroup;
   relativesForm: FormGroup;
 
+  // UC-ORP-10 — duplicate-phone flags per holder. Edit mode only: the check spans every OTHER
+  // family in scope and needs this family's id to exclude it, so it cannot run before the
+  // family exists (recorded story limitation for create mode).
+  phoneChecks: Record<string, PhoneCheckState> = {
+    family: { status: 'idle' },
+    father: { status: 'idle' },
+    mother: { status: 'idle' },
+    provider: { status: 'idle' }
+  };
+  private phoneCheckSubscriptions: Subscription[] = [];
+  private nidCheckSubscriptions: Subscription[] = [];
+
   // Relatives array for managing multiple relatives
   relatives: CreateRelativeDto[] = [];
 
   isEditMode = false;
   familyId: string | null = null;
+  /** The loaded family's charity — sent with the UC-SYS-12 check so HQ editors scope it
+   *  (a charity claim still wins server-side; review P7, 2026-08-26). */
+  private familyCharityId: string | null = null;
   loading = false;
   saving = false;
 
@@ -134,6 +152,10 @@ export class FamilyFormComponent implements OnInit, OnDestroy {
     if (this.langChangeSubscription) {
       this.langChangeSubscription.unsubscribe();
     }
+    this.phoneCheckSubscriptions.forEach(s => s.unsubscribe());
+    this.phoneCheckSubscriptions = [];
+    this.nidCheckSubscriptions.forEach(s => s.unsubscribe());
+    this.nidCheckSubscriptions = [];
   }
 
   private updateBreadcrumbs(): void {
@@ -296,6 +318,7 @@ export class FamilyFormComponent implements OnInit, OnDestroy {
     this.familyService.getFamily(id).subscribe({
       next: (family: FamilyDto) => {
         this.patchFamilyForm(family);
+        this.familyCharityId = family.charityId ?? null;
 
         // Load related entities
         if (family.father) {
@@ -315,6 +338,12 @@ export class FamilyFormComponent implements OnInit, OnDestroy {
         if (family.attachments) {
           this.familyAttachments = [...family.attachments];
         }
+
+        // UC-ORP-10 — wire the duplicate-phone checks now that the family id is known
+        this.setupPhoneDuplicateChecks();
+
+        // UC-SYS-12 — same for the national-id uniqueness checks (edit mode only)
+        this.setupNationalIdChecks();
 
         this.loading = false;
       },
@@ -399,6 +428,149 @@ export class FamilyFormComponent implements OnInit, OnDestroy {
     // Update visibility of forms based on provider type
   }
 
+  // ==================== Duplicate-phone check (UC-ORP-10) ====================
+
+  /** One debounced check per phone holder: family, father, mother, provider. */
+  private setupPhoneDuplicateChecks(): void {
+    const holders: Array<[string, FormGroup]> = [
+      ['family', this.familyForm],
+      ['father', this.fatherForm],
+      ['mother', this.motherForm],
+      ['provider', this.providerForm]
+    ];
+
+    for (const [holder, form] of holders) {
+      const control = form.get('phone');
+      if (!control) {
+        continue;
+      }
+      this.phoneCheckSubscriptions.push(
+        control.valueChanges
+          .pipe(debounceTime(400), distinctUntilChanged())
+          .subscribe(() => this.checkPhone(holder, form))
+      );
+    }
+  }
+
+  /** Flag a number already held by another family in scope (spans all five holders). */
+  private checkPhone(holder: string, form: FormGroup): void {
+    const number = (form.get('phone')?.value ?? '').toString().trim();
+    if (!number || !this.familyId) {
+      this.phoneChecks[holder] = { status: 'idle' };
+      return;
+    }
+
+    // P6 — the state carries the number it describes: a response for any other number is
+    // stale and must not pin (or clear) a flag on what the user has typed since.
+    this.phoneChecks[holder] = { status: 'checking', checkedNumber: number };
+    this.familyService.checkPhoneDuplicate(this.familyId, { number }).subscribe({
+      next: result => {
+        if (this.phoneChecks[holder]?.checkedNumber !== number) { return; }
+        this.phoneChecks[holder] = result.isDuplicate
+          ? { status: 'duplicate', checkedNumber: number, holderLabel: this.composeHolderLabel(result) }
+          : { status: 'available', checkedNumber: number };
+      },
+      error: (error: any) => {
+        console.error('Error checking phone number:', error);
+        if (this.phoneChecks[holder]?.checkedNumber === number) {
+          this.phoneChecks[holder] = { status: 'idle', checkedNumber: number };
+        }
+      }
+    });
+  }
+
+  /** P16 — the server returns the holder as structured data; the label is translated here. */
+  private composeHolderLabel(result: PhoneCheckDto): string | null {
+    if (!result.holderName) { return null; }
+    const key = result.holderType ? `orphanCoding.holder_${result.holderType}` : '';
+    const typeWord = key ? this.translate.instant(key) : '';
+    const who = typeWord && !typeWord.startsWith('orphanCoding.')
+      ? `${result.holderName} (${typeWord})`
+      : result.holderName;
+    return result.holderFamilyCode ? `${who} — ${result.holderFamilyCode}` : who;
+  }
+
+  /** A flagged duplicate blocks the save of its holder's section (UC-ORP-10). */
+  private phoneDuplicateBlocked(holder: string): boolean {
+    if (this.phoneChecks[holder]?.status === 'duplicate') {
+      this.notification.error(this.translate.instant('orphanCoding.phoneDuplicate'));
+      return true;
+    }
+    return false;
+  }
+
+  // ==================== National-id uniqueness check (UC-SYS-12) ====================
+
+  /**
+   * One debounced check per id holder: father, mother, provider. Edit mode only — like the
+   * phone check, the call spans every OTHER family in scope and needs this family's id to
+   * exclude itself, so it cannot run before the family exists (create mode stays on the
+   * server-side uniqueness judged at save).
+   */
+  private setupNationalIdChecks(): void {
+    const holders: Array<[string, FormGroup]> = [
+      ['father', this.fatherForm],
+      ['mother', this.motherForm],
+      ['provider', this.providerForm]
+    ];
+
+    for (const [, form] of holders) {
+      const control = form.get('nationalId');
+      if (!control) {
+        continue;
+      }
+      this.nidCheckSubscriptions.push(
+        control.valueChanges
+          .pipe(debounceTime(400), distinctUntilChanged())
+          .subscribe(() => this.checkNationalId(control))
+      );
+    }
+  }
+
+  /**
+   * Flag an id already held by a person on another family in scope (UC-SYS-12). The clash
+   * lands on the control as a `server` error — rendered as-is by app-input-text — so it
+   * blocks the section's save alongside the required rule; a pass clears it. A failed check
+   * stays silent on purpose: this is a read-only aid, the server re-judges on save.
+   */
+  private checkNationalId(control: AbstractControl): void {
+    const nationalId = (control.value ?? '').toString().trim();
+    this.clearNationalIdError(control);
+    if (!nationalId || !this.familyId) {
+      return;
+    }
+
+    this.familyService.checkFamilyNationalId({ nationalId, familyId: this.familyId, charityId: this.familyCharityId ?? undefined }).subscribe({
+      next: result => {
+        // Stale response guard — the user typed on after this request left.
+        if ((control.value ?? '').toString().trim() !== nationalId) { return; }
+        if (result.isUnique) {
+          this.clearNationalIdError(control);
+          return;
+        }
+        // P16 — the server returns the holder as structured data; the label is translated here.
+        const key = result.holderType ? `orphanCoding.holder_${result.holderType.toLowerCase()}` : '';
+        const typeWord = key ? this.translate.instant(key) : '';
+        const who = typeWord && !typeWord.startsWith('orphanCoding.')
+          ? `${result.holderName} (${typeWord})`
+          : (result.holderName ?? '');
+        const message = result.holderFamilyCode
+          ? this.translate.instant('families.nationalIdClash', { holder: who, code: result.holderFamilyCode })
+          : this.translate.instant('families.nationalIdClashNoCode', { holder: who });
+        control.setErrors({ ...control.errors, server: message });
+      },
+      error: (error: any) => console.error('Error checking national id:', error)
+    });
+  }
+
+  /** Drop a stale UC-SYS-12 verdict without touching required/other errors on the control. */
+  private clearNationalIdError(control: AbstractControl): void {
+    if (control.errors && control.errors['server']) {
+      const { server, ...rest } = control.errors;
+      control.setErrors(Object.keys(rest).length ? rest : null);
+    }
+  }
+
   onFamilyAttachmentChange(attachments: AttachmentDto[]): void {
     this.familyAttachments = attachments;
   }
@@ -409,6 +581,11 @@ export class FamilyFormComponent implements OnInit, OnDestroy {
     if (this.familyForm.invalid) {
       this.markFormGroupTouched(this.familyForm);
       this.notification.error(this.translate.instant('families.fixValidationErrors'));
+      return;
+    }
+
+    // UC-ORP-10 — a duplicate family phone blocks the save
+    if (this.isEditMode && this.phoneDuplicateBlocked('family')) {
       return;
     }
 
@@ -567,6 +744,9 @@ export class FamilyFormComponent implements OnInit, OnDestroy {
 
   saveFather(): void {
     if (this.familyId) {
+      if (this.phoneDuplicateBlocked('father')) {
+        return;
+      }
       const fatherData = this.getFatherData();
       if (this.father) {
         // Update existing father
@@ -599,6 +779,9 @@ export class FamilyFormComponent implements OnInit, OnDestroy {
 
   saveMother(): void {
     if (this.familyId) {
+      if (this.phoneDuplicateBlocked('mother')) {
+        return;
+      }
       const motherData = this.getMotherData();
       if (this.mother) {
         // Update existing mother
@@ -631,6 +814,9 @@ export class FamilyFormComponent implements OnInit, OnDestroy {
 
   saveProvider(): void {
     if (this.familyId) {
+      if (this.phoneDuplicateBlocked('provider')) {
+        return;
+      }
       const providerData = this.getProviderData();
       if (this.provider) {
         // Update existing provider

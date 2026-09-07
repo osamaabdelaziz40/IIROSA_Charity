@@ -1,0 +1,132 @@
+<!-- UC-ORP-08/09 — سجل دفعات اليتيم + تفاصيل الدفعة -->
+<div class="card mt-3 orphan-payment-history">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="mb-0">
+      <i class="fe fe-credit-card ml-1"></i>
+      {{ 'orphanCoding.paymentHistory' | translate }} — {{ orphan.fullName }}
+      <span class="badge badge-light mr-1" *ngIf="orphan.code">{{ orphan.code }}</span>
+    </h6>
+    <!-- غلق -->
+    <button type="button" class="btn btn-sm btn-light" (click)="close()">
+      <i class="fe fe-x"></i>
+      {{ 'orphanCoding.close' | translate }}
+    </button>
+  </div>
+
+  <div class="card-body">
+    <!-- رقم الحصة filter (UC-ORP-11 feed) -->
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <label class="form-label">{{ 'orphanCoding.batchNo' | translate }}</label>
+        <select class="form-control" [(ngModel)]="selectedBatchNo"
+                (change)="onBatchFilterChange()">
+          <option *ngFor="let option of batchNumberOptions; trackBy: trackByBatchOption"
+                  [ngValue]="option.id">
+            {{ option.name }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <!-- History rows (UC-ORP-08) -->
+    <div *ngIf="loading" class="text-center py-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <div *ngIf="!loading" class="table-responsive">
+      <table class="table table-hover table-striped">
+        <thead>
+          <tr>
+            <th>{{ 'orphanCoding.groupName' | translate }}</th>
+            <th>{{ 'orphanCoding.batchNo' | translate }}</th>
+            <th>{{ 'orphanCoding.periodFrom' | translate }}</th>
+            <th>{{ 'orphanCoding.periodTo' | translate }}</th>
+            <th>{{ 'orphanCoding.groupDate' | translate }}</th>
+            <th>{{ 'orphanCoding.uploaded' | translate }}</th>
+            <th>{{ 'common.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let payment of history; trackBy: trackByPaymentGroupId">
+            <td>{{ payment.groupName || '-' }}</td>
+            <td><strong>{{ payment.batchNo || '-' }}</strong></td>
+            <td>{{ payment.paymentPeriodFrom | date: 'mediumDate' }}</td>
+            <td>{{ payment.paymentPeriodTo | date: 'mediumDate' }}</td>
+            <td>{{ payment.groupDate | date: 'mediumDate' }}</td>
+            <td>
+              <span class="badge" [ngClass]="payment.isBatchUploaded ? 'badge-success' : 'badge-secondary'">
+                {{ (payment.isBatchUploaded ? 'orphanCoding.uploadedYes' : 'orphanCoding.uploadedNo') | translate }}
+              </span>
+            </td>
+            <td>
+              <button type="button" class="btn btn-sm btn-light"
+                      (click)="openDetails(payment.id)"
+                      [title]="'orphanCoding.viewDetails' | translate">
+                <i class="fe fe-eye"></i>
+              </button>
+            </td>
+          </tr>
+
+          <tr *ngIf="history.length === 0">
+            <td colspan="7" class="text-center py-4">
+              <i class="fe fe-inbox fe-2x text-muted d-block mb-2"></i>
+              <span class="text-muted">{{ 'orphanCoding.noHistory' | translate }}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Detail step (UC-ORP-09) — batch header + this orphan's rows -->
+    <div *ngIf="detail" class="mt-3 detail-section">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0">{{ 'orphanCoding.batchDetails' | translate }} — {{ detail.batchNo }}</h6>
+        <button type="button" class="btn btn-sm btn-light" (click)="closeDetails()">
+          <i class="fe fe-arrow-right ml-1"></i>
+          {{ 'orphanCoding.backToHistory' | translate }}
+        </button>
+      </div>
+
+      <div *ngIf="detailLoading" class="text-center py-3">
+        <div class="spinner-border text-primary" role="status"></div>
+      </div>
+
+      <div *ngIf="!detailLoading" class="row mb-3">
+        <div class="col-md-3"><strong>{{ 'orphanCoding.groupName' | translate }}:</strong> {{ detail.groupName || '-' }}</div>
+        <div class="col-md-3"><strong>{{ 'orphanCoding.groupDate' | translate }}:</strong> {{ detail.groupDate | date: 'mediumDate' }}</div>
+        <div class="col-md-3"><strong>{{ 'orphanCoding.currency' | translate }}:</strong> {{ detail.currency || '-' }}</div>
+        <div class="col-md-3" *ngIf="detail.exchangeRate"><strong>{{ 'orphanCoding.exchangeRate' | translate }}:</strong> {{ detail.exchangeRate }}</div>
+        <!-- P15 — الفترة and مرفوعة are part of the batch header (§13.U.9 Task 2 list) -->
+        <div class="col-md-3"><strong>{{ 'orphanCoding.periodFrom' | translate }}:</strong> {{ detail.paymentPeriodFrom | date: 'mediumDate' }}</div>
+        <div class="col-md-3"><strong>{{ 'orphanCoding.periodTo' | translate }}:</strong> {{ detail.paymentPeriodTo | date: 'mediumDate' }}</div>
+        <div class="col-md-3">
+          <span class="badge" [ngClass]="detail.isBatchUploaded ? 'badge-success' : 'badge-secondary'">
+            {{ (detail.isBatchUploaded ? 'orphanCoding.uploadedYes' : 'orphanCoding.uploadedNo') | translate }}
+          </span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>{{ 'orphanCoding.displayOrder' | translate }}</th>
+              <th>{{ 'orphanCoding.notes' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of detail.orphans; let i = index; trackBy: trackByOrphanRow">
+              <td>{{ i + 1 }}</td>
+              <td>{{ row.displayOrder }}</td>
+              <td>{{ row.notes || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Cheque number / receipt state columns render when their fields exist (10-11/10-12) -->
+    </div>
+  </div>
+</div>

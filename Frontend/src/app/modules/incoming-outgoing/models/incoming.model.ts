@@ -1,79 +1,111 @@
+// Epic 16 wire models (UC-COR-01…09) — camelCase fields matching the
+// api/IncomingOutgoing controller. Dates are ISO strings over the wire.
+
 export interface IncomingDto {
   id: string;
   serial?: number;
   serialTxt?: string;
   subject: string;
-  date?: Date;
-  incomingNumber?: string;
-  incomingId: string;
-  body?: string;
-  letterNumber: string;
-  letterDate: Date;
+  date?: string;
+  letterNumber?: string;
+  letterDate?: string;
   year?: number;
   status?: string;
   letterDescription?: string;
-  fkDepartmentId?: string;
+  departmentId?: number;
   departmentName?: string;
-  fkUserId?: string;
-  userName?: string;
+  assignedUserId?: string;
+  assignedUserName?: string;
   outgoingId?: string;
-  outgoingNumber?: string;
-  uploadedFile?: string;
-  fileName?: string;
-  createdOn: Date;
-  modifiedOn?: Date;
-  createdBy?: string;
-  modifiedBy?: string;
+  outgoingLetterNumber?: string;
+  uploadedFileId?: string;
+  uploadedFileName?: string;
+  charityId?: string;
+  charityName?: string;
+  createdOn: string;
+  updatedOn: string;
 }
 
 export interface CreateIncomingDto {
-  subject: string;
-  date?: Date;
-  incomingNumber?: string;
-  incomingId: string;
-  body?: string;
-  letterNumber: string;
-  letterDate: Date;
-  year?: number;
-  status?: string;
-  letterDescription?: string;
-  fkDepartmentId?: string;
-  outgoingId?: string;
-  uploadedFile?: string;
-}
-
-export interface UpdateIncomingDto {
-  subject?: string;
-  date?: Date;
-  incomingNumber?: string;
-  incomingId?: string;
-  body?: string;
+  date?: string;
   letterNumber?: string;
-  letterDate?: Date;
-  year?: number;
+  letterDate?: string;
+  departmentId?: number;
+  subject: string;
   status?: string;
-  letterDescription?: string;
-  fkDepartmentId?: string;
+  assignedUserId?: string;
   outgoingId?: string;
-  uploadedFile?: string;
+  letterDescription?: string;
+  uploadedFileId?: string;
 }
 
-export interface IncomingSearchRequest {
-  searchTerm?: string;
-  departmentId?: string;
+export interface UpdateIncomingDto extends CreateIncomingDto {
+  id: string;
+}
+
+export interface IncomingListDto {
+  id: string;
+  serial?: number;
+  serialTxt?: string;
+  subject: string;
+  letterNumber?: string;
+  letterDate?: string;
+  date?: string;
+  departmentId?: number;
+  departmentName?: string;
+  assignedUserName?: string;
   status?: string;
   year?: number;
-  startDate?: Date;
-  endDate?: Date;
-  createdBy?: string;
+  uploadedFileId?: string;
+  uploadedFileName?: string;
+  createdOn: string;
+}
+
+export interface IncomingFilterDto {
   pageNumber?: number;
   pageSize?: number;
+  searchTerm?: string;
+  serial?: number;
+  letterNumber?: string;
+  departmentId?: number;
+  status?: string;
+  year?: number;
+  startDate?: string;
+  endDate?: string;
+  assignedUserId?: string;
+  charityId?: string;
+  sortBy?: string;
+  sortOrder?: string;
 }
 
 export interface IncomingPagedResult {
-  items: IncomingDto[];
+  items: IncomingListDto[];
   totalCount: number;
-  pageNumber: number;
-  pageSize: number;
-  totalPages: number;
+  page: number;
+}
+
+// The spec's tri-state (معلق / تم الرد / تم عمل اللازم) — id is the Arabic stored value.
+export interface CorrespondenceStatusOption {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  color: string;
+}
+
+export interface NextSerialDto {
+  serial: number;
+  serialTxt: string;
+}
+
+// ========== Employee attachment (UC-COR-09 / §21.S.3) ==========
+
+export interface EmployeeOptionDto {
+  userId: string;
+  fullName: string;
+  email?: string;
+}
+
+export interface IncomingEmployeesDto {
+  attached: EmployeeOptionDto[];
+  available: EmployeeOptionDto[];
 }

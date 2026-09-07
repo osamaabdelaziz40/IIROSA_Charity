@@ -40,6 +40,31 @@ export interface FamilyDto {
   createdBy?: string;
   modifiedBy?: string;
 
+  // Refugee register household fields (epic 7, §12.S.2) — wire names, resolved names included
+  familyType?: string;
+  cityVillage?: string;
+  districtArea?: string;
+  phoneNumber?: string;
+  countryId?: number;
+  countryName?: string;
+  regionId?: number;
+  regionName?: string;
+  centerId?: number;
+  centerName?: string;
+  nearBy?: string;
+  street?: string;
+  rentAmount?: number;
+  houseOwnershipId?: number;
+  houseOwnershipName?: string;
+  houseStatusId?: number;
+  houseStatusName?: string;
+  /** نوع السكن — shared catalogue id + resolved name (GET /api/Families/{id}, UC-REF-04) */
+  housingTypeId?: number;
+  housingTypeName?: string;
+  incomeTypeId?: number;
+  incomeTypeName?: string;
+  perMemberShare?: number;
+
   // Related entities
   father?: FatherDto;
   mother?: MotherDto;
@@ -64,11 +89,30 @@ export interface CreateFamilyDto {
   providerType?: string;
   registrationDate?: string;
   notes?: string;
-  father: CreateFatherDto; // Mandatory
-  mother: CreateMotherDto; // Mandatory
+  /** Mandatory for the Regular register (service-enforced); a refugee family has neither */
+  father?: CreateFatherDto;
+  /** Mandatory for the Regular register (service-enforced); a refugee family has neither */
+  mother?: CreateMotherDto;
   provider?: CreateProviderDto;
   relatives?: CreateRelativeDto[]; // Optional
   orphans?: CreateOrphanDto[];
+  // Refugee register household fields (epic 7, §12.S.2) — string on the wire, absent ⇒ Regular
+  familyType?: string;
+  cityVillage?: string;
+  districtArea?: string;
+  phoneNumber?: string;
+  countryId?: number;
+  regionId?: number;
+  centerId?: number;
+  nearBy?: string;
+  street?: string;
+  rentAmount?: number;
+  houseOwnershipId?: number;
+  houseStatusId?: number;
+  housingTypeId?: number;
+  incomeTypeId?: number;
+  /** إسم الأسرة — derived from the provider's name on the refugee register (§12.S.2) */
+  headOfFamily?: string;
 }
 
 export interface UpdateFamilyDto {
@@ -82,11 +126,49 @@ export interface UpdateFamilyDto {
   housingType?: string;
   providerType?: string;
   notes?: string;
+  // Refugee register household fields (epic 7, §12.S.2)
+  cityVillage?: string;
+  districtArea?: string;
+  phoneNumber?: string;
+  regionId?: number;
+  centerId?: number;
+  nearBy?: string;
+  street?: string;
+  rentAmount?: number;
+  houseOwnershipId?: number;
+  houseStatusId?: number;
+  housingTypeId?: number;
+  incomeTypeId?: number;
+}
+
+// List-item shape actually returned by GET /api/Families (FamilyListDto on the wire)
+export interface FamilyListItemDto {
+  id: string;
+  code: string;
+  address: string;
+  cityVillage?: string;
+  fatherName?: string;
+  motherName?: string;
+  orphansCount: number;
+  relativesCount: number;
+  providerType?: string;
+  registrationDate: string;
+  isActive: boolean;
+  familyType?: string;
+  phoneNumber?: string;
+  charityName?: string;
+  /** Holding-family marker (ruling 2026-08-24): rows created only to hold a member detached
+   *  by member control — not a register family. */
+  isHoldingFamily?: boolean;
 }
 
 export interface FamilySearchRequest {
   searchTerm?: string;
   charityId?: string;
+  familyType?: string;
+  /** Typed search selector — the shared FamilyFilterDto.SearchType vocabulary: all |
+   *  father | mother | student (orphan name) | provider | nationalId | code (orphan code) | phone */
+  searchType?: string;
   orphanCountMin?: number;
   orphanCountMax?: number;
   providerType?: string;
@@ -105,6 +187,60 @@ export interface FamilyPagedResult {
   pageNumber: number;
   pageSize: number;
   totalPages: number;
+}
+
+// ==================== Guardian Change Request Models (UC-FAM-09/10) ====================
+
+/** Review-queue workflow status — mirrors GuardianChangeRequestStatus (Domain enum). */
+export const GUARDIAN_REQUEST_STATUS = {
+  Pending: 1,
+  Approved: 2,
+  Rejected: 3
+} as const;
+
+/** One §10.S.4 review-queue row — old/new guardian snapshots travel with the row. */
+export interface GuardianChangeRequestRow {
+  id: string;
+  charityName?: string;
+  familyId: string;
+  familyCode?: string;
+  orphanCode?: string;
+  orphanName?: string;
+  motherName?: string;
+  oldGuardianName?: string;
+  oldGuardianNationalId?: string;
+  /** Old guardian's relationship snapshot — declared relationship, or Father/Mother for
+   *  parent-designated families (DoD §10.U.09, landed 2026-08-24). */
+  oldGuardianRelationship?: string;
+  newGuardianName: string;
+  newGuardianNationalId: string;
+  relationship: string;
+  reason: string;
+  requestedByName: string;
+  createdOn: string;
+  status: number;
+  decidedBy?: string | null;
+  decidedOn?: string | null;
+  rejectionReason?: string | null;
+}
+
+export interface GuardianChangeRequestPagedResult {
+  items: GuardianChangeRequestRow[];
+  totalCount: number;
+}
+
+/** Raise payload — the proposed new guardian snapshot plus the reason. */
+export interface CreateGuardianChangeRequest {
+  newGuardianName: string;
+  newGuardianNationalId: string;
+  relationship: string;
+  reason: string;
+}
+
+/** UC-FAM-10 decision payload — a refusal is not accepted without a reason. */
+export interface DecideGuardianChangeRequest {
+  isApproved: boolean;
+  rejectionReason?: string;
 }
 
 // ==================== Father Models ====================
@@ -230,6 +366,10 @@ export interface ProviderDto {
   familyId: string;
   fullName: string;
   relationship?: string;
+  /** نوعها — free-text relation (wire name; resolved against the Relation catalogue on edit) */
+  relationshipToFamily?: string;
+  /** العلاقة — closed set: الاب | الام | علاقة أخرى (epic-7 review P14) */
+  mainRelation?: string;
   nationalId?: string;
   passportNumber?: string;
   phone?: string;
@@ -237,6 +377,15 @@ export interface ProviderDto {
   job?: string;
   monthlyIncome?: number;
   notes?: string;
+  // Refugee register extensions (epic 7, §12.S.2 اضافة معيل)
+  dateOfBirth?: string;
+  nationalityCountryId?: number;
+  isAlive?: boolean;
+  deathDate?: string;
+  /** Closed set: طبيعية / مرض / حادث (static list on the form, not a lookup) */
+  deathReason?: string;
+  reasonOfRelationId?: number;
+  reasonOfRelationName?: string;
   createdOn: string;
   modifiedOn?: string;
 }
@@ -252,6 +401,17 @@ export interface CreateProviderDto {
   job?: string;
   monthlyIncome?: number;
   notes?: string;
+  // Refugee register extensions (epic 7, §12.S.2 اضافة معيل)
+  /** نوعها — Relation catalogue label; travels as the free-text relation on the wire */
+  relationshipToFamily?: string;
+  /** العلاقة — closed set: الاب | الام | علاقة أخرى (epic-7 review P14) */
+  mainRelation?: string;
+  dateOfBirth?: string;
+  nationalityCountryId?: number;
+  isAlive?: boolean;
+  deathDate?: string;
+  deathReason?: string;
+  reasonOfRelationId?: number;
 }
 
 export interface UpdateProviderDto {
@@ -264,6 +424,16 @@ export interface UpdateProviderDto {
   job?: string;
   monthlyIncome?: number;
   notes?: string;
+  // Refugee register extensions (epic 7, §12.S.2 اضافة معيل — edit mode, UC-REF-04)
+  relationshipToFamily?: string;
+  /** العلاقة — closed set: الاب | الام | علاقة أخرى (epic-7 review P14) */
+  mainRelation?: string;
+  dateOfBirth?: string;
+  nationalityCountryId?: number;
+  isAlive?: boolean;
+  deathDate?: string;
+  deathReason?: string;
+  reasonOfRelationId?: number;
 }
 
 // ==================== Relative Models ====================
@@ -348,6 +518,13 @@ export interface RelativeListDto {
   isLivingWithFamily: boolean;
   phone?: string;
   isActive: boolean;
+  // Refugee register extensions (epic 7, UC-REF-04) — reload staged مرافق rows without
+  // losing the NID / free-text صلة القرابة
+  nationalId?: string;
+  notes?: string;
+  /** الحالة الصحية — HealthStatus lookup id + resolved name (epic-7 review P12) */
+  healthStatusId?: number;
+  healthStatusName?: string;
 }
 
 // ==================== Orphan Models ====================
@@ -356,6 +533,7 @@ export interface OrphanDto {
   id: string;
   familyId: string;
   charityId: string;
+  code?: string;
   fullName: string;
   gender: string;
   dateOfBirth: string;
@@ -372,6 +550,9 @@ export interface OrphanDto {
   grade?: string;
   academicPerformance?: string;
   healthStatus?: string;
+  /** الحالة الصحية — HealthStatus lookup id + resolved name (epic-7 review P12) */
+  healthStatusId?: number;
+  healthStatusName?: string;
   disabilities?: string;
   chronicDiseases?: string;
   phone?: string;
@@ -382,6 +563,9 @@ export interface OrphanDto {
   age?: number;
   sponsorId?: string;
   sponsorName?: string;
+  // Refugee register extension (epic 7, §12.S.2 اضافة ابن)
+  socialStatusId?: number;
+  socialStatusName?: string;
   isActive: boolean;
   createdOn: string;
   modifiedOn?: string;
@@ -407,6 +591,8 @@ export interface CreateOrphanDto {
   grade?: string;
   academicPerformance?: string;
   healthStatus?: string;
+  /** الحالة الصحية — HealthStatus lookup id (epic-7 review P12) */
+  healthStatusId?: number;
   disabilities?: string;
   chronicDiseases?: string;
   phone?: string;
@@ -414,12 +600,18 @@ export interface CreateOrphanDto {
   hobbies?: string;
   skills?: string;
   notes?: string;
+  // Refugee register extension (epic 7, §12.S.2 اضافة ابن)
+  socialStatusId?: number;
 }
 
 export interface UpdateOrphanDto {
   fullName: string;
   gender: string;
   dateOfBirth: string;
+  // Refugee register extension (epic 7, §12.S.2 اضافة ابن)
+  socialStatusId?: number;
+  /** الحالة الصحية — HealthStatus lookup id (epic-7 review P12) */
+  healthStatusId?: number;
   placeOfBirth?: string;
   nationalId?: string;
   passportNumber?: string;
@@ -501,4 +693,149 @@ export interface FamilyAuditLog {
   performedBy: string;
   performedOn: Date;
   ipAddress?: string;
+}
+
+// ==================== Orphan Register & Coding (Epic 8, UC-ORP-*) ====================
+
+/** Filter for the shared GET /api/Families/orphans read (UC-ORP-02/03/07). */
+export interface OrphanCodingSearchRequest {
+  search?: string;
+  charityId?: string;
+  /** "Pending" = uncoded (empty code) — the coding worklist, HQ only; "Coded" = has a code. */
+  codingStatus?: string;
+  sortBy?: string;
+  sortDescending?: boolean;
+  pageNumber?: number;
+  pageSize?: number;
+}
+
+/** Row of the orphan search / coding worklist (§13.S.1 / §13.S.2 judgement data). */
+export interface OrphanLookupDto {
+  orphanId: string;
+  fullName: string;
+  code?: string | null;
+  fatherName?: string | null;
+  motherName?: string | null;
+  charityName?: string | null;
+  charityId?: string | null;
+  familyId?: string | null;
+  familyCode?: string | null;
+  dateOfBirth?: string | null;
+  age?: number | null;
+  gender?: string | null;
+  nationalId?: string | null;
+  phone?: string | null;
+  sponsorshipStatus?: string | null;
+  educationLevelName?: string | null;
+  healthStatusName?: string | null;
+}
+
+export interface OrphanLookupPagedResult {
+  items: OrphanLookupDto[];
+  totalCount: number;
+  page?: number;
+}
+
+/** UC-ORP-01 — check whether an orphan may be added. */
+export interface OrphanEligibilityCheckRequest {
+  nationalId?: string;
+  /** P3 — the family being opened; checked to exist, be active and sit in scope. */
+  familyId?: string;
+  charityId?: string;
+}
+
+export interface OrphanEligibilityDto {
+  canBeAdded: boolean;
+  field?: string | null;
+  /** P16 — machine key; the label resolves to orphanCoding.reasons.<reasonCode>. */
+  reasonCode?: string | null;
+  existingOrphanName?: string | null;
+}
+
+/** UC-SYS-12 — family/guardian-level national-id uniqueness check. */
+export interface FamilyNationalIdCheckRequest {
+  nationalId: string;
+  /** The family being edited — its own holders never count as a clash. */
+  familyId?: string;
+  /** HQ names the register; a charity claim wins server-side. */
+  charityId?: string;
+}
+
+export interface FamilyNationalIdCheckResult {
+  isUnique: boolean;
+  holderName?: string | null;
+  holderFamilyCode?: string | null;
+  /** Father | Mother | Provider | Relative | Orphan (null when unique). */
+  holderType?: string | null;
+}
+
+/** UC-ORP-05 — verify a sponsorship code is not already used (BR-07). */
+export interface OrphanCodeCheckRequest {
+  code: string;
+  charityId?: string;
+  excludeOrphanId?: string;
+}
+
+export interface OrphanCodeCheckDto {
+  isAvailable: boolean;
+  existingOrphanName?: string | null;
+  existingCharityName?: string | null;
+}
+
+/** UC-ORP-06 — assign a sponsorship code. */
+export interface AssignOrphanCodeRequest {
+  orphanId: string;
+  code: string;
+}
+
+/** UC-ORP-10 — check a phone number is not duplicated. */
+export interface PhoneCheckRequest {
+  number: string;
+  type?: string;
+  charityId?: string;
+}
+
+export interface PhoneCheckDto {
+  isDuplicate: boolean;
+  /** P16 — the holder as structured data; the translated label is composed client-side. */
+  holderFamilyCode?: string | null;
+  holderName?: string | null;
+  /** family | father | mother | provider | orphan — i18n key suffix. */
+  holderType?: string | null;
+}
+
+/** UC-ORP-10 — per-holder duplicate-phone state on the family form (edit mode only). */
+export interface PhoneCheckState {
+  status: 'idle' | 'checking' | 'available' | 'duplicate';
+  /** P6 — the number this state describes; a verdict for any other number is stale. */
+  checkedNumber?: string;
+  /** P16 — translated label naming the existing holder, composed when the verdict arrived. */
+  holderLabel?: string | null;
+}
+
+/** UC-ORP-11 — batch-number reference row (رقم الحصة). */
+export interface BatchNumberDto {
+  batchNo: string;
+  latestGroupDate?: string | null;
+}
+
+// ==================== Family Follow-Up Report (Epic 5, UC-FAM-11) ====================
+
+/** One UC-FAM-11 row — a family file created or updated on the report date. */
+export interface FamilyFollowUpRow {
+  familyId: string;
+  code: string;
+  headOfFamily: string;
+  charityName?: string | null;
+  /** "Created" | "Updated" — creation wins over a same-day update */
+  changeKind: string;
+  changedBy?: string | null;
+  changedOn: string;
+  /** How many of the family's orphans were created/updated the same day */
+  orphansTouched: number;
+}
+
+export interface FamilyFollowUpPagedResult {
+  items: FamilyFollowUpRow[];
+  totalCount: number;
 }

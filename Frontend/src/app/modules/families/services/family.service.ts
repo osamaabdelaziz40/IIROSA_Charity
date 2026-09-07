@@ -27,6 +27,22 @@ import {
   UpdateOrphanDto,
   OrphanSearchRequest,
   OrphanPagedResult,
+  OrphanCodingSearchRequest,
+  OrphanLookupDto,
+  OrphanLookupPagedResult,
+  OrphanEligibilityCheckRequest,
+  OrphanEligibilityDto,
+  FamilyNationalIdCheckRequest,
+  FamilyNationalIdCheckResult,
+  OrphanCodeCheckRequest,
+  OrphanCodeCheckDto,
+  AssignOrphanCodeRequest,
+  PhoneCheckRequest,
+  PhoneCheckDto,
+  GuardianChangeRequestPagedResult,
+  CreateGuardianChangeRequest,
+  DecideGuardianChangeRequest,
+  FamilyFollowUpPagedResult,
   FamilyAttachmentDto,
   CreateFamilyAttachmentDto,
   FamilyAuditLog,
@@ -151,6 +167,95 @@ export class FamilyService {
   activateFamily(id: string): Observable<void> {
     return this.http.patch<void>(`${this.apiUrl}/${id}/activate`, {}, {
       headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // ==================== CHARITY TRANSFER (UC-FAM-06) ====================
+
+  transferFamily(id: string, dto: { newCharityId: string; reason?: string }): Observable<void> {
+    return this.http.put<void>(`${this.apiUrl}/${id}/charity`, dto, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // ==================== MEMBER CONTROL (UC-FAM-07/08) ====================
+
+  /** Move an orphan (memberType 1) or guardian (memberType 2) between families. */
+  controlMember(familyId: string, memberId: string, dto: {
+    memberType: number;
+    action: number;
+    targetFamilyCode?: string;
+    justification?: string;
+  }): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${familyId}/members/${memberId}/control`, dto, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * UC-FAM-13 حذف كفالة العائل — remove the family's guardian sponsorship link.
+   * HQ-only server-side; the التعليق travels as a query parameter (DELETE body).
+   */
+  removeProviderSponsorLink(familyId: string, comment?: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${familyId}/provider/sponsor`, {
+      headers: this.getHeaders(),
+      params: this.buildHttpParams({ comment })
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // ==================== GUARDIAN CHANGE REQUESTS (UC-FAM-09/10) ====================
+
+  /** The review queue — pending by default; a Charity-role caller is scoped server-side. */
+  getProviderRequests(filter: {
+    status?: number;
+    charityId?: string;
+    pageNumber?: number;
+    pageSize?: number;
+  }): Observable<GuardianChangeRequestPagedResult> {
+    return this.http.get<GuardianChangeRequestPagedResult>(`${this.apiUrl}/provider-requests`, {
+      headers: this.getHeaders(),
+      params: this.buildHttpParams(filter)
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Raise a guardian-change request for a family (the charity-side producer of the queue). */
+  raiseGuardianChangeRequest(familyId: string, dto: CreateGuardianChangeRequest): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${familyId}/provider-requests`, dto, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** Record the head-office decision on a request (UC-FAM-10 اعتماد تعديل العائل). */
+  decideProviderRequest(requestId: string, dto: DecideGuardianChangeRequest): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/provider-requests/${requestId}/approve`, dto, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** UC-FAM-11 follow-up report — one day of family-file activity, scoped server-side. */
+  getFollowUp(filter: {
+    date: string;
+    charityId?: string;
+    pageNumber?: number;
+    pageSize?: number;
+  }): Observable<FamilyFollowUpPagedResult> {
+    return this.http.get<FamilyFollowUpPagedResult>(`${this.apiUrl}/follow-up`, {
+      headers: this.getHeaders(),
+      params: this.buildHttpParams(filter)
     }).pipe(
       catchError(this.handleError)
     );
@@ -423,6 +528,67 @@ export class FamilyService {
   getStatistics(): Observable<any> {
     return this.http.get(`${this.apiUrl}/statistics`, {
       headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // ==================== ORPHAN REGISTER & CODING (Epic 8, UC-ORP-*) ====================
+
+  /** UC-ORP-02/03/07 — shared orphan read: search by name or code, or the coding worklist. */
+  searchOrphansCoding(request: OrphanCodingSearchRequest): Observable<OrphanLookupPagedResult> {
+    return this.http.get<OrphanLookupPagedResult>(`${this.apiUrl}/orphans`, {
+      headers: this.getHeaders(),
+      params: this.buildHttpParams(request)
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** UC-ORP-01 — may an orphan with this national ID be added? */
+  checkOrphanCanBeAdded(request: OrphanEligibilityCheckRequest): Observable<OrphanEligibilityDto> {
+    return this.http.get<OrphanEligibilityDto>(`${this.apiUrl}/orphans/check-national-id`, {
+      headers: this.getHeaders(),
+      params: this.buildHttpParams(request)
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** UC-SYS-12 — is this national id held by any person on another in-scope family? */
+  checkFamilyNationalId(request: FamilyNationalIdCheckRequest): Observable<FamilyNationalIdCheckResult> {
+    return this.http.get<FamilyNationalIdCheckResult>(`${this.apiUrl}/check-national-id`, {
+      headers: this.getHeaders(),
+      params: this.buildHttpParams(request)
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** UC-ORP-05 — verify a sponsorship code is not already used (BR-07). */
+  checkOrphanCode(request: OrphanCodeCheckRequest): Observable<OrphanCodeCheckDto> {
+    return this.http.get<OrphanCodeCheckDto>(`${this.apiUrl}/orphans/check-code`, {
+      headers: this.getHeaders(),
+      params: this.buildHttpParams(request)
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** UC-ORP-06 — assign a sponsorship code to an orphan (SaveCode). */
+  assignOrphanCode(request: AssignOrphanCodeRequest): Observable<OrphanDto> {
+    return this.http.post<OrphanDto>(`${this.apiUrl}/orphans/${request.orphanId}/code`, request, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /** UC-ORP-10 — check a phone number is not duplicated across the family's scope. */
+  checkPhoneDuplicate(familyId: string, request: PhoneCheckRequest): Observable<PhoneCheckDto> {
+    return this.http.get<PhoneCheckDto>(`${this.apiUrl}/${familyId}/provider/check-phone`, {
+      headers: this.getHeaders(),
+      params: this.buildHttpParams(request)
     }).pipe(
       catchError(this.handleError)
     );

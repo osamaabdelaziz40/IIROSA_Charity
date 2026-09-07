@@ -1,0 +1,17 @@
+.error-card {
+  max-width: 28rem;
+  width: 100%;
+}
+
+.error-icon {
+  i {
+    font-size: 3rem;
+    color: #d9534f;
+  }
+}
+
+.error-trace code {
+  direction: ltr;
+  display: inline-block;
+  user-select: all;
+}

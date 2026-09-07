@@ -154,4 +154,16 @@ public class RelativeListDto
     public bool IsLivingWithFamily { get; set; }
     public string? Phone { get; set; }
     public bool IsActive { get; set; }
+
+    // Refugee register extensions (epic 7, UC-REF-04) — the §12.S.2 edit screen reloads its
+    // staged مرافق rows from this shape; without the NID and the free-text صلة القرابة (stored
+    // as notes) the row would silently lose them on reload. (Companion social status is NOT
+    // here: Relative has no such column — see the 7-4 completion-note gap.)
+    public string? NationalId { get; set; }
+    public string? Notes { get; set; }
+
+    // الحالة الصحية (epic-7 review P12) — §12.S.2 مرافق health status, included on the list
+    // shape so the view/edit screens reload and display it like the orphan rows do
+    public int? HealthStatusId { get; set; }
+    public string? HealthStatusName { get; set; }
 }

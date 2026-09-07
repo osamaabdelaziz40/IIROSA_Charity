@@ -1,0 +1,283 @@
+- generic [ref=f1e5]:
+  - navigation [ref=f1e6]:
+    - button "" [ref=f1e7] [cursor=pointer]
+    - list [ref=f1e9]:
+      - listitem [ref=f1e10]:
+        - link "العربية " [ref=f1e11] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f1e12]: 
+          - text: العربية 
+      - listitem [ref=f1e13]:
+        - link "" [ref=f1e14] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f1e16]:
+        - link "" [ref=f1e17] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f1e20]:
+        - button [ref=f1e21] [cursor=pointer]:
+          - generic [ref=f1e22]:
+            - text: مرحبا System Admin
+            - img "..." [ref=f1e23]
+          - text: 
+  - complementary [ref=f1e24]:
+    - generic [ref=f1e29]:
+      - text: 
+      - navigation [ref=f1e30]:
+        - link [ref=f1e32] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f1e33]
+        - paragraph [ref=f1e34]: عناصر الموقع
+        - list [ref=f1e35]:
+          - listitem [ref=f1e36]:
+            - link " الصفحة الرئيسية (current) " [ref=f1e37] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f1e38]: 
+              - generic [ref=f1e39]: الصفحة الرئيسية
+              - generic [ref=f1e40]: (current)
+              - text: 
+            - list [ref=f1e41]:
+              - listitem [ref=f1e42]:
+                - link "الرئيسية" [ref=f1e43] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f1e44]:
+            - link " المستخدمون " [ref=f1e45] [cursor=pointer]:
+              - /url: "#user-management"
+              - generic [ref=f1e46]: 
+              - generic [ref=f1e47]: المستخدمون
+              - text: 
+          - listitem [ref=f1e48]:
+            - link " الموظفون " [ref=f1e49] [cursor=pointer]:
+              - /url: "#employees"
+              - generic [ref=f1e50]: 
+              - generic [ref=f1e51]: الموظفون
+              - text: 
+          - listitem [ref=f1e52]:
+            - link " الجمعيات " [ref=f1e53] [cursor=pointer]:
+              - /url: "#charities"
+              - generic [ref=f1e54]: 
+              - generic [ref=f1e55]: الجمعيات
+              - text: 
+          - listitem [ref=f1e56]:
+            - link " مشاريع المكتب " [ref=f1e57] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f1e58]: 
+              - generic [ref=f1e59]: مشاريع المكتب
+              - text: 
+            - list [ref=f1e60]:
+              - listitem [ref=f1e61]:
+                - link "جميع مشاريع المكتب" [ref=f1e62] [cursor=pointer]:
+                  - /url: "#/office-development-projects"
+              - listitem [ref=f1e63]:
+                - link "إضافة مشروع مكتب" [ref=f1e64] [cursor=pointer]:
+                  - /url: "#/office-development-projects/create"
+          - listitem [ref=f1e65]:
+            - link " مشاريع الإسكان " [ref=f1e66] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f1e67]: 
+              - generic [ref=f1e68]: مشاريع الإسكان
+              - text: 
+          - listitem [ref=f1e69]:
+            - link " المساعدات الموسمية " [ref=f1e70] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f1e71]: 
+              - generic [ref=f1e72]: المساعدات الموسمية
+              - text: 
+          - listitem [ref=f1e73]:
+            - link " الوارد والصادر " [ref=f1e74] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f1e75]: 
+              - generic [ref=f1e76]: الوارد والصادر
+              - text: 
+          - listitem [ref=f1e77]:
+            - link " مدفوعات الأيتام " [ref=f1e78] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f1e79]: 
+              - generic [ref=f1e80]: مدفوعات الأيتام
+              - text: 
+          - listitem [ref=f1e81]:
+            - link " الأسر " [ref=f1e82] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f1e83]: 
+              - generic [ref=f1e84]: الأسر
+              - text: 
+          - listitem [ref=f1e85]:
+            - link " التقارير " [ref=f1e86] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f1e87]: 
+              - generic [ref=f1e88]: التقارير
+              - text: 
+          - listitem [ref=f1e89]:
+            - link " الشيكات العامة " [ref=f1e90] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f1e91]: 
+              - generic [ref=f1e92]: الشيكات العامة
+              - text: 
+          - listitem [ref=f1e93]:
+            - link " المهام " [ref=f1e94] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f1e95]: 
+              - generic [ref=f1e96]: المهام
+              - text: 
+          - listitem [ref=f1e97]:
+            - link " التقارير الدورية للأيتام " [ref=f1e98] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f1e99]: 
+              - generic [ref=f1e100]: التقارير الدورية للأيتام
+              - text: 
+          - listitem [ref=f1e101]:
+            - link " الحوالات المالية " [ref=f1e102] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f1e103]: 
+              - generic [ref=f1e104]: الحوالات المالية
+              - text: 
+          - listitem [ref=f1e105]:
+            - link " الدعم الفني " [ref=f1e106] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f1e107]: 
+              - generic [ref=f1e108]: الدعم الفني
+              - text: 
+          - listitem [ref=f1e109]:
+            - link " إدارة الجداول المرجعية " [ref=f1e110] [cursor=pointer]:
+              - /url: "#lookup-management"
+              - generic [ref=f1e111]: 
+              - generic [ref=f1e112]: إدارة الجداول المرجعية
+              - text: 
+  - main [ref=f1e113]:
+    - generic [ref=f1e115]:
+      - navigation "breadcrumb" [ref=f1e117]:
+        - list [ref=f1e118]:
+          - listitem [ref=f1e119]:
+            - link "الرئيسية" [ref=f1e120] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=f1e121]:
+            - text: /
+            - link "مشاريع التنمية المكتبية" [ref=f1e122] [cursor=pointer]:
+              - /url: "#/office-development-projects"
+          - listitem [ref=f1e123]:
+            - text: /
+            - generic [ref=f1e124]: إضافة مشروع
+      - generic [ref=f1e126]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f1e127]:
+          - heading "إضافة مشروع" [level=3] [ref=f1e130]
+          - button "إلغاء" [ref=f1e132] [cursor=pointer]
+      - generic [ref=f1e138]:
+        - generic [ref=f1e139]:
+          - heading " المعلومات الأساسية" [level=5] [ref=f1e140]:
+            - generic [ref=f1e141]: 
+            - text: المعلومات الأساسية
+          - generic [ref=f1e142]:
+            - generic [ref=f1e145]:
+              - generic [ref=f1e146]: اسم المشروع *
+              - textbox "اسم المشروع *" [ref=f1e147]:
+                - /placeholder: أدخل اسم المشروع
+            - generic [ref=f1e150]:
+              - generic [ref=f1e151]: تاريخ المشروع *
+              - generic [ref=f1e152]:
+                - textbox "تاريخ المشروع *" [ref=f1e153]:
+                  - /placeholder: MM/DD/YYYY
+                  - text: 09/02/2026
+                - generic [ref=f1e154]: 
+          - generic [ref=f1e160]:
+            - generic [ref=f1e161]: وصف المشروع *
+            - textbox "وصف المشروع *" [ref=f1e162]:
+              - /placeholder: أدخل وصف المشروع
+          - generic [ref=f1e166]:
+            - generic [ref=f1e167]: تاريخ انتهاء المشروع *
+            - generic [ref=f1e168]:
+              - textbox "تاريخ انتهاء المشروع *" [ref=f1e169]:
+                - /placeholder: MM/DD/YYYY
+              - generic [ref=f1e170]: 
+        - generic [ref=f1e173]:
+          - heading " تصنيف المشروع" [level=5] [ref=f1e174]:
+            - generic [ref=f1e175]: 
+            - text: تصنيف المشروع
+          - generic [ref=f1e176]: نوع مشروع المكتب *
+        - generic [ref=f1e181]:
+          - heading " الموقع" [level=5] [ref=f1e182]:
+            - generic [ref=f1e183]: 
+            - text: الموقع
+          - generic [ref=f1e184]:
+            - generic [ref=f1e185]: الدولة *
+            - generic [ref=f1e189]: المنطقة *
+            - generic [ref=f1e193]: المركز *
+            - generic [ref=f1e199]:
+              - generic [ref=f1e200]: اسم القرية *
+              - textbox "اسم القرية *" [ref=f1e201]:
+                - /placeholder: أدخل اسم القرية
+        - generic [ref=f1e202]:
+          - heading " المعلومات المالية" [level=5] [ref=f1e203]:
+            - generic [ref=f1e204]: 
+            - text: المعلومات المالية
+          - generic [ref=f1e205]:
+            - generic [ref=f1e208]:
+              - generic [ref=f1e209]: تكلفة المشروع (جنيه مصري) *
+              - spinbutton "تكلفة المشروع (جنيه مصري) *" [ref=f1e210]
+            - generic [ref=f1e213]:
+              - generic [ref=f1e214]: تكلفة المشروع (ريال سعودي) *
+              - spinbutton "تكلفة المشروع (ريال سعودي) *" [ref=f1e215]
+            - generic [ref=f1e218]:
+              - generic [ref=f1e219]: اسم المتبرع *
+              - textbox "اسم المتبرع *" [ref=f1e220]:
+                - /placeholder: أدخل اسم المتبرع
+        - generic [ref=f1e221]:
+          - heading " المستفيدون" [level=5] [ref=f1e222]:
+            - generic [ref=f1e223]: 
+            - text: المستفيدون
+          - generic [ref=f1e224]:
+            - generic [ref=f1e227]:
+              - generic [ref=f1e228]: عدد المستفيدين *
+              - spinbutton "عدد المستفيدين *" [ref=f1e229]
+            - generic [ref=f1e230]: نوع المستفيدين *
+        - generic [ref=f1e234]:
+          - heading " تعيين الجمعية" [level=5] [ref=f1e235]:
+            - generic [ref=f1e236]: 
+            - text: تعيين الجمعية
+          - generic [ref=f1e237]: الجمعية المعينة
+        - generic [ref=f1e242]:
+          - heading " المستندات" [level=5] [ref=f1e243]:
+            - generic [ref=f1e244]: 
+            - text: المستندات
+          - generic [ref=f1e245]:
+            - generic [ref=f1e248]:
+              - generic [ref=f1e249]: الملف المرفق
+              - generic [ref=f1e252]:
+                - generic [ref=f1e253]: 
+                - paragraph [ref=f1e254]: اسحب وأفلت الملفات هنا
+                - paragraph [ref=f1e255]: أو
+                - generic [ref=f1e256] [cursor=pointer]:
+                  - generic [ref=f1e257]: 
+                  - text: تصفح
+            - generic [ref=f1e260]:
+              - generic [ref=f1e261]: ملف تقرير المشروع
+              - generic [ref=f1e264]:
+                - generic [ref=f1e265]: 
+                - paragraph [ref=f1e266]: اسحب وأفلت الملفات هنا
+                - paragraph [ref=f1e267]: أو
+                - generic [ref=f1e268] [cursor=pointer]:
+                  - generic [ref=f1e269]: 
+                  - text: تصفح
+        - generic [ref=f1e270]:
+          - heading " الحالة" [level=5] [ref=f1e271]:
+            - generic [ref=f1e272]: 
+            - text: الحالة
+          - generic [ref=f1e275]:
+            - checkbox "مكتمل" [ref=f1e276]
+            - generic [ref=f1e277] [cursor=pointer]: مكتمل
+          - generic [ref=f1e281]:
+            - generic [ref=f1e282]: officeDevelopmentProjects.notes
+            - textbox "officeDevelopmentProjects.notes" [ref=f1e283]:
+              - /placeholder: officeDevelopmentProjects.enterNotes
+        - generic [ref=f1e284]:
+          - button " إنشاء" [ref=f1e285] [cursor=pointer]:
+            - generic [ref=f1e286]: 
+            - text: إنشاء
+          - button " إلغاء" [ref=f1e287] [cursor=pointer]:
+            - generic [ref=f1e288]: 
+            - text: إلغاء
+  - contentinfo [ref=f1e289]:
+    - generic [ref=f1e291]:
+      - paragraph [ref=f1e293]: © 2026 IIROSA. جميع الحقوق محفوظة
+      - paragraph [ref=f1e295]: الإصدار 1.0.0

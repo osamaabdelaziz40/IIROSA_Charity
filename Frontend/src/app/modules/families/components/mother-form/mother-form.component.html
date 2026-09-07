@@ -97,6 +97,19 @@
             [label]="'families.phone'"
             [placeholder]="'families.phonePlaceholder' | translate">
           </app-input-text>
+          <!-- UC-ORP-10 — duplicate-phone flag -->
+          <small class="text-danger d-block mt-1"
+                 *ngIf="phoneCheck?.status === 'duplicate'">
+            <i class="fe fe-alert-circle"></i>
+            {{ 'orphanCoding.phoneDuplicate' | translate }}
+            <span *ngIf="phoneCheck?.holderLabel">
+              ({{ 'orphanCoding.phoneHeldBy' | translate }}: {{ phoneCheck?.holderLabel }})
+            </span>
+          </small>
+          <small class="text-muted d-block mt-1"
+                 *ngIf="phoneCheck?.status === 'checking'">
+            {{ 'orphanCoding.phoneChecking' | translate }}...
+          </small>
         </div>
         <div class="col-md-4">
           <app-input-text

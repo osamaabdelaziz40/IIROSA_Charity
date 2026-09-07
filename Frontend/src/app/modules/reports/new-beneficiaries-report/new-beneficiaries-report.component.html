@@ -1,0 +1,143 @@
+<app-report-viewer titleKey="reports.newBeneficiaries.title"
+                   subtitleKey="reports.newBeneficiaries.subtitle"
+                   [previewProducer]="previewDocument"
+                   [exportRequest]="buildExportRequest"
+                   [loading]="loading"
+                   [hasRun]="hasRun"
+                   [currentPage]="currentPage"
+                   [pageSize]="pageSize"
+                   [totalCount]="totalCount"
+                   (search)="search()"
+                   (pageChange)="onPageChange($event)">
+
+  <!-- ==================== §23.U.35 filter panel — charity (HQ) + registration window ==================== -->
+  <div report-filters>
+    <form [formGroup]="filterForm" (ngSubmit)="search()" class="row g-3 align-items-end">
+      <!-- HQ only — a charity caller is scoped server-side regardless -->
+      <div class="col-lg-3 col-md-4" *ngIf="isHQ">
+        <app-drop-down [fg]="filterForm" fcn="charityId"
+                       [label]="'reports.newBeneficiaries.filterCharity'"
+                       [placeholder]="'reports.newBeneficiaries.filterCharity'"
+                       [initialData]="charityOptions">
+        </app-drop-down>
+      </div>
+
+      <!-- من تاريخ — mandatory (the registration window's start) -->
+      <div class="col-lg-2 col-md-3">
+        <label class="form-label">{{ 'reports.newBeneficiaries.filterFrom' | translate }}</label>
+        <input type="date" class="form-control" formControlName="dateFrom"
+               [class.is-invalid]="hasServerError('dateFrom')" />
+        <div class="invalid-feedback" *ngIf="hasServerError('dateFrom')">
+          {{ serverError('dateFrom') }}
+        </div>
+      </div>
+      <div class="col-lg-2 col-md-3">
+        <label class="form-label">{{ 'reports.newBeneficiaries.filterTo' | translate }}</label>
+        <input type="date" class="form-control" formControlName="dateTo" />
+      </div>
+    </form>
+  </div>
+
+  <!-- ==================== the four commands — one screen, four legacy .rpt variants ==================== -->
+  <div class="d-flex justify-content-between mb-2 gap-2 flex-wrap align-items-center">
+    <div class="btn-group btn-group-sm flex-wrap" role="group"
+         [attr.aria-label]="'reports.newBeneficiaries.variantGroup' | translate">
+      <button type="button" class="btn"
+              *ngFor="let button of variantButtons; trackBy: trackByVariant"
+              [class.btn-primary]="variant === button.id"
+              [class.btn-outline-primary]="variant !== button.id"
+              (click)="selectVariant(button.id)">
+        {{ button.labelKey | translate }}
+      </button>
+    </div>
+
+    <!-- طباعة — the selected variant's list document via the epic's browser-print pipeline -->
+    <button type="button" class="btn btn-sm btn-outline-secondary"
+            (click)="printReport()" [disabled]="printing || loading">
+      <i class="fe fe-printer me-1" *ngIf="!printing; else printSpin"></i>
+      <ng-template #printSpin><span class="spinner-border spinner-border-sm me-1"></span></ng-template>
+      {{ 'reports.newBeneficiaries.print' | translate }}
+    </button>
+  </div>
+
+  <!-- ==================== bespoke grids — the variant contract's column sets ==================== -->
+  <div report-grid class="table-responsive">
+
+    <!-- orphans / orphansV2 — one row per orphan registered in the window -->
+    <table class="table table-hover table-striped align-middle"
+           *ngIf="rows.length > 0 && (variant === 'orphans' || variant === 'orphansv2')">
+      <thead>
+        <tr>
+          <th>{{ 'reports.newBeneficiaries.colSerial' | translate }}</th>
+          <th>{{ 'reports.newBeneficiaries.colOrphanCode' | translate }}</th>
+          <th>{{ 'reports.newBeneficiaries.colOrphanName' | translate }}</th>
+          <th>{{ 'reports.newBeneficiaries.colBirthDate' | translate }}</th>
+          <th *ngIf="variant === 'orphansv2'">{{ 'reports.newBeneficiaries.colFamilyCode' | translate }}</th>
+          <th *ngIf="variant === 'orphansv2'">{{ 'reports.newBeneficiaries.colGuardian' | translate }}</th>
+          <th>{{ 'reports.newBeneficiaries.colCharity' | translate }}</th>
+          <th>{{ 'reports.newBeneficiaries.colRegistrationDate' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow">
+          <td>{{ serial(i) }}</td>
+          <td>{{ row.orphanCode }}</td>
+          <td>{{ row.orphanName }}</td>
+          <td>{{ row.birthDate | date:'yyyy-MM-dd' }}</td>
+          <td *ngIf="variant === 'orphansv2'">{{ row.familyCode || '—' }}</td>
+          <td *ngIf="variant === 'orphansv2'">{{ row.guardianName || '—' }}</td>
+          <td>{{ row.charityName || '—' }}</td>
+          <td>{{ row.registrationDate | date:'yyyy-MM-dd' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- widows — one row per widow (family mother) of a family registered in the window -->
+    <table class="table table-hover table-striped align-middle"
+           *ngIf="rows.length > 0 && variant === 'widows'">
+      <thead>
+        <tr>
+          <th>{{ 'reports.newBeneficiaries.colSerial' | translate }}</th>
+          <th>{{ 'reports.newBeneficiaries.colWidowName' | translate }}</th>
+          <th>{{ 'reports.newBeneficiaries.colNationalId' | translate }}</th>
+          <th>{{ 'reports.newBeneficiaries.colHusbandDeathDate' | translate }}</th>
+          <th>{{ 'reports.newBeneficiaries.colCharity' | translate }}</th>
+          <th>{{ 'reports.newBeneficiaries.colRegistrationDate' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow">
+          <td>{{ serial(i) }}</td>
+          <td>{{ row.widowName }}</td>
+          <td>{{ row.nationalId || '—' }}</td>
+          <td>{{ row.husbandDeathDate | date:'yyyy-MM-dd' }}</td>
+          <td>{{ row.charityName || '—' }}</td>
+          <td>{{ row.registrationDate | date:'yyyy-MM-dd' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- widowsByFamily — widows grouped by family (familyCode-leading column set) -->
+    <table class="table table-hover table-striped align-middle"
+           *ngIf="rows.length > 0 && variant === 'widowsbyfamily'">
+      <thead>
+        <tr>
+          <th>{{ 'reports.newBeneficiaries.colSerial' | translate }}</th>
+          <th>{{ 'reports.newBeneficiaries.colFamilyCode' | translate }}</th>
+          <th>{{ 'reports.newBeneficiaries.colWidowName' | translate }}</th>
+          <th>{{ 'reports.newBeneficiaries.colChildrenCount' | translate }}</th>
+          <th>{{ 'reports.newBeneficiaries.colCharity' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow">
+          <td>{{ serial(i) }}</td>
+          <td>{{ row.familyCode }}</td>
+          <td>{{ row.widowName }}</td>
+          <td>{{ row.childrenCount }}</td>
+          <td>{{ row.charityName || '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</app-report-viewer>

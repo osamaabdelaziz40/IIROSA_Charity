@@ -28,7 +28,7 @@
           <!-- Serial -->
           <div class="col-md-4 mb-3">
             <label class="text-muted small mb-1">{{ 'incomingOutgoing.serial' | translate }}</label>
-            <div class="font-weight-semibold">{{ letter.serial || letter.serialTxt || '-' }}</div>
+            <div class="font-weight-semibold">{{ letter.serialTxt || letter.serial || '-' }}</div>
           </div>
 
           <!-- Status -->
@@ -36,7 +36,7 @@
             <label class="text-muted small mb-1">{{ 'common.status' | translate }}</label>
             <div>
               <span class="badge" [ngClass]="getStatusBadgeClass()">
-                {{ getStatusText() }}
+                {{ letter.status || '-' }}
               </span>
             </div>
           </div>
@@ -48,8 +48,8 @@
           </div>
         </div>
 
+        <!-- Subject -->
         <div class="row">
-          <!-- Subject -->
           <div class="col-md-12 mb-3">
             <label class="text-muted small mb-1">{{ 'incomingOutgoing.subject' | translate }}</label>
             <div class="font-weight-semibold h5">{{ letter.subject }}</div>
@@ -57,16 +57,10 @@
         </div>
 
         <div class="row">
-          <!-- Incoming ID -->
-          <div class="col-md-4 mb-3">
-            <label class="text-muted small mb-1">{{ 'incomingOutgoing.incomingId' | translate }}</label>
-            <div class="font-weight-semibold">{{ letter.incomingId }}</div>
-          </div>
-
           <!-- Letter Number -->
           <div class="col-md-4 mb-3">
             <label class="text-muted small mb-1">{{ 'incomingOutgoing.letterNumber' | translate }}</label>
-            <div class="font-weight-semibold">{{ letter.letterNumber }}</div>
+            <div class="font-weight-semibold">{{ letter.letterNumber || '-' }}</div>
           </div>
 
           <!-- Letter Date -->
@@ -74,25 +68,44 @@
             <label class="text-muted small mb-1">{{ 'incomingOutgoing.letterDate' | translate }}</label>
             <div class="font-weight-semibold">{{ formatDate(letter.letterDate) }}</div>
           </div>
-        </div>
 
-        <div class="row">
-          <!-- Date (Received) -->
+          <!-- Date (Registered) -->
           <div class="col-md-4 mb-3">
             <label class="text-muted small mb-1">{{ 'incomingOutgoing.date' | translate }}</label>
             <div class="font-weight-semibold">{{ formatDate(letter.date) }}</div>
           </div>
+        </div>
 
-          <!-- Incoming Number -->
-          <div class="col-md-4 mb-3">
-            <label class="text-muted small mb-1">{{ 'incomingOutgoing.incomingNumber' | translate }}</label>
-            <div class="font-weight-semibold">{{ letter.incomingNumber || '-' }}</div>
-          </div>
-
+        <div class="row">
           <!-- Department -->
           <div class="col-md-4 mb-3">
             <label class="text-muted small mb-1">{{ 'incomingOutgoing.department' | translate }}</label>
             <div class="font-weight-semibold">{{ letter.departmentName || '-' }}</div>
+          </div>
+
+          <!-- Assigned Employee -->
+          <div class="col-md-4 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.assignedEmployee' | translate }}</label>
+            <div class="font-weight-semibold">{{ letter.assignedUserName || '-' }}</div>
+          </div>
+
+          <!-- Charity -->
+          <div class="col-md-4 mb-3" *ngIf="letter.charityName">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.charity' | translate }}</label>
+            <div class="font-weight-semibold">{{ letter.charityName }}</div>
+          </div>
+        </div>
+
+        <!-- Reply To Outgoing Letter -->
+        <div class="row" *ngIf="letter.outgoingId">
+          <div class="col-md-12 mb-3">
+            <label class="text-muted small mb-1">{{ 'incomingOutgoing.replyToOutgoing' | translate }}</label>
+            <div>
+              <a [routerLink]="['/incoming-outgoing/outgoing', letter.outgoingId]" class="btn btn-sm btn-outline-primary">
+                <i class="fe fe-external-link mr-1"></i>
+                {{ letter.outgoingLetterNumber || ('incomingOutgoing.outgoingLetter' | translate) }}
+              </a>
+            </div>
           </div>
         </div>
 
@@ -100,37 +113,16 @@
         <div class="row" *ngIf="letter.letterDescription">
           <div class="col-md-12 mb-3">
             <label class="text-muted small mb-1">{{ 'incomingOutgoing.letterDescription' | translate }}</label>
-            <div>{{ letter.letterDescription }}</div>
-          </div>
-        </div>
-
-        <!-- Body -->
-        <div class="row" *ngIf="letter.body">
-          <div class="col-md-12 mb-3">
-            <label class="text-muted small mb-1">{{ 'incomingOutgoing.body' | translate }}</label>
-            <div class="p-3 bg-light rounded">{{ letter.body }}</div>
+            <div class="p-3 bg-light rounded">{{ letter.letterDescription }}</div>
           </div>
         </div>
 
         <!-- Attached File -->
-        <div class="row" *ngIf="letter.uploadedFile">
+        <div class="row" *ngIf="letter.uploadedFileId">
           <div class="col-md-12 mb-3">
             <label class="text-muted small mb-1">{{ 'incomingOutgoing.attachedFile' | translate }}</label>
             <div>
-              <app-file-viewer [attachmentId]="letter.uploadedFile" [fileName]="letter.fileName || ''"></app-file-viewer>
-            </div>
-          </div>
-        </div>
-
-        <!-- Reply To Outgoing Letter -->
-        <div class="row" *ngIf="relatedOutgoingLetter">
-          <div class="col-md-12 mb-3">
-            <label class="text-muted small mb-1">{{ 'incomingOutgoing.replyToOutgoing' | translate }}</label>
-            <div>
-              <a [routerLink]="['/incoming-outgoing/outgoing', relatedOutgoingLetter.id]" class="btn btn-sm btn-outline-primary">
-                <i class="fe fe-external-link mr-1"></i>
-                {{ relatedOutgoingLetter.subject }}
-              </a>
+              <app-file-viewer [attachmentId]="letter.uploadedFileId" [fileName]="letter.uploadedFileName || ''"></app-file-viewer>
             </div>
           </div>
         </div>
@@ -145,28 +137,16 @@
         <h5 class="card-title mb-0">{{ 'common.metaInformation' | translate }}</h5>
       </div>
       <div class="card-body">
-        <!-- Created By -->
-        <div class="mb-3">
-          <label class="text-muted small mb-1">{{ 'common.createdBy' | translate }}</label>
-          <div class="font-weight-semibold">{{ letter.createdBy || '-' }}</div>
-        </div>
-
         <!-- Created On -->
         <div class="mb-3">
           <label class="text-muted small mb-1">{{ 'common.createdOn' | translate }}</label>
           <div class="font-weight-semibold">{{ formatDateTime(letter.createdOn) }}</div>
         </div>
 
-        <!-- Modified By -->
-        <div class="mb-3" *ngIf="letter.modifiedBy">
-          <label class="text-muted small mb-1">{{ 'common.modifiedBy' | translate }}</label>
-          <div class="font-weight-semibold">{{ letter.modifiedBy }}</div>
-        </div>
-
-        <!-- Modified On -->
-        <div class="mb-3" *ngIf="letter.modifiedOn">
+        <!-- Updated On -->
+        <div class="mb-3" *ngIf="letter.updatedOn">
           <label class="text-muted small mb-1">{{ 'common.modifiedOn' | translate }}</label>
-          <div class="font-weight-semibold">{{ formatDateTime(letter.modifiedOn) }}</div>
+          <div class="font-weight-semibold">{{ formatDateTime(letter.updatedOn) }}</div>
         </div>
       </div>
     </div>

@@ -7,7 +7,7 @@
   [actions]="pageActions">
 </app-page-header>
 
-<div class="card">
+<div class="card shadow mb-4">
   <div class="card-body">
     <!-- Filters using shared components -->
     <form [formGroup]="filterForm">
@@ -47,16 +47,24 @@
         </div>
       </div>
 
-      <div class="row mb-3" *ngIf="hasActiveFilters()">
+      <div class="row">
         <div class="col-12">
-          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+          <button class="btn btn-primary" type="button" (click)="onSearchChange()">
+            <i class="fe fe-search mr-1"></i>
+            {{ 'common.search' | translate }}
+          </button>
+          <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary ml-2" type="button" (click)="clearFilters()">
             <i class="fe fe-x mr-1"></i>
             {{ 'common.clearFilters' | translate }}
           </button>
         </div>
       </div>
     </form>
+  </div>
+</div>
 
+<div class="card shadow mb-4">
+  <div class="card-body">
     <!-- Loading State -->
     <div *ngIf="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status">
@@ -80,12 +88,11 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let campaign of paginatedCampaigns">
+          <tr *ngFor="let campaign of campaigns; trackBy: trackByCampaign">
             <td>
               <a [routerLink]="['/seasonal-aid', campaign.id]" class="text-primary">
-                <strong>{{ campaign.campaignName }}</strong>
+                <strong>{{ campaign.name }}</strong>
               </a>
-              <div *ngIf="campaign.description" class="small text-muted">{{ campaign.description | slice:0:50 }}...</div>
             </td>
             <td>
               <span class="badge" [ngClass]="getCampaignTypeClass(campaign.campaignType)">
@@ -102,18 +109,19 @@
               <div>
                 <strong>{{ campaign.totalBudget | number }}</strong> {{ campaign.budgetCurrency }}
               </div>
-              <div class="small text-muted">
-                {{ 'seasonalAid.perFamily' | translate }}: {{ campaign.perFamilyAllocation | number }}
+              <div class="small text-muted" [ngClass]="getBudgetUtilizationClass(campaign)">
+                {{ 'seasonalAid.distributed' | translate }}: {{ campaign.distributedBudget | number }}
               </div>
             </td>
             <td>
               <div class="text-center">
-                <span class="badge badge-primary">0</span>
+                <span class="badge badge-primary">{{ campaign.registeredBeneficiariesCount }}</span>
+                <div class="small text-muted">{{ campaign.distributedBeneficiariesCount }} {{ 'seasonalAid.distributedLabel' | translate }}</div>
               </div>
             </td>
             <td>
-              <div *ngIf="campaign.assignedCharityName; else noCharity">
-                {{ campaign.assignedCharityName }}
+              <div *ngIf="campaign.charityName; else noCharity">
+                {{ campaign.charityName }}
               </div>
               <ng-template #noCharity>
                 <span class="text-muted">{{ 'seasonalAid.allCharities' | translate }}</span>
@@ -121,7 +129,7 @@
             </td>
             <td>
               <span class="badge" [ngClass]="getStatusBadgeClass(campaign)">
-                {{ getStatusText(campaign) }}
+                {{ getStatusText(campaign) | translate }}
               </span>
             </td>
             <td>
@@ -179,7 +187,7 @@
           </tr>
 
           <!-- Empty State -->
-          <tr *ngIf="paginatedCampaigns.length === 0">
+          <tr *ngIf="campaigns.length === 0">
             <td colspan="8" class="text-center py-5">
               <div class="empty-state">
                 <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
@@ -195,7 +203,7 @@
     <app-pagination
       [currentPage]="currentPage"
       [pageSize]="pageSize"
-      [totalCount]="filteredCampaigns.length"
+      [totalCount]="totalCount"
       (pageChange)="onPageChange($event)">
     </app-pagination>
   </div>

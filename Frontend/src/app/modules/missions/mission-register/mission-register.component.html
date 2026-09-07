@@ -1,0 +1,276 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<div class="container-fluid">
+  <div class="row" *ngIf="!loading">
+    <div class="col-12">
+      <div class="card shadow" *ngIf="mission; else noMission">
+        <div class="card-body">
+          <!-- Read-only context (§20.S.3) — disabled controls, not hidden: the actor
+               sees the mission being reported on. -->
+          <div class="col-12">
+            <h5 class="mb-3">{{ 'missions.missionContext' | translate }}</h5>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>{{ 'missions.missionType' | translate }}</label>
+                <input type="text" class="form-control" [value]="mission.missionTypeName || '-'" disabled>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>{{ 'missions.missionInterviewType' | translate }}</label>
+                <input type="text" class="form-control" [value]="mission.missionInterviewTypeName || '-'" disabled>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>{{ 'missions.missionTimeType' | translate }}</label>
+                <input type="text" class="form-control" [value]="mission.missionTimeTypeName || '-'" disabled>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>{{ 'missions.region' | translate }}</label>
+                <input type="text" class="form-control" [value]="mission.regionName || '-'" disabled>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>{{ 'missions.center' | translate }}</label>
+                <input type="text" class="form-control" [value]="mission.centerName || '-'" disabled>
+              </div>
+            </div>
+          </div>
+
+          <!-- Editable finding fields (§20.S.3) -->
+          <div class="col-12 mt-4">
+            <h5 class="mb-3">{{ 'missions.missionFindings' | translate }}</h5>
+          </div>
+
+          <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="entityName">
+                    {{ 'missions.organizingEntity' | translate }} <span class="required">*</span>
+                  </label>
+                  <input type="text"
+                         id="entityName"
+                         class="form-control"
+                         formControlName="entityName"
+                         [class.is-invalid]="isFieldInvalid('entityName')">
+                  <div *ngIf="isFieldInvalid('entityName')" class="invalid-feedback">
+                    {{ getFieldError('entityName') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="conferenceName">
+                    {{ 'missions.conferenceName' | translate }} <span class="required">*</span>
+                  </label>
+                  <input type="text"
+                         id="conferenceName"
+                         class="form-control"
+                         formControlName="conferenceName"
+                         [class.is-invalid]="isFieldInvalid('conferenceName')">
+                  <div *ngIf="isFieldInvalid('conferenceName')" class="invalid-feedback">
+                    {{ getFieldError('conferenceName') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-12">
+                <div class="form-group">
+                  <label for="details">
+                    {{ 'missions.details' | translate }} <span class="required">*</span>
+                  </label>
+                  <textarea id="details"
+                            class="form-control"
+                            formControlName="details"
+                            rows="3"
+                            [class.is-invalid]="isFieldInvalid('details')">
+                  </textarea>
+                  <div *ngIf="isFieldInvalid('details')" class="invalid-feedback">
+                    {{ getFieldError('details') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-12">
+                <div class="form-group">
+                  <label for="missionTarget">
+                    {{ 'missions.missionTarget' | translate }} <span class="required">*</span>
+                  </label>
+                  <input type="text"
+                         id="missionTarget"
+                         class="form-control"
+                         formControlName="missionTarget"
+                         [class.is-invalid]="isFieldInvalid('missionTarget')">
+                  <div *ngIf="isFieldInvalid('missionTarget')" class="invalid-feedback">
+                    {{ getFieldError('missionTarget') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-12">
+                <div class="form-group">
+                  <label for="missionDetails">
+                    {{ 'missions.missionDetails' | translate }} <span class="required">*</span>
+                  </label>
+                  <textarea id="missionDetails"
+                            class="form-control"
+                            formControlName="missionDetails"
+                            rows="3"
+                            [class.is-invalid]="isFieldInvalid('missionDetails')">
+                  </textarea>
+                  <div *ngIf="isFieldInvalid('missionDetails')" class="invalid-feedback">
+                    {{ getFieldError('missionDetails') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="missionLocation">
+                    {{ 'missions.missionLocation' | translate }} <span class="required">*</span>
+                  </label>
+                  <input type="text"
+                         id="missionLocation"
+                         class="form-control"
+                         formControlName="missionLocation"
+                         [class.is-invalid]="isFieldInvalid('missionLocation')">
+                  <div *ngIf="isFieldInvalid('missionLocation')" class="invalid-feedback">
+                    {{ getFieldError('missionLocation') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="village">
+                    {{ 'missions.village' | translate }} <span class="required">*</span>
+                  </label>
+                  <input type="text"
+                         id="village"
+                         class="form-control"
+                         formControlName="village"
+                         [class.is-invalid]="isFieldInvalid('village')">
+                  <div *ngIf="isFieldInvalid('village')" class="invalid-feedback">
+                    {{ getFieldError('village') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <!-- الموظف المسئول — same shared Select2 dropdown and the same
+                     /api/usermanagement source as the create form, so the saved
+                     assignment echoes instead of falling back to the placeholder. -->
+                <app-drop-down [fg]="registerForm"
+                               fcn="assignedToUserId"
+                               [label]="'missions.assignedTo'"
+                               [placeholder]="'missions.selectAssignedUser' | translate"
+                               [initialData]="userOptions">
+                </app-drop-down>
+              </div>
+            </div>
+
+            <!-- Outcome (§20.S.3): two mutually-exclusive checkboxes + السبب -->
+            <div class="col-12 mt-4">
+              <h5 class="mb-3">{{ 'missions.missionOutcome' | translate }}</h5>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group form-check mission-outcome-check">
+                  <input type="checkbox"
+                         class="form-check-input"
+                         id="isCompleted"
+                         [checked]="isCompleted"
+                         [disabled]="isNotCompleted"
+                         (change)="onCompletedChange($any($event.target).checked)">
+                  <label class="form-check-label" for="isCompleted">
+                    {{ 'missions.missionCompleted' | translate }}
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group form-check mission-outcome-check">
+                  <input type="checkbox"
+                         class="form-check-input"
+                         id="isNotCompleted"
+                         [checked]="isNotCompleted"
+                         [disabled]="isCompleted"
+                         (change)="onNotCompletedChange($any($event.target).checked)">
+                  <label class="form-check-label" for="isNotCompleted">
+                    {{ 'missions.missionNotCompleted' | translate }}
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-12">
+                <div class="form-group">
+                  <label for="reason">
+                    {{ 'missions.reason' | translate }} <span class="required">*</span>
+                  </label>
+                  <textarea id="reason"
+                            class="form-control"
+                            formControlName="reason"
+                            rows="3"
+                            [placeholder]="'missions.enterReason' | translate"
+                            [class.is-invalid]="isFieldInvalid('reason')">
+                  </textarea>
+                  <div *ngIf="isFieldInvalid('reason')" class="invalid-feedback">
+                    {{ getFieldError('reason') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="col-12 mt-4">
+              <div class="form-group">
+                <button type="submit" class="btn btn-primary" [disabled]="saving">
+                  <i class="fe fe-save mr-1" *ngIf="!saving"></i>
+                  <span class="spinner-border spinner-border-sm mr-1" *ngIf="saving"></span>
+                  {{ 'common.save' | translate }}
+                </button>
+                <button type="button" class="btn btn-secondary ml-2" (click)="onCancel()" [disabled]="saving">
+                  <i class="fe fe-x mr-1"></i>
+                  {{ 'common.cancel' | translate }}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <ng-template #noMission>
+        <div class="alert alert-danger" role="alert" *ngIf="error">{{ error }}</div>
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- Loading State — sibling of the gated row: the copied nesting put the spinner
+       inside the container that hides while loading, so it never rendered -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">{{ 'common.loading' | translate }}</span>
+    </div>
+  </div>
+</div>

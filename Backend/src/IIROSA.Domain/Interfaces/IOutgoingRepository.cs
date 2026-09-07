@@ -4,35 +4,50 @@ using IIROSA.Domain.Entities;
 namespace IIROSA.Domain.Interfaces;
 
 /// <summary>
-/// Outgoing Letter Repository Interface
-/// Implements data access for UC-12.6 through UC-12.10
+/// Outgoing Letter Repository Interface (epic 16, UC-COR-10…19)
 /// </summary>
 public interface IOutgoingRepository : IRepository<Outgoing>
 {
-    // Common CRUD wrapper with full filtering (UC-12.6)
+    /// <summary>
+    /// Paged register read with the §21.S.4 criteria applied server-side
+    /// (scope pinning happens in the service, before this call).
+    /// </summary>
     Task<(IEnumerable<Outgoing> Items, int TotalCount)> GetPagedAsync(
+        OutgoingFilterCriteria criteria,
         int pageNumber,
-        int pageSize,
-        string? searchTerm = null,
-        int? departmentId = null,
-        int? categoryId = null,
-        int? year = null,
-        DateTime? startDate = null,
-        DateTime? endDate = null,
-        Guid? createdByUserId = null,
-        bool? hasReply = null,
-        string? sortBy = null,
-        string? sortOrder = null);
+        int pageSize);
 
-    // Business Logic Queries
-    Task<bool> IsOutgoingIdUniqueAsync(string outgoingId, Guid? excludeId = null);
-    Task<IEnumerable<Outgoing>> GetByDepartmentAsync(int departmentId);
-    Task<IEnumerable<Outgoing>> GetByDateRangeAsync(DateTime startDate, DateTime endDate);
-    Task<IEnumerable<Outgoing>> GetByYearAsync(int year);
-    Task<IEnumerable<Outgoing>> GetByCategoryAsync(int categoryId);
-    Task<IEnumerable<Outgoing>> GetRepliesToIncomingAsync(Guid incomingId);
-    Task<IEnumerable<Outgoing>> GetByUserAsync(Guid userId);
+    /// <summary>Detail read with the navigations the §21.S.5 view renders.</summary>
+    Task<Outgoing?> GetWithDetailsAsync(Guid id);
 
-    // Import/Export Support
-    Task<int> GetNextSerialNumberAsync(int? departmentId = null, int? year = null);
+    /// <summary>Reply-count of an incoming letter — the 16-16 delete guard.</summary>
+    Task<int> CountIncomingRepliesAsync(Guid outgoingId);
+
+    /// <summary>
+    /// Next serial in the charity + year sequence (UC-COR-12). Advisory when shown in the
+    /// form; CreateAsync re-derives it inside its transaction to close the Max+1 race.
+    /// </summary>
+    Task<int> GetNextSerialAsync(Guid? charityId, int year);
+}
+
+/// <summary>
+/// The §21.S.4 search criteria, already scope-pinned by the service.
+/// </summary>
+public class OutgoingFilterCriteria
+{
+    public string? SearchTerm { get; set; }
+    public int? Serial { get; set; }
+    public int? DepartmentId { get; set; }
+    public int? CategoryId { get; set; }
+    public int? Year { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public bool? HasReply { get; set; }
+    public Guid? CharityId { get; set; }
+
+    /// <summary>Country pin (service-set from the caller's claims) — rides through the owning charity.</summary>
+    public int? CountryId { get; set; }
+
+    public string? SortBy { get; set; }
+    public string? SortOrder { get; set; }
 }

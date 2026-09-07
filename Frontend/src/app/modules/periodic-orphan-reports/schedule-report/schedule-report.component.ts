@@ -17,18 +17,21 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, EmailValidator } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 
-import { OrphanReportService } from '../../services/orphan-report.service';
+import { OrphanReportService } from '../services/orphan-report.service';
 import {
   ScheduleRecurringReportDto,
   ScheduledReportDto,
   OrphanReportFilterDto
-} from '../../models/periodic-orphan-report.model';
+} from '../models/periodic-orphan-report.model';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 
+import { BreadcrumbComponent } from '../../../shared/components/breadcrumb/breadcrumb.component';
 @Component({
   selector: 'app-schedule-report',
   standalone: true,
   imports: [
+    BreadcrumbComponent,
+
     CommonModule,
     FormsModule,
     ReactiveFormsModule,

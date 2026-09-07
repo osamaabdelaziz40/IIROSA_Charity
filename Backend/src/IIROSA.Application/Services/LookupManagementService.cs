@@ -571,6 +571,28 @@ public class MissionTypeService : LookupServiceBase<MissionType, MissionTypeDto,
     }
 }
 
+public class MissionInterviewTypeService : LookupServiceBase<MissionInterviewType, MissionInterviewTypeDto, CreateMissionInterviewTypeDto, UpdateMissionInterviewTypeDto>, IMissionInterviewTypeService
+{
+    public MissionInterviewTypeService(
+        IMissionInterviewTypeRepository repository,
+        IMapper mapper,
+        ILogger<MissionInterviewTypeService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
+public class MissionTimeTypeService : LookupServiceBase<MissionTimeType, MissionTimeTypeDto, CreateMissionTimeTypeDto, UpdateMissionTimeTypeDto>, IMissionTimeTypeService
+{
+    public MissionTimeTypeService(
+        IMissionTimeTypeRepository repository,
+        IMapper mapper,
+        ILogger<MissionTimeTypeService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
 public class ProjectTypeService : LookupServiceBase<ProjectType, ProjectTypeDto, CreateProjectTypeDto, UpdateProjectTypeDto>, IProjectTypeService
 {
     public ProjectTypeService(
@@ -599,6 +621,139 @@ public class NGOTypeService : LookupServiceBase<NGOType, NGOTypeDto, CreateNGOTy
         INGOTypeRepository repository,
         IMapper mapper,
         ILogger<NGOTypeService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
+public class EducationLevelService : LookupServiceBase<EducationLevel, EducationLevelDto, CreateEducationLevelDto, UpdateEducationLevelDto>, IEducationLevelService
+{
+    public EducationLevelService(
+        IEducationLevelRepository repository,
+        IMapper mapper,
+        ILogger<EducationLevelService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
+public class HealthStatusService : LookupServiceBase<HealthStatus, HealthStatusDto, CreateHealthStatusDto, UpdateHealthStatusDto>, IHealthStatusService
+{
+    public HealthStatusService(
+        IHealthStatusRepository repository,
+        IMapper mapper,
+        ILogger<HealthStatusService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
+public class RefuseReasonService : LookupServiceBase<RefuseReason, RefuseReasonDto, CreateRefuseReasonDto, UpdateRefuseReasonDto>, IRefuseReasonService
+{
+    public RefuseReasonService(
+        IRefuseReasonRepository repository,
+        IMapper mapper,
+        ILogger<RefuseReasonService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
+// Refugee register lookups (epic 7, UC-REF-03)
+
+public class HouseOwnershipService : LookupServiceBase<HouseOwnership, HouseOwnershipDto, CreateHouseOwnershipDto, UpdateHouseOwnershipDto>, IHouseOwnershipService
+{
+    public HouseOwnershipService(
+        IHouseOwnershipRepository repository,
+        IMapper mapper,
+        ILogger<HouseOwnershipService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
+public class HouseStatusService : LookupServiceBase<HouseStatus, HouseStatusDto, CreateHouseStatusDto, UpdateHouseStatusDto>, IHouseStatusService
+{
+    public HouseStatusService(
+        IHouseStatusRepository repository,
+        IMapper mapper,
+        ILogger<HouseStatusService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
+public class IncomeTypeService : LookupServiceBase<IncomeType, IncomeTypeDto, CreateIncomeTypeDto, UpdateIncomeTypeDto>, IIncomeTypeService
+{
+    public IncomeTypeService(
+        IIncomeTypeRepository repository,
+        IMapper mapper,
+        ILogger<IncomeTypeService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
+public class SocialStatusService : LookupServiceBase<SocialStatus, SocialStatusDto, CreateSocialStatusDto, UpdateSocialStatusDto>, ISocialStatusService
+{
+    public SocialStatusService(
+        ISocialStatusRepository repository,
+        IMapper mapper,
+        ILogger<SocialStatusService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
+public class RelationService : LookupServiceBase<Relation, RelationDto, CreateRelationDto, UpdateRelationDto>, IRelationService
+{
+    public RelationService(
+        IRelationRepository repository,
+        IMapper mapper,
+        ILogger<RelationService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
+public class ReasonOfRelService : LookupServiceBase<ReasonOfRel, ReasonOfRelDto, CreateReasonOfRelDto, UpdateReasonOfRelDto>, IReasonOfRelService
+{
+    public ReasonOfRelService(
+        IReasonOfRelRepository repository,
+        IMapper mapper,
+        ILogger<ReasonOfRelService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
+public class HousingTypeService : LookupServiceBase<HousingType, HousingTypeDto, CreateHousingTypeDto, UpdateHousingTypeDto>, IHousingTypeService
+{
+    public HousingTypeService(
+        IHousingTypeRepository repository,
+        IMapper mapper,
+        ILogger<HousingTypeService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
+public class MaritalStatusService : LookupServiceBase<MaritalStatus, MaritalStatusDto, CreateMaritalStatusDto, UpdateMaritalStatusDto>, IMaritalStatusService
+{
+    public MaritalStatusService(
+        IMaritalStatusRepository repository,
+        IMapper mapper,
+        ILogger<MaritalStatusService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+public class JobService : LookupServiceBase<Job, JobDto, CreateJobDto, UpdateJobDto>, IJobService
+{
+    public JobService(
+        IJobRepository repository,
+        IMapper mapper,
+        ILogger<JobService> logger)
         : base(repository, mapper, logger)
     {
     }

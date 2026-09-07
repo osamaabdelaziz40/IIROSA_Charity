@@ -1,0 +1,172 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+<app-page-header
+  [title]="'incomingOutgoing.attachEmployeesTitle' | translate"
+  [subtitle]="'incomingOutgoing.attachEmployeesSubtitle' | translate"
+  [icon]="'fe fe-users'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="card">
+  <div class="card-body">
+    <!-- §21.S.3 selection fields -->
+    <form [formGroup]="filterForm">
+      <div class="row mb-3">
+        <!-- الجمعية (HQ only) -->
+        <div class="col-md-4" *ngIf="isSuperAdmin">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="selectedCharity"
+            [label]="'incomingOutgoing.charity'"
+            [initialData]="charityOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onCharityChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- خطاب الوارد -->
+        <div class="col-md-5">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="selectedLetter"
+            [label]="'incomingOutgoing.selectLetter'"
+            [initialData]="letterOptions"
+            (onDropDownChanged)="onLetterChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- Pending-changes indicator -->
+        <div class="col-md-3 d-flex align-items-end" *ngIf="hasPendingChanges">
+          <span class="badge badge-warning">
+            <i class="fe fe-alert-circle mr-1"></i>
+            {{ 'incomingOutgoing.pendingChanges' | translate }}
+          </span>
+        </div>
+      </div>
+    </form>
+
+    <!-- Loading State -->
+    <div *ngIf="loadingEmployees" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- The two §21.S.3 grids -->
+    <div class="row" *ngIf="!loadingEmployees && selectedLetterId">
+      <!-- Unattached employees -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fe fe-user-plus mr-1"></i>
+              {{ 'incomingOutgoing.unattachedEmployees' | translate }}
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>{{ 'incomingOutgoing.employeeName' | translate }}</th>
+                    <th class="text-center">{{ 'common.actions' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let employee of availableEmployees; let i = index; trackBy: trackByUserId"
+                      [class.table-warning]="employee.staged === 'detach'">
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ employee.fullName }}</td>
+                    <td class="text-center">
+                      <button type="button" class="btn btn-sm btn-success"
+                              [title]="'incomingOutgoing.addToLetter' | translate"
+                              (click)="addEmployee(employee)">
+                        <i class="fe fe-plus"></i>
+                        {{ 'incomingOutgoing.addToLetter' | translate }}
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="availableEmployees.length === 0">
+                    <td colspan="3" class="text-center text-muted py-4">
+                      {{ 'incomingOutgoing.noEmployees' | translate }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Attached employees -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fe fe-user-check mr-1"></i>
+              {{ 'incomingOutgoing.attachedEmployees' | translate }}
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>{{ 'incomingOutgoing.employeeName' | translate }}</th>
+                    <th class="text-center">{{ 'common.actions' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let employee of attachedEmployees; let i = index; trackBy: trackByUserId"
+                      [class.table-warning]="employee.staged === 'attach'">
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ employee.fullName }}</td>
+                    <td class="text-center">
+                      <button type="button" class="btn btn-sm btn-outline-danger"
+                              [title]="'common.delete' | translate"
+                              (click)="removeEmployee(employee)">
+                        <i class="fe fe-trash"></i>
+                        {{ 'common.delete' | translate }}
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="attachedEmployees.length === 0">
+                    <td colspan="3" class="text-center text-muted py-4">
+                      {{ 'incomingOutgoing.noEmployees' | translate }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- No letter chosen yet -->
+    <div *ngIf="!loadingEmployees && !selectedLetterId" class="text-center text-muted py-5">
+      <i class="fe fe-filter fe-3x mb-3"></i>
+      <p>{{ 'incomingOutgoing.selectLetterFirst' | translate }}</p>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="row mt-4" *ngIf="selectedLetterId">
+      <div class="col-md-12">
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-outline-secondary" (click)="goBack()">
+            <i class="fe fe-arrow-left mr-1"></i>
+            {{ 'common.back' | translate }}
+          </button>
+          <button type="button" class="btn btn-primary"
+                  [disabled]="saving || !hasPendingChanges"
+                  (click)="save()">
+            <i class="fe fe-save mr-1" *ngIf="!saving"></i>
+            <i class="fe fe-spinner fe-spin mr-1" *ngIf="saving"></i>
+            {{ saving ? ('common.saving' | translate) : ('common.save' | translate) }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

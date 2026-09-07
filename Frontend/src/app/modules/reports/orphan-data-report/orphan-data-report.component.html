@@ -1,0 +1,199 @@
+<app-report-viewer titleKey="reports.orphanData.title"
+                   subtitleKey="reports.orphanData.subtitle"
+                   [previewProducer]="previewReceiptCards"
+                   [loading]="loading"
+                   [exporting]="exporting"
+                   [hasRun]="hasRun"
+                   [currentPage]="currentPage"
+                   [pageSize]="pageSize"
+                   [totalCount]="totalCount"
+                   (search)="search()"
+                   (export)="exportData()"
+                   (pageChange)="onPageChange($event)">
+
+  <!-- ==================== §23.S.3 filter panel (10 fields) ==================== -->
+  <div report-filters>
+    <form [formGroup]="filterForm" (ngSubmit)="search()" class="row g-3 align-items-end">
+      <div class="col-lg-3 col-md-4">
+        <app-drop-down [fg]="filterForm" fcn="batchNumber"
+                       [label]="'reports.orphanData.filterBatch'"
+                       [placeholder]="'reports.orphanData.filterBatch'"
+                       [initialData]="batchOptions">
+        </app-drop-down>
+      </div>
+
+      <!-- HQ only — a charity caller is scoped server-side regardless -->
+      <div class="col-lg-3 col-md-4" *ngIf="isHQ">
+        <app-drop-down [fg]="filterForm" fcn="charityId"
+                       [label]="'reports.orphanData.filterCharity'"
+                       [placeholder]="'reports.orphanData.filterCharity'"
+                       [initialData]="charityOptions">
+        </app-drop-down>
+      </div>
+
+      <div class="col-lg-2 col-md-3">
+        <app-drop-down [fg]="filterForm" fcn="governorateId"
+                       [label]="'reports.orphanData.filterGovernorate'"
+                       [placeholder]="'reports.orphanData.filterGovernorate'"
+                       [initialData]="governorateOptions"
+                       (onDropDownChanged)="onGovernorateChange()">
+        </app-drop-down>
+      </div>
+
+      <div class="col-lg-2 col-md-3">
+        <app-drop-down [fg]="filterForm" fcn="centerId"
+                       [label]="'reports.orphanData.filterCenter'"
+                       [placeholder]="'reports.orphanData.filterCenter'"
+                       [initialData]="centerOptions"
+                       [disabled]="centersDisabled">
+        </app-drop-down>
+      </div>
+
+      <!-- من / الى — numeric age range, min 1 -->
+      <div class="col-lg-1 col-md-2">
+        <label class="form-label">{{ 'reports.orphanData.filterAgeFrom' | translate }}</label>
+        <input type="number" class="form-control" formControlName="ageFrom" min="1"
+               [class.is-invalid]="hasServerError('ageFrom')" />
+        <div class="invalid-feedback" *ngIf="hasServerError('ageFrom')">
+          {{ serverError('ageFrom') }}
+        </div>
+      </div>
+      <div class="col-lg-1 col-md-2">
+        <label class="form-label">{{ 'reports.orphanData.filterAgeTo' | translate }}</label>
+        <input type="number" class="form-control" formControlName="ageTo" min="1"
+               [class.is-invalid]="hasServerError('ageTo')" />
+        <div class="invalid-feedback" *ngIf="hasServerError('ageTo')">
+          {{ serverError('ageTo') }}
+        </div>
+      </div>
+
+      <!-- Review P27 2026-08-26: the finished-sponsorship FILTER flag — its legacy "العمر/Age"
+           label lied about what it does; the key now carries its real name (i18n-side fix). -->
+      <div class="col-lg-2 col-md-3">
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" formControlName="isFinishedSponsorship"
+                 id="flagFinishedSponsorship" />
+          <label class="form-check-label" for="flagFinishedSponsorship">
+            {{ 'reports.orphanData.flagFinishedSponsorship' | translate }}
+          </label>
+        </div>
+      </div>
+
+      <!-- The three mutually-exclusive orphan flags (§23.S.3) -->
+      <div class="col-lg-4 col-md-6">
+        <div class="d-flex gap-4 mb-2 flex-wrap">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" formControlName="notExcluded"
+                   id="flagNotExcluded" />
+            <label class="form-check-label" for="flagNotExcluded">
+              {{ 'reports.orphanData.flagNotExcluded' | translate }}
+            </label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" formControlName="excluded"
+                   id="flagExcluded" (change)="onExcludedChange()" />
+            <label class="form-check-label" for="flagExcluded">
+              {{ 'reports.orphanData.flagExcluded' | translate }}
+            </label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" formControlName="allOrphans"
+                   id="flagAllOrphans" (change)="onAllOrphansChange()" />
+            <label class="form-check-label" for="flagAllOrphans">
+              {{ 'reports.orphanData.flagAllOrphans' | translate }}
+            </label>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- ==================== §23.S.3 command arm — أيتام لم يصرف لهم (18-28) ==================== -->
+  <!-- Carries this screen's charity selection to the gap report as ?charityId=. HQ only:
+       the endpoint gates SuperAdmin/Admin, so a charity user must not be sent there. -->
+  <div class="d-flex justify-content-start mb-2 gap-2 flex-wrap">
+    <!-- 18-31 كروت التسليم — the batch's collection cards (charity + HQ; the endpoint pins
+         a charity caller server-side). Frame = the screen's batch dropdown. -->
+    <button type="button" class="btn btn-sm btn-outline-secondary"
+            (click)="printReceiptCards()" [disabled]="cardsPrinting">
+      <i class="fe fe-credit-card me-1" *ngIf="!cardsPrinting; else cardsSpin"></i>
+      <ng-template #cardsSpin><span class="spinner-border spinner-border-sm me-1"></span></ng-template>
+      {{ 'reports.receiptCards.printCards' | translate }}
+    </button>
+
+    <a class="btn btn-sm btn-outline-secondary" *ngIf="isHQ"
+       routerLink="/reports/orphans-without-payment"
+       [queryParams]="{ charityId: filterForm.get('charityId')?.value || null }">
+      <i class="bi bi-exclamation-circle me-1"></i>
+      {{ 'reports.orphansWithoutPayment.openFromOrphanData' | translate }}
+    </a>
+  </div>
+
+  <!-- ==================== bespoke grid — the ~24-column subset, horizontal scroll ==================== -->
+  <div report-grid class="table-responsive">
+    <table class="table table-hover table-striped align-middle"
+           *ngIf="rows.length > 0">
+      <thead>
+        <tr>
+          <th>{{ 'reports.orphanData.colSerial' | translate }}</th>
+          <th>{{ 'reports.orphanData.colOrphanCode' | translate }}</th>
+          <th>{{ 'reports.orphanData.colOrphanName' | translate }}</th>
+          <th>{{ 'reports.orphanData.colOrphanNationalId' | translate }}</th>
+          <th>{{ 'reports.orphanData.colBirthDate' | translate }}</th>
+          <th>{{ 'reports.orphanData.colAge' | translate }}</th>
+          <th>{{ 'reports.orphanData.colGender' | translate }}</th>
+          <th>{{ 'reports.orphanData.colGuardianName' | translate }}</th>
+          <th>{{ 'reports.orphanData.colGuardianRelation' | translate }}</th>
+          <th>{{ 'reports.orphanData.colGuardianNationalId' | translate }}</th>
+          <th>{{ 'reports.orphanData.colGuardianJob' | translate }}</th>
+          <th>{{ 'reports.orphanData.colGovernorate' | translate }}</th>
+          <th>{{ 'reports.orphanData.colCenter' | translate }}</th>
+          <th>{{ 'reports.orphanData.colVillage' | translate }}</th>
+          <th>{{ 'reports.orphanData.colAddress' | translate }}</th>
+          <th>{{ 'reports.orphanData.colMobile' | translate }}</th>
+          <th>{{ 'reports.orphanData.colHouseOwnership' | translate }}</th>
+          <th>{{ 'reports.orphanData.colHousingType' | translate }}</th>
+          <th>{{ 'reports.orphanData.colIncomeValue' | translate }}</th>
+          <th>{{ 'reports.orphanData.colSocialStatus' | translate }}</th>
+          <th>{{ 'reports.orphanData.colHealthStatus' | translate }}</th>
+          <th>{{ 'reports.orphanData.colEducationLevel' | translate }}</th>
+          <th>{{ 'reports.orphanData.colGradeClass' | translate }}</th>
+          <th>{{ 'reports.orphanData.colSchoolName' | translate }}</th>
+          <th>{{ 'reports.orphanData.colExcluded' | translate }}</th>
+          <th>{{ 'reports.orphanData.colCharity' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow">
+          <td>{{ serial(i) }}</td>
+          <td>{{ row.code }}</td>
+          <td>{{ row.fullName }}</td>
+          <td>{{ row.nationalId || '—' }}</td>
+          <td>{{ row.dateOfBirth ? (row.dateOfBirth | date:'yyyy-MM-dd') : '—' }}</td>
+          <td>{{ row.age ?? '—' }}</td>
+          <td>{{ row.gender || '—' }}</td>
+          <td>{{ row.guardianName || '—' }}</td>
+          <td>{{ row.guardianRelationship || '—' }}</td>
+          <td>{{ row.guardianNationalId || '—' }}</td>
+          <td>{{ row.guardianJob || '—' }}</td>
+          <td>{{ row.governorateName || '—' }}</td>
+          <td>{{ row.centerName || '—' }}</td>
+          <td>{{ row.cityVillage || '—' }}</td>
+          <td>{{ row.detailedAddress || '—' }}</td>
+          <td>{{ row.mobileNumber || '—' }}</td>
+          <td>{{ row.houseOwnershipName || '—' }}</td>
+          <td>{{ row.housingTypeName || '—' }}</td>
+          <td>{{ row.monthlyIncome ?? '—' }}</td>
+          <td>{{ row.socialStatusName || '—' }}</td>
+          <td>{{ row.healthStatusName || '—' }}</td>
+          <td>{{ row.educationLevelName || '—' }}</td>
+          <td>{{ row.gradeClass || '—' }}</td>
+          <td>{{ row.schoolName || '—' }}</td>
+          <!-- Review P27 2026-08-26: a real نعم/لا, not check-glyph shorthand. -->
+          <td>{{ (row.isExcluded ? 'common.yes' : 'common.no') | translate }}</td>
+          <td>{{ row.charityName || '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</app-report-viewer>

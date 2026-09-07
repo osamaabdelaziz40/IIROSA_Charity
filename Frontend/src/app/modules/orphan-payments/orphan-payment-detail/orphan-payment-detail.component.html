@@ -12,38 +12,60 @@
         </ol>
       </nav>
       <h2 class="page-title">
-        <i class="fe fe-users mr-2"></i>
+        <i class="fe fe-users me-2"></i>
         {{ paymentGroup?.groupName || '-' }}
       </h2>
     </div>
     <div class="col-auto">
       <div class="btn-group">
-        <button class="btn btn-outline-secondary" (click)="onPrint()" *ngIf="paymentGroup">
-          <i class="fe fe-printer mr-1"></i>
-          {{ 'common.print' | translate }}
+        <!-- 18-29 (§23.U.29) — the three outcome-list print commands of this batch -->
+        <button class="btn btn-outline-secondary" (click)="printOutcomeList('received')"
+                *ngIf="paymentGroup?.batchNo" [disabled]="outcomePrinting !== null">
+          <i class="fe fe-check-square me-1" *ngIf="outcomePrinting !== 'received'; else recvSpin"></i>
+          <ng-template #recvSpin><span class="spinner-border spinner-border-sm me-1"></span></ng-template>
+          {{ 'reports.paymentsOutcome.printReceived' | translate }}
+        </button>
+        <button class="btn btn-outline-secondary" (click)="printOutcomeList('notReceived')"
+                *ngIf="paymentGroup?.batchNo" [disabled]="outcomePrinting !== null">
+          <i class="fe fe-square me-1" *ngIf="outcomePrinting !== 'notReceived'; else nrecvSpin"></i>
+          <ng-template #nrecvSpin><span class="spinner-border spinner-border-sm me-1"></span></ng-template>
+          {{ 'reports.paymentsOutcome.printNotReceived' | translate }}
+        </button>
+        <button class="btn btn-outline-secondary" (click)="printOutcomeList('stopped')"
+                *ngIf="paymentGroup?.batchNo" [disabled]="outcomePrinting !== null">
+          <i class="fe fe-slash me-1" *ngIf="outcomePrinting !== 'stopped'; else stopSpin"></i>
+          <ng-template #stopSpin><span class="spinner-border spinner-border-sm me-1"></span></ng-template>
+          {{ 'reports.paymentsOutcome.printStopped' | translate }}
+        </button>
+        <!-- 18-30 (§23.U.30) — the batch's recorded cheque numbers -->
+        <button class="btn btn-outline-secondary" (click)="printChequeNumbers()"
+                *ngIf="paymentGroup?.batchNo" [disabled]="chequePrinting">
+          <i class="fe fe-file-text me-1" *ngIf="!chequePrinting; else chqSpin"></i>
+          <ng-template #chqSpin><span class="spinner-border spinner-border-sm me-1"></span></ng-template>
+          {{ 'reports.chequeNumbers.printCheques' | translate }}
         </button>
         <button class="btn btn-success" (click)="onExport()" *ngIf="paymentGroup">
-          <i class="fe fe-download mr-1"></i>
+          <i class="fe fe-download me-1"></i>
           {{ 'orphanPayments.export' | translate }}
         </button>
         <button class="btn btn-outline-primary" (click)="onAddOrphans()" *ngIf="canModify() && paymentGroup">
-          <i class="fe fe-user-plus mr-1"></i>
+          <i class="fe fe-user-plus me-1"></i>
           {{ 'orphanPayments.addOrphans' | translate }}
         </button>
         <button class="btn btn-primary" (click)="onEdit()" *ngIf="canModify() && paymentGroup">
-          <i class="fe fe-edit mr-1"></i>
+          <i class="fe fe-edit me-1"></i>
           {{ 'common.edit' | translate }}
         </button>
         <button class="btn btn-warning" (click)="onMarkAsUploaded()" *ngIf="canModify() && paymentGroup && paymentGroup.orphanCount > 0">
-          <i class="fe fe-check-circle mr-1"></i>
+          <i class="fe fe-check-circle me-1"></i>
           {{ 'orphanPayments.markAsUploaded' | translate }}
         </button>
         <button class="btn btn-secondary" (click)="onUnmarkAsUploaded()" *ngIf="!canModify() && paymentGroup">
-          <i class="fe fe-arrow-left mr-1"></i>
+          <i class="fe fe-arrow-left me-1"></i>
           {{ 'orphanPayments.unmarkAsUploaded' | translate }}
         </button>
         <button class="btn btn-danger" (click)="onDelete()" *ngIf="canModify() && paymentGroup">
-          <i class="fe fe-trash mr-1"></i>
+          <i class="fe fe-trash me-1"></i>
           {{ 'common.delete' | translate }}
         </button>
       </div>
@@ -55,6 +77,78 @@
 <div class="text-center py-5" *ngIf="loading">
   <div class="spinner-border text-primary" role="status">
     <span class="sr-only">{{ 'common.loading' | translate }}</span>
+  </div>
+</div>
+
+<!-- Not-Found State (AC 3 — unknown or soft-deleted id) -->
+<div class="card" *ngIf="!loading && notFound">
+  <div class="card-body text-center py-5">
+    <i class="fe fe-alert-circle fe-3x text-muted mb-3 d-block"></i>
+    <h5 class="mb-1">{{ 'orphanPayments.groupNotFound' | translate }}</h5>
+    <button class="btn btn-outline-primary mt-3" routerLink="/orphan-payments">
+      <i class="fe fe-arrow-right me-1"></i>
+      {{ 'orphanPayments.backToList' | translate }}
+    </button>
+  </div>
+</div>
+
+<!-- 18-32 (§23.U.32 صفحة ملخص الدفعة) — the batch's cover figures; loaded on batch open.
+     Zeros are a valid result (an empty batch, AC 4); the band hides only on read failure. -->
+<div class="card mb-3" *ngIf="!loading && paymentGroup && (summaryLoading || summary)">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="card-title mb-0">{{ 'orphanPayments.paymentSummary.title' | translate }}</h5>
+    <span class="text-muted small" *ngIf="summary?.batchNo">{{ summary?.batchNo }}</span>
+  </div>
+  <div class="card-body">
+    <div class="text-center py-3" *ngIf="summaryLoading; else summaryCards">
+      <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+    </div>
+    <ng-template #summaryCards>
+      <!-- AC 4 — an empty batch shows its zeros plus the reason line, never an error -->
+      <div class="text-muted small mb-2" *ngIf="summary?.message">{{ summary?.message }}</div>
+      <div class="row g-2">
+        <div class="col-6 col-md-4 col-xl-2">
+          <div class="border rounded p-2 text-center h-100">
+            <div class="text-muted small">{{ 'orphanPayments.paymentSummary.orphans' | translate }}</div>
+            <div class="h5 mb-0 mt-1">{{ summary?.orphanCount ?? 0 }}</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+          <div class="border rounded p-2 text-center h-100">
+            <div class="text-muted small">{{ 'orphanPayments.paymentSummary.total' | translate }}</div>
+            <div class="h5 mb-0 mt-1">{{ (summary?.totalAmount ?? 0) | number:'1.2-2' }}{{ currencySuffix }}</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+          <div class="border rounded p-2 text-center h-100">
+            <div class="text-muted small">{{ 'orphanPayments.paymentSummary.received' | translate }}</div>
+            <div class="h5 mb-0 mt-1">{{ summary?.receivedCount ?? 0 }}</div>
+            <div class="small text-muted">{{ (summary?.receivedAmount ?? 0) | number:'1.2-2' }}{{ currencySuffix }}</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+          <div class="border rounded p-2 text-center h-100">
+            <div class="text-muted small">{{ 'orphanPayments.paymentSummary.notReceived' | translate }}</div>
+            <div class="h5 mb-0 mt-1">{{ summary?.notReceivedCount ?? 0 }}</div>
+            <div class="small text-muted">{{ (summary?.notReceivedAmount ?? 0) | number:'1.2-2' }}{{ currencySuffix }}</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+          <div class="border rounded p-2 text-center h-100">
+            <div class="text-muted small">{{ 'orphanPayments.paymentSummary.stopped' | translate }}</div>
+            <div class="h5 mb-0 mt-1">{{ summary?.stoppedCount ?? 0 }}</div>
+            <div class="small text-muted">{{ (summary?.stoppedAmount ?? 0) | number:'1.2-2' }}{{ currencySuffix }}</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+          <div class="border rounded p-2 text-center h-100">
+            <div class="text-muted small">{{ 'orphanPayments.paymentSummary.cheques' | translate }}</div>
+            <div class="h5 mb-0 mt-1">{{ summary?.chequeCount ?? 0 }}</div>
+            <div class="small text-muted">{{ (summary?.chequeTotal ?? 0) | number:'1.2-2' }}{{ currencySuffix }}</div>
+          </div>
+        </div>
+      </div>
+    </ng-template>
   </div>
 </div>
 
@@ -81,29 +175,37 @@
             <label class="text-muted small">{{ 'orphanPayments.description' | translate }}</label>
             <div>{{ paymentGroup.description }}</div>
           </div>
-          <div class="col-md-4 mb-3">
+          <div class="col-md-3 mb-3">
             <label class="text-muted small">{{ 'orphanPayments.paymentPeriodFrom' | translate }}</label>
             <div>{{ formatDate(paymentGroup.paymentPeriodFrom) }}</div>
           </div>
-          <div class="col-md-4 mb-3">
+          <div class="col-md-3 mb-3">
             <label class="text-muted small">{{ 'orphanPayments.paymentPeriodTo' | translate }}</label>
             <div>{{ formatDate(paymentGroup.paymentPeriodTo) }}</div>
           </div>
-          <div class="col-md-4 mb-3">
+          <div class="col-md-3 mb-3">
             <label class="text-muted small">{{ 'orphanPayments.groupDate' | translate }}</label>
             <div>{{ formatDate(paymentGroup.groupDate) }}</div>
           </div>
-          <div class="col-md-6 mb-3">
-            <label class="text-muted small">{{ 'orphanPayments.charity' | translate }}</label>
-            <div>{{ paymentGroup.charityName || '-' }}</div>
+          <div class="col-md-3 mb-3">
+            <label class="text-muted small">{{ 'orphanPayments.paymentDate' | translate }}</label>
+            <div>{{ formatDate(paymentGroup.paymentDate) }}</div>
           </div>
-          <div class="col-md-6 mb-3">
+          <div class="col-md-4 mb-3">
+            <label class="text-muted small">{{ 'orphanPayments.charity' | translate }}</label>
+            <div>{{ paymentGroup.charityName }}</div>
+          </div>
+          <div class="col-md-4 mb-3">
             <label class="text-muted small">{{ 'orphanPayments.status' | translate }}</label>
             <div>
               <span class="badge" [ngClass]="getStatusBadgeClass()">
                 {{ getStatusText() }}
               </span>
             </div>
+          </div>
+          <div class="col-md-4 mb-3" *ngIf="paymentGroup.uploadDate">
+            <label class="text-muted small">{{ 'orphanPayments.uploadDate' | translate }}</label>
+            <div>{{ formatDate(paymentGroup.uploadDate) }}</div>
           </div>
           <div class="col-md-12 mb-3" *ngIf="paymentGroup.notes">
             <label class="text-muted small">{{ 'common.notes' | translate }}</label>
@@ -115,65 +217,133 @@
 
     <!-- Orphans List Card -->
     <div class="card mb-3">
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h5 class="card-title mb-0">
           {{ 'orphanPayments.orphansInGroup' | translate }}
-          <span class="badge badge-primary ml-2">{{ totalOrphans }}</span>
+          <span class="badge bg-primary ms-2">{{ totalOrphans }}</span>
         </h5>
+        <!-- 10-8 (UC-PAY-08): client-side search over the loaded rows — no second endpoint -->
+        <div class="d-flex align-items-center gap-2">
+          <input type="text"
+                 class="form-control form-control-sm"
+                 style="max-width: 260px;"
+                 [placeholder]="'orphanPayments.searchOrphanHint' | translate"
+                 [(ngModel)]="searchTerm"
+                 (ngModelChange)="onSearchTermChange()">
+        </div>
       </div>
       <div class="card-body p-0">
-        <!-- Loading Orphans -->
-        <div class="text-center py-4" *ngIf="loadingOrphans">
-          <div class="spinner-border spinner-border-sm text-primary"></div>
-        </div>
-
-        <!-- Orphans Table -->
-        <div class="table-responsive" *ngIf="!loadingOrphans">
+        <!-- Orphans Table (rows come from the same {id}/details payload — 10-3) -->
+        <!-- 10-7: column set per §15.S.3 (وقف الصرف · كود اليتيم · اسم اليتيم · اسم المعيل ·
+             المبلغ · حالة الاستلام/الطباعة · رقم الشيك · تاريخ الشيك · رقم الحوالة · حالة الصرف)
+             plus الجمعية — the story's defect-2 charity join surface. Blank when null (8-9:
+             never fake values); writes arrive with 10-9..10-13. -->
+        <div class="table-responsive">
           <table class="table table-hover mb-0">
             <thead>
               <tr>
-                <th>{{ 'orphanPayments.orphanName' | translate }}</th>
-                <th>{{ 'orphanPayments.familyName' | translate }}</th>
+                <th>{{ 'orphanPayments.stopSpend' | translate }}</th>
+                <th class="cursor-pointer" (click)="sortBy('code')">
+                  {{ 'orphanPayments.orphanCode' | translate }}
+                  <i class="fe" [ngClass]="sortColumn === 'code' ? (sortAscending ? 'fe-chevron-up' : 'fe-chevron-down') : 'fe-chevrons-up-down text-muted'"></i>
+                </th>
+                <th class="cursor-pointer" (click)="sortBy('name')">
+                  {{ 'orphanPayments.orphanName' | translate }}
+                  <i class="fe" [ngClass]="sortColumn === 'name' ? (sortAscending ? 'fe-chevron-up' : 'fe-chevron-down') : 'fe-chevrons-up-down text-muted'"></i>
+                </th>
+                <th>{{ 'orphanPayments.guardianName' | translate }}</th>
                 <th>{{ 'orphanPayments.charity' | translate }}</th>
-                <th>{{ 'orphanPayments.age' | translate }}</th>
-                <th>{{ 'orphanPayments.gender' | translate }}</th>
-                <th>{{ 'orphanPayments.sponsorshipStatus' | translate }}</th>
+                <th class="cursor-pointer" (click)="sortBy('amount')">
+                  {{ 'orphanPayments.amount' | translate }}
+                  <i class="fe" [ngClass]="sortColumn === 'amount' ? (sortAscending ? 'fe-chevron-up' : 'fe-chevron-down') : 'fe-chevrons-up-down text-muted'"></i>
+                </th>
+                <th>{{ 'orphanPayments.receiptPrintStatus' | translate }}</th>
+                <th>{{ 'orphanPayments.chequeNumber' | translate }}</th>
+                <th>{{ 'orphanPayments.chequeDate' | translate }}</th>
+                <th>{{ 'orphanPayments.transferNumber' | translate }}</th>
+                <th>{{ 'orphanPayments.exchangeStatus' | translate }}</th>
                 <th *ngIf="canModify()" class="text-center">{{ 'common.actions' | translate }}</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let orphan of orphans; trackBy: trackOrphan">
+              <tr *ngFor="let orphan of pagedOrphans; trackBy: trackOrphan">
                 <td>
-                  <a routerLink="/orphans/{{orphan.orphanId}}" class="text-primary">
-                    {{ orphan.orphanName }}
-                  </a>
+                  <div class="d-flex align-items-center gap-1">
+                    <span class="badge bg-danger" *ngIf="orphan.isStopped">
+                      {{ 'orphanPayments.stopped' | translate }}
+                    </span>
+                    <span class="text-muted" *ngIf="!orphan.isStopped">—</span>
+                    <!-- 10-9 (UC-PAY-09): stop/resume row action — server enforces scope + HQ-stop lock.
+                         Review P27 2026-08-26: it is a WRITE — gated on canModify like every
+                         other write on this screen, not just the remove column. -->
+                    <button class="btn btn-sm btn-icon" *ngIf="canModify()"
+                            [ngClass]="orphan.isStopped ? 'btn-outline-success' : 'btn-outline-warning'"
+                            (click)="onToggleStop(orphan)"
+                            [title]="(orphan.isStopped ? 'orphanPayments.resumePayment' : 'orphanPayments.stopPayment') | translate">
+                      <i class="fe" [ngClass]="orphan.isStopped ? 'fe-play' : 'fe-slash'"></i>
+                    </button>
+                  </div>
                 </td>
-                <td>{{ orphan.familyName }}</td>
+                <td>{{ orphan.orphanCode }}</td>
+                <td>{{ orphan.orphanFullName }}</td>
+                <td>{{ orphan.orphanFamilyName }}</td>
                 <td>{{ orphan.charityName }}</td>
-                <td>{{ orphan.age }}</td>
-                <td>{{ orphan.gender }}</td>
+                <!-- Review P27 2026-08-26: money renders as money (grouped, two decimals) —
+                     a raw machine number ("1234.5") reads as data, not an amount. -->
+                <td>{{ orphan.amount != null ? (orphan.amount | number:'1.2-2') : '' }}</td>
                 <td>
-                  <span class="badge" [ngClass]="orphan.sponsorshipStatus === 'Sponsored' ? 'badge-success' : 'badge-warning'">
-                    {{ orphan.sponsorshipStatus }}
+                  <div class="d-flex align-items-center gap-1">
+                    <span class="badge bg-success me-1" *ngIf="orphan.isGotIt">
+                      {{ 'orphanPayments.received' | translate }}
+                    </span>
+                    <span class="badge bg-info" *ngIf="orphan.isPrinted">
+                      {{ 'orphanPayments.printed' | translate }}
+                    </span>
+                    <span class="text-muted" *ngIf="!orphan.isGotIt && !orphan.isPrinted">—</span>
+                    <!-- 10-10 (UC-PAY-10): mark printed — idempotent; print runs are 10-24.
+                         Review P27 2026-08-26: a write — gated on canModify, not only on state. -->
+                    <button class="btn btn-sm btn-icon btn-outline-info" *ngIf="canModify() && !orphan.isPrinted"
+                            (click)="onMarkPrinted(orphan)"
+                            [title]="'orphanPayments.markPrintedBtn' | translate">
+                      <i class="fe fe-printer"></i>
+                    </button>
+                  </div>
+                </td>
+                <td>{{ orphan.chiqueNum }}</td>
+                <td>{{ orphan.printdate ? formatDate(orphan.printdate) : '' }}</td>
+                <td>{{ orphan.transferNo }}</td>
+                <td>
+                  <span class="badge" *ngIf="exchangeStatusKey(orphan.exchangeStatus) as key"
+                        [ngClass]="exchangeStatusClass(orphan.exchangeStatus)">
+                    {{ key | translate }}
                   </span>
+                  <span class="text-muted" *ngIf="exchangeStatusKey(orphan.exchangeStatus) === null">—</span>
                 </td>
                 <td *ngIf="canModify()" class="text-center">
                   <button class="btn btn-sm btn-icon btn-danger"
-                          (click)="onRemoveOrphan(orphan.orphanId)"
+                          (click)="onRemoveOrphan(orphan.id)"
                           title="{{ 'common.remove' | translate }}">
                     <i class="fe fe-trash"></i>
                   </button>
                 </td>
               </tr>
-              <tr *ngIf="orphans.length === 0">
-                <td [colSpan]="canModify() ? 7 : 6" class="text-center py-4 text-muted">
+              <tr *ngIf="filteredOrphans.length === 0">
+                <td [colSpan]="canModify() ? 12 : 11" class="text-center py-4 text-muted">
                   <i class="fe fe-inbox fe-2x mb-2 d-block"></i>
-                  {{ 'orphanPayments.noOrphansInGroup' | translate }}
+                  {{ (searchTerm.trim() ? 'orphanPayments.noOrphansMatch' : 'orphanPayments.noOrphansInGroup') | translate }}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
+
+        <!-- 10-8: client paging over the filtered set (shared component) -->
+        <app-pagination
+          [currentPage]="pageNumber"
+          [pageSize]="pageSize"
+          [totalCount]="filteredCount"
+          (pageChange)="onPageChange($event)">
+        </app-pagination>
       </div>
     </div>
   </div>
@@ -219,65 +389,10 @@
           <div class="font-weight-bold">{{ paymentGroup.currency }}</div>
         </div>
         <div class="alert alert-info small" *ngIf="paymentGroup.dontRemoveRate">
-          <i class="fe fe-lock mr-1"></i>
+          <i class="fe fe-lock me-1"></i>
           {{ 'orphanPayments.exchangeRateLocked' | translate }}
         </div>
       </div>
-    </div>
-
-    <!-- Audit Log Toggle -->
-    <div class="card mb-3">
-      <div class="card-body">
-        <button class="btn btn-outline-secondary btn-block" (click)="toggleAuditLog()">
-          <i class="fe fe-activity mr-1"></i>
-          {{ 'orphanPayments.viewAuditLog' | translate }}
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Audit Log Section -->
-<div class="card mb-3" *ngIf="showingAuditLog">
-  <div class="card-header">
-    <h5 class="card-title mb-0">{{ 'orphanPayments.auditLog' | translate }}</h5>
-  </div>
-  <div class="card-body">
-    <div class="text-center py-4" *ngIf="loadingAuditLog">
-      <div class="spinner-border spinner-border-sm text-primary"></div>
-    </div>
-    <div class="table-responsive" *ngIf="!loadingAuditLog">
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            <th>{{ 'common.date' | translate }}</th>
-            <th>{{ 'common.action' | translate }}</th>
-            <th>{{ 'common.performedBy' | translate }}</th>
-            <th>{{ 'orphanPayments.details' | translate }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let log of auditLogs">
-            <td>{{ formatDate(log.performedOn) }}</td>
-            <td>
-              <span class="badge" [ngClass]="getAuditActionClass(log.action)">
-                {{ log.action }}
-              </span>
-            </td>
-            <td>{{ log.performedBy }}</td>
-            <td>
-              <span *ngIf="log.field">{{ log.field }}:</span>
-              <span *ngIf="log.oldValue" class="text-muted line-through mr-1">{{ log.oldValue }}</span>
-              <span *ngIf="log.newValue" class="text-success">{{ log.newValue }}</span>
-            </td>
-          </tr>
-          <tr *ngIf="auditLogs.length === 0">
-            <td colspan="4" class="text-center text-muted">
-              {{ 'orphanPayments.noAuditLogs' | translate }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
     </div>
   </div>
 </div>
@@ -324,7 +439,7 @@
           {{ 'common.cancel' | translate }}
         </button>
         <button type="button" class="btn btn-primary" (click)="doExport()">
-          <i class="fe fe-download mr-1"></i>
+          <i class="fe fe-download me-1"></i>
           {{ 'orphanPayments.export' | translate }}
         </button>
       </div>

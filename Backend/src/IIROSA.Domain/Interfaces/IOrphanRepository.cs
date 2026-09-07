@@ -24,7 +24,7 @@ public interface IOrphanRepository : IRepository<Orphan>
     /// </summary>
     Task<(IEnumerable<Orphan> Items, int TotalCount)> SearchFilteredAsync(
         string? searchTerm = null,
-        int? charityId = null,
+        Guid? charityId = null,
         int? regionId = null,
         int? centerId = null,
         string? sponsorshipStatus = null,

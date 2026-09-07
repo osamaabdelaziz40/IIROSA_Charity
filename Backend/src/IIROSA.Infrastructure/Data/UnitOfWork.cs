@@ -47,9 +47,17 @@ public class UnitOfWork : IUnitOfWork
 
     public async Task RollbackTransactionAsync()
     {
+        // Null-safe by design: a commit failure already rolled back and disposed the transaction
+        // inside CommitTransactionAsync's catch — service-level catch blocks then call rollback
+        // again, and that second call must be a no-op, not an NRE masking the original exception.
+        if (_transaction == null)
+        {
+            return;
+        }
+
         try
         {
-            await _transaction!.RollbackAsync();
+            await _transaction.RollbackAsync();
         }
         finally
         {

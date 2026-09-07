@@ -1,0 +1,213 @@
+- generic [ref=e32]:
+  - navigation [ref=e33]:
+    - button "" [ref=e34] [cursor=pointer]
+    - list [ref=e36]:
+      - listitem [ref=e37]:
+        - link "English " [ref=e38] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e39]: 
+          - text: English 
+      - listitem [ref=e40]:
+        - link "" [ref=e41] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=e43]:
+        - link "" [ref=e44] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=e47]:
+        - button [ref=e48] [cursor=pointer]:
+          - generic [ref=e49]:
+            - text: Welcome System Admin
+            - img "..." [ref=e50]
+          - text: 
+  - complementary [ref=e51]:
+    - generic [ref=e56]:
+      - text: 
+      - navigation [ref=e57]:
+        - link [ref=e59] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=e60]
+        - paragraph [ref=e61]: Website Elements
+        - list [ref=e62]:
+          - listitem [ref=e63]:
+            - link " Home Page (current) " [ref=e64] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=e65]: 
+              - generic [ref=e66]: Home Page
+              - generic [ref=e67]: (current)
+              - text: 
+            - list [ref=e68]:
+              - listitem [ref=e69]:
+                - link "Home" [ref=e70] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=e71]:
+            - link " Settings " [ref=e72] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=e73]: 
+              - generic [ref=e74]: Settings
+              - text: 
+          - listitem [ref=e75]:
+            - link " Technical Support " [ref=e76] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=e77]: 
+              - generic [ref=e78]: Technical Support
+              - text: 
+          - listitem [ref=e79]:
+            - link " Office Projects " [ref=e80] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=e81]: 
+              - generic [ref=e82]: Office Projects
+              - text: 
+          - listitem [ref=e83]:
+            - link " Housing Projects " [ref=e84] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=e85]: 
+              - generic [ref=e86]: Housing Projects
+              - text: 
+          - listitem [ref=e87]:
+            - link " Seasonal Aid " [ref=e88] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=e89]: 
+              - generic [ref=e90]: Seasonal Aid
+              - text: 
+          - listitem [ref=e91]:
+            - link " Incoming & Outgoing " [ref=e92] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=e93]: 
+              - generic [ref=e94]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=e95]:
+            - link " Orphan Payments " [ref=e96] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=e97]: 
+              - generic [ref=e98]: Orphan Payments
+              - text: 
+            - list [ref=e486]:
+              - listitem [ref=e487]:
+                - link "Manage Payment Groups" [ref=e488] [cursor=pointer]:
+                  - /url: "#/orphan-payments"
+              - listitem [ref=e489]:
+                - link "Add New Payment Group" [ref=e490] [cursor=pointer]:
+                  - /url: "#/orphan-payments/create"
+          - listitem [ref=e99]:
+            - link " Families " [ref=e100] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=e101]: 
+              - generic [ref=e102]: Families
+              - text: 
+          - listitem [ref=e103]:
+            - link " Reports " [ref=e104] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=e105]: 
+              - generic [ref=e106]: Reports
+              - text: 
+          - listitem [ref=e107]:
+            - link " General Cheques " [ref=e108] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=e109]: 
+              - generic [ref=e110]: General Cheques
+              - text: 
+          - listitem [ref=e111]:
+            - link " Missions " [ref=e112] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=e113]: 
+              - generic [ref=e114]: Missions
+              - text: 
+          - listitem [ref=e115]:
+            - link " Periodic Orphan Reports " [ref=e116] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=e117]: 
+              - generic [ref=e118]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=e119]:
+            - link " Financial Transfers " [ref=e120] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=e121]: 
+              - generic [ref=e122]: Financial Transfers
+              - text: 
+  - main [ref=e123]:
+    - generic [ref=e491]:
+      - navigation "breadcrumb" [ref=e493]:
+        - list [ref=e494]:
+          - listitem [ref=e495]:
+            - link "Home" [ref=e496] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=e497]:
+            - text: /
+            - link "Orphan Payments" [ref=e498] [cursor=pointer]:
+              - /url: "#/orphan-payments"
+          - listitem [ref=e499]:
+            - text: /
+            - generic [ref=e500]: Add New Payment Group
+      - generic [ref=e502]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=e503]:
+          - heading "Add New Payment Group" [level=3] [ref=e506]
+          - button "Cancel" [ref=e508] [cursor=pointer]
+      - generic [ref=e514]:
+        - heading "Basic Information" [level=5] [ref=e516]
+        - generic [ref=e517]:
+          - generic [ref=e519]:
+            - generic [ref=e520]: Group Name
+            - textbox "Group Name" [ref=e521]:
+              - /placeholder: Enter payment group name (e.g., January 2026 - Region A)
+          - generic [ref=e522]: Charity
+        - generic [ref=e528]:
+          - generic [ref=e529]: Batch Number
+          - combobox "Batch Number" [ref=e530]:
+            - option "Auto-generate" [selected]
+          - text: Leave blank to auto-generate the batch number on save
+          - button " Add Batch Number" [ref=e532] [cursor=pointer]:
+            - generic [ref=e533]: 
+            - text: Add Batch Number
+        - generic [ref=e536]:
+          - generic [ref=e537]: Description
+          - textbox "Description" [ref=e538]:
+            - /placeholder: Enter group description (optional)
+        - generic [ref=e539]:
+          - generic [ref=e541]:
+            - generic [ref=e542]: Payment Period From
+            - textbox "Payment Period From" [ref=e543]: 2026-09-07
+          - generic [ref=e545]:
+            - generic [ref=e546]: Payment Period To
+            - textbox "Payment Period To" [ref=e547]: 2026-09-07
+          - generic [ref=e549]:
+            - generic [ref=e550]: Group Date
+            - textbox "Group Date" [ref=e551]: 2026-09-07
+          - generic [ref=e553]:
+            - generic [ref=e554]: Distribution Start Date
+            - textbox "Distribution Start Date" [ref=e555]: 2026-09-07
+        - heading "Financial Information" [level=5] [ref=e557]
+        - generic [ref=e558]:
+          - generic [ref=e560]:
+            - generic [ref=e561]: Exchange Rate
+            - generic [ref=e562]:
+              - spinbutton "Exchange Rate" [ref=e563]
+              - generic [ref=e565]:
+                - generic "Used for reporting calculations only"
+            - text: Rate used for converting amounts in reports
+          - generic [ref=e566]: Currency
+          - generic [ref=e572]:
+            - checkbox "Lock Exchange Rate" [ref=e573]
+            - generic [ref=e574]: Lock Exchange Rate
+            - generic [ref=e575]: Prevents accidental changes to the exchange rate
+        - heading "Settings" [level=5] [ref=e577]
+        - generic [ref=e580]:
+          - generic [ref=e581]: Show Order
+          - spinbutton "Show Order" [ref=e582]: "0"
+        - generic [ref=e585]:
+          - generic [ref=e586]: common.notes
+          - textbox "common.notes" [ref=e587]:
+            - /placeholder: Enter additional notes (optional)
+        - generic [ref=e588]:
+          - button " Save" [disabled] [ref=e589] [cursor=pointer]:
+            - generic [ref=e590]: 
+            - text: Save
+          - button " Cancel" [ref=e591] [cursor=pointer]:
+            - generic [ref=e592]: 
+            - text: Cancel
+  - contentinfo [ref=e479]:
+    - generic [ref=e481]:
+      - paragraph [ref=e483]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=e485]: Version 1.0.0

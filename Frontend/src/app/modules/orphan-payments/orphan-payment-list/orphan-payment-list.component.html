@@ -7,36 +7,29 @@
   [actions]="pageActions">
 </app-page-header>
 
-<div class="card">
+<!-- Filter Section -->
+<div class="card shadow mb-4">
   <div class="card-body">
-    <!-- Filter Section -->
     <form [formGroup]="filterForm">
       <div class="row mb-3">
         <!-- Search -->
         <div class="col-md-3">
           <label class="form-label">{{ 'common.search' | translate }}</label>
-          <div class="input-group">
-            <input type="text"
-                   class="form-control"
-                   [placeholder]="'orphanPayments.searchPlaceholder' | translate"
-                   formControlName="searchValue"
-                   (keyup.enter)="onSearch()">
-            <div class="input-group-append">
-              <button class="btn btn-outline-secondary" type="button" (click)="onSearch()">
-                <i class="fe fe-search"></i>
-              </button>
-            </div>
-          </div>
+          <input type="text"
+                 class="form-control"
+                 [placeholder]="'orphanPayments.searchPlaceholder' | translate"
+                 formControlName="searchValue"
+                 (keyup.enter)="onSearch()">
         </div>
 
         <!-- Date Range Filters -->
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label">{{ 'orphanPayments.paymentPeriodFrom' | translate }}</label>
           <input type="date"
                  class="form-control"
                  formControlName="paymentPeriodFrom">
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label">{{ 'orphanPayments.paymentPeriodTo' | translate }}</label>
           <input type="date"
                  class="form-control"
@@ -44,27 +37,51 @@
         </div>
 
         <!-- Status Filter -->
-        <div class="col-md-3">
-          <label class="form-label">{{ 'orphanPayments.uploadStatus' | translate }}</label>
-          <select class="form-control" formControlName="isBatchUploaded">
-            <option [ngValue]="null">{{ 'common.all' | translate }}</option>
-            <option [ngValue]="true">{{ 'orphanPayments.uploaded' | translate }}</option>
-            <option [ngValue]="false">{{ 'orphanPayments.pending' | translate }}</option>
-          </select>
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="isBatchUploaded"
+            [label]="'orphanPayments.uploadStatus'"
+            [initialData]="uploadStatusOptions"
+            [hasDefaultValue]="false"
+            [placeholder]="'common.all' | translate"
+            (onDropDownChanged)="onUploadStatusChange($event)">
+          </app-drop-down>
+        </div>
+
+        <!-- Charity Filter (§15.S.1 — review D1: HQ only; a charity user's claim pins scope) -->
+        <div class="col-md-3" *ngIf="isHqUser">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="charityId"
+            [label]="'orphanPayments.charity'"
+            [initialData]="charityOptions"
+            [hasDefaultValue]="true"
+            [placeholder]="'orphanPayments.allCharities' | translate"
+            (onDropDownChanged)="onSearch()">
+          </app-drop-down>
         </div>
       </div>
 
       <!-- Filter Actions -->
-      <div class="row mb-3" *ngIf="hasActiveFilters()">
+      <div class="row">
         <div class="col-12">
-          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+          <button class="btn btn-primary" type="button" (click)="onSearch()">
+            <i class="fe fe-search mr-1"></i>
+            {{ 'common.search' | translate }}
+          </button>
+          <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary ml-2" type="button" (click)="clearFilters()">
             <i class="fe fe-x mr-1"></i>
             {{ 'common.clearFilters' | translate }}
           </button>
         </div>
       </div>
     </form>
+  </div>
+</div>
 
+<div class="card shadow mb-4">
+  <div class="card-body">
     <!-- Loading State -->
     <div *ngIf="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status">
@@ -77,6 +94,8 @@
       <table class="table table-hover table-striped">
         <thead>
           <tr>
+            <!-- Review P10: §15.S.1's first enumerated column — الرقم (page serial) -->
+            <th class="text-center">{{ 'orphanPayments.serial' | translate }}</th>
             <th>{{ 'orphanPayments.batchNumber' | translate }}</th>
             <th>{{ 'orphanPayments.groupName' | translate }}</th>
             <th>{{ 'orphanPayments.paymentPeriod' | translate }}</th>
@@ -89,7 +108,8 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let group of paymentGroups">
+          <tr *ngFor="let group of paymentGroups; let i = index; trackBy: trackById">
+            <td class="text-center">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
             <td><strong>{{ group.batchNo || '-' }}</strong></td>
             <td>{{ group.groupName }}</td>
             <td>
@@ -102,10 +122,12 @@
             <td>{{ group.currency || '-' }}</td>
             <td>
               <span [class]="'badge ' + getStatusBadgeClass(group.isBatchUploaded)">
-                {{ getStatusText(group.isBatchUploaded) }}
+                {{ (group.isBatchUploaded ? 'orphanPayments.uploaded' : 'orphanPayments.pending') | translate }}
               </span>
             </td>
-            <td>{{ formatDate(group.groupDate) }}</td>
+            <!-- Review P11: تاريخ الدفعة shows PaymentDate with the GroupDate fallback
+                 (§15.S.1's تاريخ بدء التوزيع — 10-2's contract, finally surfaced) -->
+            <td>{{ formatDate(group.paymentDate || group.groupDate) }}</td>
             <td>
               <div class="btn-group">
                 <button *ngFor="let action of rowActions"
@@ -120,9 +142,19 @@
             </td>
           </tr>
 
+          <!-- Error State (review P3b: a failed load reads as an error, not a blank grid) -->
+          <tr *ngIf="!loading && loadError">
+            <td colspan="10" class="text-center py-5">
+              <div class="empty-state">
+                <i class="fe fe-alert-circle fe-3x text-danger mb-3"></i>
+                <p class="text-muted">{{ 'orphanPayments.loadFailed' | translate }}</p>
+              </div>
+            </td>
+          </tr>
+
           <!-- Empty State -->
-          <tr *ngIf="!paymentGroups || paymentGroups.length === 0">
-            <td colspan="9" class="text-center py-5">
+          <tr *ngIf="!loading && !loadError && (!paymentGroups || paymentGroups.length === 0)">
+            <td colspan="10" class="text-center py-5">
               <div class="empty-state">
                 <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
                 <p class="text-muted">{{ 'orphanPayments.noPaymentsFound' | translate }}</p>

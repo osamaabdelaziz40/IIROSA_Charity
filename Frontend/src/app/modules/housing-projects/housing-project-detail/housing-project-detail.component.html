@@ -1,0 +1,225 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="family?.code || ('housingProjects.familyDetails' | translate)"
+  [subtitle]="family?.headOfFamily || ''"
+  [icon]="'fe fe-home'"
+  [actions]="pageActions">
+</app-page-header>
+
+<!-- Aggregate load in flight -->
+<div class="card mb-3" *ngIf="loading">
+  <div class="card-body text-center">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">{{ 'common.loading' | translate }}</span>
+    </div>
+  </div>
+</div>
+
+<ng-container *ngIf="!loading && family">
+  <!-- ==================== بيانات الأسرة (§11.U.4 read view) ==================== -->
+  <div class="card mb-3">
+    <div class="card-header">
+      <h4 class="mb-0">{{ 'housingProjects.form.sections.family' | translate }}</h4>
+    </div>
+    <div class="card-body">
+      <div class="row detail-grid">
+        <div class="col-md-4" *ngIf="family.charityName">
+          <dt>{{ 'housingProjects.form.charity' | translate }}</dt>
+          <dd>{{ family.charityName }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.familyCode' | translate }}</dt>
+          <dd>{{ family.code || '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.headOfFamily' | translate }}</dt>
+          <dd>{{ family.headOfFamily || '—' }}</dd>
+        </div>
+
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.cityVillage' | translate }}</dt>
+          <dd>{{ family.cityVillage || '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.region' | translate }}</dt>
+          <dd>{{ family.regionName || '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.center' | translate }}</dt>
+          <dd>{{ family.centerName || '—' }}</dd>
+        </div>
+
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.building' | translate }}</dt>
+          <dd>{{ family.housingBuildingName || '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.flat' | translate }}</dt>
+          <dd>{{ family.housingFlatName || '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.phone' | translate }}</dt>
+          <dd>{{ family.phoneNumber || '—' }}</dd>
+        </div>
+
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.nearBy' | translate }}</dt>
+          <dd>{{ family.nearBy || '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.street' | translate }}</dt>
+          <dd>{{ family.street || '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.address' | translate }}</dt>
+          <dd>{{ family.address || '—' }}</dd>
+        </div>
+
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.rentAmount' | translate }}</dt>
+          <dd>{{ family.rentAmount ?? '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.incomeType' | translate }}</dt>
+          <dd>{{ family.incomeTypeName || '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.computed.perMemberShare' | translate }}</dt>
+          <dd>{{ family.perMemberShare ?? '—' }}</dd>
+        </div>
+
+        <div class="col-12" *ngIf="family.notes">
+          <dt>{{ 'housingProjects.form.notes' | translate }}</dt>
+          <dd>{{ family.notes }}</dd>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== اضافة معيل — the guardian block ==================== -->
+  <div class="card mb-3" *ngIf="family.provider">
+    <div class="card-header">
+      <h4 class="mb-0">{{ 'housingProjects.form.sections.guardian' | translate }}</h4>
+    </div>
+    <div class="card-body">
+      <div class="row detail-grid">
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.guardian.reason' | translate }}</dt>
+          <dd>{{ family.provider.reasonOfRelationName || '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.guardian.relationType' | translate }}</dt>
+          <dd>{{ family.provider.relationName || '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.guardian.mainRelation' | translate }}</dt>
+          <dd>{{ mainRelationLabel(family.provider.mainRelation) }}</dd>
+        </div>
+
+        <div class="col-md-8">
+          <dt>{{ 'housingProjects.form.child.fullName' | translate }}</dt>
+          <dd>{{ family.provider.fullName || '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.guardian.nationalId' | translate }}</dt>
+          <dd>{{ family.provider.nationalId || '—' }}</dd>
+        </div>
+
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.guardian.birthDate' | translate }}</dt>
+          <dd>{{ datePart(family.provider.dateOfBirth) }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.guardian.phone' | translate }}</dt>
+          <dd>{{ family.provider.phone || '—' }}</dd>
+        </div>
+
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.guardian.job' | translate }}</dt>
+          <dd>{{ family.provider.job || '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.guardian.monthlyIncome' | translate }}</dt>
+          <dd>{{ family.provider.monthlyIncome ?? '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.guardian.educationLevel' | translate }}</dt>
+          <dd>{{ family.provider.educationLevelName || '—' }}</dd>
+        </div>
+
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.guardian.socialStatus' | translate }}</dt>
+          <dd>{{ family.provider.socialStatusName || '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.guardian.healthStatus' | translate }}</dt>
+          <dd>{{ family.provider.healthStatusName || '—' }}</dd>
+        </div>
+        <div class="col-md-4">
+          <dt>{{ 'housingProjects.form.guardian.flags' | translate }}</dt>
+          <dd class="flags">
+            <span *ngIf="family.provider.widowSponsorship">{{ 'housingProjects.form.guardian.widowSponsorship' | translate }}</span>
+            <span *ngIf="family.provider.anotherSponsor">{{ 'housingProjects.form.guardian.anotherSponsor' | translate }}</span>
+            <span *ngIf="family.provider.motherIsMar">{{ 'housingProjects.form.guardian.motherIsMar' | translate }}</span>
+            <span *ngIf="family.provider.isCaring">{{ 'housingProjects.form.guardian.isCaring' | translate }}</span>
+            <span *ngIf="!family.provider.widowSponsorship && !family.provider.anotherSponsor && !family.provider.motherIsMar && !family.provider.isCaring">—</span>
+          </dd>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== كل الابناء — the full child set ==================== -->
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">{{ 'housingProjects.form.sections.childrenTable' | translate }}</h4>
+      <span class="badge bg-primary">{{ family.children.length }}</span>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive" *ngIf="family.children.length > 0">
+        <table class="table table-bordered align-middle">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>{{ 'housingProjects.form.childrenTable.name' | translate }}</th>
+              <th>{{ 'housingProjects.form.childrenTable.birthDate' | translate }}</th>
+              <th>{{ 'housingProjects.form.child.age' | translate }}</th>
+              <th>{{ 'housingProjects.form.childrenTable.gender' | translate }}</th>
+              <th>{{ 'housingProjects.form.childrenTable.nationalId' | translate }}</th>
+              <th>{{ 'housingProjects.form.child.educationStage' | translate }}</th>
+              <th>{{ 'housingProjects.form.child.gradeClass' | translate }}</th>
+              <th>{{ 'housingProjects.form.child.school' | translate }}</th>
+              <th>{{ 'housingProjects.form.child.healthStatus' | translate }}</th>
+              <th>{{ 'housingProjects.form.child.socialStatus' | translate }}</th>
+              <th>{{ 'housingProjects.form.child.profession' | translate }}</th>
+              <th>{{ 'housingProjects.form.child.department' | translate }}</th>
+              <th>{{ 'housingProjects.form.child.faculty' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let child of family.children; let i = index; trackBy: trackByChildId">
+              <td>{{ i + 1 }}</td>
+              <td>{{ child.fullName }}</td>
+              <td>{{ datePart(child.dateOfBirth) }}</td>
+              <td>{{ child.age ?? '—' }}</td>
+              <td>{{ childGenderLabel(child.gender) }}</td>
+              <td>{{ child.nationalId || '—' }}</td>
+              <td>{{ child.educationLevelName || '—' }}</td>
+              <td>{{ child.gradeClass || '—' }}</td>
+              <td>{{ child.schoolName || '—' }}</td>
+              <td>{{ child.healthStatusName || '—' }}</td>
+              <td>{{ child.socialStatusName || '—' }}</td>
+              <td>{{ child.profession || '—' }}</td>
+              <td>{{ child.departmentName || '—' }}</td>
+              <td>{{ child.facultyName || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-muted mb-0" *ngIf="family.children.length === 0">
+        {{ 'housingProjects.detail.noChildren' | translate }}
+      </p>
+    </div>
+  </div>
+</ng-container>

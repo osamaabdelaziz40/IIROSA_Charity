@@ -1,0 +1,5 @@
+/* UC-RPT-36 (§23.U.36 كشوف المتابعة والتسليم) — the variant grids ride the shared
+   report-viewer chrome; the variant group wraps on narrow RTL widths. */
+.btn-group {
+  flex-wrap: wrap;
+}

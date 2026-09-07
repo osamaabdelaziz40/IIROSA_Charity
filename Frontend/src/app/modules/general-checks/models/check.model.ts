@@ -1,304 +1,167 @@
-import { User } from "../../../core/models";
-
 /**
- * Currency Enum
+ * General cheques wire models (chapter 16, UC-CHQ-01..10).
+ *
+ * These map 1:1 onto the backend DTOs in IIROSA.Application/DTOs/CheckManagement —
+ * camelCase on the wire, Guid ids as strings, the FK_ prefix kept server-side.
  */
-export enum Currency {
-  EGP = 'EGP',
-  SAR = 'SAR',
-  USD = 'USD'
-}
 
-/**
- * Beneficiary Type Enum
- */
-export enum BeneficiaryType {
-  Individual = 'Individual',
-  Company = 'Company',
-  Charity = 'Charity',
-  Supplier = 'Supplier',
-  Employee = 'Employee'
-}
-
-/**
- * Check Status Enum
- */
-export enum CheckStatus {
-  Pending = 'Pending',
-  Issued = 'Issued',
-  Cleared = 'Cleared',
-  Void = 'Void'
-}
-
-/**
- * Payment Reason Enum
- */
-export enum PaymentReason {
-  Salary = 'Salary',
-  SupplierRefund = 'SupplierRefund',
-  Expense = 'Expense',
-  Other = 'Other'
-}
-
-/**
- * Void Reason Enum
- */
-export enum VoidReason {
-  Lost = 'Lost',
-  Stopped = 'Stopped',
-  Error = 'Error',
-  Expired = 'Expired',
-  Other = 'Other'
-}
-
-/**
- * Check Beneficiary
- */
-export interface CheckBeneficiary {
-  id?: number;
-  beneficiaryType: BeneficiaryType;
-  beneficiaryName: string;
-  idNumber?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  isActive: boolean;
-  createdAt?: Date;
-  createdBy?: string;
-}
-
-/**
- * Bank
- */
-export interface Bank {
-  id: number;
-  bankName: string;
-  bankNameAr?: string;
-  bankNameEn?: string;
-  branch?: string;
-  accountNumber?: string;
-  isActive: boolean;
-}
-
-/**
- * Check
- */
-export interface Check {
-  id?: number;
-
-  // Check Information
-  checkNumber: string;
-  checkDate: Date;
-  dueDate?: Date;
-  currency: Currency;
-
-  // Beneficiary Information
-  beneficiaryType: BeneficiaryType;
-  beneficiaryName: string;
-  beneficiaryId?: number;
-  beneficiaryAddress?: string;
-  beneficiaryPhone?: string;
-  beneficiaryEmail?: string;
-  idNumber?: string;
-
-  // Financial Information
-  amount: number;
-  amountInWords?: string;
-  paymentReason: PaymentReason;
-  paymentDescription?: string;
-
-  // Bank Information
-  bankId: number;
-  bankName?: string;
-  branch?: string;
-  accountNumber?: string;
-
-  // Status Information
-  checkStatus: CheckStatus;
-  issueDate?: Date;
-  clearanceDate?: Date;
-  bankReference?: string;
-  clearanceNotes?: string;
-  voidDate?: Date;
-  voidReason?: VoidReason;
-  voidNotes?: string;
-
-  // Approval
-  requiresApproval: boolean;
-  approvedBy?: string;
-
-  // Check Image
-  checkImageId?: number;
-  checkImageUrl?: string;
-
-  // Audit
-  createdAt?: Date;
-  createdBy?: string;
-  creator?: User;
-  modifiedAt?: Date;
-  modifiedBy?: string;
-  modifier?: User;
-}
-
-/**
- * Check List Item
- */
+/** §16.S.1 / §16.S.3 — register and statement grid row. */
 export interface CheckListItem {
-  id: number;
+  id: string;
   checkNumber: string;
-  checkDate: Date;
-  dueDate?: Date;
+  checkDate: string;
   beneficiaryName: string;
   amount: number;
-  currency: Currency;
-  checkStatus: CheckStatus;
-  bankName: string;
-  createdBy: string;
-  createdAt: Date;
+  currency: string;
+  chequeType: 'Orphans' | 'Individuals';
+  bankName: string | null;
+  charityId: string | null;
+  isDamaged: boolean;
+  isReturned: boolean;
+  isDispensed: boolean;
+  isDone: boolean;
+  comment: string | null;
 }
 
-/**
- * Check Filter
- */
-export interface CheckFilter {
-  searchTerm?: string;
-  checkStatus?: CheckStatus;
-  bankId?: number;
-  currency?: Currency;
-  dateFrom?: Date;
-  dateTo?: Date;
-  amountFrom?: number;
-  amountTo?: number;
-}
-
-/**
- * Create/Update Check DTO
- */
-export interface CheckDto {
-  id?: number;
-
-  // Check Information
+/** §16.S.2 — full cheque record for the view/edit screens. */
+export interface CheckDetail {
+  id: string;
   checkNumber: string;
-  checkDate: Date;
-  dueDate?: Date;
-  currency: Currency;
+  checkDate: string;
+  currency: string;
+  chequeType: 'Orphans' | 'Individuals';
 
-  // Beneficiary Information
-  beneficiaryType: BeneficiaryType;
+  chequeBeneficiaryId: number | null;
+  beneficiaryType: string | null;
   beneficiaryName: string;
-  beneficiaryId?: number;
-  beneficiaryAddress?: string;
-  beneficiaryPhone?: string;
-  beneficiaryEmail?: string;
-  idNumber?: string;
+  beneficiaryAddress: string | null;
+  beneficiaryPhone: string | null;
+  beneficiaryEmail: string | null;
+  beneficiaryIdNumber: string | null;
 
-  // Financial Information
   amount: number;
-  amountInWords?: string;
-  paymentReason: PaymentReason;
-  paymentDescription?: string;
+  amountInWords: string | null;
 
-  // Bank Information
+  bankId: number | null;
+  bankName: string | null;
+  bankBranch: string | null;
+  accountNumber: string | null;
+
+  charityId: string | null;
+  charityName: string | null;
+  isDamaged: boolean;
+  isReturned: boolean;
+  isDispensed: boolean;
+  isDone: boolean;
+  comment: string | null;
+
+  createdOn: string;
+  createdBy: string | null;
+  updatedOn: string | null;
+  updatedBy: string | null;
+}
+
+/** UC-CHQ-02 — issue a cheque. Mandatory: bank, beneficiaryName, checkDate, checkNumber, currency, amount. */
+export interface CreateCheckRequest {
   bankId: number;
-  branch?: string;
-  accountNumber?: string;
-
-  // Status Information
-  checkStatus: CheckStatus;
-  issueDate?: Date;
-
-  // Approval
-  requiresApproval: boolean;
-
-  // Check Image (file ID)
-  checkImageId?: number;
-}
-
-/**
- * Clearance Request
- */
-export interface CheckClearanceRequest {
-  clearanceDate: Date;
-  bankReference?: string;
-  clearanceNotes?: string;
-}
-
-/**
- * Void Request
- */
-export interface CheckVoidRequest {
-  voidReason: VoidReason;
-  voidDate: Date;
-  voidNotes: string;
-}
-
-/**
- * Reconciliation Item
- */
-export interface ReconciliationItem {
-  checkId: number;
-  checkNumber: string;
-  amount: number;
-  currency: Currency;
-  checkDate: Date;
   beneficiaryName: string;
-  bankName: string;
-  isReconciled: boolean;
-  bankReference?: string;
-  clearanceDate?: Date;
+  checkDate: string;
+  checkNumber: string;
+  currency: string;
+  amount: number;
+
+  charityId?: string | null;
+  chequeBeneficiaryId?: number | null;
+  beneficiaryType?: string | null;
+  beneficiaryAddress?: string | null;
+  beneficiaryPhone?: string | null;
+  beneficiaryEmail?: string | null;
+  beneficiaryIdNumber?: string | null;
+  bankBranch?: string | null;
+  accountNumber?: string | null;
+  amountInWords?: string | null;
+  chequeType: 'Orphans' | 'Individuals';
+  isDamaged: boolean;
+  isReturned: boolean;
+  isDispensed: boolean;
+  isDone: boolean;
+  comment?: string | null;
 }
 
-/**
- * Reconciliation Summary
- */
-export interface ReconciliationSummary {
-  totalChecks: number;
-  reconciledChecks: number;
-  unreconciledChecks: number;
-  totalAmount: number;
-  reconciledAmount: number;
-  unreconciledAmount: number;
-  items: ReconciliationItem[];
+/** UC-CHQ-04 — update a cheque; the id travels in the body (legacy PUT /api/CheckManagement contract). */
+export interface UpdateCheckRequest extends CreateCheckRequest {
+  id: string;
 }
 
-/**
- * Check Report Options
- */
-export interface CheckReportOptions {
-  dateFrom: Date;
-  dateTo: Date;
-  checkStatus?: CheckStatus;
+/** Register/statement filter — camelCase names match the backend CheckFilterDto query params. */
+export interface CheckFilter {
+  charityId?: string;
   bankId?: number;
-  currency?: Currency;
-  groupBy?: 'Status' | 'Bank' | 'Beneficiary';
+  dateFrom?: string;
+  dateTo?: string;
+  chequeType?: 'Orphans' | 'Individuals';
+  searchText?: string;
+  page: number;
+  pageSize: number;
 }
 
-/**
- * Check Report
- */
-export interface CheckReport {
-  summaryStatistics: {
-    totalChecks: number;
-    totalAmount: number;
-    byStatus: { [key: string]: { count: number; amount: number } };
-    byBank: { [key: string]: { count: number; amount: number } };
-    byCurrency: { [key: string]: { count: number; amount: number } };
-  };
-  detailedCheckList: CheckListItem[];
-  clearedChecks: CheckListItem[];
-  pendingChecks: CheckListItem[];
-  voidChecks: CheckListItem[];
+export interface CheckPagedResult {
+  items: CheckListItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
-/**
- * Validation Errors
- */
-export interface CheckValidationError {
-  checkNumber?: string;
-  checkDate?: string;
-  beneficiaryName?: string;
-  amount?: string;
-  currency?: string;
-  bankId?: string;
-  voidNotes?: string;
+/** UC-CHQ-07 — GET amount-in-words response. */
+export interface AmountInWordsResponse {
+  amount: number;
+  currency: string;
+  words: string;
+}
+
+/** UC-CHQ-09 — cheque statement بيان الشيكات. */
+export interface CheckStatement {
+  items: CheckListItem[];
+  totalCount: number;
+  totalPages: number;
+  totalByCurrency: Record<string, number>;
+  generatedOn: string;
+}
+
+/** UC-CHQ-05 — cheque beneficiary type-ahead row. */
+export interface ChequeBeneficiaryOption {
+  id: number;
+  name: string;
+  nameAr: string | null;
+  nameEn: string | null;
+  beneficiaryType: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  idNumber: string | null;
+  bankId: number | null;
+  accountNumber: string | null;
+}
+
+/** UC-CHQ-06 — currency dropdown row. */
+export interface CurrencyOption {
+  code: string;
+  nameAr: string | null;
+  nameEn: string | null;
+}
+
+/** UC-CHQ-08 — bank cheque stationery offsets, mm from the leaf's top-right. */
+export interface BankChequePositions {
+  bankId: number;
+  bankName: string;
+  configured: boolean;
+  dateX: number | null;
+  dateY: number | null;
+  payeeX: number | null;
+  payeeY: number | null;
+  amountX: number | null;
+  amountY: number | null;
+  amountWordsX: number | null;
+  amountWordsY: number | null;
 }

@@ -6,13 +6,13 @@ import { PermissionGuard } from '../../core/guards/permission.guard';
 // Import existing components
 import { IncomingLettersListComponent } from './incoming-letters/incoming-letters-list.component';
 import { OutgoingLettersListComponent } from './outgoing-letters/outgoing-letters-list.component';
-import { ImportWizardComponent } from './import-wizard/import-wizard.component';
-import { ExportWizardComponent } from './export-wizard/export-wizard.component';
-import { HistoryComponent } from './history/history.component';
 import { IncomingLetterFormComponent } from './incoming-letters/incoming-letter-form.component';
 import { IncomingLetterDetailComponent } from './incoming-letters/incoming-letter-detail.component';
+import { IncomingLetterEmployeesComponent } from './incoming-employees/incoming-letter-employees.component';
 import { OutgoingLetterFormComponent } from './outgoing-letters/outgoing-letter-form.component';
 import { OutgoingLetterDetailComponent } from './outgoing-letters/outgoing-letter-detail.component';
+import { OutgoingLetterOrphansComponent } from './outgoing-orphans/outgoing-letter-orphans.component';
+import { OutgoingOrphansReportComponent } from './outgoing-orphans-report/outgoing-orphans-report.component';
 
 const routes: Routes = [
   {
@@ -95,32 +95,35 @@ const routes: Routes = [
       permission: 'IncomingOutgoing.Edit'
     }
   },
-  // Import/Export Routes
+  // Employee attachment (UC-COR-09 / §21.S.3) — the legacy export-wizard route
+  // re-pointed at the correspondence screen it was always meant to serve.
   {
-    path: 'import/:type',
-    component: ImportWizardComponent,
+    path: 'export/incoming',
+    component: IncomingLetterEmployeesComponent,
     canActivate: [AuthGuard, PermissionGuard],
     data: {
-      title: 'incomingOutgoing.importLetters',
-      permission: 'IncomingOutgoing.Import'
+      title: 'incomingOutgoing.attachEmployeesTitle',
+      permission: 'IncomingOutgoing.Edit'
     }
   },
+  // Orphan-report attachment (UC-COR-18 / §21.S.6) — the second wizard route re-pointed.
   {
-    path: 'export/:type',
-    component: ExportWizardComponent,
+    path: 'export/outgoing',
+    component: OutgoingLetterOrphansComponent,
     canActivate: [AuthGuard, PermissionGuard],
     data: {
-      title: 'incomingOutgoing.exportLetters',
-      permission: 'IncomingOutgoing.Export'
+      title: 'incomingOutgoing.attachOrphansTitle',
+      permission: 'IncomingOutgoing.Edit'
     }
   },
+  // Orphans-by-letter report (UC-COR-19 / §21.S.7)
   {
-    path: 'history',
-    component: HistoryComponent,
+    path: 'export/outgoing-orphans',
+    component: OutgoingOrphansReportComponent,
     canActivate: [AuthGuard, PermissionGuard],
     data: {
-      title: 'incomingOutgoing.history',
-      permission: 'IncomingOutgoing.ViewHistory'
+      title: 'incomingOutgoing.orphansReportTitle',
+      permission: 'IncomingOutgoing.View'
     }
   }
 ];

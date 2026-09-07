@@ -1,0 +1,67 @@
+<app-report-viewer titleKey="reports.refusedReports.title"
+                   subtitleKey="reports.refusedReports.subtitle"
+                   [loading]="loading"
+                   [exporting]="exporting"
+                   [hasRun]="hasRun"
+                   [currentPage]="currentPage"
+                   [pageSize]="pageSize"
+                   [totalCount]="totalCount"
+                   (search)="search()"
+                   (export)="exportData()"
+                   (pageChange)="onPageChange($event)">
+
+  <!-- ==================== §23.S.17 filter panel (1 field) ==================== -->
+  <div report-filters>
+    <form [formGroup]="filterForm" (ngSubmit)="search()" class="row g-3 align-items-end">
+      <div class="col-lg-3 col-md-4" *ngIf="isHQ">
+        <app-drop-down [fg]="filterForm" fcn="charityId"
+                       [label]="'reports.refusedReports.filterCharity'"
+                       [placeholder]="'reports.refusedReports.filterCharity'"
+                       [initialData]="charityOptions">
+        </app-drop-down>
+      </div>
+    </form>
+  </div>
+
+  <!-- ==================== bespoke grid — the §23.S.17 contract (serial + 5 + state) ==================== -->
+  <div report-grid class="table-responsive">
+    <table class="table table-hover table-striped align-middle text-nowrap"
+           *ngIf="rows.length > 0">
+      <thead>
+        <tr>
+          <th>{{ 'reports.refusedReports.colSerial' | translate }}</th>
+          <th>{{ 'reports.refusedReports.colCharity' | translate }}</th>
+          <th>{{ 'reports.refusedReports.colOrphanName' | translate }}</th>
+          <th>{{ 'reports.refusedReports.colReportDate' | translate }}</th>
+          <th>{{ 'reports.refusedReports.colOrphanCode' | translate }}</th>
+          <th>{{ 'reports.refusedReports.colRefuseReason' | translate }}</th>
+          <!-- charity visibility (AC 4): the state and the decision date are part of the worklist -->
+          <th>{{ 'reports.refusedReports.colReviewedDate' | translate }}</th>
+          <th>{{ 'reports.refusedReports.colState' | translate }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow">
+          <td>{{ serial(i) }}</td>
+          <td>{{ row.charityName || '—' }}</td>
+          <td>{{ row.orphanName }}</td>
+          <td>{{ row.reportDate | date:'dd/MM/yyyy' }}</td>
+          <td>{{ row.orphanCode }}</td>
+          <!-- resolved server-side: catalogue label preferred, free-text fallback, dash only when neither -->
+          <td>{{ row.refuseReason || '—' }}</td>
+          <td>{{ (row.reviewedDate ? (row.reviewedDate | date:'dd/MM/yyyy') : '—') }}</td>
+          <td><span class="badge text-bg-danger">{{ 'reports.refusedReports.stateRefused' | translate }}</span></td>
+          <td>
+            <!-- EditOrpReport — shown only for review-capable roles; the endpoint re-checks -->
+            <button type="button" class="btn btn-sm btn-outline-primary"
+                    *ngIf="canReview"
+                    (click)="openReview(row.reportId)">
+              {{ 'reports.refusedReports.openReview' | translate }}
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</app-report-viewer>

@@ -2,18 +2,21 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { IncomingService } from '../services/incoming.service';
+import { OutgoingService } from '../services/outgoing.service';
+import { EmployeeService } from '../../employees/services/employee.service';
 import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
 import { DepartmentDto } from '../../lookup-management/models/lookup.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { BreadcrumbComponent, BreadcrumbItem, AttachmentInputComponent } from '../../../shared/components';
-import { TranslateModule, TranslateService, LangChangeEvent } from '@ngx-translate/core';
-import { IncomingDto, CreateIncomingDto, UpdateIncomingDto } from '../models/incoming.model';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { IncomingDto, CreateIncomingDto, UpdateIncomingDto, CorrespondenceStatusOption } from '../models/incoming.model';
+import { OutgoingListDto } from '../models/outgoing.model';
 import { SharedModule, AttachmentFileType } from '../../../shared/shared.module';
-import { Subscription } from 'rxjs';
-import { OutgoingService } from '../services/outgoing.service';
-import { OutgoingDto } from '../models/outgoing.model';
+import { Employee } from '../../../core/models/employee.model';
 
 @Component({
   selector: 'app-incoming-letter-form',
@@ -32,30 +35,44 @@ import { OutgoingDto } from '../models/outgoing.model';
   styleUrls: ['./incoming-letter-form.component.scss']
 })
 export class IncomingLetterFormComponent implements OnInit, OnDestroy {
-  private langChangeSubscription?: Subscription;
   letterForm: FormGroup;
   isEditMode = false;
   letterId: string | null = null;
   loading = false;
   saving = false;
 
+  // The advisory next serial (UC-COR-03) — read-only; the server allocates the
+  // definitive serial per charity + year inside the create transaction.
+  nextSerialTxt = '';
+
   // Lookup data
   allDepartments: DepartmentDto[] = [];
-  allOutgoingLetters: OutgoingDto[] = [];
-  loadingLookups = false;
+  allOutgoingLetters: OutgoingListDto[] = [];
+  activeEmployees: Employee[] = [];
 
   // Dropdown data (transformed for LookupBase compatibility)
+  get departmentOptions(): Array<{ id: number; name: string }> {
+    return this.allDepartments.map(d => ({ id: d.id, name: d.nameAr || d.name }));
+  }
+
   get outgoingLetterOptions(): Array<{ id: string; name: string }> {
     return this.allOutgoingLetters.map(letter => ({
       id: letter.id,
-      name: letter.subject
+      name: `${letter.serial ?? ''} - ${letter.subject}`
     }));
+  }
+
+  get employeeOptions(): Array<{ id: string; name: string }> {
+    return this.activeEmployees.map(e => ({ id: e.id, name: e.fullName }));
   }
 
   // Attachments
   attachmentFileId: string | null = null;
+  attachmentFileType = AttachmentFileType;
 
-  // Status options
+  private destroy$ = new Subject<void>();
+
+  // The spec's tri-state — served by the endpoint, never hard-coded
   statusOptions: Array<{ id: string; name: string }> = [];
 
   // Page actions for header
@@ -80,6 +97,7 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private incomingService: IncomingService,
     private outgoingService: OutgoingService,
+    private employeeService: EmployeeService,
     private lookupService: LookupManagementService,
     private notification: NotificationService,
     private translate: TranslateService
@@ -89,24 +107,29 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.updateBreadcrumbs();
-    this.initializeStatusOptions();
-
-    // Subscribe to language changes to update status options
-    this.langChangeSubscription = this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
-      this.initializeStatusOptions();
-    });
-
+    this.loadStatuses();
     this.loadLookupData();
 
     if (this.isEditMode && this.letterId) {
       this.loadLetter(this.letterId);
+    } else {
+      this.loadNextSerial();
     }
+
+    // Review P13: serials are per charity + year — the advisory serial follows the
+    // chosen registration date's year (create mode only; edit mode shows the stored serial).
+    this.letterForm.get('date')!.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(value => {
+        if (!this.isEditMode && value) {
+          this.loadNextSerial(Number(String(value).slice(0, 4)));
+        }
+      });
   }
 
   ngOnDestroy(): void {
-    if (this.langChangeSubscription) {
-      this.langChangeSubscription.unsubscribe();
-    }
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private updateBreadcrumbs(): void {
@@ -128,60 +151,64 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
     }
   }
 
-  private initializeStatusOptions(): void {
-    this.statusOptions = [
-      { id: 'Received', name: this.translate.instant('incomingOutgoing.statusReceived') },
-      { id: 'Processing', name: this.translate.instant('incomingOutgoing.statusProcessing') },
-      { id: 'Completed', name: this.translate.instant('incomingOutgoing.statusCompleted') },
-      { id: 'Closed', name: this.translate.instant('incomingOutgoing.statusClosed') },
-      { id: 'Pending', name: this.translate.instant('incomingOutgoing.statusPending') }
-    ];
+  private loadStatuses(): void {
+    this.incomingService.getAvailableStatuses().subscribe({
+      next: (statuses: CorrespondenceStatusOption[]) => {
+        this.statusOptions = statuses.map(s => ({ id: s.id, name: s.nameAr }));
+      },
+      error: (error: any) => console.error('Error loading statuses:', error)
+    });
+  }
+
+  private loadNextSerial(year?: number): void {
+    this.incomingService.getNextSerial(year).subscribe({
+      next: result => {
+        this.nextSerialTxt = result.serialTxt;
+      },
+      error: (error: any) => console.error('Error loading next serial:', error)
+    });
   }
 
   private createForm(): FormGroup {
     return this.fb.group({
-      // Required fields
-      subject: ['', [Validators.required, Validators.maxLength(500)]],
-      incomingId: ['', Validators.required],
-      letterNumber: ['', Validators.required],
+      // §21.S.2 field contract — the serial is read-only and server-allocated.
+      // Review P3/P5: letter number, letter date and status are mandatory on the
+      // server — require them here too so an emptiness never reaches the 400.
+      date: ['', Validators.required],
+      letterNumber: ['', [Validators.required, Validators.maxLength(100)]],
       letterDate: ['', Validators.required],
-
-      // Optional fields
-      date: [''],
-      incomingNumber: [''],
-      body: [''],
-      year: [''],
-      status: ['Received'],
-      letterDescription: [''],
-      fkDepartmentId: [null],
-      outgoingId: [null]
+      departmentId: [null, Validators.required],
+      subject: ['', [Validators.required, Validators.maxLength(500)]],
+      status: ['معلق'],
+      assignedUserId: [null, Validators.required],
+      outgoingId: [null, Validators.required],
+      letterDescription: ['', [Validators.required, Validators.maxLength(4000)]]
     });
   }
 
   private loadLookupData(): void {
-    this.loadingLookups = true;
-
-    // Load Departments
-    this.lookupService.getDepartments({ isActive: true }).subscribe({
+    // Load Departments (UC-COR-08)
+    this.lookupService.getDepartments({ page: 1, pageSize: 1000, isActive: true }).subscribe({
       next: (response) => {
         this.allDepartments = response.items || [];
       },
-      error: () => {
-        this.loadingLookups = false;
-      }
+      error: () => console.error('Error loading departments')
     });
 
-    // Load Outgoing Letters (for Reply To dropdown)
-    this.outgoingService.getOutgoingLetters({
-      pageNumber: 1,
-      pageSize: 1000
-    }).subscribe({
+    // Load Outgoing Letters (ردا على — required reply target)
+    this.outgoingService.getOutgoingLetters({ pageNumber: 1, pageSize: 1000 }).subscribe({
       next: (response) => {
         this.allOutgoingLetters = response.items || [];
       },
-      error: () => {
-        console.error('Error loading outgoing letters');
-      }
+      error: () => console.error('Error loading outgoing letters')
+    });
+
+    // Load active employees (الموظف المسؤول)
+    this.employeeService.getEmployees({ page: 1, pageSize: 1000, isActive: true }).subscribe({
+      next: (response) => {
+        this.activeEmployees = response.items || [];
+      },
+      error: () => console.error('Error loading employees')
     });
   }
 
@@ -201,32 +228,30 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
   }
 
   private patchForm(letter: IncomingDto): void {
-    this.letterForm.patchValue({
-      subject: letter.subject,
-      date: letter.date ? new Date(letter.date) : '',
-      incomingNumber: letter.incomingNumber,
-      incomingId: letter.incomingId,
-      body: letter.body,
-      letterNumber: letter.letterNumber,
-      letterDate: letter.letterDate ? new Date(letter.letterDate) : '',
-      year: letter.year,
-      status: letter.status || 'Received',
-      letterDescription: letter.letterDescription,
-      fkDepartmentId: letter.fkDepartmentId,
-      outgoingId: letter.outgoingId
-    });
+    this.nextSerialTxt = letter.serialTxt || '';
+    this.attachmentFileId = letter.uploadedFileId || null;
 
-    if (letter.uploadedFile) {
-      this.attachmentFileId = letter.uploadedFile;
-    }
+    this.letterForm.patchValue({
+      date: this.toDateInput(letter.date),
+      letterNumber: letter.letterNumber || '',
+      letterDate: this.toDateInput(letter.letterDate),
+      departmentId: letter.departmentId ?? null,
+      subject: letter.subject,
+      status: letter.status || 'معلق',
+      assignedUserId: letter.assignedUserId ?? null,
+      outgoingId: letter.outgoingId ?? null,
+      letterDescription: letter.letterDescription || ''
+    });
+  }
+
+  /** date inputs take yyyy-MM-dd — server dates are full ISO strings */
+  private toDateInput(value?: string): string {
+    return value ? value.slice(0, 10) : '';
   }
 
   // Attachment handling
-  attachmentFileType = AttachmentFileType;
-
   onAttachmentChange(fileId: string | null): void {
     this.attachmentFileId = fileId;
-    console.log('Attachment changed:', fileId);
   }
 
   onSubmit(): void {
@@ -245,70 +270,80 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
     }
   }
 
-  private createLetter(): void {
+  private buildPayload(): CreateIncomingDto {
     const formValue = this.letterForm.value;
 
-    const letter: CreateIncomingDto = {
-      subject: formValue.subject,
+    return {
       date: formValue.date || null,
-      incomingNumber: formValue.incomingNumber || null,
-      incomingId: formValue.incomingId,
-      body: formValue.body || null,
-      letterNumber: formValue.letterNumber,
-      letterDate: formValue.letterDate,
-      year: formValue.year || null,
-      status: formValue.status || 'Received',
+      letterNumber: formValue.letterNumber || null,
+      letterDate: formValue.letterDate || null,
+      departmentId: formValue.departmentId ?? null,
+      subject: formValue.subject,
+      status: formValue.status || 'معلق',
+      assignedUserId: formValue.assignedUserId ?? null,
+      outgoingId: formValue.outgoingId ?? null,
       letterDescription: formValue.letterDescription || null,
-      fkDepartmentId: formValue.fkDepartmentId || null,
-      outgoingId: formValue.outgoingId || null,
-      uploadedFile: this.attachmentFileId || undefined
+      uploadedFileId: this.attachmentFileId || undefined
     };
+  }
 
-    this.incomingService.createIncomingLetter(letter).subscribe({
-      next: (response: IncomingDto) => {
+  private createLetter(): void {
+    this.incomingService.createIncomingLetter(this.buildPayload()).subscribe({
+      next: () => {
         this.notification.success(this.translate.instant('incomingOutgoing.createSuccess'));
         this.saving = false;
-        this.router.navigate(['/incoming-outgoing/incoming', response.id]);
+        // §21.U.4 post-condition: back to the register, where the new row (serial
+        // included) is visible.
+        this.router.navigate(['/incoming-outgoing/incoming']);
       },
       error: (error: any) => {
         console.error('Error creating letter:', error);
-        this.notification.error(this.translate.instant('incomingOutgoing.createFailed'));
-        this.saving = false;
+        this.handleSaveError(error, 'incomingOutgoing.createFailed');
       }
     });
   }
 
   private updateLetter(): void {
-    const formValue = this.letterForm.value;
+    const payload: UpdateIncomingDto = { ...this.buildPayload(), id: this.letterId! };
 
-    const letter: UpdateIncomingDto = {
-      subject: formValue.subject,
-      date: formValue.date || null,
-      incomingNumber: formValue.incomingNumber || null,
-      incomingId: formValue.incomingId,
-      body: formValue.body || null,
-      letterNumber: formValue.letterNumber,
-      letterDate: formValue.letterDate,
-      year: formValue.year || null,
-      status: formValue.status || 'Received',
-      letterDescription: formValue.letterDescription || null,
-      fkDepartmentId: formValue.fkDepartmentId || null,
-      outgoingId: formValue.outgoingId || null,
-      uploadedFile: this.attachmentFileId || undefined
-    };
-
-    this.incomingService.updateIncomingLetter(this.letterId!, letter).subscribe({
-      next: (response: IncomingDto) => {
+    this.incomingService.updateIncomingLetter(this.letterId!, payload).subscribe({
+      next: () => {
         this.notification.success(this.translate.instant('incomingOutgoing.updateSuccess'));
         this.saving = false;
-        this.router.navigate(['/incoming-outgoing/incoming', response.id]);
+        this.router.navigate(['/incoming-outgoing/incoming']);
       },
       error: (error: any) => {
         console.error('Error updating letter:', error);
-        this.notification.error(this.translate.instant('incomingOutgoing.updateFailed'));
-        this.saving = false;
+        this.handleSaveError(error, 'incomingOutgoing.updateFailed');
       }
     });
+  }
+
+  /**
+   * Review P5: surface the server's field→messages map (FluentValidation via the
+   * controller's BadRequest(new { message, errors }) shape; this module's service
+   * rewraps it as { message, status, details }). Each named control is flagged
+   * through the shared components' `server` error, which they render verbatim.
+   */
+  private handleSaveError(httpError: any, fallbackKey: string): void {
+    this.saving = false;
+
+    const errors = httpError?.details;
+    if (errors && typeof errors === 'object') {
+      for (const [field, messages] of Object.entries<any>(errors)) {
+        // Server keys are PascalCase DTO names ("LetterNumber") — controls are camelCase
+        const controlName = field.charAt(0).toLowerCase() + field.slice(1);
+        const control = this.letterForm.get(controlName);
+        const message = Array.isArray(messages) ? messages.join(' · ') : String(messages);
+
+        if (control) {
+          control.setErrors({ server: message });
+          control.markAsTouched();
+        }
+      }
+    }
+
+    this.notification.error(httpError?.message || this.translate.instant(fallbackKey));
   }
 
   cancel(): void {
@@ -317,33 +352,6 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
     } else {
       this.router.navigate(['/incoming-outgoing/incoming']);
     }
-  }
-
-  isFieldValid(fieldName: string): boolean {
-    const field = this.letterForm.get(fieldName);
-    return field ? field.valid && (field.dirty || field.touched) : false;
-  }
-
-  isFieldInvalid(fieldName: string): boolean {
-    const field = this.letterForm.get(fieldName);
-    return field ? field.invalid && (field.dirty || field.touched) : false;
-  }
-
-  getErrorMessage(fieldName: string): string {
-    const field = this.letterForm.get(fieldName);
-    if (!field || !field.errors) return '';
-
-    const fieldLabel = this.translate.instant(`incomingOutgoing.${fieldName}`);
-
-    if (field.errors['required']) {
-      return this.translate.instant('validation.requiredField', { field: fieldLabel });
-    }
-    if (field.errors['maxlength']) {
-      const maxLength = field.errors['maxlength'].requiredLength;
-      return this.translate.instant('validation.maxLength', { maxLength });
-    }
-
-    return this.translate.instant('validation.invalid');
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
@@ -355,30 +363,5 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
         this.markFormGroupTouched(control);
       }
     });
-  }
-
-  // Dropdown change handlers
-  onDepartmentDropDownChanged(value: any): void {
-    if (value && value.id !== undefined && value.id !== null) {
-      this.letterForm.patchValue({ fkDepartmentId: value.id });
-    } else {
-      this.letterForm.patchValue({ fkDepartmentId: null });
-    }
-  }
-
-  onOutgoingDropDownChanged(value: any): void {
-    if (value && value.id !== undefined && value.id !== null) {
-      this.letterForm.patchValue({ outgoingId: value.id });
-    } else {
-      this.letterForm.patchValue({ outgoingId: null });
-    }
-  }
-
-  onStatusDropDownChanged(value: any): void {
-    if (value && value.id !== undefined && value.id !== null) {
-      this.letterForm.patchValue({ status: value.id });
-    } else {
-      this.letterForm.patchValue({ status: 'Received' });
-    }
   }
 }

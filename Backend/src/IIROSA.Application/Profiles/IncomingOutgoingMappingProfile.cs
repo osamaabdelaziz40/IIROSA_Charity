@@ -1,83 +1,66 @@
 using AutoMapper;
-using IIROSA.Domain.Entities;
 using IIROSA.Application.DTOs.IncomingOutgoing;
+using IIROSA.Domain.Entities;
 
 namespace IIROSA.Application.Profiles;
 
 /// <summary>
-/// AutoMapper profile for Incoming and Outgoing correspondence entities
+/// AutoMapper profile for the correspondence entities (epic 16, UC-COR-01…19).
+/// Entity → DTO only: the services build entities by hand so the serial and charity
+/// stamping stay explicit, so there are no DTO → entity maps here.
 /// </summary>
 public class IncomingOutgoingMappingProfile : Profile
 {
     public IncomingOutgoingMappingProfile()
     {
-        // Incoming Letter Mappings
+        // ========== Incoming (§21.S.1 / §21.S.2) ==========
+
         CreateMap<Incoming, IncomingDto>()
+            .ForMember(dest => dest.SerialTxt, opt => opt.MapFrom(src => src.Serial_Txt))
+            .ForMember(dest => dest.DepartmentId, opt => opt.MapFrom(src => src.FK_DepartmentId))
             .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department != null ? src.Department.Name : null))
-            .ForMember(dest => dest.UserName, opt => opt.Ignore()) // Map from user service
-            .ForMember(dest => dest.UploadedFileName, opt => opt.MapFrom(src => src.UploadedFile != null ? src.UploadedFile.FileName : null));
+            .ForMember(dest => dest.AssignedUserId, opt => opt.MapFrom(src => src.FK_UserId))
+            .ForMember(dest => dest.AssignedUserName, opt => opt.MapFrom(src => src.AssignedUser != null ? src.AssignedUser.FullName : null))
+            .ForMember(dest => dest.OutgoingLetterNumber, opt => opt.MapFrom(src =>
+                src.OutgoingLetter != null ? src.OutgoingLetter.OutGoingNumber ?? src.OutgoingLetter.OutGoingId : null))
+            .ForMember(dest => dest.UploadedFileName, opt => opt.MapFrom(src => src.UploadedFile != null ? src.UploadedFile.FileName : null))
+            .ForMember(dest => dest.CharityId, opt => opt.MapFrom(src => src.FK_CharityId))
+            .ForMember(dest => dest.CharityName, opt => opt.MapFrom(src => src.Charity != null ? src.Charity.Name : null));
 
         CreateMap<Incoming, IncomingListDto>()
-            .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department != null ? src.Department.Name : null));
-
-        // DTO to Entity mappings for Incoming
-        CreateMap<CreateIncomingDto, Incoming>()
-            .ForMember(dest => dest.Id, opt => opt.Ignore())
-            .ForMember(dest => dest.CreatedOn, opt => opt.Ignore())
-            .ForMember(dest => dest.UpdatedOn, opt => opt.Ignore())
-            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.Department, opt => opt.Ignore())
-            .ForMember(dest => dest.UploadedFile, opt => opt.Ignore())
-            .ForMember(dest => dest.OutgoingLetter, opt => opt.Ignore())
-            .ForMember(dest => dest.Replies, opt => opt.Ignore());
-
-        CreateMap<UpdateIncomingDto, Incoming>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-            .ForMember(dest => dest.CreatedOn, opt => opt.Ignore())
-            .ForMember(dest => dest.UpdatedOn, opt => opt.Ignore())
-            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.Department, opt => opt.Ignore())
-            .ForMember(dest => dest.UploadedFile, opt => opt.Ignore())
-            .ForMember(dest => dest.OutgoingLetter, opt => opt.Ignore())
-            .ForMember(dest => dest.Replies, opt => opt.Ignore());
-
-        // Outgoing Letter Mappings
-        CreateMap<Outgoing, OutgoingDto>()
+            .ForMember(dest => dest.SerialTxt, opt => opt.MapFrom(src => src.Serial_Txt))
+            .ForMember(dest => dest.DepartmentId, opt => opt.MapFrom(src => src.FK_DepartmentId))
             .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department != null ? src.Department.Name : null))
-            .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : null))
+            .ForMember(dest => dest.AssignedUserName, opt => opt.MapFrom(src => src.AssignedUser != null ? src.AssignedUser.FullName : null))
+            .ForMember(dest => dest.UploadedFileId, opt => opt.MapFrom(src => src.UploadedFileId))
+            .ForMember(dest => dest.UploadedFileName, opt => opt.MapFrom(src => src.UploadedFile != null ? src.UploadedFile.FileName : null));
+
+        // ========== Outgoing (§21.S.4 / §21.S.5) ==========
+
+        CreateMap<Outgoing, OutgoingDto>()
+            .ForMember(dest => dest.DepartmentId, opt => opt.MapFrom(src => src.Fk_DepartmentId))
+            .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department != null ? src.Department.Name : null))
             .ForMember(dest => dest.UploadedFileName, opt => opt.MapFrom(src => src.UploadedFile != null ? src.UploadedFile.FileName : null))
-            .ForMember(dest => dest.IncomingLetterSubject, opt => opt.MapFrom(src => src.IncomingLetter != null ? src.IncomingLetter.Subject : null));
+            .ForMember(dest => dest.OutgoingCategoryId, opt => opt.MapFrom(src => src.OutgoingCategoryId))
+            .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : null))
+            .ForMember(dest => dest.IncomingLetterNumber, opt => opt.MapFrom(src => src.IncomingLetter != null ? src.IncomingLetter.LetterNumber : null))
+            .ForMember(dest => dest.IncomingLetterSubject, opt => opt.MapFrom(src => src.IncomingLetter != null ? src.IncomingLetter.Subject : null))
+            .ForMember(dest => dest.CharityId, opt => opt.MapFrom(src => src.FK_CharityId))
+            .ForMember(dest => dest.CharityName, opt => opt.MapFrom(src => src.Charity != null ? src.Charity.Name : null))
+            .ForMember(dest => dest.Orphans, opt => opt.MapFrom(src =>
+                src.OrphanReports.Where(r => !r.IsDeleted).Select(r => new OutgoingOrphanDto
+                {
+                    OrphanId = r.OrphanId,
+                    Code = r.Orphan != null ? r.Orphan.Code : string.Empty,
+                    FullName = r.Orphan != null ? r.Orphan.FullName : string.Empty
+                })));
 
         CreateMap<Outgoing, OutgoingListDto>()
             .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department != null ? src.Department.Name : null))
             .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : null))
-            .ForMember(dest => dest.HasReply, opt => opt.MapFrom(src => src.IncomingId != null));
-
-        // DTO to Entity mappings for Outgoing
-        CreateMap<CreateOutgoingDto, Outgoing>()
-            .ForMember(dest => dest.Id, opt => opt.Ignore())
-            .ForMember(dest => dest.CreatedOn, opt => opt.Ignore())
-            .ForMember(dest => dest.UpdatedOn, opt => opt.Ignore())
-            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.Department, opt => opt.Ignore())
-            .ForMember(dest => dest.UploadedFile, opt => opt.Ignore())
-            .ForMember(dest => dest.Category, opt => opt.Ignore())
-            .ForMember(dest => dest.IncomingLetter, opt => opt.Ignore())
-            .ForMember(dest => dest.ChildOutGoings, opt => opt.Ignore());
-
-        CreateMap<UpdateOutgoingDto, Outgoing>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-            .ForMember(dest => dest.CreatedOn, opt => opt.Ignore())
-            .ForMember(dest => dest.UpdatedOn, opt => opt.Ignore())
-            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
-            .ForMember(dest => dest.Department, opt => opt.Ignore())
-            .ForMember(dest => dest.UploadedFile, opt => opt.Ignore())
-            .ForMember(dest => dest.Category, opt => opt.Ignore())
-            .ForMember(dest => dest.IncomingLetter, opt => opt.Ignore())
-            .ForMember(dest => dest.ChildOutGoings, opt => opt.Ignore());
+            .ForMember(dest => dest.HasReply, opt => opt.MapFrom(src => src.IncomingId != null))
+            .ForMember(dest => dest.IncomingLetterNumber, opt => opt.MapFrom(src => src.IncomingLetter != null ? src.IncomingLetter.LetterNumber : null))
+            .ForMember(dest => dest.UploadedFileId, opt => opt.MapFrom(src => src.UploadedFileId))
+            .ForMember(dest => dest.UploadedFileName, opt => opt.MapFrom(src => src.UploadedFile != null ? src.UploadedFile.FileName : null));
     }
 }

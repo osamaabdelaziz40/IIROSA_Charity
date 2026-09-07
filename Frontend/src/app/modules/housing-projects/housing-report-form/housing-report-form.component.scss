@@ -1,0 +1,26 @@
+/* Housing Report Form (UC-HOU-08 · §11.S.4) — section cards mirroring the epic-9 §14.S.2 form. */
+
+.section {
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.section-title {
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+/* The read-only beneficiary strip at the top of the form */
+.border.rounded.p-3.bg-light {
+  background-color: rgba(var(--primary-rgb, 90, 110, 235), 0.04) !important;
+}
+
+/* rtl: keep the fe icon spacing consistent under dir="rtl" */
+:host-context([dir="rtl"]) .me-1,
+:host-context([dir="rtl"]) .me-2 {
+  margin-left: 0.25rem !important;
+  margin-right: 0 !important;
+}

@@ -1,240 +1,170 @@
 <div class="orphan-report-search">
-  <app-breadcrumb
-    [title]="'orphanReports.search' | translate"
-    [subtitle]="'orphanReports.searchSubtitle' | translate">
-  </app-breadcrumb>
+  <app-page-header
+    [title]="'periodicReports.search.title' | translate"
+    [subtitle]="'periodicReports.search.subtitle' | translate"
+    [icon]="'fas fa-search'">
+  </app-page-header>
 
-  <!-- Search Section - UC-6.16 -->
+  <!-- §14.S.4 filters: الجمعية · And/Or · نوع التعليم · الحالة الصحية · الحالة الاجتماعية ·
+       الحالة التعليمية · المرحلة الدراسية · اخر تقدير (الصف الدراسي gap: no stage lookup on this stack) -->
   <div class="card mb-3">
     <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label">{{ 'orphanReports.selectOrphan' | translate }}</label>
-          <select class="form-select" [(ngModel)]="selectedOrphanId" (change)="onSearch()">
-            <option value="">{{ 'orphanReports.selectOrphanPlaceholder' | translate }}</option>
-            <option *ngFor="let orphan of orphans" [value]="orphan.id">
-              {{ orphan.code }} - {{ orphan.name }}
+      <div class="row g-3 align-items-end">
+        <!-- الجمعية — HQ only (a charity caller is server-pinned to its own rows) -->
+        <div class="col-md-3" *ngIf="isHeadOffice">
+          <label class="form-label" translate>periodicReports.filters.charity</label>
+          <select class="form-select" [(ngModel)]="charityId" (change)="search()">
+            <option value="" translate>periodicReports.filters.allCharities</option>
+            <option *ngFor="let charity of charities; trackBy: trackByCharityId" [ngValue]="charity.id">
+              {{ charity.name }}
             </option>
           </select>
         </div>
-        <div class="col-md-4">
-          <label class="form-label">{{ 'orphanReports.or' | translate }} {{ 'common.search' | translate }}</label>
-          <div class="input-group">
-            <input type="text" class="form-control"
-                   [placeholder]="'orphanReports.searchOrphanPlaceholder' | translate"
-                   [(ngModel)]="searchTerm">
-            <button class="btn btn-outline-secondary" type="button" (click)="onSearch()">
-              <i class="fas fa-search"></i>
-            </button>
+
+        <!-- And / Or radio — how the status predicates combine (legacy OrphanStatusRefinedContract) -->
+        <div class="col-md-3">
+          <label class="form-label d-block" translate>periodicReports.search.combine</label>
+          <div class="btn-group" role="group">
+            <input type="radio" class="btn-check" name="andOr" id="andOrAnd" value="and" [(ngModel)]="andOr">
+            <label class="btn btn-outline-primary" for="andOrAnd" translate>periodicReports.search.and</label>
+            <input type="radio" class="btn-check" name="andOr" id="andOrOr" value="or" [(ngModel)]="andOr">
+            <label class="btn btn-outline-primary" for="andOrOr" translate>periodicReports.search.or</label>
           </div>
         </div>
-        <div class="col-md-2 d-flex align-items-end">
-          <button class="btn btn-outline-secondary w-100" (click)="clearSearch()">
-            <i class="fas fa-times me-2"></i>
-            <span translate>common.clear</span>
+
+        <!-- نوع التعليم -->
+        <div class="col-md-2">
+          <label class="form-label" translate>periodicReports.search.schoolType</label>
+          <select class="form-select" [(ngModel)]="schoolType" (change)="search()">
+            <option value="" translate>common.all</option>
+            <option value="حكومي" translate>periodicReports.search.schoolTypeGovernment</option>
+            <option value="أهلي" translate>periodicReports.search.schoolTypePrivate</option>
+          </select>
+        </div>
+
+        <!-- الحالة الصحية -->
+        <div class="col-md-2">
+          <label class="form-label" translate>periodicReports.search.medicalStatus</label>
+          <select class="form-select" [(ngModel)]="medicalStatus" (change)="search()">
+            <option value="" translate>common.all</option>
+            <option value="سليم" translate>periodicReports.search.medicalHealthy</option>
+            <option value="معاق" translate>periodicReports.search.medicalDisabled</option>
+            <option value="مريض" translate>periodicReports.search.medicalSick</option>
+          </select>
+        </div>
+
+        <!-- الحالة الاجتماعية -->
+        <div class="col-md-2">
+          <label class="form-label" translate>periodicReports.search.maritalStatus</label>
+          <select class="form-select" [(ngModel)]="maritalStatus" (change)="search()">
+            <option value="" translate>common.all</option>
+            <option value="married" translate>periodicReports.search.maritalMarried</option>
+            <option value="single" translate>periodicReports.search.maritalSingle</option>
+            <option value="deceased" translate>periodicReports.search.maritalDeceased</option>
+          </select>
+        </div>
+
+        <!-- الحالة التعليمية -->
+        <div class="col-md-2">
+          <label class="form-label" translate>periodicReports.search.educationalStatus</label>
+          <select class="form-select" [(ngModel)]="educationalStatus" (change)="search()">
+            <option value="" translate>common.all</option>
+            <option value="studying" translate>periodicReports.search.eduStudying</option>
+            <option value="graduated" translate>periodicReports.search.eduGraduated</option>
+            <option value="dropout" translate>periodicReports.search.eduDropout</option>
+          </select>
+        </div>
+
+        <!-- المرحلة الدراسية -->
+        <div class="col-md-2">
+          <label class="form-label" translate>periodicReports.search.educationalLevel</label>
+          <select class="form-select" [(ngModel)]="educationalLevelId" (change)="search()">
+            <option value="" translate>common.all</option>
+            <option *ngFor="let level of educationLevels; trackBy: trackByLevelId" [ngValue]="level.id">
+              {{ level.name }}
+            </option>
+          </select>
+        </div>
+
+        <!-- اخر تقدير -->
+        <div class="col-md-2">
+          <label class="form-label" translate>periodicReports.search.educationDegree</label>
+          <select class="form-select" [(ngModel)]="educationDegree" (change)="search()">
+            <option value="" translate>common.all</option>
+            <option value="ممتاز" translate>periodicReports.search.degreeExcellent</option>
+            <option value="جيد جدا" translate>periodicReports.search.degreeVeryGood</option>
+            <option value="جيد" translate>periodicReports.search.degreeGood</option>
+            <option value="مقبول" translate>periodicReports.search.degreeFair</option>
+            <option value="ضعيف" translate>periodicReports.search.degreeWeak</option>
+          </select>
+        </div>
+
+        <!-- بحث -->
+        <div class="col-md-2 text-start">
+          <button class="btn btn-primary" (click)="search()">
+            <i class="fas fa-search me-1"></i>
+            <span translate>periodicReports.filters.search</span>
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Loading -->
   <app-loading *ngIf="loading"></app-loading>
 
-  <!-- Orphan Summary Card -->
-  <div class="card mb-3" *ngIf="!loading && summary && orphanInfo">
-    <div class="card-header bg-primary text-white">
-      <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <h5 class="mb-0">
-            <i class="fas fa-child me-2"></i>
-            {{ orphanInfo.name }} ({{ orphanInfo.code }})
-          </h5>
-          <small class="text-white-50">{{ orphanInfo.charity }}</small>
-        </div>
-        <div class="text-end">
-          <div class="text-white-50">{{ 'orphanReports.totalReports' | translate }}</div>
-          <div class="fs-4 fw-bold">{{ summary.totalReportsForOrphan }}</div>
-        </div>
-      </div>
-    </div>
-    <div class="card-body">
-      <div class="row text-center">
-        <div class="col-md-3">
-          <div class="stat-card">
-            <h3 class="text-warning">{{ summary.pendingReports || 0 }}</h3>
-            <p class="text-muted mb-0">{{ 'periodicReports.tabs.pending' | translate }}</p>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="stat-card">
-            <h3 class="text-success">{{ summary.approvedReports || 0 }}</h3>
-            <p class="text-muted mb-0">{{ 'periodicReports.tabs.approved' | translate }}</p>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="stat-card">
-            <h3 class="text-danger">{{ summary.rejectedReports || 0 }}</h3>
-            <p class="text-muted mb-0">{{ 'periodicReports.tabs.rejected' | translate }}</p>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <button class="btn btn-outline-primary w-100" (click)="exportHistory()">
-            <i class="fas fa-file-excel me-2"></i>
-            <span translate>orphanReports.exportHistory</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Reports List - UC-6.16 -->
-  <div class="card" *ngIf="!loading && reports.length > 0">
+  <!-- §14.S.4 wide grid — 38 spec columns, horizontal scroll -->
+  <div class="card" *ngIf="!loading">
     <div class="card-header d-flex justify-content-between align-items-center">
-      <h5 class="mb-0">
-        <i class="fas fa-list me-2"></i>
-        <span translate>orphanReports.reportHistory</span>
-        <span class="badge bg-primary ms-2">{{ totalCount }}</span>
-      </h5>
-      <div class="btn-group">
-        <button class="btn btn-sm btn-outline-primary" [class.active]="viewMode === 'list'" (click)="viewMode = 'list'">
-          <i class="fas fa-list me-1"></i>
-          {{ 'orphanReports.listView' | translate }}
-        </button>
-        <button class="btn btn-sm btn-outline-primary" [class.active]="viewMode === 'timeline'" (click)="viewMode = 'timeline'">
-          <i class="fas fa-stream me-1"></i>
-          {{ 'orphanReports.timelineView' | translate }}
-        </button>
-        <button class="btn btn-sm btn-outline-success" (click)="toggleComparison()">
-          <i class="fas fa-balance-scale me-1"></i>
-          {{ comparisonMode ? ('common.cancel' | translate) : ('orphanReports.compare' | translate) }}
-        </button>
-      </div>
+      <span translate>periodicReports.search.results</span>
+      <button class="btn btn-sm btn-outline-success" (click)="exportData()" [disabled]="exporting || totalCount === 0">
+        <i class="fas" [class.fa-spinner]="exporting" [class.fa-spin]="exporting" [class.fa-file-excel]="!exporting"></i>
+        <span class="ms-1" translate>periodicReports.search.export</span>
+      </button>
     </div>
     <div class="card-body p-0">
-      <!-- List View - UC-6.16 -->
-      <div class="table-responsive" *ngIf="viewMode === 'list'">
-        <table class="table table-hover mb-0">
+      <div class="table-responsive wide-grid">
+        <table class="table table-hover table-sm mb-0 text-nowrap">
           <thead>
             <tr>
-              <th *ngIf="comparisonMode" width="50"></th>
-              <th translate>periodicReports.reportNo</th>
-              <th translate>periodicReports.reportDate</th>
-              <th translate>periodicReports.reportPeriod</th>
-              <th translate>periodicReports.status</th>
-              <th translate>periodicReports.prayerStatus</th>
-              <th translate>periodicReports.education</th>
-              <th translate>periodicReports.medical</th>
-              <th translate>periodicReports.reviewer</th>
+              <th *ngFor="let col of columns; trackBy: trackByColumnKey">{{ 'periodicReports.search.columns.' + col.key | translate }}</th>
               <th translate>common.actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let report of reports">
-              <td *ngIf="comparisonMode">
-                <input type="checkbox" [checked]="isReportSelected(report.id)" (change)="toggleReportSelection(report.id)">
-              </td>
-              <td>{{ report.reportNo || '-' }}</td>
-              <td>{{ report.reportDate | date:'mediumDate' }}</td>
+            <tr *ngFor="let report of reports; trackBy: trackByReportId">
+              <td *ngFor="let col of columns; trackBy: trackByColumnKey">{{ col.value(report) || '—' }}</td>
               <td>
-                <small>{{ report.reportPeriodFrom | date:'shortDate' }} - {{ report.reportPeriodTo | date:'shortDate' }}</small>
-              </td>
-              <td>
-                <span class="badge" [ngClass]="getStatusClass(report.reviewStatus)">
-                  {{ 'periodicReports.status.' + report.reviewStatus.toLowerCase() | translate }}
-                </span>
-              </td>
-              <td>{{ report.prayerStatus || '-' }}</td>
-              <td>{{ report.educationalLevelName || '-' }}</td>
-              <td>{{ report.medicalStatus || '-' }}</td>
-              <td>{{ report.reviewerName || '-' }}</td>
-              <td>
-                <div class="btn-group btn-group-sm">
-                  <button class="btn btn-light" [title]="'common.view' | translate" (click)="viewReport(report.id)">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                </div>
+                <a class="btn btn-light btn-sm" [routerLink]="['/periodic-orphan-reports', report.id]"
+                   [title]="'common.view' | translate">
+                  <i class="fas fa-eye"></i>
+                </a>
+                <!-- §23.S.1 مراجعة — HQ reviewers only; the review screen enforces the refuse-reason rule -->
+                <a class="btn btn-outline-primary btn-sm ms-1" *ngIf="auth.hasPermission('PeriodicReports.Review')"
+                   [routerLink]="['/periodic-orphan-reports', report.id, 'review']"
+                   [title]="'periodicReports.search.review' | translate">
+                  <i class="fas fa-check-double"></i>
+                </a>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- Timeline View - UC-6.16 -->
-      <div class="timeline-view p-3" *ngIf="viewMode === 'timeline'">
-        <div class="timeline">
-          <div class="timeline-item" *ngFor="let report of reports; let i = index">
-            <div class="timeline-marker">
-              <div class="timeline-dot" [ngClass]="getStatusClass(report.reviewStatus).replace('bg-', 'border-')"></div>
-            </div>
-            <div class="timeline-content card">
-              <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                  <div>
-                    <h6 class="mb-1">
-                      {{ report.reportNo || ('periodicReports.untitledReport' | translate) }}
-                    </h6>
-                    <small class="text-muted">{{ report.reportDate | date:'medium' }}</small>
-                  </div>
-                  <span class="badge" [ngClass]="getStatusClass(report.reviewStatus)">
-                    {{ 'periodicReports.status.' + report.reviewStatus.toLowerCase() | translate }}
-                  </span>
-                </div>
-                <div class="row text-sm">
-                  <div class="col-md-6">
-                    <small>{{ 'periodicReports.reportPeriod' | translate }}: </small>
-                    <span>{{ report.reportPeriodFrom | date:'shortDate' }} - {{ report.reportPeriodTo | date:'shortDate' }}</span>
-                  </div>
-                  <div class="col-md-6">
-                    <small>{{ 'periodicReports.reviewer' | translate }}: </small>
-                    <span>{{ report.reviewerName || '-' }}</span>
-                  </div>
-                </div>
-                <div class="mt-2">
-                  <button class="btn btn-sm btn-outline-primary" (click)="viewReport(report.id)">
-                    <i class="fas fa-eye me-1"></i>
-                    {{ 'common.view' | translate }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <app-empty-state
+        *ngIf="reports.length === 0"
+        [icon]="'fas fa-search'"
+        [title]="'periodicReports.search.emptyTitle' | translate"
+        [description]="'periodicReports.search.emptyMessage' | translate">
+      </app-empty-state>
     </div>
 
-    <!-- Pagination -->
-    <div class="card-footer" *ngIf="totalCount > pageSize">
+    <div class="card-footer" *ngIf="totalCount > 0">
       <app-pagination
         [totalCount]="totalCount"
         [pageSize]="pageSize"
         [currentPage]="currentPage"
         (pageChange)="onPageChange($event)">
       </app-pagination>
-    </div>
-
-    <!-- Compare Button (when in comparison mode) -->
-    <div class="card-footer" *ngIf="comparisonMode">
-      <div class="d-flex justify-content-between align-items-center">
-        <span class="text-muted">
-          <i class="fas fa-info-circle me-2"></i>
-          {{ 'orphanReports.selectTwoReports' | translate }}
-        </span>
-        <button class="btn btn-success" [disabled]="selectedReportIds.length !== 2" (click)="compareReports()">
-          <i class="fas fa-balance-scale me-2"></i>
-          <span translate>orphanReports.compareSelected' | translate }}</span>
-          <span class="badge bg-light text-success ms-2">{{ selectedReportIds.length }}/2</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Empty State -->
-  <div class="card" *ngIf="!loading && reports.length === 0">
-    <div class="card-body text-center py-5">
-      <i class="fas fa-search fa-3x text-muted mb-3"></i>
-      <h5>{{ 'orphanReports.noReportsFound' | translate }}</h5>
-      <p class="text-muted">{{ 'orphanReports.noReportsFoundMessage' | translate }}</p>
     </div>
   </div>
 </div>

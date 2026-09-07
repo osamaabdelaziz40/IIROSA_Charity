@@ -167,7 +167,9 @@ slash commands, e.g.:
 | `/bmad-create-epics-and-stories` | Regenerate or extend the backlog |
 | `/bmad-correct-course` | Handle a scope or requirement change |
 
-Story files are written to `_bmad-output/implementation-artifacts/<story-key>.md`.
+Story files are written to `_bmad-output/implementation-artifacts/<epic-folder>/<story-key>.md` —
+one folder per epic (e.g. `epic-3-charity-administration/3-1-list-all-charities.md`). Epic
+closeouts, retrospectives, `deferred-work.md` and the board itself stay at the root.
 
 ## Current state
 

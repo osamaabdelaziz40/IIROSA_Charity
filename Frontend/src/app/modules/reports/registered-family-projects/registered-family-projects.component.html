@@ -1,0 +1,73 @@
+<app-report-viewer titleKey="reports.familyProjects.title"
+                   subtitleKey="reports.familyProjects.subtitle"
+                   [loading]="loading"
+                   [exporting]="exporting"
+                   [hasRun]="hasRun"
+                   [currentPage]="currentPage"
+                   [pageSize]="pageSize"
+                   [totalCount]="totalCount"
+                   (search)="search()"
+                   (export)="exportData()"
+                   (pageChange)="onPageChange($event)">
+
+  <!-- ==================== §23.S.7 filter panel (1 field) ==================== -->
+  <div report-filters>
+    <form [formGroup]="filterForm" (ngSubmit)="search()" class="row g-3 align-items-end">
+      <!-- HQ narrow; the endpoint roles are HQ-only anyway -->
+      <div class="col-lg-3 col-md-4" *ngIf="isHQ">
+        <app-drop-down [fg]="filterForm" fcn="charityId"
+                       [label]="'reports.familyProjects.filterCharity'"
+                       [placeholder]="'reports.familyProjects.filterCharity'"
+                       [initialData]="charityOptions">
+        </app-drop-down>
+      </div>
+    </form>
+  </div>
+
+  <!-- ==================== bespoke grid — the §23.S.7 contract (serial + 14) ==================== -->
+  <div report-grid class="table-responsive">
+    <table class="table table-hover table-striped align-middle text-nowrap"
+           *ngIf="rows.length > 0">
+      <thead>
+        <tr>
+          <th>{{ 'reports.familyProjects.colSerial' | translate }}</th>
+          <th>{{ 'reports.familyProjects.colOrphanNames' | translate }}</th>
+          <th>{{ 'reports.familyProjects.colOrphanNationalIds' | translate }}</th>
+          <th>{{ 'reports.familyProjects.colGuardianName' | translate }}</th>
+          <th>{{ 'reports.familyProjects.colOrphanCodes' | translate }}</th>
+          <th>{{ 'reports.familyProjects.colFamilyCode' | translate }}</th>
+          <th>{{ 'reports.familyProjects.colPhone' | translate }}</th>
+          <th>{{ 'reports.familyProjects.colCharity' | translate }}</th>
+          <th>{{ 'reports.familyProjects.colProjectStatus' | translate }}</th>
+          <th>{{ 'reports.familyProjects.colYearsOfExperience' | translate }}</th>
+          <th>{{ 'reports.familyProjects.colTotalBudget' | translate }}</th>
+          <th>{{ 'reports.familyProjects.colProjectStartDate' | translate }}</th>
+          <th>{{ 'reports.familyProjects.colProjectAddress' | translate }}</th>
+          <th>{{ 'reports.familyProjects.colHasExperience' | translate }}</th>
+          <th>{{ 'reports.familyProjects.colProjectDescription' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow">
+          <td>{{ serial(i) }}</td>
+          <td>{{ row.orphanNames || '—' }}</td>
+          <td>{{ row.orphanNationalIds || '—' }}</td>
+          <td>{{ row.guardianName || '—' }}</td>
+          <td>{{ row.orphanCodes || '—' }}</td>
+          <td>{{ row.familyCode }}</td>
+          <td>{{ row.phone || '—' }}</td>
+          <td>{{ row.charityName || '—' }}</td>
+          <td>{{ row.projectStatus || '—' }}</td>
+          <!-- no backing column — renders blank by contract -->
+          <td>{{ row.yearsOfExperience ?? '—' }}</td>
+          <td>{{ row.totalBudget != null ? (row.totalBudget | number) + ' ' + (row.budgetCurrency || '') : '—' }}</td>
+          <td>{{ row.projectStartDate ? (row.projectStartDate | date:'yyyy-MM-dd') : '—' }}</td>
+          <td>{{ row.projectAddress || '—' }}</td>
+          <!-- Review P27 2026-08-26: null stays '—'; a present flag reads نعم/لا, not a glyph. -->
+          <td>{{ row.hasExperience == null ? '—' : ((row.hasExperience ? 'common.yes' : 'common.no') | translate) }}</td>
+          <td>{{ row.projectDescription || '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</app-report-viewer>

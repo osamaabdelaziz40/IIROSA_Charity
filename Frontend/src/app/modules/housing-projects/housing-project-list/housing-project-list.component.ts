@@ -1,30 +1,25 @@
 /**
- * Housing Project List Component
- * Displays list of housing projects with filtering, searching, and actions
- * Access: Admin and Super Admin only
- * Refactored to use shared components like charities module
+ * Housing Families List (UC-HOU-01 · §11.S.1)
+ * The register of families housed in organisation-owned buildings. Re-cut from the
+ * invented construction tracker: rows are Family records filtered to familyType=Housing,
+ * served by GET /api/Families. Search is the UC-HOU-02 typed search (6 selectors).
+ * Roles: Charity + HQ (Admin/SuperAdmin).
  */
 
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { Observable, forkJoin, Subject, Subscription } from 'rxjs';
+import { Subject, Subscription } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { HousingProjectService } from '../services/housing-project.service';
-import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
+import { FamilyService } from '../../families/services/family.service';
+import { FamilyListItemDto } from '../../families/models/family.model';
+import { CharityService } from '../../charities/services/charity.service';
+import { CharityDto } from '../../charities/models/charity.model';
+import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import {
-  HousingProject,
-  HousingProjectSearchRequest,
-  ProjectType,
-  ProjectStatus,
-  getProjectTypeName,
-  getProjectStatusName,
-  getStatusBadgeClass
-} from '../models/housing-project.model';
 import {
   PaginationComponent,
   BreadcrumbComponent,
@@ -33,103 +28,115 @@ import {
   DropDownComponent
 } from '../../../shared/components';
 import { SharedModule } from '../../../shared/shared.module';
-import { CountryDto, RegionDto, CenterDto } from '../../lookup-management/models/lookup.model';
+
+/** §11.S.1 searchType options (البحث عن طريق) — values bind FamilyFilterDto.SearchType */
+export const HOUSING_SEARCH_TYPES: ReadonlyArray<{ id: string; labelKey: string }> = [
+  { id: 'father', labelKey: 'housingProjects.searchTypes.father' },
+  { id: 'mother', labelKey: 'housingProjects.searchTypes.mother' },
+  { id: 'student', labelKey: 'housingProjects.searchTypes.student' },
+  { id: 'nationalId', labelKey: 'housingProjects.searchTypes.nationalId' },
+  { id: 'code', labelKey: 'housingProjects.searchTypes.code' },
+  { id: 'phone', labelKey: 'housingProjects.searchTypes.phone' }
+];
 
 @Component({
   selector: 'app-housing-project-list',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
     ReactiveFormsModule,
     RouterModule,
     TranslateModule,
     PaginationComponent,
     BreadcrumbComponent,
     PageHeaderComponent,
-    SharedModule,
-    DropDownComponent
+    DropDownComponent,
+    SharedModule
   ],
   templateUrl: './housing-project-list.component.html',
-  styleUrls: ['./housing-project-list.component.scss']
+  styleUrls: ['./housing-project-list.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HousingProjectListComponent implements OnInit, OnDestroy {
+  /** كافة الجهات sentinel — maps to no charityId in the request. */
+  private static readonly ALL_CHARITIES = 'all';
+  /** §11.S.1 default البحث عن طريق selector (father). */
+  private static readonly DEFAULT_SEARCH_TYPE = 'father';
+
   private destroy$ = new Subject<void>();
   private langChangeSubscription?: Subscription;
 
-  // Breadcrumb items
   breadcrumbs: BreadcrumbItem[] = [
     { label: 'common.home', url: '/dashboard' },
     { label: 'housingProjects.title' }
   ];
 
-  // Page header actions
   pageActions = [
     {
-      label: 'housingProjects.addProject',
+      label: 'housingProjects.addFamily',
       type: 'primary',
       icon: 'fe-plus',
-      click: () => this.createProject()
-    },
-    {
-      label: 'common.exportToExcel',
-      type: 'success',
-      icon: 'fe-file-plus',
-      click: () => this.exportToExcel()
+      click: () => this.router.navigate(['/housing-projects', 'create'])
     }
   ];
 
-  // Filter form with shared components
-  filterForm!: FormGroup;
+  // §11.S.1 filter form — the shared select2 drop-downs bind to this (employee-list pattern)
+  filterForm: FormGroup;
+
+  // Select2 option arrays ({id, name}) fed to app-drop-down
+  charityOptions: Array<{ id: string; name: string }> = [];
+  searchTypeOptions: Array<{ id: string; name: string }> = [];
+
+  // HQ roles see the charity drop-down; charity callers are pinned server-side
+  isHQ = false;
 
   // Data
-  housingProjects: HousingProject[] = [];
-  loading: boolean = false;
+  families: FamilyListItemDto[] = [];
+  loading = false;
 
   // Lookup data
-  allCountries: CountryDto[] = [];
-  allRegions: RegionDto[] = [];
-  allCenters: CenterDto[] = [];
-  filteredRegions: RegionDto[] = [];
-  filteredCenters: CenterDto[] = [];
+  charities: CharityDto[] = [];
 
   // Pagination
-  currentPage: number = 1;
-  pageSize: number = 10;
-  totalCount: number = 0;
-  totalPages: number = 0;
-
-  // Project type options for dropdown
-  projectTypeOptions: Array<{ id: string; name: string }> = [];
-
-  // Project status options for dropdown
-  statusOptions: Array<{ id: string; name: string }> = [];
-
-  // Helpers
-  getProjectTypeName = getProjectTypeName;
-  getProjectStatusName = getProjectStatusName;
-  getStatusBadgeClass = getStatusBadgeClass;
-  Math = Math;
+  currentPage = 1;
+  pageSize = 10;
+  totalCount = 0;
+  totalPages = 0;
 
   constructor(
     private fb: FormBuilder,
-    private housingProjectService: HousingProjectService,
-    private lookupService: LookupManagementService,
+    private familyService: FamilyService,
+    private charityService: CharityService,
+    private auth: AuthService,
     private notification: NotificationService,
     private translate: TranslateService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {
-    this.initFilterForm();
+    this.filterForm = this.fb.group({
+      charityId: [HousingProjectListComponent.ALL_CHARITIES],
+      searchType: [HousingProjectListComponent.DEFAULT_SEARCH_TYPE],
+      searchValue: ['']
+    });
   }
 
   ngOnInit(): void {
-    this.initializeDropdownOptions();
-    this.loadLookupData();
+    this.initializeSearchTypeOptions();
+    this.isHQ = this.auth.hasRole('SuperAdmin') || this.auth.hasRole('Admin');
+    if (this.isHQ) {
+      this.loadCharities();
+    }
+    this.loadHousingFamilies();
 
-    // Subscribe to language changes to update translated options
-    this.langChangeSubscription = this.translate.onLangChange.subscribe(() => {
-      this.initializeDropdownOptions();
-    });
+    // The option labels are pre-translated (app-drop-down renders raw text), so a
+    // language switch needs a rebuild — the translate pipe can't refresh them.
+    this.langChangeSubscription = this.translate.onLangChange
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.initializeSearchTypeOptions();
+        this.buildCharityOptions();
+        this.cdr.markForCheck();
+      });
   }
 
   ngOnDestroy(): void {
@@ -140,318 +147,124 @@ export class HousingProjectListComponent implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Initialize filter form with FormBuilder
-   */
-  private initFilterForm(): void {
-    this.filterForm = this.fb.group({
-      searchValue: [''],
-      countryId: [null],
-      regionId: [null],
-      centerId: [null],
-      projectType: [null],
-      projectStatus: [null],
-      dateFrom: [null],
-      dateTo: [null]
-    });
-  }
-
-  /**
-   * Initialize dropdown options with translated labels
-   */
-  private initializeDropdownOptions(): void {
-    // Project type options
-    this.projectTypeOptions = Object.values(ProjectType).map(type => ({
-      id: type,
-      name: this.getProjectTypeName(type)
-    }));
-
-    // Project status options
-    this.statusOptions = Object.values(ProjectStatus).map(status => ({
-      id: status,
-      name: this.getProjectStatusName(status)
+  /** Translated البحث عن طريق options (UC-HOU-02) — rebuilt on language switch. */
+  initializeSearchTypeOptions(): void {
+    this.searchTypeOptions = HOUSING_SEARCH_TYPES.map(option => ({
+      id: option.id,
+      name: this.translate.instant(option.labelKey)
     }));
   }
 
   /**
-   * Load lookup data for dropdowns
+   * Load charities for the HQ-only الجمعية filter (كافة الجهات = 'all' sentinel)
    */
-  private loadLookupData(): void {
-    const observables: Observable<any>[] = [
-      this.lookupService.getCountries({ isActive: true })
+  private loadCharities(): void {
+    this.charityService.getCharities({ pageNumber: 1, pageSize: 1000, isActive: true })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.charities = result.items || [];
+          this.buildCharityOptions();
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          // The filter degrades to كافة الجهات only — not fatal
+          this.charities = [];
+          this.buildCharityOptions();
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  /** HQ charity options with the كافة الجهات sentinel first. */
+  private buildCharityOptions(): void {
+    this.charityOptions = [
+      { id: HousingProjectListComponent.ALL_CHARITIES, name: this.translate.instant('housingProjects.filters.allCharities') },
+      ...this.charities.map(charity => ({ id: charity.id, name: charity.name }))
     ];
-
-    forkJoin(observables).pipe(takeUntil(this.destroy$)).subscribe({
-      next: ([countries]) => {
-        this.allCountries = (countries as any).items || [];
-      },
-      error: (error) => {
-        console.error('Error loading lookup data:', error);
-      }
-    });
   }
 
   /**
-   * Load regions by country for cascading dropdown
+   * Load the housing register: GET /api/Families?familyType=Housing&…
    */
-  private loadRegionsByCountry(countryId: any): void {
-    if (!countryId) {
-      this.filteredRegions = [];
-      return;
-    }
-
-    const cleanCountryId = typeof countryId === 'string' ? parseInt(countryId.trim(), 10) : countryId;
-    this.lookupService.getRegionsByCountry(cleanCountryId).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (regions) => {
-        this.filteredRegions = regions || [];
-      },
-      error: () => {
-        this.filteredRegions = [];
-      }
-    });
-  }
-
-  /**
-   * Load centers by region for cascading dropdown
-   */
-  private loadCentersByRegion(regionId: any): void {
-    if (!regionId) {
-      this.filteredCenters = [];
-      return;
-    }
-
-    const cleanRegionId = typeof regionId === 'string' ? parseInt(regionId.trim(), 10) : regionId;
-    this.lookupService.getCentersByRegion(cleanRegionId).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (centers) => {
-        this.filteredCenters = centers || [];
-      },
-      error: () => {
-        this.filteredCenters = [];
-      }
-    });
-  }
-
-  /**
-   * Load housing projects with current filters
-   */
-  loadHousingProjects(): void {
+  loadHousingFamilies(): void {
     this.loading = true;
-    const formValues = this.filterForm.value;
-
-    const searchRequest: HousingProjectSearchRequest = {
-      search: formValues.searchValue || undefined,
-      projectType: formValues.projectType || undefined,
-      projectStatus: formValues.projectStatus || undefined,
-      countryId: formValues.countryId || undefined,
-      regionId: formValues.regionId || undefined,
-      centerId: formValues.centerId || undefined,
-      dateFrom: formValues.dateFrom || undefined,
-      dateTo: formValues.dateTo || undefined,
-      page: this.currentPage,
+    const filters = this.filterForm.value;
+    this.familyService.getFamilies({
+      familyType: 'Housing',
+      charityId: filters.charityId && filters.charityId !== HousingProjectListComponent.ALL_CHARITIES
+        ? filters.charityId
+        : undefined,
+      searchTerm: filters.searchValue || undefined,
+      searchType: filters.searchValue ? filters.searchType : undefined,
+      pageNumber: this.currentPage,
       pageSize: this.pageSize
-    };
-
-    this.housingProjectService.getHousingProjects(searchRequest).pipe(takeUntil(this.destroy$)).subscribe({
+    }).pipe(takeUntil(this.destroy$)).subscribe({
       next: (response) => {
-        this.housingProjects = response.items;
+        this.families = (response.items || []) as unknown as FamilyListItemDto[];
         this.totalCount = response.totalCount;
         this.totalPages = response.totalPages;
         this.loading = false;
+        // OnPush: the template never re-evaluates unless the component is marked
+        // dirty — without this the spinner outlives the data that replaced it.
+        this.cdr.markForCheck();
       },
-      error: (error) => {
-        console.error('Error loading housing projects:', error);
-        this.notification.error(this.translate.instant('housingProjects.loadProjectsFailed'));
+      error: () => {
+        this.notification.error(this.translate.instant('housingProjects.loadFailed'));
         this.loading = false;
+        this.cdr.markForCheck();
       }
     });
   }
 
   /**
-   * Handle search
+   * §11.S.1 row serial — continuous across pages (13-1 formula)
    */
+  rowSerial(index: number): number {
+    return (this.currentPage - 1) * this.pageSize + index + 1;
+  }
+
   onSearch(): void {
     this.currentPage = 1;
-    this.loadHousingProjects();
+    this.loadHousingFamilies();
   }
 
-  /**
-   * Country dropdown change handler
-   */
-  onCountryDropDownChanged(value: any): void {
-    if (value && value.id) {
-      this.loadRegionsByCountry(value.id);
-    } else {
-      this.filteredRegions = [];
-      this.filteredCenters = [];
-    }
+  /** Auto-apply: the الجمعية filter reloads immediately (legacy select behaviour). */
+  onCharityChanged(): void {
     this.onSearch();
   }
 
-  /**
-   * Region dropdown change handler
-   */
-  onRegionDropDownChanged(value: any): void {
-    if (value && value.id) {
-      this.loadCentersByRegion(value.id);
-    } else {
-      this.filteredCenters = [];
-    }
-    this.onSearch();
-  }
-
-  /**
-   * Center dropdown change handler
-   */
-  onCenterDropDownChanged(value: any): void {
-    this.onSearch();
-  }
-
-  /**
-   * Project type dropdown change handler
-   */
-  onProjectTypeDropDownChanged(value: any): void {
-    const projectTypeControl = this.filterForm.get('projectType');
-    if (value && value.id !== undefined && value.id !== null) {
-      projectTypeControl?.setValue(value.id);
-    } else {
-      projectTypeControl?.setValue(null);
-    }
-    this.onSearch();
-  }
-
-  /**
-   * Project status dropdown change handler
-   */
-  onProjectStatusDropDownChanged(value: any): void {
-    const statusControl = this.filterForm.get('projectStatus');
-    if (value && value.id !== undefined && value.id !== null) {
-      statusControl?.setValue(value.id);
-    } else {
-      statusControl?.setValue(null);
-    }
-    this.onSearch();
-  }
-
-  /**
-   * Check if any filters are active
-   */
-  hasActiveFilters(): boolean {
-    const formValues = this.filterForm.value;
-    return !!(
-      formValues.searchValue ||
-      formValues.countryId ||
-      formValues.regionId ||
-      formValues.centerId ||
-      formValues.projectType ||
-      formValues.projectStatus ||
-      formValues.dateFrom ||
-      formValues.dateTo
-    );
-  }
-
-  /**
-   * Clear all filters
-   */
   clearFilters(): void {
     this.filterForm.reset({
-      searchValue: '',
-      countryId: null,
-      regionId: null,
-      centerId: null,
-      projectType: null,
-      projectStatus: null,
-      dateFrom: null,
-      dateTo: null
+      charityId: HousingProjectListComponent.ALL_CHARITIES,
+      searchType: HousingProjectListComponent.DEFAULT_SEARCH_TYPE,
+      searchValue: ''
     });
-    this.filteredRegions = [];
-    this.filteredCenters = [];
     this.currentPage = 1;
-    this.loadHousingProjects();
+    this.loadHousingFamilies();
   }
 
-  /**
-   * Handle page change
-   */
+  /** Any filter away from its no-filter default — drives the Clear Filters button. */
+  hasActiveFilters(): boolean {
+    const filters = this.filterForm.value;
+    return !!(
+      filters.searchValue ||
+      (filters.charityId && filters.charityId !== HousingProjectListComponent.ALL_CHARITIES)
+    );
+  }
+
   onPageChange(page: number): void {
     this.currentPage = page;
-    this.loadHousingProjects();
+    this.loadHousingFamilies();
   }
 
-  /**
-   * Delete housing project
-   */
-  async deleteProject(project: HousingProject): Promise<void> {
-    const confirmed = await this.notification.confirm(
-      this.translate.instant('housingProjects.deleteConfirmMessage', { name: project.projectName })
-    );
-
-    if (confirmed) {
-      this.housingProjectService.deleteHousingProject(project.id).pipe(takeUntil(this.destroy$)).subscribe({
-        next: () => {
-          this.notification.success(this.translate.instant('housingProjects.deleteSuccess'));
-          this.loadHousingProjects();
-        },
-        error: (error) => {
-          console.error('Error deleting housing project:', error);
-          this.notification.error(this.translate.instant('housingProjects.deleteFailed'));
-        }
-      });
-    }
+  viewFamily(id: string): void {
+    // UC-HOU-04 (6-4): the housing detail screen — the §11.U.4 aggregate view of the
+    // Family record (FamilyType=Housing) with its guardian + full child set.
+    this.router.navigate(['/housing-projects', id]);
   }
 
-  /**
-   * Create new project
-   */
-  createProject(): void {
-    this.router.navigate(['/housing-projects', 'create']);
-  }
-
-  /**
-   * Export to Excel
-   */
-  exportToExcel(): void {
-    this.loading = true;
-    const formValues = this.filterForm.value;
-
-    const searchRequest: HousingProjectSearchRequest = {
-      search: formValues.searchValue || undefined,
-      projectType: formValues.projectType || undefined,
-      projectStatus: formValues.projectStatus || undefined,
-      countryId: formValues.countryId || undefined,
-      regionId: formValues.regionId || undefined,
-      centerId: formValues.centerId || undefined,
-      dateFrom: formValues.dateFrom || undefined,
-      dateTo: formValues.dateTo || undefined,
-      page: 1,
-      pageSize: this.totalCount
-    };
-
-    this.housingProjectService.exportHousingProjects(searchRequest).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `housing-projects-${new Date().toISOString().split('T')[0]}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        this.notification.success(this.translate.instant('housingProjects.exportSuccess'));
-        this.loading = false;
-      },
-      error: (error) => {
-        console.error('Error exporting housing projects:', error);
-        this.notification.error(this.translate.instant('housingProjects.exportFailed'));
-        this.loading = false;
-      }
-    });
-  }
-
-  /**
-   * Track by function for ngFor
-   */
-  trackByProjectId(index: number, project: HousingProject): string {
-    return project.id;
+  trackByFamilyId(index: number, family: FamilyListItemDto): string {
+    return family.id;
   }
 }
-

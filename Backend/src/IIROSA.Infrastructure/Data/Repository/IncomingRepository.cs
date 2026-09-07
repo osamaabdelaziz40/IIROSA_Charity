@@ -7,8 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace IIROSA.Infrastructure.Data.Repository;
 
 /// <summary>
-/// Incoming Letter Repository Implementation
-/// Implements data access for UC-12.1 through UC-12.5
+/// Incoming Letter Repository Implementation (epic 16, UC-COR-01…09)
 /// </summary>
 public class IncomingRepository : Repository<Incoming>, IIncomingRepository
 {
@@ -19,74 +18,20 @@ public class IncomingRepository : Repository<Incoming>, IIncomingRepository
         _dbSet = context.Set<Incoming>();
     }
 
-    // Common CRUD wrapper with full filtering (UC-12.1)
     public async Task<(IEnumerable<Incoming> Items, int TotalCount)> GetPagedAsync(
+        IncomingFilterCriteria criteria,
         int pageNumber,
-        int pageSize,
-        string? searchTerm = null,
-        int? departmentId = null,
-        string? status = null,
-        int? year = null,
-        DateTime? startDate = null,
-        DateTime? endDate = null,
-        Guid? createdByUserId = null,
-        string? sortBy = null,
-        string? sortOrder = null)
+        int pageSize)
     {
-        var query = _dbSet.AsQueryable();
-
-        // Apply search filter
-        if (!string.IsNullOrWhiteSpace(searchTerm))
-        {
-            query = query.Where(i =>
-                i.Subject.Contains(searchTerm) ||
-                i.IncomingId.Contains(searchTerm) ||
-                i.LetterNumber.Contains(searchTerm) ||
-                (i.IncomingNumber != null && i.IncomingNumber.Contains(searchTerm)));
-        }
-
-        // Apply department filter
-        if (departmentId.HasValue)
-        {
-            query = query.Where(i => i.FK_DepartmentId == departmentId.Value);
-        }
-
-        // Apply status filter
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            query = query.Where(i => i.Status == status);
-        }
-
-        // Apply year filter
-        if (year.HasValue)
-        {
-            query = query.Where(i => i.Year == year.Value);
-        }
-
-        // Apply date range filter
-        if (startDate.HasValue)
-        {
-            query = query.Where(i => i.Date >= startDate.Value);
-        }
-
-        if (endDate.HasValue)
-        {
-            query = query.Where(i => i.Date <= endDate.Value);
-        }
-
-        // Apply created by user filter
-        if (createdByUserId.HasValue)
-        {
-            query = query.Where(i => i.CreatedBy == createdByUserId.Value.ToString());
-        }
+        var query = BuildFilteredQuery(criteria);
 
         var totalCount = await query.CountAsync();
 
-        // Apply sorting
-        query = ApplySorting(query, sortBy, sortOrder);
+        query = ApplySorting(query, criteria.SortBy, criteria.SortOrder);
 
         var items = await query
             .Include(i => i.Department)
+            .Include(i => i.AssignedUser)
             .Include(i => i.UploadedFile)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -95,147 +40,149 @@ public class IncomingRepository : Repository<Incoming>, IIncomingRepository
         return (items, totalCount);
     }
 
-    // Business Logic Queries
-    public async Task<bool> IsIncomingIdUniqueAsync(string incomingId, Guid? excludeId = null)
+    public Task<Incoming?> GetWithDetailsAsync(Guid id)
     {
-        var query = _dbSet.Where(i => i.IncomingId == incomingId);
+        // Soft delete is NOT a global query filter in this platform — every read
+        // carries an explicit !IsDeleted predicate (review P1)
+        return _dbSet
+            .Include(i => i.Department)
+            .Include(i => i.UploadedFile)
+            .Include(i => i.AssignedUser)
+            .Include(i => i.OutgoingLetter)
+            .Include(i => i.Charity)
+            .FirstOrDefaultAsync(i => i.Id == id && !i.IsDeleted);
+    }
+
+    public async Task<bool> IsLetterNumberUniqueAsync(string letterNumber, Guid? charityId, int year, Guid? excludeId = null)
+    {
+        var query = _dbSet.Where(i => !i.IsDeleted && i.LetterNumber == letterNumber && i.Year == year);
+        if (charityId.HasValue)
+        {
+            query = query.Where(i => i.FK_CharityId == charityId.Value);
+        }
+        else
+        {
+            // HQ-owned letter (D1 decision, review P14): uniqueness is scoped to the
+            // letter's effective charity — NULL-charity letters are checked only
+            // against other NULL-charity letters, never against every charity's numbers
+            query = query.Where(i => i.FK_CharityId == null);
+        }
 
         if (excludeId.HasValue)
         {
             query = query.Where(i => i.Id != excludeId.Value);
         }
 
-        return await query.CountAsync() == 0;
+        return !await query.AnyAsync();
     }
 
-    public async Task<bool> IsLetterNumberUniqueAsync(string letterNumber, int? departmentId, int? year, Guid? excludeId = null)
+    public Task<int> CountOutgoingRepliesAsync(Guid incomingId)
     {
-        var query = _dbSet.Where(i => i.LetterNumber == letterNumber);
+        // Outgoing.IncomingId — outgoing letters replying to this incoming letter;
+        // soft-deleted replies must not block the delete (review P1)
+        return DbContext.Set<Outgoing>().CountAsync(o => o.IncomingId == incomingId && !o.IsDeleted);
+    }
 
-        if (departmentId.HasValue)
+    public async Task<int> GetNextSerialAsync(Guid? charityId, int year)
+    {
+        // Serials derive from live rows only — a soft-deleted letter's serial is reusable
+        var query = _dbSet.Where(i => !i.IsDeleted && i.Year == year);
+        if (charityId.HasValue)
         {
-            query = query.Where(i => i.FK_DepartmentId == departmentId.Value);
+            query = query.Where(i => i.FK_CharityId == charityId.Value);
         }
 
-        if (year.HasValue)
+        // Cast to int? so an empty sequence yields 0 instead of throwing
+        var max = await query.MaxAsync(i => (int?)i.Serial);
+        return (max ?? 0) + 1;
+    }
+
+    private IQueryable<Incoming> BuildFilteredQuery(IncomingFilterCriteria criteria)
+    {
+        // Soft delete is NOT a global query filter in this platform — the register
+        // grids never list deleted letters (review P1)
+        var query = _dbSet.Where(i => !i.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(criteria.SearchTerm))
         {
-            query = query.Where(i => i.Year == year.Value);
+            // §21.S.1 الموضوع — the subject search; serial and letter number are their
+            // own criteria, never folded into this one.
+            var term = criteria.SearchTerm.Trim();
+            query = query.Where(i => i.Subject.Contains(term));
         }
 
-        if (excludeId.HasValue)
+        if (criteria.Serial.HasValue)
         {
-            query = query.Where(i => i.Id != excludeId.Value);
+            query = query.Where(i => i.Serial == criteria.Serial.Value);
         }
 
-        return await query.CountAsync() == 0;
-    }
-
-    public async Task<IEnumerable<Incoming>> GetByDepartmentAsync(int departmentId)
-    {
-        return await _dbSet
-            .Include(i => i.Department)
-            .Where(i => i.FK_DepartmentId == departmentId)
-            .OrderByDescending(i => i.CreatedOn)
-            .ToListAsync();
-    }
-
-    public async Task<IEnumerable<Incoming>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
-    {
-        return await _dbSet
-            .Include(i => i.Department)
-            .Where(i => i.Date >= startDate && i.Date <= endDate)
-            .OrderByDescending(i => i.Date)
-            .ToListAsync();
-    }
-
-    public async Task<IEnumerable<Incoming>> GetByStatusAsync(string status)
-    {
-        return await _dbSet
-            .Include(i => i.Department)
-            .Where(i => i.Status == status)
-            .OrderByDescending(i => i.CreatedOn)
-            .ToListAsync();
-    }
-
-    public async Task<IEnumerable<Incoming>> GetByYearAsync(int year)
-    {
-        return await _dbSet
-            .Include(i => i.Department)
-            .Where(i => i.Year == year)
-            .OrderByDescending(i => i.CreatedOn)
-            .ToListAsync();
-    }
-
-    public async Task<IEnumerable<Incoming>> GetByUserAsync(Guid userId)
-    {
-        return await _dbSet
-            .Include(i => i.Department)
-            .Where(i => i.FK_UserId == userId)
-            .OrderByDescending(i => i.CreatedOn)
-            .ToListAsync();
-    }
-
-    // Import/Export Support
-    public async Task<int> GetNextSerialNumberAsync(int? departmentId = null, int? year = null)
-    {
-        var query = _dbSet.AsQueryable();
-
-        if (departmentId.HasValue)
+        if (!string.IsNullOrWhiteSpace(criteria.LetterNumber))
         {
-            query = query.Where(i => i.FK_DepartmentId == departmentId.Value);
+            query = query.Where(i => i.LetterNumber == criteria.LetterNumber);
         }
 
-        if (year.HasValue)
+        if (criteria.DepartmentId.HasValue)
         {
-            query = query.Where(i => i.Year == year.Value);
+            query = query.Where(i => i.FK_DepartmentId == criteria.DepartmentId.Value);
         }
 
-        var maxSerial = await query.MaxAsync(i => (int?)i.Serial) ?? 0;
-        return maxSerial + 1;
-    }
-
-    public async Task<string> GenerateSerialTextAsync(int serial)
-    {
-        // Format: INC-YYYY-XXXX (e.g., INC-2024-0001)
-        var year = DateTime.Now.Year;
-        return $"INC-{year}-{serial:D4}";
-    }
-
-    #region Helper Methods
-
-    private IQueryable<Incoming> ApplySorting(IQueryable<Incoming> query, string? sortBy, string? sortOrder)
-    {
-        sortBy = sortBy?.ToLower();
-        sortOrder = sortOrder?.ToLower();
-
-        // Default sort: Date descending
-        if (string.IsNullOrWhiteSpace(sortBy))
+        if (!string.IsNullOrWhiteSpace(criteria.Status))
         {
-            sortBy = "date";
+            query = query.Where(i => i.Status == criteria.Status);
         }
 
-        var isDescending = sortOrder == "descending";
-
-        return sortBy switch
+        if (criteria.Year.HasValue)
         {
-            "date" => isDescending
+            query = query.Where(i => i.Year == criteria.Year.Value);
+        }
+
+        if (criteria.StartDate.HasValue)
+        {
+            query = query.Where(i => i.Date >= criteria.StartDate.Value);
+        }
+
+        if (criteria.EndDate.HasValue)
+        {
+            query = query.Where(i => i.Date <= criteria.EndDate.Value);
+        }
+
+        if (criteria.AssignedUserId.HasValue)
+        {
+            // §21.S.1 الموظف — the responsible employee (FK_UserId), not the audit creator
+            query = query.Where(i => i.FK_UserId == criteria.AssignedUserId.Value);
+        }
+
+        if (criteria.CharityId.HasValue)
+        {
+            query = query.Where(i => i.FK_CharityId == criteria.CharityId.Value);
+        }
+
+        if (criteria.CountryId.HasValue)
+        {
+            // Country pin (review P7) — letters carry no country column, the scope rides
+            // through the owning charity; HQ-owned (NULL-charity) letters match no country
+            var countryCharityIds = DbContext.Set<Charity>()
+                .Where(c => c.CountryId == criteria.CountryId.Value)
+                .Select(c => c.Id);
+            query = query.Where(i => i.FK_CharityId != null && countryCharityIds.Contains(i.FK_CharityId.Value));
+        }
+
+        return query;
+    }
+
+    private static IQueryable<Incoming> ApplySorting(IQueryable<Incoming> query, string? sortBy, string? sortOrder)
+    {
+        var isDescending = !"asc".Equals(sortOrder, StringComparison.OrdinalIgnoreCase);
+
+        return (sortBy?.ToLowerInvariant()) switch
+        {
+            "serial" => isDescending ? query.OrderByDescending(i => i.Serial) : query.OrderBy(i => i.Serial),
+            "subject" => isDescending ? query.OrderByDescending(i => i.Subject) : query.OrderBy(i => i.Subject),
+            "letterdate" => isDescending ? query.OrderByDescending(i => i.LetterDate) : query.OrderBy(i => i.LetterDate),
+            "createdon" => isDescending ? query.OrderByDescending(i => i.CreatedOn) : query.OrderBy(i => i.CreatedOn),
+            _ => isDescending
                 ? query.OrderByDescending(i => i.Date ?? i.CreatedOn)
-                : query.OrderBy(i => i.Date ?? i.CreatedOn),
-            "serial" => isDescending
-                ? query.OrderByDescending(i => i.Serial)
-                : query.OrderBy(i => i.Serial),
-            "subject" => isDescending
-                ? query.OrderByDescending(i => i.Subject)
-                : query.OrderBy(i => i.Subject),
-            "letterdate" => isDescending
-                ? query.OrderByDescending(i => i.LetterDate)
-                : query.OrderBy(i => i.LetterDate),
-            "createdon" => isDescending
-                ? query.OrderByDescending(i => i.CreatedOn)
-                : query.OrderBy(i => i.CreatedOn),
-            _ => query.OrderByDescending(i => i.Date ?? i.CreatedOn)
+                : query.OrderBy(i => i.Date ?? i.CreatedOn)
         };
     }
-
-    #endregion
 }

@@ -1,10 +1,11 @@
 /**
  * Mission Model and Related Interfaces
- * Missions Module - IIROSA Frontend Application
+ * Missions Module - IIROSA Frontend Application (epic 15)
+ * Field names mirror the API wire contract (camelCase).
  */
 
 /**
- * Main Mission entity interface
+ * Mission list row — the wire shape of MissionListDto
  */
 export interface Mission {
   /** Primary key */
@@ -12,14 +13,49 @@ export interface Mission {
 
   /** Basic Information */
   missionTarget: string;
-  missionDetails?: string;
   details?: string;
 
   /** Classification */
-  missionTypeId: number;
+  missionType?: string;
+  missionTimeType?: string;
+
+  /** §20.S.1 columns */
+  entityName?: string;
+  village?: string;
+  missionLocation?: string;
+  missionCompletedTxt?: string;
+
+  /** Scheduling */
+  missionDate: string;
+  isMissionCompleted: boolean;
+
+  /** اسم القائم — the assigned employee's full name (MissionListDto.AssignedTo) */
+  assignedTo?: string;
+
+  /** Location */
+  region?: string;
+  center?: string;
+  countryName?: string;
+}
+
+/**
+ * Mission detail — the wire shape of MissionDetailDto
+ */
+export interface MissionDetail {
+  id: string;
+
+  /** Basic Information */
+  missionTarget: string;
+  missionDetails?: string;
+  details?: string;
+
+  /** Classification (ids for the form selects, names for display) */
+  missionTypeId?: number;
   missionTypeName?: string;
-  missionTimeTypeId: number;
+  missionTimeTypeId?: number;
   missionTimeTypeName?: string;
+  missionInterviewTypeId?: number;
+  missionInterviewTypeName?: string;
 
   /** Scheduling */
   missionDate: string;
@@ -38,20 +74,25 @@ export interface Mission {
   village?: string;
 
   /** Assignment */
-  assignedTo: string; // UserId
-  assignedToName?: string;
+  assignedToUserId?: string;
+  assignedUserName?: string;
+  assignedUserEmail?: string;
+
+  /** Ownership */
+  charityId?: string;
+  charityName?: string;
 
   /** Event Information */
   entityName?: string;
   conferenceName?: string;
 
-  /** Audit Trail */
+  /** Audit */
   createdOn: string;
-  modifiedOn?: string;
+  updatedOn?: string;
 }
 
 /**
- * Request payload for creating a new mission
+ * Request payload for creating a new mission — the wire shape of CreateMissionDto
  */
 export interface CreateMissionRequest {
   /** Basic Information */
@@ -62,6 +103,7 @@ export interface CreateMissionRequest {
   /** Classification */
   missionTypeId: number;
   missionTimeTypeId: number;
+  missionInterviewTypeId: number;
 
   /** Scheduling */
   missionDate: string;
@@ -74,7 +116,7 @@ export interface CreateMissionRequest {
   village?: string;
 
   /** Assignment */
-  assignedTo: string;
+  assignedToUserId: string;
 
   /** Event Information */
   entityName?: string;
@@ -82,38 +124,46 @@ export interface CreateMissionRequest {
 }
 
 /**
- * Request payload for updating an existing mission
+ * Request payload for updating an existing mission — the wire shape of UpdateMissionDto
  */
 export interface UpdateMissionRequest {
-  /** Basic Information */
-  missionTarget: string;
+  missionTarget?: string;
   missionDetails?: string;
   details?: string;
-
-  /** Classification */
-  missionTypeId: number;
-  missionTimeTypeId: number;
-
-  /** Scheduling */
-  missionDate: string;
-
-  /** Location */
+  missionTypeId?: number;
+  missionTimeTypeId?: number;
+  missionInterviewTypeId?: number;
+  missionDate?: string;
   countryId?: number;
   regionId?: number;
   centerId?: number;
   missionLocation?: string;
   village?: string;
-
-  /** Assignment */
-  assignedTo: string;
-
-  /** Event Information */
   entityName?: string;
   conferenceName?: string;
+  assignedToUserId?: string;
 }
 
 /**
- * Search and filter request for mission list
+ * Register mission result payload — the wire shape of RegisterMissionResultDto (UC-MSN-09).
+ * The screen's two completion checkboxes are one tri-state: the actor checks either
+ * "completed" or "not completed".
+ */
+export interface RegisterMissionResultRequest {
+  entityName?: string;
+  conferenceName?: string;
+  details?: string;
+  missionTarget?: string;
+  missionDetails?: string;
+  missionLocation?: string;
+  assignedToUserId?: string;
+  village?: string;
+  isCompleted?: boolean;
+  reason?: string;
+}
+
+/**
+ * Search and filter request for the mission register — the wire shape of MissionFilterDto
  */
 export interface MissionSearchRequest {
   /** Search by mission target */
@@ -124,6 +174,9 @@ export interface MissionSearchRequest {
 
   /** Filter by mission time type */
   missionTimeTypeId?: number;
+
+  /** Filter by owning charity */
+  charityId?: string;
 
   /** Filter by completion status (undefined = all, false = pending, true = completed) */
   isCompleted?: boolean;
@@ -137,12 +190,12 @@ export interface MissionSearchRequest {
   /** Filter by center */
   centerId?: number;
 
-  /** Filter by assigned user (empty string = current user) */
-  assignedTo?: string;
+  /** Filter by assigned user */
+  assignedToUserId?: string;
 
   /** Filter by date range */
-  dateFrom?: Date;
-  dateTo?: Date;
+  dateFrom?: string;
+  dateTo?: string;
 
   /** Pagination */
   page: number;
@@ -150,104 +203,25 @@ export interface MissionSearchRequest {
 }
 
 /**
- * Request payload for marking a mission as completed
- */
-export interface MarkMissionCompletedRequest {
-  /** Optional completion notes */
-  completionNotes?: string;
-}
-
-/**
- * Mission status counts for dashboard
- */
-export interface MissionStatusCounts {
-  /** Pending missions count */
-  pending: number;
-
-  /** In progress missions count */
-  inProgress: number;
-
-  /** Completed missions count */
-  completed: number;
-
-  /** Overdue missions count */
-  overdue: number;
-}
-
-/**
- * Paginated response for mission list
+ * Paginated response for mission lists — the wire shape of MissionPagedResult<T>
  */
 export interface MissionListResponse {
-  /** List of missions */
   items: Mission[];
-
-  /** Total count for pagination */
   totalCount: number;
-
-  /** Current page number */
-  pageNumber: number;
-
-  /** Page size */
+  page: number;
   pageSize: number;
-
-  /** Total pages calculated */
   totalPages: number;
 }
 
 /**
- * Mission type lookup (if not using generic lookup)
+ * Lookup item for the mission catalogues (type / time type / interview type)
  */
-export interface MissionType {
+export interface MissionLookupItem {
   id: number;
-  name: string;
+  name?: string;
   nameAr?: string;
   nameEn?: string;
-  description?: string;
+  typeCode?: string;
+  timeTypeCode?: string;
   isActive: boolean;
-}
-
-/**
- * Mission time type lookup (if not using generic lookup)
- */
-export interface MissionTimeType {
-  id: number;
-  name: string;
-  nameAr?: string;
-  nameEn?: string;
-  description?: string;
-  isActive: boolean;
-}
-
-/**
- * Mission status enum for type safety
- */
-export enum MissionStatus {
-  Pending = 'Pending',
-  InProgress = 'InProgress',
-  Completed = 'Completed',
-  Overdue = 'Overdue'
-}
-
-/**
- * Mission time type enum for static values
- */
-export enum MissionTimeTypeEnum {
-  OneTime = 'One-time',
-  Daily = 'Daily',
-  Weekly = 'Weekly',
-  Monthly = 'Monthly',
-  Quarterly = 'Quarterly',
-  Annually = 'Annually'
-}
-
-/**
- * Mission type enum for static values
- */
-export enum MissionTypeEnum {
-  Fieldwork = 'Fieldwork',
-  Conference = 'Conference',
-  Training = 'Training',
-  Meeting = 'Meeting',
-  Inspection = 'Inspection',
-  Other = 'Other'
 }

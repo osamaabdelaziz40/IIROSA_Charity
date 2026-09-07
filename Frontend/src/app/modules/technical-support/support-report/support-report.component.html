@@ -59,51 +59,6 @@
               required>
           </div>
 
-          <!-- Group By -->
-          <div class="form-group">
-            <label for="groupBy">
-              {{ 'technicalSupport.reports.groupBy' | translate }}
-            </label>
-            <select
-              class="form-control"
-              id="groupBy"
-              [(ngModel)]="reportRequest.groupBy"
-              name="groupBy">
-              <option *ngFor="let option of groupByOptions" [value]="option.value">
-                {{ option.label | translate }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Include Options -->
-          <div class="form-group">
-            <div class="custom-control custom-checkbox">
-              <input
-                type="checkbox"
-                class="custom-control-input"
-                id="includeCategories"
-                [(ngModel)]="reportRequest.includeCategories"
-                name="includeCategories">
-              <label class="custom-control-label" for="includeCategories">
-                {{ 'technicalSupport.reports.includeCategories' | translate }}
-              </label>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <div class="custom-control custom-checkbox">
-              <input
-                type="checkbox"
-                class="custom-control-input"
-                id="includeUsers"
-                [(ngModel)]="reportRequest.includeUsers"
-                name="includeUsers">
-              <label class="custom-control-label" for="includeUsers">
-                {{ 'technicalSupport.reports.includeUsers' | translate }}
-              </label>
-            </div>
-          </div>
-
           <!-- Actions -->
           <div class="form-actions">
             <button
@@ -148,7 +103,7 @@
               {{ 'technicalSupport.reports.title' | translate }}
             </h4>
             <small class="text-muted">
-              {{ reportRequest.startDate }} - {{ reportRequest.endDate }}
+              {{ report.startDate | date:'mediumDate' }} - {{ report.endDate | date:'mediumDate' }}
             </small>
           </div>
           <div class="col-auto">
@@ -177,26 +132,53 @@
           <div class="row">
             <div class="col-md-3">
               <div class="stat-card">
-                <div class="stat-value">{{ report.summaryStatistics.totalTickets }}</div>
+                <div class="stat-value">{{ report.totalTickets }}</div>
                 <div class="stat-label">{{ 'technicalSupport.statistics.totalTickets' | translate }}</div>
               </div>
             </div>
             <div class="col-md-3">
               <div class="stat-card">
-                <div class="stat-value text-success">{{ report.summaryStatistics.solvedVsUnsolved.solved }}</div>
+                <div class="stat-value text-success">{{ report.solvedTickets }}</div>
                 <div class="stat-label">{{ 'technicalSupport.statistics.solvedTickets' | translate }}</div>
               </div>
             </div>
             <div class="col-md-3">
               <div class="stat-card">
-                <div class="stat-value text-warning">{{ report.summaryStatistics.solvedVsUnsolved.unsolved }}</div>
+                <div class="stat-value text-warning">{{ report.unsolvedTickets }}</div>
                 <div class="stat-label">{{ 'technicalSupport.statistics.unsolvedTickets' | translate }}</div>
               </div>
             </div>
             <div class="col-md-3">
               <div class="stat-card">
-                <div class="stat-value">{{ formatDuration(report.performanceMetrics.averageResolutionTime) }}</div>
+                <div class="stat-value">{{ formatDuration(report.averageResolutionTimeHours) }}</div>
                 <div class="stat-label">{{ 'technicalSupport.reports.averageResolutionTime' | translate }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mt-3">
+            <div class="col-md-3">
+              <div class="stat-card">
+                <div class="stat-value">{{ report.openTickets }}</div>
+                <div class="stat-label">{{ 'technicalSupport.reports.openTickets' | translate }}</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="stat-card">
+                <div class="stat-value">{{ report.inProgressTickets }}</div>
+                <div class="stat-label">{{ 'technicalSupport.reports.inProgressTickets' | translate }}</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="stat-card">
+                <div class="stat-value">{{ report.resolvedTickets }}</div>
+                <div class="stat-label">{{ 'technicalSupport.reports.resolvedTickets' | translate }}</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="stat-card">
+                <div class="stat-value">{{ report.closedTickets }}</div>
+                <div class="stat-label">{{ 'technicalSupport.reports.closedTickets' | translate }}</div>
               </div>
             </div>
           </div>
@@ -209,17 +191,13 @@
             <div class="col-md-6">
               <div class="progress-item mb-3">
                 <div class="d-flex justify-content-between mb-1">
-                  <span>{{ 'technicalSupport.reports.ticketsOpenedVsClosed' | translate }}</span>
-                  <span>
-                    {{ report.performanceMetrics.ticketsOpenedVsClosed.opened }}
-                    /
-                    {{ report.performanceMetrics.ticketsOpenedVsClosed.closed }}
-                  </span>
+                  <span>{{ 'technicalSupport.reports.ticketsWithinSLA' | translate }}</span>
+                  <span>{{ report.ticketsResolvedWithinSLA }}</span>
                 </div>
                 <div class="progress">
                   <div
-                    class="progress-bar bg-success"
-                    [style.width.%]="getPercentage(report.performanceMetrics.ticketsOpenedVsClosed.closed, report.performanceMetrics.ticketsOpenedVsClosed.opened)">
+                    class="progress-bar bg-info"
+                    [style.width.%]="getPercentage(report.ticketsResolvedWithinSLA, report.totalTickets)">
                   </div>
                 </div>
               </div>
@@ -227,13 +205,13 @@
             <div class="col-md-6">
               <div class="progress-item mb-3">
                 <div class="d-flex justify-content-between mb-1">
-                  <span>{{ 'technicalSupport.reports.ticketsWithinSLA' | translate }}</span>
-                  <span>{{ report.performanceMetrics.ticketsResolvedWithinSLA }}</span>
+                  <span>{{ 'technicalSupport.reports.slaBreached' | translate }}</span>
+                  <span>{{ report.ticketsBreachedSLA }}</span>
                 </div>
                 <div class="progress">
                   <div
-                    class="progress-bar bg-info"
-                    [style.width.%]="getPercentage(report.performanceMetrics.ticketsResolvedWithinSLA, report.summaryStatistics.totalTickets)">
+                    class="progress-bar bg-danger"
+                    [style.width.%]="getPercentage(report.ticketsBreachedSLA, report.totalTickets)">
                   </div>
                 </div>
               </div>
@@ -241,39 +219,112 @@
           </div>
         </div>
 
-        <!-- User Statistics -->
-        <div class="report-section mb-4" *ngIf="reportRequest.includeUsers">
-          <h5>{{ 'technicalSupport.reports.userStatistics' | translate }}</h5>
+        <!-- Tickets by Status -->
+        <div class="report-section mb-4" *ngIf="toEntries(report.ticketsByStatus).length > 0">
+          <h5>{{ 'technicalSupport.reports.ticketsByStatus' | translate }}</h5>
           <div class="table-responsive">
             <table class="table table-sm">
-              <thead>
-                <tr>
-                  <th>{{ 'technicalSupport.createdBy' | translate }}</th>
-                  <th class="text-right">{{ 'technicalSupport.statistics.totalTickets' | translate }}</th>
-                  <th class="text-right">{{ 'technicalSupport.statistics.solvedTickets' | translate }}</th>
-                </tr>
-              </thead>
               <tbody>
-                <tr *ngFor="let userStat of report.userStatistics">
-                  <td>{{ userStat.userName }}</td>
-                  <td class="text-right">{{ userStat.ticketCount }}</td>
-                  <td class="text-right">{{ userStat.solvedCount }}</td>
+                <tr *ngFor="let item of toEntries(report.ticketsByStatus); trackBy: trackByEntryKey">
+                  <td>{{ item.key }}</td>
+                  <td class="text-right">{{ item.value }}</td>
+                  <td style="width: 40%">
+                    <div class="progress">
+                      <div
+                        class="progress-bar bg-primary"
+                        [style.width.%]="getPercentage(item.value, report.totalTickets)">
+                      </div>
+                    </div>
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Category Statistics -->
-        <div class="report-section" *ngIf="reportRequest.includeCategories">
+        <!-- Tickets by Priority -->
+        <div class="report-section mb-4" *ngIf="toEntries(report.ticketsByPriority).length > 0">
+          <h5>{{ 'technicalSupport.reports.ticketsByPriority' | translate }}</h5>
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <tbody>
+                <tr *ngFor="let item of toEntries(report.ticketsByPriority); trackBy: trackByEntryKey">
+                  <td>{{ item.key }}</td>
+                  <td class="text-right">{{ item.value }}</td>
+                  <td style="width: 40%">
+                    <div class="progress">
+                      <div
+                        class="progress-bar bg-warning"
+                        [style.width.%]="getPercentage(item.value, report.totalTickets)">
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tickets by Category -->
+        <div class="report-section mb-4" *ngIf="toEntries(report.ticketsByCategory).length > 0">
           <h5>{{ 'technicalSupport.statistics.ticketsByCategory' | translate }}</h5>
           <div class="row">
-            <div *ngFor="let item of report.summaryStatistics.ticketsByCategory | keyvalue" class="col-md-4 mb-3">
+            <div *ngFor="let item of toEntries(report.ticketsByCategory); trackBy: trackByEntryKey" class="col-md-4 mb-3">
               <div class="category-stat">
                 <div class="category-name">{{ item.key }}</div>
                 <div class="category-count">{{ item.value }}</div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Tickets by Creator -->
+        <div class="report-section mb-4" *ngIf="toEntries(report.ticketsByCreator).length > 0">
+          <h5>{{ 'technicalSupport.reports.ticketsByCreator' | translate }}</h5>
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>{{ 'technicalSupport.createdBy' | translate }}</th>
+                  <th class="text-right">{{ 'technicalSupport.statistics.totalTickets' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of toEntries(report.ticketsByCreator); trackBy: trackByEntryKey">
+                  <td>{{ item.key }}</td>
+                  <td class="text-right">{{ item.value }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Ticket List -->
+        <div class="report-section" *ngIf="report.tickets && report.tickets.length > 0">
+          <h5>{{ 'technicalSupport.reports.ticketsInPeriod' | translate }}</h5>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover">
+              <thead>
+                <tr>
+                  <th>{{ 'technicalSupport.ticketTitle' | translate }}</th>
+                  <th>{{ 'technicalSupport.category' | translate }}</th>
+                  <th>{{ 'technicalSupport.priority' | translate }}</th>
+                  <th>{{ 'technicalSupport.status' | translate }}</th>
+                  <th>{{ 'technicalSupport.createdBy' | translate }}</th>
+                  <th>{{ 'technicalSupport.createdDate' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let ticket of report.tickets; trackBy: trackByTicketId">
+                  <td>{{ ticket.title }}</td>
+                  <td>{{ ticket.categoryName }}</td>
+                  <td>{{ ticket.priorityName }}</td>
+                  <td>{{ ticket.statusName }}</td>
+                  <td>{{ ticket.createdByUserName }}</td>
+                  <td>{{ ticket.createdOn | date:'mediumDate' }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

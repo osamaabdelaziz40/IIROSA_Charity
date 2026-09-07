@@ -1,0 +1,14 @@
+.provider-request-list {
+  .table {
+    th,
+    td {
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    td.text-wrap {
+      white-space: normal;
+      min-width: 160px;
+    }
+  }
+}

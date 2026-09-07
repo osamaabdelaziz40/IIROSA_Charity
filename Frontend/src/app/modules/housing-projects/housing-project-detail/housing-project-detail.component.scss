@@ -1,0 +1,35 @@
+/**
+ * Housing Family Detail (UC-HOU-04) — read-only §11.U.4 aggregate view.
+ * Lean by design: the description grid + guardian flag chips; everything else is
+ * Bootstrap 5.3 (RTL-first via the TinyDash dark theme).
+ */
+
+/* Definition-list grid rows — label muted above the value */
+.detail-grid {
+  dt {
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.7;
+    margin-bottom: 0.15rem;
+  }
+
+  dd {
+    margin-bottom: 1rem;
+    word-break: break-word;
+  }
+}
+
+/* Guardian flags — the §11.S.2 checkboxes render as inline chips */
+.flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+
+  span {
+    display: inline-block;
+    padding: 0.1rem 0.55rem;
+    font-size: 0.75rem;
+    border-radius: 1rem;
+    background: rgba(var(--bs-primary-rgb, 13, 110, 253), 0.15);
+  }
+}

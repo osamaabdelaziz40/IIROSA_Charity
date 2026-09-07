@@ -1,16 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, ActivatedRoute } from '@angular/router';
-import { OutgoingDto } from '../models/outgoing.model';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
+import { OutgoingDto, OutgoingOrphanRow } from '../models/outgoing.model';
 import { OutgoingService } from '../services/outgoing.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
 import { FileViewerComponent } from '../../../shared/components/file-viewer';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { IncomingService } from '../services/incoming.service';
-import { IncomingDto } from '../models/incoming.model';
-import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-outgoing-letter-detail',
@@ -22,8 +20,6 @@ import { RouterModule } from '@angular/router';
 export class OutgoingLetterDetailComponent implements OnInit {
   letter: OutgoingDto | null = null;
   loading = false;
-  relatedIncomingLetter: IncomingDto | null = null;
-  loadingRelated = false;
 
   // Page actions for header
   pageActions = [
@@ -32,6 +28,16 @@ export class OutgoingLetterDetailComponent implements OnInit {
       type: 'primary',
       icon: 'fe-edit',
       click: () => this.editLetter()
+    },
+    {
+      // UC-COR-18 entry point — the §21.S.6 orphan-report attachment screen, opened
+      // on this letter.
+      label: 'incomingOutgoing.attachOrphansTitle',
+      type: 'secondary',
+      icon: 'fe-users',
+      click: () => this.router.navigate(['/incoming-outgoing/export/outgoing'], {
+        queryParams: { outgoingId: this.letter?.id }
+      })
     },
     {
       label: 'common.delete',
@@ -51,12 +57,17 @@ export class OutgoingLetterDetailComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private outgoingService: OutgoingService,
-    private incomingService: IncomingService,
+    private authService: AuthService,
     private notification: NotificationService,
     private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
+    // UC-COR-16: deletes are the General Director's alone — SuperAdmin only. The
+    // endpoint enforces the role regardless of what the UI shows.
+    if (!this.authService.hasRole('SuperAdmin')) {
+      this.pageActions = this.pageActions.filter(a => a.label !== 'common.delete');
+    }
     this.loadLetter();
   }
 
@@ -72,29 +83,11 @@ export class OutgoingLetterDetailComponent implements OnInit {
       next: (letter: OutgoingDto) => {
         this.letter = letter;
         this.loading = false;
-
-        // Load related incoming letter if exists
-        if (letter.incomingId) {
-          this.loadRelatedIncomingLetter(letter.incomingId);
-        }
       },
       error: (error: any) => {
         console.error('Error loading letter:', error);
         this.notification.error(this.translate.instant('incomingOutgoing.loadLetterFailed'));
         this.loading = false;
-      }
-    });
-  }
-
-  private loadRelatedIncomingLetter(incomingId: string): void {
-    this.loadingRelated = true;
-    this.incomingService.getIncomingLetter(incomingId).subscribe({
-      next: (letter: IncomingDto) => {
-        this.relatedIncomingLetter = letter;
-        this.loadingRelated = false;
-      },
-      error: () => {
-        this.loadingRelated = false;
       }
     });
   }
@@ -108,19 +101,18 @@ export class OutgoingLetterDetailComponent implements OnInit {
   async deleteLetter(): Promise<void> {
     if (!this.letter) return;
 
-    const confirmed = await this.notification.confirm(
-      this.translate.instant('incomingOutgoing.confirmDelete', { subject: this.letter.subject })
-    );
+    const message = this.translate.instant('incomingOutgoing.deleteConfirm', { subject: this.letter.subject });
+    const confirmed = await this.notification.confirm(message, this.translate.instant('common.delete'));
 
     if (confirmed) {
       this.outgoingService.deleteOutgoingLetter(this.letter.id).subscribe({
         next: () => {
-          this.notification.success(this.translate.instant('incomingOutgoing.deleteSuccess'));
+          this.notification.success(this.translate.instant('incomingOutgoing.letterDeleted'));
           this.router.navigate(['/incoming-outgoing/outgoing']);
         },
         error: (error: any) => {
           console.error('Error deleting letter:', error);
-          this.notification.error(this.translate.instant('incomingOutgoing.deleteFailed'));
+          this.notification.error(error.message || this.translate.instant('incomingOutgoing.deleteFailed'));
         }
       });
     }
@@ -130,38 +122,23 @@ export class OutgoingLetterDetailComponent implements OnInit {
     this.router.navigate(['/incoming-outgoing/outgoing']);
   }
 
-  getCategoryBadgeClass(): string {
-    if (!this.letter) return 'badge-secondary';
-    const category = this.letter.outgoingCategoryName || 'other';
-
-    const categoryMap: { [key: string]: string } = {
-      'Official': 'badge-primary',
-      'official': 'badge-primary',
-      'Internal': 'badge-info',
-      'internal': 'badge-info',
-      'External': 'badge-success',
-      'external': 'badge-success'
-    };
-
-    return categoryMap[category] || 'badge-secondary';
+  get attachedOrphans(): OutgoingOrphanRow[] {
+    return this.letter?.orphans || [];
   }
 
-  formatDate(date: Date | string | undefined): string {
+  trackByOrphanId(_index: number, orphan: OutgoingOrphanRow): string {
+    return orphan.orphanId;
+  }
+
+  formatDate(date: string | undefined): string {
     if (!date) return '-';
     const d = new Date(date);
     return d.toLocaleDateString('en-GB');
   }
 
-  formatDateTime(date: Date | string | undefined): string {
+  formatDateTime(date: string | undefined): string {
     if (!date) return '-';
     const d = new Date(date);
     return d.toLocaleString('en-GB');
-  }
-
-  /**
-   * Check if this letter has child follow-up letters
-   */
-  hasChildLetters(): boolean {
-    return !!(this.letter?.childOutgoings && this.letter.childOutgoings.length > 0);
   }
 }

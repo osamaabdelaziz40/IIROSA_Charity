@@ -1,0 +1,1869 @@
+diff --git a/Backend/src/IIROSA.Api/Controllers/EmployeeManagementController.cs b/Backend/src/IIROSA.Api/Controllers/EmployeeManagementController.cs
+index a0b5dea..e47ef8d 100644
+--- a/Backend/src/IIROSA.Api/Controllers/EmployeeManagementController.cs
++++ b/Backend/src/IIROSA.Api/Controllers/EmployeeManagementController.cs
+@@ -34,8 +34,9 @@ namespace IIROSA.Api.Controllers
+         [Authorize(Policy = "ManagementOnly")]
+         public async Task<ActionResult<EmployeePagedResult<EmployeeListDto>>> GetEmployees(
+             [FromQuery] string? search = null,
+-            [FromQuery] string? department = null,
++            [FromQuery] int? departmentId = null,
+             [FromQuery] string? position = null,
++            [FromQuery] string? role = null,
+             [FromQuery] bool? isActive = null,
+             [FromQuery] int page = 1,
+             [FromQuery] int pageSize = 20)
+@@ -45,8 +46,9 @@ namespace IIROSA.Api.Controllers
+                 var filter = new EmployeeFilterDto
+                 {
+                     SearchText = search,
+-                    Department = department,
++                    DepartmentId = departmentId,
+                     Position = position,
++                    Role = role,
+                     IsActive = isActive,
+                     Page = page,
+                     PageSize = pageSize
+@@ -62,6 +64,31 @@ namespace IIROSA.Api.Controllers
+             }
+         }
+ 
++        /// <summary>
++        /// Check login-name availability (UC-EMP-02: Verify employee username availability).
++        /// In this stack the identity UserName IS the email, so this probes the same two
++        /// stores the create/update uniqueness rules enforce against. excludeEmployeeId
++        /// spares an employee's own account when editing.
++        /// </summary>
++        [HttpGet("check-username")]
++        [Authorize(Policy = "ManagementOnly")]
++        public async Task<ActionResult<EmployeeUserNameAvailabilityDto>> CheckUserName(
++            [FromQuery] string? userName,
++            [FromQuery] Guid? excludeEmployeeId = null)
++        {
++            try
++            {
++                var name = (userName ?? string.Empty).Trim();
++                var isAvailable = await _employeeService.IsUserNameAvailableAsync(name, excludeEmployeeId);
++                return Ok(new EmployeeUserNameAvailabilityDto { UserName = name, IsAvailable = isAvailable });
++            }
++            catch (Exception ex)
++            {
++                _logger.LogError(ex, "Error occurred while checking username availability for {UserName}", userName);
++                return StatusCode(500, new { message = "An error occurred while checking username availability" });
++            }
++        }
++
+         /// <summary>
+         /// Get employee by ID (UC-2.7: View Employee Profile)
+         /// </summary>
+@@ -281,8 +308,9 @@ namespace IIROSA.Api.Controllers
+         [Authorize(Policy = "ManagementOnly")]
+         public async Task<IActionResult> ExportEmployees(
+             [FromQuery] string? search = null,
+-            [FromQuery] string? department = null,
++            [FromQuery] int? departmentId = null,
+             [FromQuery] string? position = null,
++            [FromQuery] string? role = null,
+             [FromQuery] bool? isActive = null)
+         {
+             try
+@@ -290,8 +318,9 @@ namespace IIROSA.Api.Controllers
+                 var filter = new EmployeeFilterDto
+                 {
+                     SearchText = search,
+-                    Department = department,
++                    DepartmentId = departmentId,
+                     Position = position,
++                    Role = role,
+                     IsActive = isActive,
+                     Page = 1,
+                     PageSize = 10000 // Export all matching records
+diff --git a/Backend/src/IIROSA.Application/DTOs/EmployeeManagement/Employees.cs b/Backend/src/IIROSA.Application/DTOs/EmployeeManagement/Employees.cs
+index 05050eb..f7f8b09 100644
+--- a/Backend/src/IIROSA.Application/DTOs/EmployeeManagement/Employees.cs
++++ b/Backend/src/IIROSA.Application/DTOs/EmployeeManagement/Employees.cs
+@@ -38,6 +38,8 @@ public class EmployeeDetailDto
+     public decimal? Salary { get; set; }
+     public bool IsActive { get; set; }
+     public string? Notes { get; set; }
++    public Guid? FK_UserId { get; set; }
++    public bool HasAccount => FK_UserId.HasValue;
+     public DateTime CreatedOn { get; set; }
+     public DateTime? UpdatedOn { get; set; }
+     public List<string> Roles { get; set; } = new();
+@@ -94,8 +96,9 @@ public class UpdateEmployeeDto
+ public class EmployeeSearchDto
+ {
+     public string? SearchText { get; set; }
+-    public string? Department { get; set; }
++    public int? DepartmentId { get; set; }
+     public string? Position { get; set; }
++    public string? Role { get; set; }
+     public bool? IsActive { get; set; }
+     public int PageNumber { get; set; } = 1;
+     public int PageSize { get; set; } = 20;
+@@ -107,13 +110,24 @@ public class EmployeeSearchDto
+ public class EmployeeFilterDto
+ {
+     public string? SearchText { get; set; }
+-    public string? Department { get; set; }
++    public int? DepartmentId { get; set; }
+     public string? Position { get; set; }
++    public string? Role { get; set; }
+     public bool? IsActive { get; set; }
+     public int Page { get; set; } = 1;
+     public int PageSize { get; set; } = 20;
+ }
+ 
++/// <summary>
++/// Result of the UC-EMP-02 username availability check. The server echoes the
++/// (trimmed) name it actually checked so the client can discard stale replies.
++/// </summary>
++public class EmployeeUserNameAvailabilityDto
++{
++    public string UserName { get; set; } = string.Empty;
++    public bool IsAvailable { get; set; }
++}
++
+ /// <summary>
+ /// Employee role assignment
+ /// </summary>
+diff --git a/Backend/src/IIROSA.Application/Interfaces/IEmployeeService.cs b/Backend/src/IIROSA.Application/Interfaces/IEmployeeService.cs
+index 159b7fd..93f739c 100644
+--- a/Backend/src/IIROSA.Application/Interfaces/IEmployeeService.cs
++++ b/Backend/src/IIROSA.Application/Interfaces/IEmployeeService.cs
+@@ -13,6 +13,13 @@ public interface IEmployeeService
+     /// </summary>
+     Task<EmployeePagedResult<EmployeeListDto>> GetEmployeesFilteredAsync(EmployeeFilterDto filter);
+ 
++    /// <summary>
++    /// Check whether a proposed login name (the identity user's email/username) is free
++    /// (UC-EMP-02: Verify employee username availability). Consults both the identity user
++    /// store and the Employee table, excluding the given employee's own account when editing.
++    /// </summary>
++    Task<bool> IsUserNameAvailableAsync(string userName, Guid? excludeEmployeeId = null);
++
+     /// <summary>
+     /// Get employee by ID (UC-2.7: View Employee Profile)
+     /// </summary>
+diff --git a/Backend/src/IIROSA.Application/Profiles/EmployeeProfile.cs b/Backend/src/IIROSA.Application/Profiles/EmployeeProfile.cs
+index 6e6c06b..1f3f8b8 100644
+--- a/Backend/src/IIROSA.Application/Profiles/EmployeeProfile.cs
++++ b/Backend/src/IIROSA.Application/Profiles/EmployeeProfile.cs
+@@ -60,6 +60,8 @@ public class EmployeeProfile : Profile
+             .ForMember(dest => dest.DeletedOn, opt => opt.Ignore())
+             .ForMember(dest => dest.DeletedBy, opt => opt.Ignore())
+             .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
+-            .ForMember(dest => dest.Events, opt => opt.Ignore());
++            .ForMember(dest => dest.Events, opt => opt.Ignore())
++            // PATCH semantics: a field the caller omitted must not wipe the stored value
++            .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
+     }
+ }
+\ No newline at end of file
+diff --git a/Backend/src/IIROSA.Application/Services/EmployeeService.cs b/Backend/src/IIROSA.Application/Services/EmployeeService.cs
+index b9ef961..324054b 100644
+--- a/Backend/src/IIROSA.Application/Services/EmployeeService.cs
++++ b/Backend/src/IIROSA.Application/Services/EmployeeService.cs
+@@ -44,8 +44,8 @@ public class EmployeeService : IEmployeeService
+         {
+             var query = await _employeeRepository.GetAllAsync();
+ 
+-            // Apply filters
+-            var filteredQuery = query.AsQueryable();
++            // Soft-deleted rows never appear in reads
++            var filteredQuery = query.AsQueryable().Where(e => !e.IsDeleted);
+ 
+             if (!string.IsNullOrWhiteSpace(filter.SearchText))
+             {
+@@ -59,28 +59,52 @@ public class EmployeeService : IEmployeeService
+                         (e.NationalId != null && e.NationalId.Contains(searchText)));
+             }
+ 
++            if (filter.DepartmentId.HasValue)
++            {
++                filteredQuery = filteredQuery.Where(e => e.DepartmentId == filter.DepartmentId.Value);
++            }
++
++            if (!string.IsNullOrWhiteSpace(filter.Position))
++            {
++                filteredQuery = filteredQuery.Where(e => e.Position == filter.Position);
++            }
++
+             if (filter.IsActive.HasValue)
+             {
+                 filteredQuery = filteredQuery.Where(e => e.IsActive == filter.IsActive.Value);
+             }
+ 
++            // Role filter lives in the identity store, not on the Employee row: resolve the
++            // users holding the role first, then keep only employees linked to one of them.
++            if (!string.IsNullOrWhiteSpace(filter.Role))
++            {
++                var usersInRole = await _userAppService.GetUsersInRoles(new List<string> { filter.Role });
++                var userIds = usersInRole
++                    .Where(u => u.Id.HasValue)
++                    .Select(u => u.Id!.Value)
++                    .ToHashSet();
++
++                filteredQuery = filteredQuery.Where(e => e.FK_UserId.HasValue && userIds.Contains(e.FK_UserId.Value));
++            }
++
+             // Get total count
+             var totalCount = filteredQuery.Count();
+ 
+             // Apply pagination
+-            var paginatedQuery = filteredQuery
++            var pageRows = filteredQuery
+                 .Skip((filter.Page - 1) * filter.PageSize)
+-                .Take(filter.PageSize);
++                .Take(filter.PageSize)
++                .ToList();
+ 
+-            var employeeDtos = _mapper.Map<List<EmployeeListDto>>(paginatedQuery);
++            var employeeDtos = _mapper.Map<List<EmployeeListDto>>(pageRows);
+ 
+-            // Load roles for each employee
+-            foreach (var employeeDto in employeeDtos)
++            // Load roles for the page only, straight from the rows already in hand
++            // (no per-row re-fetch of the employee)
++            for (var i = 0; i < pageRows.Count; i++)
+             {
+-                var employee = await _employeeRepository.GetByIdAsync(employeeDto.Id);
+-                if (employee != null && !string.IsNullOrWhiteSpace(employee.Email))
++                if (!string.IsNullOrWhiteSpace(pageRows[i].Email))
+                 {
+-                    employeeDto.Roles = await GetEmployeeRolesAsync(employeeDto.Id);
++                    employeeDtos[i].Roles = await GetEmployeeRolesAsync(pageRows[i].Id);
+                 }
+             }
+ 
+@@ -99,6 +123,47 @@ public class EmployeeService : IEmployeeService
+         }
+     }
+ 
++    /// <summary>
++    /// UC-EMP-02: verify a proposed login name is free before the record is submitted.
++    /// In this stack the identity UserName IS the email, so the probe consults both stores
++    /// that enforce uniqueness at save time: the Employee table (IsEmailUniqueAsync, the rule
++    /// CreateEmployeeAsync applies) and the identity user store (FindByEmailAsync, the rule
++    /// CreateUserAsync applies). excludeEmployeeId spares an employee's own account when editing.
++    /// </summary>
++    public async Task<bool> IsUserNameAvailableAsync(string userName, Guid? excludeEmployeeId = null)
++    {
++        var name = (userName ?? string.Empty).Trim();
++
++        // Nothing to check, or longer than the column allows — both mean "cannot use this name"
++        if (name.Length == 0 || name.Length > 100)
++        {
++            return false;
++        }
++
++        if (!await _employeeRepository.IsEmailUniqueAsync(name, excludeEmployeeId))
++        {
++            return false;
++        }
++
++        var identityMatch = await _userAppService.FindByEmailAsync(name);
++        if (identityMatch == null || !identityMatch.Id.HasValue)
++        {
++            return true;
++        }
++
++        // A hit is fine when it is the excluded employee's own account
++        if (excludeEmployeeId.HasValue)
++        {
++            var employee = await _employeeRepository.GetByIdAsync(excludeEmployeeId.Value);
++            if (employee != null && employee.FK_UserId == identityMatch.Id.Value)
++            {
++                return true;
++            }
++        }
++
++        return false;
++    }
++
+     /// <summary>
+     /// Get employee by ID (UC-2.7: View Employee Profile)
+     /// </summary>
+@@ -107,7 +172,7 @@ public class EmployeeService : IEmployeeService
+         try
+         {
+             var employee = await _employeeRepository.GetByIdAsync(id);
+-            if (employee == null)
++            if (employee == null || employee.IsDeleted)
+                 return null;
+ 
+             var employeeDto = _mapper.Map<EmployeeDetailDto>(employee);
+@@ -134,61 +199,64 @@ public class EmployeeService : IEmployeeService
+     {
+         try
+         {
+-            // Validate email uniqueness
++            dto.FullName = (dto.FullName ?? string.Empty).Trim();
++            if (dto.FullName.Length == 0)
++            {
++                throw new InvalidOperationException("Full name is required");
++            }
++
++            dto.Email = dto.Email?.Trim();
++            dto.Code = (dto.Code ?? string.Empty).Trim();
++
++            // Login-name availability across BOTH stores (Employee table + identity users),
++            // the same rule the UC-EMP-02 check exposes to the screen
+             if (!string.IsNullOrWhiteSpace(dto.Email) &&
+-                !await _employeeRepository.IsEmailUniqueAsync(dto.Email))
++                !await IsUserNameAvailableAsync(dto.Email))
+             {
+                 throw new InvalidOperationException($"Email '{dto.Email}' is already in use");
+             }
+ 
+-            // Validate code uniqueness
+-            if (!string.IsNullOrWhiteSpace(dto.Code) &&
+-                !await _employeeRepository.IsCodeUniqueAsync(dto.Code))
++            // Code is uniquely indexed; generate one when the screen leaves it blank
++            if (dto.Code.Length == 0)
++            {
++                dto.Code = $"EMP-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
++            }
++            else if (!await _employeeRepository.IsCodeUniqueAsync(dto.Code))
+             {
+                 throw new InvalidOperationException($"Employee code '{dto.Code}' already exists");
+             }
+ 
+-            // Create employee entity
+-            var employee = _mapper.Map<Employee>(dto);
+-            employee.IsActive = true;
+-
+-            await _employeeRepository.AddAsync(employee);
+-            await _employeeRepository.SaveChangesAsync();
+-
+-            // Create associated user account if email and password are provided
++            // The login account is the point of UC-EMP-03: create it FIRST and fail loudly —
++            // never leave an Employee row that silently has no account
++            Guid? userId = null;
+             if (!string.IsNullOrWhiteSpace(dto.Email) && !string.IsNullOrWhiteSpace(dto.Password))
+             {
+-                try
++                var createUserDto = new Framework.Identity.Data.Services.Interfaces.CreateUserDto
+                 {
+-                    var createUserDto = new Framework.Identity.Data.Services.Interfaces.CreateUserDto
+-                    {
+-                        Email = dto.Email,
+-                        FullName = dto.FullName,
+-                        PhoneNumber = dto.PhoneNumber,
+-                        Roles = dto.Roles,
+-                        Password = dto.Password
+-                    };
+-
+-                    var userResult = await _userAppService.CreateUserAsync(createUserDto);
+-                    if (userResult.Success)
+-                    {
+-                        // Link employee to user
+-                        employee.FK_UserId = userResult.InsertedId;
+-                        _employeeRepository.Update(employee);
+-                        await _employeeRepository.SaveChangesAsync();
+-                    }
+-                    else
+-                    {
+-                        _logger.LogWarning("User account creation failed for employee {EmployeeId}: {Message}",
+-                            employee.Id, userResult.VerificationMSG);
+-                    }
+-                }
+-                catch (Exception ex)
++                    Email = dto.Email,
++                    FullName = dto.FullName,
++                    PhoneNumber = dto.PhoneNumber,
++                    Roles = dto.Roles,
++                    Password = dto.Password
++                };
++
++                var userResult = await _userAppService.CreateUserAsync(createUserDto);
++                if (!userResult.Success)
+                 {
+-                    _logger.LogError(ex, "Error creating user account for employee {EmployeeId}", employee.Id);
++                    throw new InvalidOperationException(
++                        $"Could not create the login account for '{dto.Email}': {userResult.VerificationMSG}");
+                 }
++                userId = userResult.InsertedId;
+             }
+ 
++            // Create employee entity, already linked to the account when one was created
++            var employee = _mapper.Map<Employee>(dto);
++            employee.IsActive = true;
++            employee.FK_UserId = userId;
++
++            await _employeeRepository.AddAsync(employee);
++            await _employeeRepository.SaveChangesAsync();
++
+             _logger.LogInformation("Employee created successfully: {EmployeeId} - {Code} - {FullName}",
+                 employee.Id, employee.Code, employee.FullName);
+ 
+@@ -215,21 +283,59 @@ public class EmployeeService : IEmployeeService
+         try
+         {
+             var employee = await _employeeRepository.GetByIdAsync(id);
+-            if (employee == null)
++            if (employee == null || employee.IsDeleted)
+                 throw new InvalidOperationException($"Employee with ID {id} not found");
+ 
+-            // Validate email uniqueness (excluding current employee)
++            dto.Email = dto.Email?.Trim();
++            dto.Code = dto.Code?.Trim();
++
++            // Login-name availability across both stores, sparing this employee's own account
+             if (!string.IsNullOrWhiteSpace(dto.Email) &&
+-                !await _employeeRepository.IsEmailUniqueAsync(dto.Email, id))
++                !await IsUserNameAvailableAsync(dto.Email, id))
+             {
+                 throw new InvalidOperationException($"Email '{dto.Email}' is already in use");
+             }
+ 
++            if (!string.IsNullOrWhiteSpace(dto.Code) &&
++                !await _employeeRepository.IsCodeUniqueAsync(dto.Code, id))
++            {
++                throw new InvalidOperationException($"Employee code '{dto.Code}' already exists");
++            }
++
+             // Update employee fields
+             _mapper.Map(dto, employee);
+             _employeeRepository.Update(employee);
+             await _employeeRepository.SaveChangesAsync();
+ 
++            // Mirror profile changes onto the linked login account — the identity UserName IS
++            // the email, so an unsynced change would leave the old credential working
++            if (employee.FK_UserId.HasValue)
++            {
++                await _userAppService.UpdateUserDetailAsync(employee.FK_UserId.Value,
++                    new Framework.Identity.Data.Services.Interfaces.UpdateUserDto
++                    {
++                        Email = employee.Email,
++                        FullName = employee.FullName,
++                        PhoneNumber = employee.PhoneNumber
++                    });
++
++                // Role changes ride along when the request carries a role set (UC-EMP-05)
++                if (dto.Roles != null)
++                {
++                    var currentRoles = await _userAppService.GetUserRolesAsync(employee.FK_UserId.Value);
++
++                    foreach (var removed in currentRoles.Where(r => !dto.Roles.Contains(r)))
++                    {
++                        await _userAppService.RemoveUserFromRoleAsync(employee.FK_UserId.Value, removed);
++                    }
++
++                    foreach (var added in dto.Roles.Where(r => !currentRoles.Contains(r)))
++                    {
++                        await _userAppService.AssignUserToRoleAsync(employee.FK_UserId.Value, added);
++                    }
++                }
++            }
++
+             _logger.LogInformation("Employee updated successfully: {EmployeeId}", id);
+ 
+             var result = await GetEmployeeByIdAsync(id);
+@@ -454,15 +560,7 @@ public class EmployeeService : IEmployeeService
+             if (employee == null || !employee.FK_UserId.HasValue)
+                 return new List<string>();
+ 
+-            var allUsers = await _userAppService.GetUsersFilteredAsync(
+-                new Framework.Identity.Data.Services.Interfaces.UserFilterDto());
+-            var associatedUser = allUsers.Items.FirstOrDefault(u => u.Id == employee.FK_UserId.Value);
+-
+-            if (associatedUser == null)
+-                return new List<string>();
+-
+-            var userDetail = await _userAppService.GetUserDetailAsync(associatedUser.Id);
+-            return userDetail?.Roles?.ToList() ?? new List<string>();
++            return await _userAppService.GetUserRolesAsync(employee.FK_UserId.Value);
+         }
+         catch (Exception ex)
+         {
+@@ -482,8 +580,9 @@ public class EmployeeService : IEmployeeService
+             var result = await GetEmployeesFilteredAsync(new EmployeeFilterDto
+             {
+                 SearchText = filter.SearchText,
+-                Department = filter.Department,
++                DepartmentId = filter.DepartmentId,
+                 Position = filter.Position,
++                Role = filter.Role,
+                 IsActive = filter.IsActive,
+                 Page = 1,
+                 PageSize = 10000 // Export all matching records
+diff --git a/Frontend/src/app/core/models/employee.model.ts b/Frontend/src/app/core/models/employee.model.ts
+index 4ed973a..a02ab50 100644
+--- a/Frontend/src/app/core/models/employee.model.ts
++++ b/Frontend/src/app/core/models/employee.model.ts
+@@ -1,61 +1,71 @@
++/**
++ * Mirrors the backend Employee DTOs (camelCase JSON). Field names must stay aligned with
++ * `IIROSA.Application/DTOs/EmployeeManagement/Employees.cs` — this shape replaces the old
++ * firstName/lastName/employeeCode/roleName wire contract that bound nothing on the server.
++ */
+ export interface Employee {
+   id: string;
+-  email: string;
+-  firstName: string;
+-  lastName: string;
+-  employeeCode?: string;
+-  position: string;
+-  department?: string;
+-  phoneNumber?: string;
+-  dateOfBirth?: string;
+-  gender?: string;
+-  address?: string;
+-  nationalId?: string;
+-  hireDate: string;
+-  salary?: number;
+-  notes?: string;
++  code: string;
++  fullName: string;
++  email?: string | null;
++  phoneNumber?: string | null;
++  position?: string | null;
++  departmentId?: number | null;
++  departmentName?: string | null;
++  nationalId?: string | null;
++  dateOfBirth?: string | null;
++  gender?: string | null;
++  address?: string | null;
++  hireDate?: string | null;
++  salary?: number | null;
++  notes?: string | null;
+   isActive: boolean;
++  /** Server-computed: does this employee have a linked login account? */
++  hasAccount?: boolean;
+   roles: string[];
+-  departmentId?: string;
+-  createdOn: string;
+-  modifiedOn?: string;
+-  fullName: string; // Computed property
++  createdOn?: string;
++  updatedOn?: string | null;
+ }
+ 
+ export interface CreateEmployeeRequest {
++  /** The login name — in this stack the identity UserName IS the email. */
+   email: string;
+-  firstName: string;
+-  lastName: string;
+-  employeeCode?: string;
++  /** Creates the linked login account; required on create (UC-EMP-03). */
++  password: string;
++  fullName: string;
++  code?: string;
+   position: string;
+-  department?: string;
++  departmentId?: number | null;
+   phoneNumber?: string;
+   dateOfBirth?: string;
+   gender?: string;
+   address?: string;
+   hireDate: string;
+   salary?: number;
+-  roleName: string;
++  notes?: string;
++  roles: string[];
+ }
+ 
+ export interface UpdateEmployeeRequest {
+-  email: string;
+-  firstName: string;
+-  lastName: string;
+-  employeeCode?: string;
+-  position: string;
+-  department?: string;
++  email?: string;
++  fullName?: string;
++  code?: string;
++  position?: string;
++  departmentId?: number | null;
+   phoneNumber?: string;
+   dateOfBirth?: string;
+   gender?: string;
+   address?: string;
++  hireDate?: string;
+   salary?: number;
+-  roleName?: string;
++  notes?: string;
++  roles?: string[];
++  isActive?: boolean;
+ }
+ 
+ export interface EmployeeSearchRequest {
+   search?: string;
+-  department?: string;
++  departmentId?: number | null;
+   role?: string;
+   isActive?: boolean;
+   page: number;
+@@ -70,13 +80,32 @@ export interface EmployeeListResponse {
+   totalPages: number;
+ }
+ 
+-export const departments = [
+-  'Management',
+-  'Human Resources',
+-  'Finance',
+-  'IT',
+-  'Operations',
+-  'Marketing',
+-  'Sales',
+-  'Customer Service'
+-];
++/** UC-EMP-02 response: the server echoes the (trimmed) name it checked. */
++export interface EmployeeUserNameAvailability {
++  userName: string;
++  isAvailable: boolean;
++}
++
++/** Row of `GET /api/LookupManagement/departments` (LookupDto). */
++export interface DepartmentLookup {
++  id: number;
++  name: string;
++  nameAr?: string | null;
++  nameEn?: string | null;
++}
++
++export interface LookupPagedResult<T> {
++  items: T[];
++  totalCount: number;
++  pageNumber: number;
++  pageSize: number;
++  totalPages: number;
++}
++
++/** Row of `GET /api/RoleManagement` (RoleListDto). */
++export interface RoleListItem {
++  id: string;
++  name: string;
++  displayNameAr?: string | null;
++  displayNameEn?: string | null;
++}
+diff --git a/Frontend/src/app/modules/employees/employee-detail/employee-detail.component.html b/Frontend/src/app/modules/employees/employee-detail/employee-detail.component.html
+index ced4a27..e521c89 100644
+--- a/Frontend/src/app/modules/employees/employee-detail/employee-detail.component.html
++++ b/Frontend/src/app/modules/employees/employee-detail/employee-detail.component.html
+@@ -32,7 +32,7 @@
+                 <table class="table table-sm table-borderless">
+                   <tr>
+                     <th>{{ 'employees.employeeCode' | translate }}:</th>
+-                    <td>{{ employee.employeeCode || '-' }}</td>
++                    <td>{{ employee.code || '-' }}</td>
+                   </tr>
+                   <tr>
+                     <th>{{ 'employees.fullName' | translate }}:</th>
+@@ -102,7 +102,7 @@
+                   </tr>
+                   <tr>
+                     <th>{{ 'employees.department' | translate }}:</th>
+-                    <td>{{ employee.department || '-' }}</td>
++                    <td>{{ employee.departmentName || '-' }}</td>
+                   </tr>
+                   <tr>
+                     <th>{{ 'employees.hireDate' | translate }}:</th>
+diff --git a/Frontend/src/app/modules/employees/employee-form/employee-form.component.html b/Frontend/src/app/modules/employees/employee-form/employee-form.component.html
+index ab3ed48..6d99cd2 100644
+--- a/Frontend/src/app/modules/employees/employee-form/employee-form.component.html
++++ b/Frontend/src/app/modules/employees/employee-form/employee-form.component.html
+@@ -12,45 +12,60 @@
+         <div class="card-body">
+           <form [formGroup]="employeeForm">
+             <div class="row">
+-              <!-- Personal Information Section -->
++              <!-- Login Account Section -->
+               <div class="col-12">
+-                <h5 class="mb-3">{{ 'employees.personalInformation' | translate }}</h5>
++                <h5 class="mb-3">{{ 'employees.accountInformation' | translate }}</h5>
+               </div>
+ 
+               <div class="col-md-6">
+                 <div class="form-group">
+                   <label>{{ 'employees.email' | translate }} <span class="text-danger">*</span></label>
+-                  <input type="email" class="form-control" formControlName="email" [ngClass]="{'is-invalid': isFieldInvalid('email')}">
++                  <input type="email" class="form-control" formControlName="email" [ngClass]="{'is-invalid': isFieldInvalid('email')}"
++                         [placeholder]="'employees.emailPlaceholder' | translate">
+                   <div class="invalid-feedback" *ngIf="isFieldInvalid('email')">
+-                    {{ getErrorMessage('email') }}
++                    <span *ngIf="employeeForm.get('email')?.hasError('required')">{{ 'validation.required' | translate }}</span>
++                    <span *ngIf="employeeForm.get('email')?.hasError('email')">{{ 'validation.email' | translate }}</span>
++                    <span *ngIf="employeeForm.get('email')?.hasError('userNameTaken')">{{ 'validation.emailTaken' | translate }}</span>
+                   </div>
++                  <small class="form-text text-muted" *ngIf="!isFieldInvalid('email')">
++                    {{ 'employees.emailLoginHint' | translate }}
++                  </small>
+                 </div>
+               </div>
+ 
+-              <div class="col-md-6">
++              <div class="col-md-6" *ngIf="!isEditMode">
+                 <div class="form-group">
+-                  <label>{{ 'employees.employeeCode' | translate }}</label>
+-                  <input type="text" class="form-control" formControlName="employeeCode">
++                  <label>{{ 'employees.password' | translate }} <span class="text-danger">*</span></label>
++                  <input type="password" class="form-control" formControlName="password" autocomplete="new-password"
++                         [ngClass]="{'is-invalid': isFieldInvalid('password')}">
++                  <div class="invalid-feedback" *ngIf="isFieldInvalid('password')">
++                    <span *ngIf="employeeForm.get('password')?.hasError('required')">{{ 'validation.required' | translate }}</span>
++                    <span *ngIf="employeeForm.get('password')?.hasError('weakPassword')">{{ 'validation.weakPassword' | translate }}</span>
++                  </div>
+                 </div>
+               </div>
+ 
++              <!-- Personal Information Section -->
++              <div class="col-12 mt-4">
++                <h5 class="mb-3">{{ 'employees.personalInformation' | translate }}</h5>
++              </div>
++
+               <div class="col-md-6">
+                 <div class="form-group">
+-                  <label>{{ 'employees.firstName' | translate }} <span class="text-danger">*</span></label>
+-                  <input type="text" class="form-control" formControlName="firstName" [ngClass]="{'is-invalid': isFieldInvalid('firstName')}">
+-                  <div class="invalid-feedback" *ngIf="isFieldInvalid('firstName')">
+-                    {{ getErrorMessage('firstName') }}
++                  <label>{{ 'employees.fullName' | translate }} <span class="text-danger">*</span></label>
++                  <input type="text" class="form-control" formControlName="fullName" [ngClass]="{'is-invalid': isFieldInvalid('fullName')}">
++                  <div class="invalid-feedback" *ngIf="isFieldInvalid('fullName')">
++                    <span *ngIf="employeeForm.get('fullName')?.hasError('required')">{{ 'validation.required' | translate }}</span>
++                    <span *ngIf="employeeForm.get('fullName')?.hasError('minlength')">{{ 'validation.minLength' | translate }}</span>
+                   </div>
+                 </div>
+               </div>
+ 
+               <div class="col-md-6">
+                 <div class="form-group">
+-                  <label>{{ 'employees.lastName' | translate }} <span class="text-danger">*</span></label>
+-                  <input type="text" class="form-control" formControlName="lastName" [ngClass]="{'is-invalid': isFieldInvalid('lastName')}">
+-                  <div class="invalid-feedback" *ngIf="isFieldInvalid('lastName')">
+-                    {{ getErrorMessage('lastName') }}
+-                  </div>
++                  <label>{{ 'employees.employeeCode' | translate }}</label>
++                  <input type="text" class="form-control" formControlName="code">
++                  <small class="form-text text-muted">{{ 'employees.codeAutoHint' | translate }}</small>
+                 </div>
+               </div>
+ 
+@@ -72,7 +87,7 @@
+                 <div class="form-group">
+                   <label>{{ 'employees.gender' | translate }}</label>
+                   <select class="form-control" formControlName="gender">
+-                    <option value="">Select Gender</option>
++                    <option value="">{{ 'validation.selectAnOption' | translate }}</option>
+                     <option value="Male">{{ 'employees.male' | translate }}</option>
+                     <option value="Female">{{ 'employees.female' | translate }}</option>
+                   </select>
+@@ -96,7 +111,7 @@
+                   <label>{{ 'employees.position' | translate }} <span class="text-danger">*</span></label>
+                   <input type="text" class="form-control" formControlName="position" [ngClass]="{'is-invalid': isFieldInvalid('position')}">
+                   <div class="invalid-feedback" *ngIf="isFieldInvalid('position')">
+-                    {{ getErrorMessage('position') }}
++                    {{ 'validation.required' | translate }}
+                   </div>
+                 </div>
+               </div>
+@@ -104,9 +119,11 @@
+               <div class="col-md-6">
+                 <div class="form-group">
+                   <label>{{ 'employees.department' | translate }}</label>
+-                  <select class="form-control" formControlName="department">
+-                    <option value="">Select Department</option>
+-                    <option *ngFor="let dept of allDepartments" [value]="dept">{{ dept }}</option>
++                  <select class="form-control" formControlName="departmentId">
++                    <option [ngValue]="null">{{ 'validation.selectAnOption' | translate }}</option>
++                    <option *ngFor="let dept of allDepartments; trackBy: trackDepartmentById" [ngValue]="dept.id">
++                      {{ departmentLabel(dept) }}
++                    </option>
+                   </select>
+                 </div>
+               </div>
+@@ -116,7 +133,7 @@
+                   <label>{{ 'employees.hireDate' | translate }} <span class="text-danger">*</span></label>
+                   <input type="date" class="form-control" formControlName="hireDate" [ngClass]="{'is-invalid': isFieldInvalid('hireDate')}">
+                   <div class="invalid-feedback" *ngIf="isFieldInvalid('hireDate')">
+-                    {{ getErrorMessage('hireDate') }}
++                    {{ 'validation.required' | translate }}
+                   </div>
+                 </div>
+               </div>
+@@ -126,7 +143,7 @@
+                   <label>{{ 'employees.salary' | translate }}</label>
+                   <input type="number" class="form-control" formControlName="salary" [ngClass]="{'is-invalid': isFieldInvalid('salary')}">
+                   <div class="invalid-feedback" *ngIf="isFieldInvalid('salary')">
+-                    {{ getErrorMessage('salary') }}
++                    {{ 'validation.min' | translate }}
+                   </div>
+                 </div>
+               </div>
+@@ -134,16 +151,25 @@
+               <div class="col-md-6">
+                 <div class="form-group">
+                   <label>{{ 'userManagement.role' | translate }} <span class="text-danger">*</span></label>
+-                  <select class="form-control" formControlName="roleName" [ngClass]="{'is-invalid': isFieldInvalid('roleName')}">
+-                    <option value="">Select Role</option>
+-                    <option *ngFor="let role of allRoles" [value]="role">{{ role }}</option>
++                  <select class="form-control" formControlName="role" [ngClass]="{'is-invalid': isFieldInvalid('role')}">
++                    <option value="">{{ 'validation.selectAnOption' | translate }}</option>
++                    <option *ngFor="let role of allRoles; trackBy: trackRoleById" [value]="role.name">
++                      {{ roleLabel(role) }}
++                    </option>
+                   </select>
+-                  <div class="invalid-feedback" *ngIf="isFieldInvalid('roleName')">
+-                    {{ getErrorMessage('roleName') }}
++                  <div class="invalid-feedback" *ngIf="isFieldInvalid('role')">
++                    {{ 'validation.required' | translate }}
+                   </div>
+                 </div>
+               </div>
+ 
++              <div class="col-md-6">
++                <div class="form-group">
++                  <label>{{ 'employees.notes' | translate }}</label>
++                  <textarea class="form-control" formControlName="notes" rows="2"></textarea>
++                </div>
++              </div>
++
+               <div class="col-12">
+                 <div class="form-group">
+                   <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="loading">
+diff --git a/Frontend/src/app/modules/employees/employee-form/employee-form.component.ts b/Frontend/src/app/modules/employees/employee-form/employee-form.component.ts
+index 0526b92..1ad5a3d 100644
+--- a/Frontend/src/app/modules/employees/employee-form/employee-form.component.ts
++++ b/Frontend/src/app/modules/employees/employee-form/employee-form.component.ts
+@@ -1,14 +1,22 @@
+-import { Component, OnInit } from '@angular/core';
++import { Component, OnDestroy, OnInit } from '@angular/core';
+ import { CommonModule } from '@angular/common';
+ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+ import { ActivatedRoute, Router } from '@angular/router';
++import { first, Subscription } from 'rxjs';
+ import { EmployeeService } from '../services/employee.service';
+ import { NotificationService } from '../../../core/services/notification.service';
+-import { Employee, CreateEmployeeRequest, UpdateEmployeeRequest, departments } from '../../../core/models/employee.model';
+-import { TranslateModule } from '@ngx-translate/core';
++import {
++  Employee,
++  CreateEmployeeRequest,
++  UpdateEmployeeRequest,
++  DepartmentLookup,
++  RoleListItem
++} from '../../../core/models/employee.model';
++import { TranslateModule, TranslateService } from '@ngx-translate/core';
+ import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+ import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
+ import { LoadingComponent } from '../../../shared/components/loading/loading.component';
++import { employeeUserNameUniqueValidator, passwordStrengthValidator } from '../../../shared/validators';
+ 
+ @Component({
+   selector: 'app-employee-form',
+@@ -17,13 +25,18 @@ import { LoadingComponent } from '../../../shared/components/loading/loading.com
+   templateUrl: './employee-form.component.html',
+   styleUrls: ['./employee-form.component.scss']
+ })
+-export class EmployeeFormComponent implements OnInit {
++export class EmployeeFormComponent implements OnInit, OnDestroy {
+   employeeForm: FormGroup;
+   loading = false;
+   isEditMode = false;
+   employeeId?: string;
+-  allDepartments = departments;
+-  allRoles: string[] = [];
++  allDepartments: DepartmentLookup[] = [];
++  allRoles: RoleListItem[] = [];
++
++  /** True while waiting for the email availability check to settle; see onSubmit(). */
++  awaitingValidation = false;
++  /** Held so it can be torn down; see the PENDING branch of onSubmit(). */
++  private pendingValidationSubscription?: Subscription;
+ 
+   pageActions = [
+     {
+@@ -51,14 +64,13 @@ export class EmployeeFormComponent implements OnInit {
+     private route: ActivatedRoute,
+     private router: Router,
+     private employeeService: EmployeeService,
+-    private notification: NotificationService
++    private notification: NotificationService,
++    private translate: TranslateService
+   ) {
+     this.employeeForm = this.createForm();
+   }
+ 
+   ngOnInit(): void {
+-    // Page actions are now directly bound
+-
+     this.loadRoles();
+     this.loadDepartments();
+ 
+@@ -74,78 +86,123 @@ export class EmployeeFormComponent implements OnInit {
+     }
+   }
+ 
++  ngOnDestroy(): void {
++    this.pendingValidationSubscription?.unsubscribe();
++  }
++
+   createForm(): FormGroup {
+     return this.fb.group({
+-      email: ['', [Validators.required, Validators.email]],
+-      firstName: ['', Validators.required],
+-      lastName: ['', Validators.required],
+-      employeeCode: [''],
++      // The identity UserName IS the email in this stack, so the login-name availability
++      // check (UC-EMP-02) probes exactly this field. The exclude getter is read at check
++      // time, when the route param is already resolved.
++      email: ['', {
++        validators: [Validators.required, Validators.email],
++        asyncValidators: [employeeUserNameUniqueValidator(
++          this.employeeService,
++          () => this.employeeId
++        )]
++      }],
++      password: ['', [Validators.required, passwordStrengthValidator(3)]],
++      fullName: ['', [Validators.required, Validators.minLength(3)]],
++      code: [''],
+       position: ['', Validators.required],
+-      department: [''],
++      departmentId: [null],
+       phoneNumber: [''],
+       dateOfBirth: [''],
+       gender: [''],
+       address: [''],
+       hireDate: [new Date().toISOString().split('T')[0], Validators.required],
+       salary: ['', [Validators.min(0)]],
+-      roleName: ['', Validators.required]
++      notes: [''],
++      role: ['', Validators.required]
+     });
+   }
+ 
+   loadDepartments(): void {
+     this.employeeService.getDepartments().subscribe({
+-      next: (departments: string[]) => {
++      next: (departments: DepartmentLookup[]) => {
+         this.allDepartments = departments;
+       },
+       error: () => {
+-        // Fallback to static departments
+-        this.allDepartments = departments;
++        // No static fallback: an unreachable lookup must be visible as an empty select,
++        // not silently replaced with a hard-coded list that drifts from the database.
++        this.allDepartments = [];
++        this.notification.warning(this.translate.instant('employees.departmentsLoadFailed'));
+       }
+     });
+   }
+ 
+   loadRoles(): void {
+-    // TODO: Load roles dynamically from user management service
+-    this.allRoles = ['SuperAdmin', 'Admin', 'Charity', 'Accountant', 'FinancialOfficer'];
++    this.employeeService.getRoles().subscribe({
++      next: (roles: RoleListItem[]) => {
++        this.allRoles = roles;
++      },
++      error: () => {
++        this.allRoles = [];
++        this.notification.warning(this.translate.instant('employees.rolesLoadFailed'));
++      }
++    });
+   }
+ 
+   loadEmployeeData(): void {
+     this.loading = true;
+     this.employeeService.getEmployeeById(this.employeeId!).subscribe({
+       next: (employee: Employee) => {
+-        // Extract first and last name from full name
+-        const nameParts = employee.fullName.split(' ');
+-        const firstName = nameParts[0] || '';
+-        const lastName = nameParts.slice(1).join(' ') || '';
+-
+         this.employeeForm.patchValue({
+-          email: employee.email,
+-          firstName: firstName,
+-          lastName: lastName,
+-          employeeCode: employee.employeeCode || '',
+-          position: employee.position,
+-          department: employee.department || '',
++          email: employee.email || '',
++          fullName: employee.fullName || '',
++          code: employee.code || '',
++          position: employee.position || '',
++          departmentId: employee.departmentId ?? null,
+           phoneNumber: employee.phoneNumber || '',
+-          dateOfBirth: employee.dateOfBirth || '',
++          dateOfBirth: employee.dateOfBirth ? employee.dateOfBirth.split('T')[0] : '',
+           gender: employee.gender || '',
+           address: employee.address || '',
+-          hireDate: employee.hireDate,
+-          salary: employee.salary || '',
+-          roleName: employee.roles && employee.roles.length > 0 ? employee.roles[0] : ''
++          hireDate: employee.hireDate ? employee.hireDate.split('T')[0] : '',
++          salary: employee.salary ?? '',
++          notes: employee.notes || '',
++          role: employee.roles && employee.roles.length > 0 ? employee.roles[0] : ''
+         });
++        // The password belongs to account creation only; password changes go through
++        // the reset-password action, not the edit form.
++        this.employeeForm.get('password')?.clearValidators();
++        this.employeeForm.get('password')?.setValue('');
++        this.employeeForm.get('password')?.updateValueAndValidity();
+         this.loading = false;
+       },
+       error: (error: any) => {
+         console.error('Error loading employee:', error);
+-        this.notification.error('Failed to load employee data');
++        this.notification.error(this.translate.instant('employees.employeeLoadFailed'));
+         this.loading = false;
+       }
+     });
+   }
+ 
+   onSubmit(): void {
++    // A control whose async validator is still running is PENDING, not INVALID, so the guard
++    // below would let the save through and bypass the availability check entirely. Wait for
++    // the pending validators to settle, then re-enter.
++    if (this.employeeForm.pending) {
++      if (this.awaitingValidation) {
++        return;
++      }
++
++      this.awaitingValidation = true;
++      this.loading = true;
++
++      this.pendingValidationSubscription = this.employeeForm.statusChanges
++        .pipe(first(status => status !== 'PENDING'))
++        .subscribe(() => {
++          this.awaitingValidation = false;
++          this.loading = false;
++          this.onSubmit();
++        });
++      return;
++    }
++
+     if (this.employeeForm.invalid) {
+-      this.notification.error('Please fill in all required fields');
++      this.employeeForm.markAllAsTouched();
++      this.notification.error(this.translate.instant('validation.fixErrors'));
+       return;
+     }
+ 
+@@ -155,57 +212,59 @@ export class EmployeeFormComponent implements OnInit {
+     if (this.isEditMode) {
+       const request: UpdateEmployeeRequest = {
+         email: formValue.email,
+-        firstName: formValue.firstName,
+-        lastName: formValue.lastName,
+-        employeeCode: formValue.employeeCode,
++        fullName: formValue.fullName,
++        code: formValue.code || undefined,
+         position: formValue.position,
+-        department: formValue.department || undefined,
++        departmentId: formValue.departmentId ?? null,
+         phoneNumber: formValue.phoneNumber || undefined,
+         dateOfBirth: formValue.dateOfBirth || undefined,
+         gender: formValue.gender || undefined,
+         address: formValue.address || undefined,
++        hireDate: formValue.hireDate,
+         salary: formValue.salary || undefined,
+-        roleName: formValue.roleName
++        notes: formValue.notes || undefined,
++        roles: formValue.role ? [formValue.role] : []
+       };
+ 
+       this.employeeService.updateEmployee(this.employeeId!, request).subscribe({
+         next: () => {
+-          this.notification.success('employees.employeeUpdated');
++          this.notification.success(this.translate.instant('employees.employeeUpdated'));
+           this.router.navigate(['/employees']);
+           this.loading = false;
+         },
+         error: (error: any) => {
+           console.error('Error updating employee:', error);
+-          this.notification.error(error?.error?.message || 'Failed to update employee');
++          this.notification.error(error?.error?.message || this.translate.instant('employees.employeeUpdateFailed'));
+           this.loading = false;
+         }
+       });
+     } else {
+       const request: CreateEmployeeRequest = {
+         email: formValue.email,
+-        firstName: formValue.firstName,
+-        lastName: formValue.lastName,
+-        employeeCode: formValue.employeeCode,
++        password: formValue.password,
++        fullName: formValue.fullName,
++        code: formValue.code || undefined,
+         position: formValue.position,
+-        department: formValue.department || undefined,
++        departmentId: formValue.departmentId ?? null,
+         phoneNumber: formValue.phoneNumber || undefined,
+         dateOfBirth: formValue.dateOfBirth || undefined,
+         gender: formValue.gender || undefined,
+         address: formValue.address || undefined,
+         hireDate: formValue.hireDate,
+         salary: formValue.salary || undefined,
+-        roleName: formValue.roleName
++        notes: formValue.notes || undefined,
++        roles: formValue.role ? [formValue.role] : []
+       };
+ 
+       this.employeeService.createEmployee(request).subscribe({
+         next: () => {
+-          this.notification.success('employees.employeeCreated');
++          this.notification.success(this.translate.instant('employees.employeeCreated'));
+           this.router.navigate(['/employees']);
+           this.loading = false;
+         },
+         error: (error: any) => {
+           console.error('Error creating employee:', error);
+-          this.notification.error(error?.error?.message || 'Failed to create employee');
++          this.notification.error(error?.error?.message || this.translate.instant('employees.employeeCreateFailed'));
+           this.loading = false;
+         }
+       });
+@@ -221,20 +280,20 @@ export class EmployeeFormComponent implements OnInit {
+     return formControl ? formControl.invalid && (formControl.dirty || formControl.touched) : false;
+   }
+ 
+-  getErrorMessage(field: string): string {
+-    const formControl = this.employeeForm.get(field);
+-    if (!formControl) return '';
++  /** Bilingual display name for a lookup row — Arabic first (RTL-first platform). */
++  departmentLabel(dept: DepartmentLookup): string {
++    return dept.nameAr || dept.nameEn || dept.name;
++  }
+ 
+-    if (formControl.hasError('required')) {
+-      return 'This field is required';
+-    }
+-    if (formControl.hasError('email')) {
+-      return 'Please enter a valid email address';
+-    }
+-    if (formControl.hasError('min')) {
+-      return 'Value must be positive';
+-    }
++  roleLabel(role: RoleListItem): string {
++    return role.displayNameAr || role.displayNameEn || role.name;
++  }
++
++  trackDepartmentById(_index: number, dept: DepartmentLookup): number {
++    return dept.id;
++  }
+ 
+-    return '';
++  trackRoleById(_index: number, role: RoleListItem): string {
++    return role.id;
+   }
+ }
+diff --git a/Frontend/src/app/modules/employees/employee-list/employee-list.component.html b/Frontend/src/app/modules/employees/employee-list/employee-list.component.html
+index a57e1b5..84e70e8 100644
+--- a/Frontend/src/app/modules/employees/employee-list/employee-list.component.html
++++ b/Frontend/src/app/modules/employees/employee-list/employee-list.component.html
+@@ -22,8 +22,10 @@
+               <div class="form-group">
+                 <label>{{ 'employees.department' | translate }}</label>
+                 <select class="form-control" [(ngModel)]="selectedDepartment" [disabled]="loadingDepartments">
+-                  <option [value]="null">{{ 'employees.allDepartments' | translate }}</option>
+-                  <option *ngFor="let department of allDepartments" [value]="department">{{ department }}</option>
++                  <option [ngValue]="null">{{ 'employees.allDepartments' | translate }}</option>
++                  <option *ngFor="let department of allDepartments; trackBy: trackDepartmentById" [ngValue]="department.id">
++                    {{ departmentLabel(department) }}
++                  </option>
+                 </select>
+                 <small *ngIf="loadingDepartments" class="text-muted">{{ 'common.loading' | translate }}...</small>
+               </div>
+@@ -33,7 +35,7 @@
+                 <label>{{ 'userManagement.role' | translate }}</label>
+                 <select class="form-control" [(ngModel)]="selectedRole">
+                   <option [value]="null">{{ 'employees.allRoles' | translate }}</option>
+-                  <option *ngFor="let role of allRoles" [value]="role">{{ role }}</option>
++                  <option *ngFor="let role of allRoles; trackBy: trackRoleById" [value]="role.name">{{ roleLabel(role) }}</option>
+                 </select>
+               </div>
+             </div>
+@@ -97,12 +99,12 @@
+                 </tr>
+               </thead>
+               <tbody>
+-                <tr *ngFor="let employee of employees">
+-                  <td>{{ employee.employeeCode || '-' }}</td>
++                <tr *ngFor="let employee of employees; trackBy: trackEmployeeById">
++                  <td>{{ employee.code || '-' }}</td>
+                   <td>{{ employee.fullName }}</td>
+                   <td>{{ employee.email }}</td>
+                   <td>{{ employee.position }}</td>
+-                  <td>{{ employee.department || '-' }}</td>
++                  <td>{{ employee.departmentName || '-' }}</td>
+                   <td>
+                     <span class="badge badge-primary mr-1" *ngFor="let role of employee.roles">
+                       {{ role }}
+diff --git a/Frontend/src/app/modules/employees/employee-list/employee-list.component.ts b/Frontend/src/app/modules/employees/employee-list/employee-list.component.ts
+index 79a4ba5..3705582 100644
+--- a/Frontend/src/app/modules/employees/employee-list/employee-list.component.ts
++++ b/Frontend/src/app/modules/employees/employee-list/employee-list.component.ts
+@@ -2,12 +2,12 @@ import { Component, OnInit } from '@angular/core';
+ import { CommonModule } from '@angular/common';
+ import { FormsModule } from '@angular/forms';
+ import { Router } from '@angular/router';
+-import { Employee, EmployeeSearchRequest } from '../../../core/models/employee.model';
++import { Employee, EmployeeSearchRequest, DepartmentLookup, RoleListItem } from '../../../core/models/employee.model';
+ import { EmployeeService } from '../services/employee.service';
+ import { NotificationService } from '../../../core/services/notification.service';
+ import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+ import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
+-import { TranslateModule } from '@ngx-translate/core';
++import { TranslateModule, TranslateService } from '@ngx-translate/core';
+ import { AppDatePipe } from '../../../shared/pipes/date.pipe';
+ import { RouterModule } from '@angular/router';
+ import { PaginationComponent } from '../../../shared/components';
+@@ -21,8 +21,8 @@ import { PaginationComponent } from '../../../shared/components';
+ })
+ export class EmployeeListComponent implements OnInit {
+   employees: Employee[] = [];
+-  allDepartments: string[] = [];
+-  allRoles: string[] = [];
++  allDepartments: DepartmentLookup[] = [];
++  allRoles: RoleListItem[] = [];
+   loading = false;
+   loadingDepartments = false;
+   totalCount = 0;
+@@ -31,7 +31,7 @@ export class EmployeeListComponent implements OnInit {
+ 
+   // Filter properties
+   searchValue = '';
+-  selectedDepartment: string | null = null;
++  selectedDepartment: number | null = null;
+   selectedRole: string | null = null;
+   isActiveFilter: boolean | null = null;
+ 
+@@ -52,6 +52,7 @@ export class EmployeeListComponent implements OnInit {
+   constructor(
+     private employeeService: EmployeeService,
+     private notification: NotificationService,
++    private translate: TranslateService,
+     private router: Router
+   ) {}
+ 
+@@ -65,38 +66,35 @@ export class EmployeeListComponent implements OnInit {
+   loadDepartments(): void {
+     this.loadingDepartments = true;
+     this.employeeService.getDepartments().subscribe({
+-      next: (departments: string[]) => {
++      next: (departments: DepartmentLookup[]) => {
+         this.allDepartments = departments;
+         this.loadingDepartments = false;
+       },
+       error: () => {
+-        // Fallback to static departments if backend fails
+-        this.allDepartments = [
+-          'Management',
+-          'Human Resources',
+-          'Finance',
+-          'IT',
+-          'Operations',
+-          'Marketing',
+-          'Sales',
+-          'Customer Service'
+-        ];
++        // No static fallback: an unreachable lookup must be visible as an empty select,
++        // not silently replaced with a hard-coded list that drifts from the database.
++        this.allDepartments = [];
+         this.loadingDepartments = false;
+       }
+     });
+   }
+ 
+   loadRoles(): void {
+-    // Load roles dynamically from the user management service
+-    // For now, use static roles
+-    this.allRoles = ['SuperAdmin', 'Admin', 'Charity', 'Accountant', 'FinancialOfficer'];
++    this.employeeService.getRoles().subscribe({
++      next: (roles: RoleListItem[]) => {
++        this.allRoles = roles;
++      },
++      error: () => {
++        this.allRoles = [];
++      }
++    });
+   }
+ 
+   loadEmployees(): void {
+     this.loading = true;
+     const searchRequest: EmployeeSearchRequest = {
+       search: this.searchValue || undefined,
+-      department: this.selectedDepartment || undefined,
++      departmentId: this.selectedDepartment ?? undefined,
+       role: this.selectedRole || undefined,
+       isActive: this.isActiveFilter !== null ? this.isActiveFilter : undefined,
+       page: this.currentPage,
+@@ -111,7 +109,7 @@ export class EmployeeListComponent implements OnInit {
+       },
+       error: (error: any) => {
+         console.error('Error loading employees:', error);
+-        this.notification.error(`Failed to load employees: ${error.message || 'Unknown error'}`);
++        this.notification.error(this.translate.instant('employees.employeeLoadFailed'));
+         this.loading = false;
+       }
+     });
+@@ -144,38 +142,42 @@ export class EmployeeListComponent implements OnInit {
+   }
+ 
+   toggleEmployeeStatus(employee: Employee): void {
+-    const action = employee.isActive ? 'deactivate' : 'activate';
+-    const confirmed = confirm(`Are you sure you want to ${action} this employee?`);
++    const deactivating = employee.isActive;
++    const confirmed = confirm(this.translate.instant(
++      deactivating ? 'employees.confirmEmployeeDeactivation' : 'employees.confirmEmployeeActivation'
++    ));
+ 
+     if (confirmed) {
+-      const action$ = employee.isActive
++      const action$ = deactivating
+         ? this.employeeService.deactivateEmployee(employee.id)
+         : this.employeeService.activateEmployee(employee.id);
+ 
+       action$.subscribe({
+         next: () => {
+-          this.notification.success(`Employee ${action}d successfully`);
++          this.notification.success(this.translate.instant(
++            deactivating ? 'employees.employeeDeactivated' : 'employees.employeeActivated'
++          ));
+           this.loadEmployees();
+         },
+         error: (error: any) => {
+-          console.error(`Error ${action}ing employee:`, error);
+-          this.notification.error(`Failed to ${action} employee`);
++          console.error('Error toggling employee status:', error);
++          this.notification.error(this.translate.instant('employees.employeeUpdateFailed'));
+         }
+       });
+     }
+   }
+ 
+   resetPassword(employee: Employee): void {
+-    const confirmed = confirm('Are you sure you want to reset this employee\'s password?');
++    const confirmed = confirm(this.translate.instant('employees.confirmPasswordReset'));
+ 
+     if (confirmed) {
+       this.employeeService.resetPassword(employee.id).subscribe({
+         next: (response: any) => {
+-          this.notification.success('Password reset successfully. New password sent to employee email.');
++          this.notification.success(this.translate.instant('employees.passwordReset'));
+         },
+         error: (error: any) => {
+           console.error('Error resetting password:', error);
+-          this.notification.error('Failed to reset password');
++          this.notification.error(this.translate.instant('employees.employeeUpdateFailed'));
+         }
+       });
+     }
+@@ -186,17 +188,17 @@ export class EmployeeListComponent implements OnInit {
+   }
+ 
+   deleteEmployee(employee: Employee): void {
+-    const confirmed = confirm(`Are you sure you want to delete employee "${employee.fullName}"?`);
++    const confirmed = confirm(this.translate.instant('employees.confirmEmployeeDeletion'));
+ 
+     if (confirmed) {
+       this.employeeService.deleteEmployee(employee.id).subscribe({
+         next: () => {
+-          this.notification.success('Employee deleted successfully');
++          this.notification.success(this.translate.instant('employees.employeeDeleted'));
+           this.loadEmployees();
+         },
+         error: (error: any) => {
+           console.error('Error deleting employee:', error);
+-          this.notification.error('Failed to delete employee');
++          this.notification.error(this.translate.instant('employees.employeeUpdateFailed'));
+         }
+       });
+     }
+@@ -207,7 +209,7 @@ export class EmployeeListComponent implements OnInit {
+ 
+     const exportRequest: EmployeeSearchRequest = {
+       search: this.searchValue || undefined,
+-      department: this.selectedDepartment || undefined,
++      departmentId: this.selectedDepartment ?? undefined,
+       role: this.selectedRole || undefined,
+       isActive: this.isActiveFilter !== null ? this.isActiveFilter : undefined,
+       page: 1,
+@@ -247,4 +249,25 @@ export class EmployeeListComponent implements OnInit {
+     }
+     return roles.join(', ');
+   }
++
++  /** Bilingual display name for a lookup row — Arabic first (RTL-first platform). */
++  departmentLabel(dept: DepartmentLookup): string {
++    return dept.nameAr || dept.nameEn || dept.name;
++  }
++
++  roleLabel(role: RoleListItem): string {
++    return role.displayNameAr || role.displayNameEn || role.name;
++  }
++
++  trackDepartmentById(_index: number, dept: DepartmentLookup): number {
++    return dept.id;
++  }
++
++  trackRoleById(_index: number, role: RoleListItem): string {
++    return role.id;
++  }
++
++  trackEmployeeById(_index: number, employee: Employee): string {
++    return employee.id;
++  }
+ }
+diff --git a/Frontend/src/app/modules/employees/employees-list/employees-list.component.html b/Frontend/src/app/modules/employees/employees-list/employees-list.component.html
+deleted file mode 100644
+index 3fe92d5..0000000
+--- a/Frontend/src/app/modules/employees/employees-list/employees-list.component.html
++++ /dev/null
+@@ -1,110 +0,0 @@
+-<div class="page-header">
+-  <h3>{{ 'employees.title' | translate }}</h3>
+-  <p class="text-muted">{{ 'employees.manageEmployees' | translate }}</p>
+-</div>
+-
+-<div class="card">
+-  <div class="card-body">
+-    <!-- Toolbar -->
+-    <div class="row mb-3">
+-      <div class="col-md-6">
+-        <div class="input-group">
+-          <input type="text"
+-                 class="form-control"
+-                 [placeholder]="'common.search' | translate"
+-                 [(ngModel)]="searchTerm"
+-                 (keyup.enter)="onSearch()">
+-          <div class="input-group-append">
+-            <button class="btn btn-outline-secondary" type="button" (click)="onSearch()">
+-              <i class="fe fe-search"></i>
+-            </button>
+-          </div>
+-        </div>
+-      </div>
+-      <div class="col-md-6 text-right">
+-        <button class="btn btn-primary" (click)="addEmployee()">
+-          <i class="fe fe-plus mr-1"></i>
+-          {{ 'employees.addEmployee' | translate }}
+-        </button>
+-        <button class="btn btn-success ml-2" (click)="exportToExcel()">
+-          <i class="fe fe-file-plus mr-1"></i>
+-          {{ 'common.exportToExcel' | translate }}
+-        </button>
+-      </div>
+-    </div>
+-
+-    <!-- Loading State -->
+-    <div *ngIf="loading" class="text-center py-5">
+-      <div class="spinner-border text-primary" role="status">
+-        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+-      </div>
+-    </div>
+-
+-    <!-- Data Table -->
+-    <div class="table-responsive" *ngIf="!loading">
+-      <table class="table table-hover table-striped">
+-        <thead>
+-          <tr>
+-            <th *ngFor="let column of columns">
+-              {{ column.title | translate }}
+-              <i class="fe fe-chevron-up ml-1" *ngIf="column.sortable"></i>
+-            </th>
+-            <th>{{ 'common.actions' | translate }}</th>
+-          </tr>
+-        </thead>
+-        <tbody>
+-          <tr *ngFor="let employee of employees">
+-            <td>{{ employee.code }}</td>
+-            <td>{{ employee.fullName }}</td>
+-            <td>{{ employee.nationalId || '-' }}</td>
+-            <td>{{ employee.departmentName || '-' }}</td>
+-            <td>{{ employee.position || '-' }}</td>
+-            <td>
+-              <span class="badge"
+-                    [class.badge-success]="employee.isActive"
+-                    [class.badge-secondary]="!employee.isActive">
+-                {{ employee.isActive ? ('common.active' | translate) : ('common.inactive' | translate) }}
+-              </span>
+-            </td>
+-            <td>
+-              <div class="btn-group">
+-                <button class="btn btn-sm btn-info" (click)="onAction('view', employee)" title="{{ 'common.view' | translate }}">
+-                  <i class="fe fe-eye"></i>
+-                </button>
+-                <button class="btn btn-sm btn-primary" (click)="onAction('edit', employee)" title="{{ 'common.edit' | translate }}">
+-                  <i class="fe fe-edit"></i>
+-                </button>
+-                <button class="btn btn-sm btn-danger" (click)="onAction('delete', employee)" title="{{ 'common.delete' | translate }}">
+-                  <i class="fe fe-trash"></i>
+-                </button>
+-              </div>
+-            </td>
+-          </tr>
+-          <tr *ngIf="employees.length === 0">
+-            <td [colSpan]="columns.length + 1" class="text-center py-5">
+-              <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+-              <p class="text-muted">{{ 'common.noData' | translate }}</p>
+-            </td>
+-          </tr>
+-        </tbody>
+-      </table>
+-    </div>
+-
+-    <!-- Pagination -->
+-    <div class="row mt-3" *ngIf="pagination">
+-      <div class="col-md-6">
+-        <p class="text-muted">
+-          {{ 'common.showing' | translate }} {{ pagination.totalRecords }} {{ 'common.records' | translate }}
+-        </p>
+-      </div>
+-      <div class="col-md-6">
+-        <app-pagination
+-          [currentPage]="currentPage"
+-          [pageSize]="pageSize"
+-          [totalCount]="pagination.totalRecords"
+-          (pageChange)="onPageChange($event)">
+-        </app-pagination>
+-      </div>
+-    </div>
+-  </div>
+-</div>
+diff --git a/Frontend/src/app/modules/employees/employees-list/employees-list.component.scss b/Frontend/src/app/modules/employees/employees-list/employees-list.component.scss
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/Frontend/src/app/modules/employees/employees-list/employees-list.component.ts b/Frontend/src/app/modules/employees/employees-list/employees-list.component.ts
+deleted file mode 100644
+index b5284a0..0000000
+--- a/Frontend/src/app/modules/employees/employees-list/employees-list.component.ts
++++ /dev/null
+@@ -1,153 +0,0 @@
+-import { Component, OnInit } from '@angular/core';
+-import { HttpService } from '../../../core/services/http.service';
+-import { Observable } from 'rxjs';
+-import { CommonModule } from '@angular/common';
+-import { FormsModule } from '@angular/forms';
+-import { TranslateModule } from '@ngx-translate/core';
+-import { PaginationComponent } from '../../../shared/components';
+-
+-export interface Employee {
+-  id: string;
+-  code: string;
+-  fullName: string;
+-  nationalId?: string;
+-  dateOfBirth?: string;
+-  gender?: string;
+-  phoneNumber?: string;
+-  email?: string;
+-  address?: string;
+-  departmentId?: number;
+-  departmentName?: string;
+-  position?: string;
+-  hireDate?: string;
+-  salary?: number;
+-  isActive: boolean;
+-  notes?: string;
+-  createdDate: string;
+-  modifiedDate: string;
+-}
+-
+-export interface PagedRequest {
+-  pageNumber: number;
+-  pageSize: number;
+-  searchTerm?: string;
+-  sortBy?: string;
+-  sortDirection: string;
+-}
+-
+-export interface PagedResponse {
+-  data: Employee[];
+-  totalRecords: number;
+-  pageNumber: number;
+-  pageSize: number;
+-  totalPages: number;
+-  hasPrevious: boolean;
+-  hasNext: boolean;
+-}
+-
+-@Component({
+-  selector: 'app-employees-list',
+-  standalone: true,
+-  imports: [CommonModule, FormsModule, TranslateModule, PaginationComponent],
+-  templateUrl: './employees-list.component.html',
+-  styleUrls: ['./employees-list.component.scss']
+-})
+-export class EmployeesListComponent implements OnInit {
+-  employees: Employee[] = [];
+-  loading: boolean = false;
+-  pagination: PagedResponse | null = null;
+-  currentPage: number = 1;
+-  pageSize: number = 10;
+-  searchTerm: string = '';
+-
+-  columns = [
+-    { key: 'code', title: 'employees.employeeCode', sortable: true },
+-    { key: 'fullName', title: 'employees.fullName', sortable: true },
+-    { key: 'nationalId', title: 'employees.nationalId', sortable: false },
+-    { key: 'departmentName', title: 'employees.department', sortable: false },
+-    { key: 'position', title: 'employees.position', sortable: false },
+-    { key: 'isActive', title: 'employees.isActive', sortable: true }
+-  ];
+-
+-  constructor(private httpService: HttpService) {}
+-
+-  ngOnInit(): void {
+-    this.loadEmployees();
+-  }
+-
+-  loadEmployees(): void {
+-    this.loading = true;
+-    const request: PagedRequest = {
+-      pageNumber: this.currentPage,
+-      pageSize: this.pageSize,
+-      searchTerm: this.searchTerm || undefined,
+-      sortBy: 'fullName',
+-      sortDirection: 'asc'
+-    };
+-
+-    this.httpService.post<PagedResponse>('/employees/paged', request).subscribe({
+-      next: (response: PagedResponse) => {
+-        this.employees = response.data;
+-        this.pagination = response;
+-        this.loading = false;
+-      },
+-      error: () => {
+-        this.loading = false;
+-      }
+-    });
+-  }
+-
+-  onSearch(): void {
+-    this.currentPage = 1;
+-    this.loadEmployees();
+-  }
+-
+-  onPageChange(page: number): void {
+-    this.currentPage = page;
+-    this.loadEmployees();
+-  }
+-
+-  onPageSizeChange(size: number): void {
+-    this.pageSize = size;
+-    this.currentPage = 1;
+-    this.loadEmployees();
+-  }
+-
+-  onSort(column: string): void {
+-    // TODO: Implement sorting
+-  }
+-
+-  onAction(action: string, employee: Employee): void {
+-    switch (action) {
+-      case 'view':
+-        console.log('View employee:', employee);
+-        break;
+-      case 'edit':
+-        console.log('Edit employee:', employee);
+-        break;
+-      case 'delete':
+-        if (confirm('Are you sure you want to delete this employee?')) {
+-          this.deleteEmployee(employee.id);
+-        }
+-        break;
+-    }
+-  }
+-
+-  addEmployee(): void {
+-    console.log('Add new employee');
+-    // TODO: Navigate to create page
+-  }
+-
+-  exportToExcel(): void {
+-    console.log('Export to Excel');
+-    // TODO: Implement export
+-  }
+-
+-  deleteEmployee(id: string): void {
+-    this.httpService.delete(`/employees/${id}`).subscribe({
+-      next: () => {
+-        this.loadEmployees();
+-      }
+-    });
+-  }
+-}
+diff --git a/Frontend/src/app/modules/employees/services/employee.service.ts b/Frontend/src/app/modules/employees/services/employee.service.ts
+index 0b5b3b2..3a0cb51 100644
+--- a/Frontend/src/app/modules/employees/services/employee.service.ts
++++ b/Frontend/src/app/modules/employees/services/employee.service.ts
+@@ -1,16 +1,55 @@
+ import { Injectable } from '@angular/core';
++import { HttpClient, HttpParameterCodec, HttpParams } from '@angular/common/http';
+ import { ApiService } from '../../../core/services/api.service';
+ import { Observable } from 'rxjs';
+-import { Employee, CreateEmployeeRequest, UpdateEmployeeRequest, EmployeeListResponse, EmployeeSearchRequest } from '../../../core/models/employee.model';
++import { map } from 'rxjs/operators';
++import { environment } from '../../../../environments/environment';
++import {
++  Employee,
++  CreateEmployeeRequest,
++  UpdateEmployeeRequest,
++  EmployeeSearchRequest,
++  EmployeeUserNameAvailability,
++  DepartmentLookup,
++  LookupPagedResult,
++  RoleListItem
++} from '../../../core/models/employee.model';
+ import { ApiResponse, PagedResponse } from '../../../core/models/common.model';
+ 
++/**
++ * Percent-encodes query parameters strictly, unlike Angular's default codec which un-escapes a
++ * set of characters — including `+`, which a server reads as a space. Emails contain `+` often
++ * enough (tagged addresses) that the availability check must agree with the server on the exact
++ * string it is checking.
++ */
++class StrictHttpParameterCodec implements HttpParameterCodec {
++  encodeKey(key: string): string {
++    return encodeURIComponent(key);
++  }
++
++  encodeValue(value: string): string {
++    return encodeURIComponent(value);
++  }
++
++  decodeKey(key: string): string {
++    return decodeURIComponent(key);
++  }
++
++  decodeValue(value: string): string {
++    return decodeURIComponent(value);
++  }
++}
++
+ @Injectable({
+   providedIn: 'root'
+ })
+ export class EmployeeService {
+   private readonly endpoint = '/api/employeemanagement';
+ 
+-  constructor(private api: ApiService) {}
++  constructor(
++    private api: ApiService,
++    private http: HttpClient
++  ) {}
+ 
+   // Employee CRUD
+   getEmployees(search: EmployeeSearchRequest): Observable<PagedResponse<Employee>> {
+@@ -21,11 +60,11 @@ export class EmployeeService {
+     return this.api.get(`${this.endpoint}/${id}`);
+   }
+ 
+-  createEmployee(request: CreateEmployeeRequest): Observable<ApiResponse<Employee>> {
++  createEmployee(request: CreateEmployeeRequest): Observable<Employee> {
+     return this.api.post(`${this.endpoint}`, request);
+   }
+ 
+-  updateEmployee(id: string, request: UpdateEmployeeRequest): Observable<ApiResponse<Employee>> {
++  updateEmployee(id: string, request: UpdateEmployeeRequest): Observable<Employee> {
+     return this.api.put(`${this.endpoint}/${id}`, request);
+   }
+ 
+@@ -58,8 +97,35 @@ export class EmployeeService {
+     return this.api.post(`${this.endpoint}/${id}/roles`, { roleName });
+   }
+ 
+-  // Department Management
+-  getDepartments(): Observable<string[]> {
+-    return this.api.get(`${this.endpoint}/departments`);
++  // UC-EMP-02: login-name availability. The server consults both the identity user store and
++  // the Employee table, and echoes the name it actually checked so stale replies can be dropped.
++  checkUserNameAvailability(userName: string, excludeEmployeeId?: string): Observable<EmployeeUserNameAvailability> {
++    let params = new HttpParams({ encoder: new StrictHttpParameterCodec() }).set('userName', userName);
++    if (excludeEmployeeId) {
++      params = params.set('excludeEmployeeId', excludeEmployeeId);
++    }
++    return this.http.get<EmployeeUserNameAvailability>(
++      `${environment.apiUrl}${this.endpoint}/check-username`,
++      { params }
++    );
++  }
++
++  /**
++   * Departments come from the shared lookup module (UC-14.9) — the old
++   * `EmployeeManagement/departments` route never existed on the server.
++   */
++  getDepartments(): Observable<DepartmentLookup[]> {
++    return this.api
++      .get<LookupPagedResult<DepartmentLookup>>('/api/LookupManagement/departments', {
++        page: 1,
++        pageSize: 100,
++        isActive: true
++      })
++      .pipe(map(result => result?.items ?? []));
++  }
++
++  /** Roles come from the identity store via RoleManagement (AllRoles policy). */
++  getRoles(): Observable<RoleListItem[]> {
++    return this.api.get<RoleListItem[]>('/api/RoleManagement');
+   }
+ }
+diff --git a/Frontend/src/app/shared/validators/index.ts b/Frontend/src/app/shared/validators/index.ts
+index 3b69961..016c0b3 100644
+--- a/Frontend/src/app/shared/validators/index.ts
++++ b/Frontend/src/app/shared/validators/index.ts
+@@ -1 +1,2 @@
+ export * from './charity.validators';
++export * from './employee.validators';
+diff --git a/Frontend/src/app/shared/validators/employee.validators.ts b/Frontend/src/app/shared/validators/employee.validators.ts
+new file mode 100644
+index 0000000..e60a530
+--- /dev/null
++++ b/Frontend/src/app/shared/validators/employee.validators.ts
+@@ -0,0 +1,50 @@
++import { AbstractControl, AsyncValidatorFn, ValidationErrors } from '@angular/forms';
++import { HttpErrorResponse } from '@angular/common/http';
++import { Observable, of, timer } from 'rxjs';
++import { catchError, first, map, switchMap } from 'rxjs/operators';
++import { EmployeeService } from '../../modules/employees/services/employee.service';
++
++/**
++ * UC-EMP-02: reports `userNameTaken` while the operator is still filling the form, instead of
++ * letting a completed form die on a refused save.
++ *
++ * Follows the corrected charity-name-validator pattern:
++ * - `timer(400)` debounces the check off individual keystrokes.
++ * - `switchMap` cancels a superseded request, so a slow earlier reply cannot overwrite a newer one.
++ * - The server echoes the name it checked; a reply about a different string (stale or mangled in
++ *   transit) must not mark this control invalid.
++ * - A failed request resolves to `null` (valid) — a network blip must not block the save. The
++ *   server re-checks uniqueness on write regardless.
++ * - `first()` completes the observable; an async validator that never completes leaves the control
++ *   stuck in `pending` forever.
++ */
++export function employeeUserNameUniqueValidator(
++  employeeService: EmployeeService,
++  /** Getter rather than value: the excluded id is only known after ngOnInit resolves the route. */
++  excludeEmployeeId?: () => string | undefined
++): AsyncValidatorFn {
++  return (control: AbstractControl): Observable<ValidationErrors | null> => {
++    const name = (control.value ?? '').trim();
++
++    if (!name) {
++      return of(null);
++    }
++
++    return timer(400).pipe(
++      switchMap(() => employeeService.checkUserNameAvailability(name, excludeEmployeeId?.())),
++      map(result => {
++        if (result.userName !== name) {
++          return null;
++        }
++        return result.isAvailable ? null : { userNameTaken: true };
++      }),
++      catchError((error: HttpErrorResponse) => {
++        console.warn(
++          `Employee username availability check failed (${error.status}); treating the name as unverified.`
++        );
++        return of(null);
++      }),
++      first()
++    );
++  };
++}

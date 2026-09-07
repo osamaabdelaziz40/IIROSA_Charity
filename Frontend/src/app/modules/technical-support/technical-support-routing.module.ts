@@ -26,16 +26,17 @@ const routes: Routes = [
     component: TicketFormComponent
   },
   {
+    // Must be registered before ':id' or 'reports' matches the id param
+    path: 'reports',
+    component: SupportReportComponent
+  },
+  {
     path: ':id',
     component: TicketDetailComponent
   },
   {
     path: ':id/edit',
     component: TicketFormComponent
-  },
-  {
-    path: 'reports',
-    component: SupportReportComponent
   }
 ];
 

@@ -45,9 +45,22 @@ public class OrphanConfiguration : IEntityTypeConfiguration<Orphan>
             .HasForeignKey(x => x.EducationLevelId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // §11.S.2 «حاصل على مؤهل دراسى» (review D3 2026-08-24) — same catalogue, second
+        // edge; explicit FK keeps the two EducationLevel navigations unambiguous.
+        builder.HasOne(x => x.EducationalQualification)
+            .WithMany()
+            .HasForeignKey(x => x.EducationalQualificationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(x => x.HealthStatus)
             .WithMany()
             .HasForeignKey(x => x.HealthStatusId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Refugee register extension (epic 7, UC-REF-03)
+        builder.HasOne(x => x.SocialStatus)
+            .WithMany()
+            .HasForeignKey(x => x.SocialStatusId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Indexes

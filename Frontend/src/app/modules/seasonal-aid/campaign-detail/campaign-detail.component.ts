@@ -1,18 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
-import { RouterModule } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 import { SeasonalAidService } from '../services/seasonal-aid.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import {
-  SeasonalCampaign,
-  CampaignStatistics,
-  CampaignBeneficiary,
-  DistributionStatus,
-  CampaignType,
-  FamilyType
+  SeasonalAidCampaign,
+  SeasonalAidBeneficiary,
+  SeasonalAidBeneficiaryFilter
 } from '../models/seasonal-aid.model';
 import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
 import { SharedModule } from '../../../shared/shared.module';
@@ -21,7 +18,7 @@ import { DropDownComponent } from '../../../shared/components/drop-down/drop-dow
 @Component({
   selector: 'app-campaign-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, TranslateModule, BreadcrumbComponent, SharedModule, DropDownComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, TranslateModule, BreadcrumbComponent, SharedModule, DropDownComponent],
   templateUrl: './campaign-detail.component.html',
   styleUrls: ['./campaign-detail.component.scss']
 })
@@ -32,30 +29,29 @@ export class CampaignDetailComponent implements OnInit {
     { label: 'seasonalAid.title', url: '/seasonal-aid' },
     { label: 'seasonalAid.campaignDetails' }
   ];
-  campaign: SeasonalCampaign | null = null;
-  statistics: CampaignStatistics | null = null;
-  beneficiaries: CampaignBeneficiary[] = [];
-  loading: boolean = false;
-  closingCampaign: boolean = false;
 
-  // Beneficiary filter form
+  campaign: SeasonalAidCampaign | null = null;
+  beneficiaries: SeasonalAidBeneficiary[] = [];
+  loading = false;
+  closingCampaign = false;
+
   beneficiaryFilterForm: FormGroup;
 
-  // Distribution status options
+  // Server-side distribution filter — the backend exposes only isDistributed (bool).
   distributionStatusOptions = [
     { id: '', name: 'seasonalAid.allStatuses' },
-    { id: 'Pending', name: 'seasonalAid.pending' },
-    { id: 'Distributed', name: 'seasonalAid.distributed' },
-    { id: 'Cancelled', name: 'seasonalAid.cancelled' }
+    { id: 'pending', name: 'seasonalAid.pending' },
+    { id: 'distributed', name: 'seasonalAid.distributed' }
   ];
 
   constructor(
     public router: Router,
     private route: ActivatedRoute,
     private seasonalAidService: SeasonalAidService,
+    private notification: NotificationService,
+    private translate: TranslateService,
     private fb: FormBuilder
   ) {
-    // Initialize beneficiary filter form
     this.beneficiaryFilterForm = this.fb.group({
       searchTerm: [''],
       distributionStatus: ['']
@@ -65,17 +61,16 @@ export class CampaignDetailComponent implements OnInit {
   ngOnInit(): void {
     this.route.params.subscribe(params => {
       this.loadCampaign(params['id']);
-      this.loadStatistics(params['id']);
-      this.loadBeneficiaries(params['id']);
     });
   }
 
   loadCampaign(id: string): void {
     this.loading = true;
     this.seasonalAidService.getCampaignById(id).subscribe({
-      next: (data) => {
+      next: data => {
         this.campaign = data;
         this.loading = false;
+        this.loadBeneficiaries(id);
       },
       error: () => {
         this.loading = false;
@@ -83,33 +78,27 @@ export class CampaignDetailComponent implements OnInit {
     });
   }
 
-  loadStatistics(id: string): void {
-    this.seasonalAidService.getCampaignStatistics(id).subscribe({
-      next: (data) => {
-        this.statistics = data;
-      }
-    });
-  }
-
+  /** Beneficiary preview (first page) — the full management screen lives at :id/beneficiaries. */
   loadBeneficiaries(id: string): void {
     const formValues = this.beneficiaryFilterForm.value;
-
-    // Build filter object from form values
-    const filter: {
-      distributionStatus?: DistributionStatus;
-      searchTerm?: string;
-    } = {};
+    const filter: Partial<SeasonalAidBeneficiaryFilter> = {
+      pageNumber: 1,
+      pageSize: 10,
+      sortDescending: false
+    };
 
     if (formValues.searchTerm) {
       filter.searchTerm = formValues.searchTerm;
     }
-    if (formValues.distributionStatus) {
-      filter.distributionStatus = formValues.distributionStatus as DistributionStatus;
+    if (formValues.distributionStatus === 'pending') {
+      filter.isDistributed = false;
+    } else if (formValues.distributionStatus === 'distributed') {
+      filter.isDistributed = true;
     }
 
     this.seasonalAidService.getCampaignBeneficiaries(id, filter).subscribe({
-      next: (data) => {
-        this.beneficiaries = data;
+      next: result => {
+        this.beneficiaries = result.items || [];
       }
     });
   }
@@ -123,19 +112,21 @@ export class CampaignDetailComponent implements OnInit {
   onCloseCampaign(): void {
     if (!this.campaign) return;
 
-    const notes = prompt('Please enter closure notes:');
-    if (notes) {
-      this.closingCampaign = true;
-      this.seasonalAidService.closeCampaign(this.campaign.id, notes).subscribe({
-        next: () => {
-          this.closingCampaign = false;
-          this.loadCampaign(this.campaign!.id);
-        },
-        error: () => {
-          this.closingCampaign = false;
-        }
-      });
-    }
+    const notes = prompt(this.translate.instant('seasonalAid.closureNotesPrompt') || '');
+    if (notes === null) return;
+
+    this.closingCampaign = true;
+    this.seasonalAidService.closeCampaign(this.campaign.id, notes || undefined).subscribe({
+      next: () => {
+        this.closingCampaign = false;
+        this.notification.success(this.translate.instant('seasonalAid.campaignClosed'));
+        this.loadCampaign(this.campaign!.id);
+      },
+      error: () => {
+        this.closingCampaign = false;
+        this.notification.error(this.translate.instant('seasonalAid.campaignCloseFailed'));
+      }
+    });
   }
 
   onGenerateReport(): void {
@@ -145,8 +136,8 @@ export class CampaignDetailComponent implements OnInit {
   }
 
   getBudgetUtilization(): number {
-    if (!this.statistics || !this.statistics.totalBudget) return 0;
-    return (this.statistics.distributedAmount / this.statistics.totalBudget) * 100;
+    if (!this.campaign || !this.campaign.totalBudget) return 0;
+    return (this.campaign.distributedBudget / this.campaign.totalBudget) * 100;
   }
 
   getBudgetUtilizationClass(): string {
@@ -156,14 +147,14 @@ export class CampaignDetailComponent implements OnInit {
     return 'text-success';
   }
 
-  getCampaignTypeClass(type: CampaignType): string {
-    const classes: { [key in CampaignType]: string } = {
-      [CampaignType.Ramadan]: 'badge-primary',
-      [CampaignType.EidAlFitr]: 'badge-info',
-      [CampaignType.EidAlAdha]: 'badge-info',
-      [CampaignType.Winter]: 'badge-info',
-      [CampaignType.SchoolSupplies]: 'badge-warning',
-      [CampaignType.Other]: 'badge-light'
+  getCampaignTypeClass(type: string): string {
+    const classes: Record<string, string> = {
+      Ramadan: 'badge-primary',
+      EidAlFitr: 'badge-info',
+      EidAlAdha: 'badge-info',
+      Winter: 'badge-info',
+      SchoolSupplies: 'badge-warning',
+      Other: 'badge-light'
     };
     return classes[type] || 'badge-light';
   }
@@ -177,18 +168,26 @@ export class CampaignDetailComponent implements OnInit {
 
   getStatusText(): string {
     if (!this.campaign) return '';
-    if (this.campaign.isClosed) return 'Closed';
-    if (this.campaign.isActive) return 'Active';
-    return 'Inactive';
+    if (this.campaign.isClosed) return 'seasonalAid.closed';
+    if (this.campaign.isActive) return 'seasonalAid.active';
+    return 'seasonalAid.inactive';
   }
 
-  getDistributionStatusClass(status: DistributionStatus): string {
-    const classes: { [key in DistributionStatus]: string } = {
-      [DistributionStatus.Pending]: 'badge-warning',
-      [DistributionStatus.Distributed]: 'badge-success',
-      [DistributionStatus.Cancelled]: 'badge-danger'
-    };
-    return classes[status] || 'badge-light';
+  getDistributionStatusClass(beneficiary: SeasonalAidBeneficiary): string {
+    return beneficiary.isDistributed ? 'badge-success' : 'badge-warning';
+  }
+
+  /** Wire values carry spaces ("Orphan Families"); i18n keys do not ("OrphanFamilies"). */
+  familyTypeKey(familyType: string | null | undefined): string {
+    return (familyType || 'All').replace(/\s+/g, '');
+  }
+
+  getDistributionStatusKey(beneficiary: SeasonalAidBeneficiary): string {
+    return beneficiary.isDistributed ? 'seasonalAid.distributed' : 'seasonalAid.pending';
+  }
+
+  trackByBeneficiary(index: number, beneficiary: SeasonalAidBeneficiary): string {
+    return beneficiary.id;
   }
 
   onBeneficiaryFilterChange(): void {
@@ -197,18 +196,13 @@ export class CampaignDetailComponent implements OnInit {
     }
   }
 
-  // Check if beneficiary filters are active
   hasActiveBeneficiaryFilters(): boolean {
     const formValues = this.beneficiaryFilterForm.value;
     return !!(formValues.searchTerm || formValues.distributionStatus);
   }
 
-  // Clear beneficiary filters
   clearBeneficiaryFilters(): void {
-    this.beneficiaryFilterForm.reset({
-      searchTerm: '',
-      distributionStatus: ''
-    });
+    this.beneficiaryFilterForm.reset({ searchTerm: '', distributionStatus: '' });
     if (this.campaign) {
       this.loadBeneficiaries(this.campaign.id);
     }

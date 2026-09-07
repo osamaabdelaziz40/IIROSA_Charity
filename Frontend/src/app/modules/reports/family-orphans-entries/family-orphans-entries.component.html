@@ -1,0 +1,101 @@
+<app-report-viewer titleKey="reports.familyOrphans.title"
+                   subtitleKey="reports.familyOrphans.subtitle"
+                   [loading]="loading"
+                   [showExport]="false"
+                   [hasRun]="hasRun"
+                   [currentPage]="currentPage"
+                   [pageSize]="pageSize"
+                   [totalCount]="totalCount"
+                   (search)="search()"
+                   (pageChange)="onPageChange($event)">
+
+  <!-- ==================== §23.S.10 filter panel (2 fields + the totals command) ==================== -->
+  <div report-filters>
+    <form [formGroup]="filterForm" (ngSubmit)="search()" class="row g-3 align-items-end">
+      <div class="col-lg-3 col-md-4">
+        <label class="form-label">{{ 'reports.familyOrphans.filterDate' | translate }}</label>
+        <input type="date" class="form-control" formControlName="date" />
+      </div>
+      <div class="col-lg-3 col-md-4" *ngIf="isHQ">
+        <app-drop-down [fg]="filterForm" fcn="charityId"
+                       [label]="'reports.familyOrphans.filterCharity'"
+                       [placeholder]="'reports.familyOrphans.filterCharity'"
+                       [initialData]="charityOptions">
+        </app-drop-down>
+      </div>
+      <!-- إجماليات — the second data command; تفاصيل is the shell's search -->
+      <div class="col-lg-3 col-md-4">
+        <button type="button" class="btn btn-outline-secondary w-100"
+                (click)="loadTotals()" [disabled]="loadingTotals || loading">
+          <span *ngIf="loadingTotals" class="spinner-border spinner-border-sm ms-1"></span>
+          {{ 'reports.familyOrphans.totalsCommand' | translate }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ==================== إجماليات tiles (when run) ==================== -->
+  <div report-grid>
+    <div class="row g-3 mb-3" *ngIf="totals">
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">
+              {{ 'reports.familyOrphans.totalsNewFamilies' | translate }}
+            </h6>
+            <h3 class="mb-0">{{ totals.newFamilies }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">
+              {{ 'reports.familyOrphans.totalsNewOrphans' | translate }}
+            </h6>
+            <h3 class="mb-0">{{ totals.newOrphans }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">
+              {{ 'reports.familyOrphans.totalsSince' | translate }}
+            </h6>
+            <h5 class="mb-0 pt-1">
+              {{ totals.sinceDate ? (totals.sinceDate | date:'yyyy-MM-dd') : ('reports.familyOrphans.totalsAllTime' | translate) }}
+            </h5>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== تفاصيل — the §23.S.10 5-column contract ==================== -->
+    <div class="table-responsive">
+      <table class="table table-hover table-striped align-middle text-nowrap"
+             *ngIf="rows.length > 0">
+        <thead>
+          <tr>
+            <th>{{ 'reports.familyOrphans.colSerial' | translate }}</th>
+            <th>{{ 'reports.familyOrphans.colFamilyCode' | translate }}</th>
+            <th>{{ 'reports.familyOrphans.colHeadOfFamily' | translate }}</th>
+            <th>{{ 'reports.familyOrphans.colCharity' | translate }}</th>
+            <th>{{ 'reports.familyOrphans.colRegistrationDate' | translate }}</th>
+            <th>{{ 'reports.familyOrphans.colOrphansCount' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow">
+            <td>{{ serial(i) }}</td>
+            <td>{{ row.familyCode }}</td>
+            <td>{{ row.headOfFamily || '—' }}</td>
+            <td>{{ row.charityName || '—' }}</td>
+            <td>{{ row.registrationDate ? (row.registrationDate | date:'yyyy-MM-dd') : '—' }}</td>
+            <td>{{ row.orphansCount }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</app-report-viewer>

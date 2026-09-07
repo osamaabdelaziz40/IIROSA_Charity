@@ -37,6 +37,11 @@ public class OrphanPayment : FullAuditedEntity
     /// </summary>
     public DateTime GroupDate { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Distribution start date تاريخ بدء التوزيع (§15.S.2 mandatory on create; nullable for legacy rows)
+    /// </summary>
+    public DateTime? PaymentDate { get; set; }
+
     // Financial Information
     /// <summary>
     /// Exchange rate for reporting purposes (e.g., 0.21 for SAR to EGP)

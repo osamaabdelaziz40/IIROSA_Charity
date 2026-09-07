@@ -32,7 +32,6 @@ export class FileViewerComponent implements OnInit, OnDestroy {
   hasError = false;
   errorMessage = '';
   safeUrl: SafeUrl | null = null;
-  downloadUrl = '';
 
   private readonly imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp', 'image/bmp', 'image/x-icon'];
   private readonly pdfType = 'application/pdf';
@@ -57,9 +56,6 @@ export class FileViewerComponent implements OnInit, OnDestroy {
 
     this.loading = true;
     this.hasError = false;
-
-    // Always set download URL
-    this.downloadUrl = `/api/attachments/${this.attachmentId}/download`;
 
     // If it's an image or PDF, fetch the file content via authenticated API call
     if (this.isImage || this.isPdf) {
@@ -113,6 +109,34 @@ export class FileViewerComponent implements OnInit, OnDestroy {
 
   onImageLoad(event: Event): void {
     // Image loaded successfully
+  }
+
+  /**
+   * UC-SYS-02: download via the authenticated blob path — a plain href cannot
+   * carry the Bearer header.
+   */
+  downloadFile(): void {
+    if (!this.attachmentId) {
+      return;
+    }
+    this.api.download(`/api/attachments/${this.attachmentId}/download`).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = this.fileName || 'attachment';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      },
+      error: () => {
+        // Surface the failure on the viewer's error state (review P6, 2026-08-26) —
+        // same idiom as onImageError below.
+        this.setError('Failed to download file');
+        this.error.emit('Failed to download file');
+      }
+    });
   }
 
   onImageError(event: Event): void {

@@ -1,494 +1,502 @@
+using AutoMapper;
+using FluentValidation;
+using IIROSA.Application.DTOs.IncomingOutgoing;
+using IIROSA.Application.Interfaces;
+using IIROSA.Domain.Entities;
+using IIROSA.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using IIROSA.Domain.Interfaces;
-using IIROSA.Domain.Entities;
-using IIROSA.Application.Interfaces;
-using IIROSA.Application.DTOs.IncomingOutgoing;
-using AutoMapper;
-using System.Text;
 
 namespace IIROSA.Application.Services;
 
 /// <summary>
-/// Incoming Letter Service Implementation
-/// Implements use cases UC-12.1, UC-12.3, UC-12.4, UC-12.5, UC-12.6, UC-12.7, UC-12.8, UC-12.9, UC-12.10, UC-12.12, UC-12.13
+/// Incoming Letter Service (epic 16, UC-COR-01…09)
+///
+/// Tenancy: a caller bound to a charity is pinned to it on every read and write — pin,
+/// never widen — and the single-record paths treat an out-of-scope row exactly like a
+/// missing one. A head-office caller without a charity claim sees everything and may
+/// narrow with the filter's CharityId.
+///
+/// Serials are allocated per charity + year inside the create transaction (UC-COR-03);
+/// the GET endpoint is advisory only. Only the UnitOfWork saves; validators run in this
+/// layer per the platform rule.
 /// </summary>
 public class IncomingService : IIncomingService
 {
+    private const string DefaultStatus = "معلق";
+
+    // The spec's tri-state (§21.S.1): the stored value is the Arabic term.
+    private static readonly (string Id, string NameAr, string NameEn, string Color)[] Statuses =
+    {
+        ("معلق", "معلق", "Pending", "warning"),
+        ("تم الرد", "تم الرد", "Replied", "success"),
+        ("تم عمل اللازم", "تم عمل اللازم", "Actioned", "secondary")
+    };
+
     private readonly IIncomingRepository _incomingRepository;
+    private readonly IIncomingEmployeeRepository _employeeRepository;
+    private readonly IDepartmentRepository _departmentRepository;
+    private readonly IOutgoingRepository _outgoingRepository;
+    private readonly IEmployeeService _employeeService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly ILogger<IncomingService> _logger;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IValidator<CreateIncomingDto> _createValidator;
+    private readonly IValidator<UpdateIncomingDto> _updateValidator;
 
     public IncomingService(
         IIncomingRepository incomingRepository,
+        IIncomingEmployeeRepository employeeRepository,
+        IDepartmentRepository departmentRepository,
+        IOutgoingRepository outgoingRepository,
+        IEmployeeService employeeService,
         IUnitOfWork unitOfWork,
         IMapper mapper,
-        ILogger<IncomingService> logger)
+        ILogger<IncomingService> logger,
+        ICurrentUserService currentUser,
+        IValidator<CreateIncomingDto> createValidator,
+        IValidator<UpdateIncomingDto> updateValidator)
     {
         _incomingRepository = incomingRepository;
+        _employeeRepository = employeeRepository;
+        _departmentRepository = departmentRepository;
+        _outgoingRepository = outgoingRepository;
+        _employeeService = employeeService;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _logger = logger;
+        _currentUser = currentUser;
+        _createValidator = createValidator;
+        _updateValidator = updateValidator;
     }
 
-    #region CRUD Operations
+    // ========== Reads ==========
 
-    public async Task<IncomingDto> GetByIdAsync(Guid id)
+    /// <summary>Detail read (UC-COR-05). An out-of-scope id returns null, exactly like a missing one.</summary>
+    public async Task<IncomingDto?> GetByIdAsync(Guid id)
     {
-        var incoming = await _incomingRepository.GetByIdAsync(id);
+        var incoming = await _incomingRepository.GetWithDetailsAsync(id);
         if (incoming == null)
-            throw new KeyNotFoundException($"Incoming letter with ID {id} not found");
+        {
+            _logger.LogWarning("Incoming letter {IncomingId} not found", id);
+            return null;
+        }
+
+        if (!IsWithinCallerScope(incoming))
+        {
+            _logger.LogWarning("Incoming letter {IncomingId} is outside the caller's charity scope", id);
+            return null;
+        }
 
         return _mapper.Map<IncomingDto>(incoming);
     }
 
-    public async Task<(IEnumerable<IncomingListDto> Items, int TotalCount)> GetPagedAsync(IncomingFilterDto filter)
+    /// <summary>The §21.S.1 register read (UC-COR-01 / UC-COR-02) — scope-pinned before it reaches the repository.</summary>
+    public async Task<(IEnumerable<IncomingListDto> Items, int TotalCount, int Page)> GetPagedAsync(IncomingFilterDto filter)
     {
-        var (items, totalCount) = await _incomingRepository.GetPagedAsync(
-            filter.PageNumber,
-            filter.PageSize,
-            filter.SearchTerm,
-            filter.DepartmentId,
-            filter.Status,
-            filter.Year,
-            filter.StartDate,
-            filter.EndDate,
-            filter.CreatedByUserId,
-            filter.SortBy,
-            filter.SortOrder);
+        filter ??= new IncomingFilterDto();
 
-        var listDtos = _mapper.Map<IEnumerable<IncomingListDto>>(items);
-        return (listDtos, totalCount);
+        ApplyCallerScope(filter);
+
+        var criteria = new IncomingFilterCriteria
+        {
+            SearchTerm = filter.SearchTerm,
+            Serial = filter.Serial,
+            LetterNumber = filter.LetterNumber,
+            DepartmentId = filter.DepartmentId,
+            Status = filter.Status,
+            Year = filter.Year,
+            StartDate = filter.StartDate,
+            EndDate = filter.EndDate,
+            AssignedUserId = filter.AssignedUserId,
+            CharityId = filter.CharityId,
+            // Country dimension of tenancy (review P7): pinned from the caller's claims
+            // only — never a client assertion — mirroring MissionService.ApplyCallerScope
+            CountryId = _currentUser.CountryId,
+            SortBy = filter.SortBy,
+            SortOrder = filter.SortOrder
+        };
+
+        var (items, totalCount) = await _incomingRepository.GetPagedAsync(criteria, filter.PageNumber, filter.PageSize);
+        var dtos = _mapper.Map<List<IncomingListDto>>(items);
+
+        return (dtos, totalCount, filter.PageNumber);
     }
 
+    // ========== Writes ==========
+
+    /// <summary>
+    /// Register an incoming letter (UC-COR-04 / §21.S.2). The serial is re-derived inside
+    /// this transaction — per charity + year — so the advisory GET can never collide.
+    /// </summary>
     public async Task<IncomingDto> CreateAsync(CreateIncomingDto dto)
     {
-        _logger.LogInformation("Creating new incoming letter: {Subject}", dto.Subject);
+        await _createValidator.ValidateAndThrowAsync(dto);
+        await EnsureReferencesExistAsync(dto.DepartmentId, dto.AssignedUserId, dto.OutgoingId);
 
-        // Validate uniqueness
-        if (!await IsIncomingIdUniqueAsync(dto.IncomingId))
+        var year = dto.Date!.Value.Year;
+        // A caller with no charity claim creates an HQ-owned (NULL-charity) letter —
+        // deliberate D1 decision (رئاسة المكتب correspondence); scoping, uniqueness and
+        // the orphan pool treat NULL as its own scope, never as "every charity".
+        var charityId = _currentUser.CharityId;
+
+        if (!string.IsNullOrWhiteSpace(dto.LetterNumber) &&
+            !await _incomingRepository.IsLetterNumberUniqueAsync(dto.LetterNumber.Trim(), charityId, year))
         {
-            throw new InvalidOperationException($"Incoming letter with ID '{dto.IncomingId}' already exists");
+            throw new InvalidOperationException(
+                "Operation Faild: this letter number is already registered for the charity and year");
         }
 
-        if (!string.IsNullOrEmpty(dto.LetterNumber))
-        {
-            if (!await IsLetterNumberUniqueAsync(dto.LetterNumber, dto.FK_DepartmentId, dto.Year))
-            {
-                throw new InvalidOperationException($"Letter number '{dto.LetterNumber}' already exists for this department and year");
-            }
-        }
+        EnsureKnownStatus(dto.Status);
 
-        // Generate serial number
-        var serial = await GetNextSerialNumberAsync(dto.FK_DepartmentId, dto.Year);
-        var serialTxt = await _incomingRepository.GenerateSerialTextAsync(serial);
+        var serial = await _incomingRepository.GetNextSerialAsync(charityId, year);
+        var serialTxt = serial.ToString("D4");
 
         var incoming = new Incoming
         {
-            Subject = dto.Subject,
-            Date = dto.Date ?? DateTime.UtcNow,
-            IncomingNumber = dto.IncomingNumber,
-            IncomingId = dto.IncomingId,
-            Body = dto.Body,
-            LetterNumber = dto.LetterNumber,
+            Serial = serial,
+            Serial_Txt = serialTxt,
+            IncomingId = serialTxt, // legacy NOT NULL display column — carries the plain serial text
+            Subject = dto.Subject.Trim(),
+            Date = dto.Date,
+            LetterNumber = string.IsNullOrWhiteSpace(dto.LetterNumber) ? null : dto.LetterNumber.Trim(),
             LetterDate = dto.LetterDate,
-            Year = dto.Year ?? DateTime.UtcNow.Year,
-            Status = dto.Status ?? "Received",
+            Year = year,
+            Status = string.IsNullOrWhiteSpace(dto.Status) ? DefaultStatus : dto.Status.Trim(),
             LetterDescription = dto.LetterDescription,
-            FK_DepartmentId = dto.FK_DepartmentId,
+            FK_DepartmentId = dto.DepartmentId,
+            FK_UserId = dto.AssignedUserId,
             OutgoingId = dto.OutgoingId,
             UploadedFileId = dto.UploadedFileId,
-            Serial = serial,
-            Serial_Txt = serialTxt
+            FK_CharityId = charityId
         };
 
         await _incomingRepository.AddAsync(incoming);
-        await _unitOfWork.SaveChangesAsync();
+        try
+        {
+            await _unitOfWork.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+        {
+            // Serial race backstop (review P6): two concurrent creates can read the same
+            // Max and collide on the unique filtered index — re-derive once inside this
+            // transaction and retry; anything else rethrows.
+            _logger.LogWarning(
+                ex, "Serial collision while registering an incoming letter for charity {CharityId} year {Year}; re-deriving",
+                charityId, year);
 
-        _logger.LogInformation("Incoming letter created successfully with ID: {Id}", incoming.Id);
+            var retrySerial = await _incomingRepository.GetNextSerialAsync(charityId, year);
+            incoming.Serial = retrySerial;
+            incoming.Serial_Txt = retrySerial.ToString("D4");
+            incoming.IncomingId = incoming.Serial_Txt;
 
-        return await GetByIdAsync(incoming.Id);
+            _incomingRepository.Update(incoming);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        _logger.LogInformation(
+            "Incoming letter {IncomingId} registered with serial {Serial} by {UserId}",
+            incoming.Id, serialTxt, _currentUser.UserId);
+
+        return (await GetByIdAsync(incoming.Id))!;
     }
 
-    public async Task<IncomingDto> UpdateAsync(UpdateIncomingDto dto)
+    /// <summary>
+    /// Update an incoming letter (UC-COR-06). The serial, its year and the charity
+    /// ownership are immutable — they anchor the per-charity sequence.
+    /// </summary>
+    public async Task<IncomingDto> UpdateAsync(Guid id, UpdateIncomingDto dto)
     {
-        _logger.LogInformation("Updating incoming letter: {Id}", dto.Id);
+        await _updateValidator.ValidateAndThrowAsync(dto);
+        await EnsureReferencesExistAsync(dto.DepartmentId, dto.AssignedUserId, dto.OutgoingId);
 
-        var incoming = await _incomingRepository.GetByIdAsync(dto.Id);
-        if (incoming == null)
-            throw new KeyNotFoundException($"Incoming letter with ID {dto.Id} not found");
-
-        // Validate uniqueness
-        if (!await IsIncomingIdUniqueAsync(dto.IncomingId, dto.Id))
+        var incoming = await _incomingRepository.GetWithDetailsAsync(id);
+        if (incoming == null || !IsWithinCallerScope(incoming))
         {
-            throw new InvalidOperationException($"Incoming letter with ID '{dto.IncomingId}' already exists");
+            throw new InvalidOperationException($"Incoming letter {id} not found");
         }
 
-        if (!string.IsNullOrEmpty(dto.LetterNumber))
+        if (!string.IsNullOrWhiteSpace(dto.LetterNumber) &&
+            !await _incomingRepository.IsLetterNumberUniqueAsync(
+                dto.LetterNumber.Trim(), incoming.FK_CharityId,
+                incoming.Year ?? dto.Date!.Value.Year, // legacy rows may carry a NULL year (review P9)
+                excludeId: id))
         {
-            if (!await IsLetterNumberUniqueAsync(dto.LetterNumber, dto.FK_DepartmentId, dto.Year, dto.Id))
-            {
-                throw new InvalidOperationException($"Letter number '{dto.LetterNumber}' already exists for this department and year");
-            }
+            throw new InvalidOperationException(
+                "Operation Faild: this letter number is already registered for the charity and year");
         }
 
-        incoming.Subject = dto.Subject;
+        EnsureKnownStatus(dto.Status);
+
+        incoming.Subject = dto.Subject.Trim();
         incoming.Date = dto.Date;
-        incoming.IncomingNumber = dto.IncomingNumber;
-        incoming.IncomingId = dto.IncomingId;
-        incoming.Body = dto.Body;
-        incoming.LetterNumber = dto.LetterNumber;
+        incoming.LetterNumber = string.IsNullOrWhiteSpace(dto.LetterNumber) ? null : dto.LetterNumber.Trim();
         incoming.LetterDate = dto.LetterDate;
-        incoming.Year = dto.Year;
-        incoming.Status = dto.Status;
+        incoming.Status = string.IsNullOrWhiteSpace(dto.Status) ? DefaultStatus : dto.Status.Trim();
         incoming.LetterDescription = dto.LetterDescription;
-        incoming.FK_DepartmentId = dto.FK_DepartmentId;
+        incoming.FK_DepartmentId = dto.DepartmentId;
+        incoming.FK_UserId = dto.AssignedUserId;
         incoming.OutgoingId = dto.OutgoingId;
         incoming.UploadedFileId = dto.UploadedFileId;
 
         _incomingRepository.Update(incoming);
         await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation("Incoming letter updated successfully: {Id}", incoming.Id);
+        _logger.LogInformation("Incoming letter {IncomingId} updated by {UserId}", id, _currentUser.UserId);
 
-        return await GetByIdAsync(incoming.Id);
+        return (await GetByIdAsync(id))!;
     }
 
-    public async Task DeleteAsync(Guid id)
+    /// <summary>
+    /// Delete an incoming letter (UC-COR-07) — soft delete, refused while the letter still
+    /// has outgoing replies, per the spec's guard.
+    /// </summary>
+    public async Task DeleteAsync(Guid id, Guid? deletedBy)
     {
-        _logger.LogInformation("Deleting incoming letter: {Id}", id);
+        var incoming = await _incomingRepository.GetWithDetailsAsync(id);
+        if (incoming == null || !IsWithinCallerScope(incoming))
+        {
+            throw new InvalidOperationException($"Incoming letter {id} not found");
+        }
 
-        var incoming = await _incomingRepository.GetByIdAsync(id);
-        if (incoming == null)
-            throw new KeyNotFoundException($"Incoming letter with ID {id} not found");
+        var replies = await _incomingRepository.CountOutgoingRepliesAsync(id);
+        if (replies > 0)
+        {
+            throw new InvalidOperationException(
+                "Operation Faild: the letter has outgoing replies and cannot be deleted");
+        }
 
-        _incomingRepository.Delete(incoming);
+        incoming.IsDeleted = true;
+        incoming.DeletedOn = DateTime.UtcNow;
+        incoming.DeletedBy = deletedBy?.ToString() ?? "System";
+
+        _incomingRepository.Update(incoming);
         await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation("Incoming letter deleted successfully: {Id}", id);
+        _logger.LogInformation("Incoming letter {IncomingId} deleted by {DeletedBy}", id, incoming.DeletedBy);
     }
 
-    #endregion
+    // ========== Catalogues + serials ==========
 
-    #region Import Operations (UC-12.1, UC-12.3, UC-12.4, UC-12.5, UC-12.6)
-
-    public async Task<ImportValidationResultDto> ValidateImportAsync(ImportIncomingRequestDto request)
+    /// <summary>The §21.S.1 status options (UC-COR-01) — tri-state, Arabic-stored.</summary>
+    public Task<IEnumerable<CorrespondenceStatusDto>> GetAvailableStatusesAsync()
     {
-        _logger.LogInformation("Validating import file: {FileName}", request.FileName);
-
-        var result = new ImportValidationResultDto();
-
-        try
+        var statuses = Statuses.Select(s => new CorrespondenceStatusDto
         {
-            // Parse file content (simplified - in real implementation use Excel/CSV parser)
-            var rows = ParseImportFile(request.FileContent, request.FileName);
+            Id = s.Id,
+            NameAr = s.NameAr,
+            NameEn = s.NameEn,
+            Color = s.Color
+        });
 
-            result.TotalRows = rows.Count;
+        return Task.FromResult<IEnumerable<CorrespondenceStatusDto>>(statuses);
+    }
 
-            foreach (var row in rows)
+    /// <summary>
+    /// The advisory next serial (UC-COR-03). The definitive serial is re-derived inside the
+    /// create transaction — this read only powers the read-only form field.
+    /// </summary>
+    public async Task<NextSerialDto> GetNextSerialAsync(int? year, Guid? charityId)
+    {
+        // Pin, never widen: a caller bound to a charity reads their own sequence — the
+        // charityId query parameter is the HQ caller's narrow, never a client assertion.
+        var effectiveCharity = _currentUser.CharityId ?? charityId;
+        var effectiveYear = year ?? DateTime.UtcNow.Year;
+
+        var next = await _incomingRepository.GetNextSerialAsync(effectiveCharity, effectiveYear);
+
+        return new NextSerialDto { Serial = next, SerialTxt = next.ToString("D4") };
+    }
+
+    // ========== Employee attachment (UC-COR-09) ==========
+
+    /// <summary>The two lists of the §21.S.3 screen: attached employees and available ones.</summary>
+    public async Task<IncomingEmployeesDto> GetEmployeesAsync(Guid incomingId)
+    {
+        var incoming = await _incomingRepository.GetWithDetailsAsync(incomingId);
+        if (incoming == null || !IsWithinCallerScope(incoming))
+        {
+            throw new InvalidOperationException($"Incoming letter {incomingId} not found");
+        }
+
+        var links = await _employeeRepository.GetByIncomingAsync(incomingId);
+        var available = await _employeeRepository.GetAvailableEmployeesAsync(incomingId, incoming.FK_CharityId);
+
+        return new IncomingEmployeesDto
+        {
+            Attached = links.Select(l => new EmployeeOptionDto
             {
-                var errors = new List<string>();
-
-                // Validate required fields
-                if (string.IsNullOrEmpty(row.GetValueOrDefault("Subject")))
-                    errors.Add("Subject is required");
-
-                if (string.IsNullOrEmpty(row.GetValueOrDefault("IncomingId")))
-                    errors.Add("IncomingId is required");
-
-                if (string.IsNullOrEmpty(row.GetValueOrDefault("LetterNumber")))
-                    errors.Add("LetterNumber is required");
-
-                if (string.IsNullOrEmpty(row.GetValueOrDefault("LetterDate")))
-                    errors.Add("LetterDate is required");
-
-                // Validate data formats
-                if (DateTime.TryParse(row.GetValueOrDefault("LetterDate"), out var letterDate))
-                {
-                    if (DateTime.TryParse(row.GetValueOrDefault("Date"), out var receivedDate))
-                    {
-                        if (letterDate > receivedDate)
-                        {
-                            errors.Add("LetterDate cannot be after received Date");
-                        }
-                    }
-                }
-
-                // Validate business rules
-                var incomingId = row.GetValueOrDefault("IncomingId");
-                if (!string.IsNullOrEmpty(incomingId))
-                {
-                    if (!await IsIncomingIdUniqueAsync(incomingId))
-                    {
-                        errors.Add($"IncomingId '{incomingId}' already exists");
-                    }
-                }
-
-                if (errors.Any())
-                {
-                    result.InvalidRows++;
-                    result.Errors.AddRange(errors.Select(e => new ValidationErrorDto
-                    {
-                        RowNumber = rows.IndexOf(row) + 1,
-                        FieldName = "Multiple",
-                        ErrorMessage = e,
-                        Severity = "Error"
-                    }));
-                }
-                else
-                {
-                    result.ValidRows++;
-                }
-            }
-
-            _logger.LogInformation("Validation completed: {Valid} valid, {Invalid} invalid", result.ValidRows, result.InvalidRows);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error validating import file");
-            throw;
-        }
-
-        return result;
-    }
-
-    public async Task<ImportResultDto> ImportAsync(ImportIncomingRequestDto request)
-    {
-        _logger.LogInformation("Importing incoming letters from file: {FileName}", request.FileName);
-
-        var result = new ImportResultDto
-        {
-            ImportId = Guid.NewGuid(),
-            FileName = request.FileName,
-            ImportDate = DateTime.UtcNow,
-            ImportedBy = "CurrentUser" // TODO: Get from context
-        };
-
-        try
-        {
-            // Validate first if not in validate-only mode
-            if (!request.ValidateOnly)
+                UserId = l.UserId,
+                FullName = l.User?.FullName ?? string.Empty,
+                Email = l.User?.Email
+            }).ToList(),
+            Available = available.Select(a => new EmployeeOptionDto
             {
-                var validationResult = await ValidateImportAsync(request);
-                if (validationResult.InvalidRows > 0 && !request.UpdateExisting)
-                {
-                    throw new InvalidOperationException($"Validation failed with {validationResult.InvalidRows} errors");
-                }
-            }
+                UserId = a.UserId,
+                FullName = a.FullName,
+                Email = a.Email
+            }).ToList()
+        };
+    }
 
-            // Parse file content
-            var rows = ParseImportFile(request.FileContent, request.FileName);
-            result.TotalRows = rows.Count;
+    /// <summary>Attach an employee (UC-COR-09) — refused with «Operation Faild» on a duplicate or unknown link.</summary>
+    public async Task AttachEmployeeAsync(Guid incomingId, Guid userId)
+    {
+        var incoming = await _incomingRepository.GetWithDetailsAsync(incomingId);
+        if (incoming == null || !IsWithinCallerScope(incoming))
+        {
+            throw new InvalidOperationException($"Incoming letter {incomingId} not found");
+        }
 
-            foreach (var row in rows)
+        if (await _employeeRepository.ExistsAsync(incomingId, userId))
+        {
+            throw new InvalidOperationException("Operation Faild: the employee is already attached to this letter");
+        }
+
+        var available = await _employeeRepository.GetAvailableEmployeesAsync(incomingId, incoming.FK_CharityId);
+        if (!available.Any(u => u.UserId == userId))
+        {
+            throw new InvalidOperationException("Operation Faild: the employee is unknown or inactive");
+        }
+
+        await _employeeRepository.AddAsync(new IncomingEmployee { IncomingId = incomingId, UserId = userId });
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Employee {UserId} attached to incoming letter {IncomingId} by {Caller}",
+            userId, incomingId, _currentUser.UserId);
+    }
+
+    /// <summary>Detach an employee (UC-COR-09) — soft delete of the link row.</summary>
+    public async Task DetachEmployeeAsync(Guid incomingId, Guid userId)
+    {
+        var incoming = await _incomingRepository.GetWithDetailsAsync(incomingId);
+        if (incoming == null || !IsWithinCallerScope(incoming))
+        {
+            throw new InvalidOperationException($"Incoming letter {incomingId} not found");
+        }
+
+        var links = await _employeeRepository.GetByIncomingAsync(incomingId);
+        var link = links.FirstOrDefault(l => l.UserId == userId);
+        if (link == null)
+        {
+            throw new InvalidOperationException("Operation Faild: the employee is not attached to this letter");
+        }
+
+        link.IsDeleted = true;
+        link.DeletedOn = DateTime.UtcNow;
+        link.DeletedBy = _currentUser.UserId?.ToString() ?? "System";
+
+        _employeeRepository.Update(link);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Employee {UserId} detached from incoming letter {IncomingId} by {Caller}",
+            userId, incomingId, _currentUser.UserId);
+    }
+
+    // ========== Scope + status helpers ==========
+
+    /// <summary>
+    /// Pin the caller's charity claim onto the filter — pin, never widen. A head-office
+    /// caller without the claim keeps their explicit CharityId narrow (or sees all).
+    /// </summary>
+    private void ApplyCallerScope(IncomingFilterDto filter)
+    {
+        var callerCharity = _currentUser.CharityId;
+        if (!callerCharity.HasValue)
+        {
+            return;
+        }
+
+        if (filter.CharityId.HasValue && filter.CharityId.Value != callerCharity.Value)
+        {
+            _logger.LogWarning(
+                "Caller pinned to charity {CallerCharity} requested charity {RequestedCharity}; pinning to {CallerCharity}",
+                callerCharity.Value, filter.CharityId.Value, callerCharity.Value);
+        }
+
+        filter.CharityId = callerCharity;
+    }
+
+    /// <summary>
+    /// Whether the letter is visible to the caller: a charity-pinned caller sees only
+    /// their own charity's letters; a country-pinned caller (no charity claim) sees the
+    /// letters of their country's charities (review P7); a caller with neither claim
+    /// sees everything. NULL-charity (HQ-owned) letters belong to no country and no charity.
+    /// </summary>
+    private bool IsWithinCallerScope(Incoming incoming)
+    {
+        var callerCharity = _currentUser.CharityId;
+        if (callerCharity.HasValue)
+        {
+            return incoming.FK_CharityId == callerCharity.Value;
+        }
+
+        var callerCountry = _currentUser.CountryId;
+        if (callerCountry.HasValue)
+        {
+            return incoming.Charity != null && incoming.Charity.CountryId == callerCountry.Value;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// FK existence checks (§21.S.2 / §21.U.4): a bogus department, employee or reply-to
+    /// outgoing letter is a field-flagging 400 (ValidationException → the controller's
+    /// errors map), never an FK-constraint 500. The reply-to letter must also sit inside
+    /// the caller's charity when the caller is pinned to one.
+    /// </summary>
+    private async Task EnsureReferencesExistAsync(int? departmentId, Guid? assignedUserId, Guid? outgoingId)
+    {
+        var failures = new List<FluentValidation.Results.ValidationFailure>();
+
+        if (departmentId.HasValue && await _departmentRepository.GetByIdAsync(departmentId.Value) == null)
+        {
+            failures.Add(new FluentValidation.Results.ValidationFailure(
+                nameof(CreateIncomingDto.DepartmentId), "Routing department does not exist"));
+        }
+
+        if (assignedUserId.HasValue && await _employeeService.GetEmployeeByIdAsync(assignedUserId.Value) == null)
+        {
+            failures.Add(new FluentValidation.Results.ValidationFailure(
+                nameof(CreateIncomingDto.AssignedUserId), "Assigned employee does not exist"));
+        }
+
+        if (outgoingId.HasValue)
+        {
+            var outgoing = await _outgoingRepository.GetWithDetailsAsync(outgoingId.Value);
+            if (outgoing == null)
             {
-                try
-                {
-                    var incomingId = row.GetValueOrDefault("IncomingId");
-
-                    // Skip if IncomingId is not provided
-                    if (string.IsNullOrWhiteSpace(incomingId))
-                    {
-                        result.FailedRows++;
-                        result.Errors.Add(new ValidationErrorDto
-                        {
-                            RowNumber = rows.IndexOf(row) + 1,
-                            FieldName = "IncomingId",
-                            ErrorMessage = "IncomingId is required"
-                        });
-                        continue;
-                    }
-
-                    // Check if exists (for update scenario)
-                    var existing = await _incomingRepository.GetAllAsync();
-                    var existingRecord = existing.FirstOrDefault(x => x.IncomingId == incomingId!);
-
-                    if (existingRecord != null && request.UpdateExisting)
-                    {
-                        // Update existing
-                        existingRecord.Subject = row.GetValueOrDefault("Subject") ?? existingRecord.Subject;
-                        existingRecord.Body = row.GetValueOrDefault("Body");
-                        existingRecord.LetterDescription = row.GetValueOrDefault("LetterDescription");
-
-                        _incomingRepository.Update(existingRecord);
-                        result.SuccessfulRows++;
-                        result.ImportedRecordIds.Add(existingRecord.Id);
-                    }
-                    else if (existingRecord == null && !request.SkipDuplicates)
-                    {
-                        // Create new
-                        var serial = await GetNextSerialNumberAsync(null, null);
-                        var serialTxt = await _incomingRepository.GenerateSerialTextAsync(serial);
-
-                        var incoming = new Incoming
-                        {
-                            IncomingId = incomingId,
-                            Subject = row.GetValueOrDefault("Subject") ?? string.Empty,
-                            Body = row.GetValueOrDefault("Body"),
-                            LetterNumber = row.GetValueOrDefault("LetterNumber"),
-                            LetterDate = DateTime.TryParse(row.GetValueOrDefault("LetterDate"), out var ld) ? ld : null,
-                            Date = DateTime.TryParse(row.GetValueOrDefault("Date"), out var d) ? d : DateTime.UtcNow,
-                            Year = int.TryParse(row.GetValueOrDefault("Year"), out var y) ? y : DateTime.UtcNow.Year,
-                            Serial = serial,
-                            Serial_Txt = serialTxt,
-                            Status = "Imported"
-                        };
-
-                        await _incomingRepository.AddAsync(incoming);
-                        result.SuccessfulRows++;
-                        result.ImportedRecordIds.Add(incoming.Id);
-                    }
-                    else
-                    {
-                        result.FailedRows++;
-                        result.Errors.Add(new ValidationErrorDto
-                        {
-                            RowNumber = rows.IndexOf(row) + 1,
-                            FieldName = "IncomingId",
-                            ErrorMessage = "Skipped (duplicate)"
-                        });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    result.FailedRows++;
-                    result.Errors.Add(new ValidationErrorDto
-                    {
-                        RowNumber = rows.IndexOf(row) + 1,
-                        FieldName = "Import",
-                        ErrorMessage = ex.Message
-                    });
-                }
+                failures.Add(new FluentValidation.Results.ValidationFailure(
+                    nameof(CreateIncomingDto.OutgoingId), "The outgoing letter being replied to does not exist"));
             }
-
-            await _unitOfWork.SaveChangesAsync();
-
-            _logger.LogInformation("Import completed: {Success} successful, {Failed} failed", result.SuccessfulRows, result.FailedRows);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error importing incoming letters");
-            throw;
+            else if (_currentUser.CharityId.HasValue && outgoing.FK_CharityId != _currentUser.CharityId.Value)
+            {
+                failures.Add(new FluentValidation.Results.ValidationFailure(
+                    nameof(CreateIncomingDto.OutgoingId), "The outgoing letter being replied to is outside the caller's charity"));
+            }
         }
 
-        return result;
-    }
-
-    public async Task<TemplateDownloadDto> DownloadTemplateAsync()
-    {
-        _logger.LogInformation("Generating incoming letters import template");
-
-        // TODO: Generate actual Excel template
-        var template = new TemplateDownloadDto
+        if (failures.Count > 0)
         {
-            TemplateType = "IncomingLetters",
-            FileName = $"IncomingLetters_Template_{DateTime.UtcNow:yyyyMMdd}.xlsx",
-            FileContent = Encoding.UTF8.GetBytes("Template placeholder")
-        };
-
-        return template;
+            throw new ValidationException(failures);
+        }
     }
 
-    #endregion
-
-    #region Export Operations (UC-12.10, UC-12.12, UC-12.13)
-
-    public async Task<ExportResultDto> ExportAsync(ExportIncomingRequestDto request)
+    /// <summary>The stored status must be one of the spec's tri-state terms (empty defaults at create).</summary>
+    private static void EnsureKnownStatus(string? status)
     {
-        _logger.LogInformation("Exporting incoming letters");
-
-        // TODO: Implement actual export logic with Excel/PDF generation
-        var result = new ExportResultDto
+        if (string.IsNullOrWhiteSpace(status))
         {
-            ExportId = Guid.NewGuid(),
-            ExportDate = DateTime.UtcNow,
-            ExportedBy = "CurrentUser", // TODO: Get from context
-            FileFormat = request.FileFormat
-        };
+            return;
+        }
 
-        return result;
-    }
-
-    #endregion
-
-    #region Import History (UC-12.7, UC-12.8)
-
-    public async Task<IEnumerable<ImportHistoryItemDto>> GetImportHistoryAsync()
-    {
-        // TODO: Implement import history tracking
-        return Enumerable.Empty<ImportHistoryItemDto>();
-    }
-
-    public async Task RollbackImportAsync(Guid importId)
-    {
-        _logger.LogInformation("Rolling back import: {ImportId}", importId);
-
-        // TODO: Implement rollback logic
-
-        _logger.LogInformation("Import rolled back successfully: {ImportId}", importId);
-    }
-
-    #endregion
-
-    #region Business Logic
-
-    public async Task<bool> IsIncomingIdUniqueAsync(string incomingId, Guid? excludeId = null)
-    {
-        return await _incomingRepository.IsIncomingIdUniqueAsync(incomingId, excludeId);
-    }
-
-    public async Task<bool> IsLetterNumberUniqueAsync(string letterNumber, int? departmentId, int? year, Guid? excludeId = null)
-    {
-        return await _incomingRepository.IsLetterNumberUniqueAsync(letterNumber, departmentId, year, excludeId);
-    }
-
-    public async Task<int> GetNextSerialNumberAsync(int? departmentId = null, int? year = null)
-    {
-        return await _incomingRepository.GetNextSerialNumberAsync(departmentId, year);
-    }
-
-    public async Task<IEnumerable<string>> GetAvailableStatusesAsync()
-    {
-        // Return available statuses as per use case
-        return new List<string>
+        if (Statuses.All(s => s.Id != status.Trim()))
         {
-            "Received",
-            "Processing",
-            "Completed",
-            "Closed",
-            "Pending"
-        };
+            throw new InvalidOperationException("Operation Faild: unknown letter status");
+        }
     }
-
-    public async Task<Dictionary<string, string>> GetStatusColorsAsync()
-    {
-        // Return status colors for UI display
-        return new Dictionary<string, string>
-        {
-            { "Received", "primary" },
-            { "Processing", "info" },
-            { "Completed", "success" },
-            { "Closed", "secondary" },
-            { "Pending", "warning" }
-        };
-    }
-
-    #endregion
-
-    #region Helper Methods
-
-    //private Dictionary<string, string> ParseImportFile(byte[] fileContent, string fileName)
-    //{
-    //    // TODO: Implement actual Excel/CSV parsing
-    //    return new Dictionary<string, string>();
-    //}
-
-    private List<Dictionary<string, string>> ParseImportFile(byte[] fileContent, string fileName)
-    {
-        // TODO: Implement actual Excel/CSV parsing
-        return new List<Dictionary<string, string>>();
-    }
-
-    #endregion
 }

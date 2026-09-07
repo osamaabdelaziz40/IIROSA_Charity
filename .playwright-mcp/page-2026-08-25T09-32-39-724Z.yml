@@ -1,0 +1,237 @@
+- generic [ref=f18e32]:
+  - navigation [ref=f18e33]:
+    - button "" [ref=f18e440] [cursor=pointer]
+    - list [ref=f18e36]:
+      - listitem [ref=f18e37]:
+        - link "English " [ref=f18e441] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f18e442]: 
+          - text: English 
+      - listitem [ref=f18e39]:
+        - link "" [ref=f18e40] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f18e42]:
+        - link "" [ref=f18e443] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f18e45]:
+        - button [ref=f18e46] [cursor=pointer]:
+          - generic [ref=f18e47]:
+            - text: Welcome Osama Abdelaziz
+            - img "..." [ref=f18e48]
+          - text: 
+  - complementary [ref=f18e49]:
+    - generic [ref=f18e449]:
+      - text: 
+      - navigation [ref=f18e50]:
+        - link [ref=f18e52] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f18e53]
+        - paragraph [ref=f18e54]: Website Elements
+        - list [ref=f18e55]:
+          - listitem [ref=f18e56]:
+            - link " Home Page (current) " [ref=f18e450] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f18e451]: 
+              - generic [ref=f18e58]: Home Page
+              - generic [ref=f18e59]: (current)
+              - text: 
+            - list [ref=f18e60]:
+              - listitem [ref=f18e61]:
+                - link "Home" [ref=f18e62] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f18e63]:
+            - link " Users " [ref=f18e452] [cursor=pointer]:
+              - /url: "#user-management"
+              - generic [ref=f18e453]: 
+              - generic [ref=f18e65]: Users
+              - text: 
+          - listitem [ref=f18e66]:
+            - link " Employees " [ref=f18e454] [cursor=pointer]:
+              - /url: "#employees"
+              - generic [ref=f18e455]: 
+              - generic [ref=f18e68]: Employees
+              - text: 
+          - listitem [ref=f18e69]:
+            - link " NGOs " [ref=f18e456] [cursor=pointer]:
+              - /url: "#charities"
+              - generic [ref=f18e457]: 
+              - generic [ref=f18e71]: NGOs
+              - text: 
+          - listitem [ref=f18e72]:
+            - link " Office Projects " [ref=f18e458] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f18e459]: 
+              - generic [ref=f18e74]: Office Projects
+              - text: 
+          - listitem [ref=f18e75]:
+            - link " Housing Projects " [ref=f18e460] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f18e461]: 
+              - generic [ref=f18e77]: Housing Projects
+              - text: 
+          - listitem [ref=f18e78]:
+            - link " Seasonal Aid " [ref=f18e462] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f18e463]: 
+              - generic [ref=f18e80]: Seasonal Aid
+              - text: 
+          - listitem [ref=f18e81]:
+            - link " Incoming & Outgoing " [ref=f18e464] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f18e465]: 
+              - generic [ref=f18e83]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=f18e84]:
+            - link " Orphan Payments " [ref=f18e466] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f18e467]: 
+              - generic [ref=f18e86]: Orphan Payments
+              - text: 
+          - listitem [ref=f18e87]:
+            - link " Families " [ref=f18e468] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f18e469]: 
+              - generic [ref=f18e89]: Families
+              - text: 
+          - listitem [ref=f18e90]:
+            - link " Reports " [ref=f18e470] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f18e471]: 
+              - generic [ref=f18e92]: Reports
+              - text: 
+            - list [ref=f18e520]:
+              - listitem [ref=f18e521]:
+                - link "Family Follow-Up" [ref=f18e522] [cursor=pointer]:
+                  - /url: "#/reports/family-orphans"
+              - listitem [ref=f18e523]:
+                - link "Orphan data" [ref=f18e524] [cursor=pointer]:
+                  - /url: "#/reports/orphans"
+              - listitem [ref=f18e525]:
+                - link "Excluded Orphans" [ref=f18e526] [cursor=pointer]:
+                  - /url: "#/reports/excluded-orphans"
+              - listitem [ref=f18e527]:
+                - link "Orphans with Ended Sponsorship" [ref=f18e528] [cursor=pointer]:
+                  - /url: "#/reports/finished-sponsorship-orphans"
+              - listitem [ref=f18e529]:
+                - link "Unsponsored Orphans" [ref=f18e530] [cursor=pointer]:
+                  - /url: "#/reports/unsponsored-orphans"
+              - listitem [ref=f18e531]:
+                - link "Widows Requiring Sponsorship" [ref=f18e532] [cursor=pointer]:
+                  - /url: "#/reports/widows-allowing-sponsorship"
+              - listitem [ref=f18e533]:
+                - link "Registered Meza Cards" [ref=f18e534] [cursor=pointer]:
+                  - /url: "#/reports/meza-cards"
+              - listitem [ref=f18e535]:
+                - link "Assistance Family Data" [ref=f18e536] [cursor=pointer]:
+                  - /url: "#/reports/beneficiary-family-details"
+              - listitem [ref=f18e537]:
+                - link "Family Projects" [ref=f18e538] [cursor=pointer]:
+                  - /url: "#/reports/registered-family-projects"
+              - listitem [ref=f18e539]:
+                - link "Guardian Change Reports" [ref=f18e540] [cursor=pointer]:
+                  - /url: "#/reports/provider-sponsor-changes"
+              - listitem [ref=f18e541]:
+                - link "Family & Orphan Entry Tracking" [ref=f18e542] [cursor=pointer]:
+                  - /url: "#/reports/family-orphans-entries"
+              - listitem [ref=f18e543]:
+                - link "Coded Orphans Needing a Report" [ref=f18e544] [cursor=pointer]:
+                  - /url: "#/reports/orphans-missing-reports"
+              - listitem [ref=f18e545]:
+                - link "Orphans Missing Files" [ref=f18e546] [cursor=pointer]:
+                  - /url: "#/reports/orphans-missing-files"
+              - listitem [ref=f18e547]:
+                - link "Reports Awaiting Approval" [ref=f18e548] [cursor=pointer]:
+                  - /url: "#/reports/reports-awaiting-approval"
+              - listitem [ref=f18e549]:
+                - link "Refused Reports" [ref=f18e550] [cursor=pointer]:
+                  - /url: "#/reports/refused-reports"
+              - listitem [ref=f18e551]:
+                - link "Orphans without a Renewed Report" [ref=f18e552] [cursor=pointer]:
+                  - /url: "#/reports/non-renewed-reports"
+              - listitem [ref=f18e553]:
+                - link "Charity Follow-up" [ref=f18e554] [cursor=pointer]:
+                  - /url: "#/reports/charity-payment-tracking"
+              - listitem [ref=f18e555]:
+                - link "Missed Payments (Previous Batches)" [ref=f18e556] [cursor=pointer]:
+                  - /url: "#/reports/missed-payments"
+              - listitem [ref=f18e557]:
+                - link "Orphan Photographs" [ref=f18e558] [cursor=pointer]:
+                  - /url: "#/reports/orphan-files"
+              - listitem [ref=f18e559]:
+                - link "Print the Survey Questionnaire" [ref=f18e560] [cursor=pointer]:
+                  - /url: "#/reports/survey-questionnaire"
+              - listitem [ref=f18e561]:
+                - link "Orphans Receiving Nothing" [ref=f18e562] [cursor=pointer]:
+                  - /url: "#/reports/orphans-without-payment"
+              - listitem [ref=f18e563]:
+                - link "Follow-up and Handover Sheets" [ref=f18e564] [cursor=pointer]:
+                  - /url: "#/reports/follow-up-sheets"
+              - listitem [ref=f18e565]:
+                - link "Missing outgoing attachments" [ref=f18e566] [cursor=pointer]:
+                  - /url: "#/reports/missing-outgoing-attachments"
+          - listitem [ref=f18e93]:
+            - link " General Cheques " [ref=f18e472] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f18e473]: 
+              - generic [ref=f18e95]: General Cheques
+              - text: 
+          - listitem [ref=f18e96]:
+            - link " Missions " [ref=f18e474] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f18e475]: 
+              - generic [ref=f18e98]: Missions
+              - text: 
+          - listitem [ref=f18e99]:
+            - link " Periodic Orphan Reports " [ref=f18e476] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f18e477]: 
+              - generic [ref=f18e101]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=f18e102]:
+            - link " Financial Transfers " [ref=f18e478] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f18e479]: 
+              - generic [ref=f18e104]: Financial Transfers
+              - text: 
+          - listitem [ref=f18e105]:
+            - link " Technical Support " [ref=f18e480] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f18e481]: 
+              - generic [ref=f18e107]: Technical Support
+              - text: 
+          - listitem [ref=f18e108]:
+            - link " Lookup Management " [ref=f18e482] [cursor=pointer]:
+              - /url: "#lookup-management"
+              - generic [ref=f18e483]: 
+              - generic [ref=f18e110]: Lookup Management
+              - text: 
+  - main [ref=f18e111]:
+    - generic [ref=f18e961]:
+      - generic [ref=f18e963]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f18e966]:
+          - heading "Follow-up and Handover Sheets" [level=3] [ref=f18e967]
+          - paragraph [ref=f18e968]: Orphan and family follow-up plus handover sheets — the three legacy reports in one screen
+      - generic [ref=f18e969]:
+        - generic [ref=f18e971]:
+          - generic [ref=f18e973]:
+            - generic [ref=f18e974]: Charity
+            - generic [ref=f18e978]:
+              - generic [ref=f18e979]: From date
+              - textbox [ref=f18e980]
+            - generic [ref=f18e981]:
+              - generic [ref=f18e982]: To date
+              - textbox [ref=f18e983]
+          - generic [ref=f18e985]:
+            - button "Search" [ref=f18e986] [cursor=pointer]
+            - button "Extract data" [disabled] [ref=f18e987] [cursor=pointer]
+            - button "Preview" [disabled] [ref=f18e988] [cursor=pointer]
+        - generic [ref=f18e991]:
+          - generic [ref=f18e992]: 
+          - text: Set the filters and press Search to load data
+  - contentinfo [ref=f18e433]:
+    - generic [ref=f18e435]:
+      - paragraph [ref=f18e437]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f18e439]: Version 1.0.0

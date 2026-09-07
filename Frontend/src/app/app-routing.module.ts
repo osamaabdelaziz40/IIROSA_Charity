@@ -63,6 +63,22 @@ const routes: Routes = [
         data: { title: 'missions.title' }
       },
       {
+        path: 'periodic-orphan-reports',
+        loadChildren: () => import('./modules/periodic-orphan-reports/periodic-orphan-reports.module').then(m => m.PeriodicOrphanReportsModule),
+        data: { title: 'periodicReports.title' }
+      },
+      {
+        // Reporting vertical (founded by UC-FAM-11; epic 18 extends it)
+        path: 'reports',
+        loadChildren: () => import('./modules/reports/reports.module').then(m => m.ReportsModule),
+        data: { title: 'reports.title' }
+      },
+      {
+        path: 'hq-transfers',
+        loadChildren: () => import('./modules/hq-transfers/hq-transfers.module').then(m => m.HqTransfersModule),
+        data: { title: 'hqTransfers.title' }
+      },
+      {
         path: 'housing-projects',
         loadChildren: () => import('./modules/housing-projects/housing-projects.module').then(m => m.HousingProjectsModule),
         data: { title: 'housingProjects.title' }
@@ -93,6 +109,14 @@ const routes: Routes = [
         data: { title: 'technicalSupport.title' }
       }
     ]
+  },
+  {
+    // UC-SYS-13 — the platform error surface. Registered OUTSIDE the auth-gated layout (an
+    // unauthenticated crash must still get the friendly page) and BEFORE the wildcard, which
+    // otherwise swallows every unknown hash into a /dashboard redirect.
+    path: 'error',
+    loadComponent: () => import('./core/pages/error/error-page.component').then(m => m.ErrorPageComponent),
+    data: { title: 'error.title' }
   },
   {
     path: '**',

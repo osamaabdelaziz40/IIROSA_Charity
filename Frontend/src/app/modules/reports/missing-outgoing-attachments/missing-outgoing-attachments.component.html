@@ -1,0 +1,78 @@
+<app-report-viewer titleKey="reports.missingOutgoingAttachments.title"
+                   subtitleKey="reports.missingOutgoingAttachments.subtitle"
+                   [exportRequest]="buildExportRequest"
+                   [loading]="loading"
+                   [hasRun]="hasRun"
+                   [currentPage]="currentPage"
+                   [pageSize]="pageSize"
+                   [totalCount]="totalCount"
+                   (search)="search()"
+                   (pageChange)="onPageChange($event)">
+
+  <!-- ==================== §23.U.38 filter panel — charity (HQ) + letter window + category ==================== -->
+  <div report-filters>
+    <form [formGroup]="filterForm" (ngSubmit)="search()" class="row g-3 align-items-end">
+      <!-- HQ only — a charity caller is scoped server-side regardless -->
+      <div class="col-lg-3 col-md-4" *ngIf="isHQ">
+        <app-drop-down [fg]="filterForm" fcn="charityId"
+                       [label]="'reports.missingOutgoingAttachments.filterCharity'"
+                       [placeholder]="'reports.missingOutgoingAttachments.filterCharity'"
+                       [initialData]="charityOptions">
+        </app-drop-down>
+      </div>
+
+      <div class="col-lg-2 col-md-3">
+        <app-drop-down [fg]="filterForm" fcn="outgoingCategoryId"
+                       [label]="'reports.missingOutgoingAttachments.filterCategory'"
+                       [placeholder]="'reports.missingOutgoingAttachments.filterCategory'"
+                       [initialData]="categoryOptions">
+        </app-drop-down>
+      </div>
+
+      <div class="col-lg-2 col-md-3">
+        <label class="form-label">{{ 'reports.missingOutgoingAttachments.filterFrom' | translate }}</label>
+        <input type="date" class="form-control" formControlName="dateFrom"
+               [class.is-invalid]="hasServerError('dateFrom')" />
+        <div class="invalid-feedback" *ngIf="hasServerError('dateFrom')">
+          {{ serverError('dateFrom') }}
+        </div>
+      </div>
+      <div class="col-lg-2 col-md-3">
+        <label class="form-label">{{ 'reports.missingOutgoingAttachments.filterTo' | translate }}</label>
+        <input type="date" class="form-control" formControlName="dateTo" />
+      </div>
+    </form>
+  </div>
+
+  <!-- ==================== bespoke grid — the audit list, query/grid-only by design ==================== -->
+  <div report-grid class="table-responsive">
+    <table class="table table-hover table-striped align-middle"
+           *ngIf="rows.length > 0">
+      <thead>
+        <tr>
+          <th>{{ 'reports.missingOutgoingAttachments.colSerial' | translate }}</th>
+          <th>{{ 'reports.missingOutgoingAttachments.colOutGoingNumber' | translate }}</th>
+          <th>{{ 'reports.missingOutgoingAttachments.colSubject' | translate }}</th>
+          <th>{{ 'reports.missingOutgoingAttachments.colDate' | translate }}</th>
+          <th>{{ 'reports.missingOutgoingAttachments.colYear' | translate }}</th>
+          <th>{{ 'reports.missingOutgoingAttachments.colCategory' | translate }}</th>
+          <th>{{ 'reports.missingOutgoingAttachments.colCharity' | translate }}</th>
+          <th>{{ 'reports.missingOutgoingAttachments.colAttachmentCount' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; trackBy: trackByRow">
+          <!-- مسلسل الصادر — the register's own serial, not a running index -->
+          <td>{{ row.serial ?? '—' }}</td>
+          <td>{{ row.outGoingNumber || '—' }}</td>
+          <td>{{ row.subject || '—' }}</td>
+          <td>{{ row.date | date:'yyyy-MM-dd' }}</td>
+          <td>{{ row.year ?? '—' }}</td>
+          <td>{{ row.categoryName || '—' }}</td>
+          <td>{{ row.charityName || '—' }}</td>
+          <td>{{ row.attachmentCount }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</app-report-viewer>

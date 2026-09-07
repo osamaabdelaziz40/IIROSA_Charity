@@ -1,15 +1,19 @@
+using System.Security.Claims;
+using IIROSA.Application.DTOs.IncomingOutgoing;
+using IIROSA.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using IIROSA.Application.Interfaces;
-using IIROSA.Application.DTOs.IncomingOutgoing;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using IIROSA.Domain.Entities;
 
 namespace IIROSA.Api.Controllers;
 
+/// <summary>
+/// Incoming &amp; Outgoing Correspondence API Controller (epic 16, UC-COR-01…19).
+/// Only Admin and Super Admin reach it; delete use cases are the General Director's
+/// alone — SuperAdmin only. Paged reads return the { items, totalCount, page } envelope.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize(Roles = "Admin,SuperAdmin")]
 public class IncomingOutgoingController : ControllerBase
 {
     private readonly IIncomingService _incomingService;
@@ -26,494 +30,481 @@ public class IncomingOutgoingController : ControllerBase
         _logger = logger;
     }
 
-    #region Incoming Letters
+    // ========== Incoming letters (UC-COR-01…09) ==========
 
     /// <summary>
-    /// Get incoming letter by ID
-    /// </summary>
-    [HttpGet("incoming/{id}")]
-    public async Task<ActionResult<IncomingDto>> GetIncomingById(Guid id)
-    {
-        try
-        {
-            var result = await _incomingService.GetByIdAsync(id);
-            return Ok(result);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-    }
-
-    /// <summary>
-    /// Get paginated list of incoming letters
+    /// The §21.S.1 incoming register (UC-COR-01 / UC-COR-02) — scoped server-side to the
+    /// caller's charity.
     /// </summary>
     [HttpGet("incoming")]
-    public async Task<ActionResult<(IEnumerable<IncomingListDto> Items, int TotalCount)>> GetIncomingPaged([FromQuery] IncomingFilterDto filter)
+    public async Task<IActionResult> GetIncomingLetters([FromQuery] IncomingFilterDto filter)
     {
-        var result = await _incomingService.GetPagedAsync(filter);
-        return Ok(result);
+        try
+        {
+            var result = await _incomingService.GetPagedAsync(filter ?? new IncomingFilterDto());
+            return Ok(new { items = result.Items, totalCount = result.TotalCount, page = result.Page });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving incoming letters");
+            return StatusCode(500, new { message = "An error occurred while retrieving incoming letters" });
+        }
     }
 
-    /// <summary>
-    /// Create new incoming letter
-    /// </summary>
+    /// <summary>View an incoming letter (UC-COR-05).</summary>
+    [HttpGet("incoming/{id:guid}")]
+    public async Task<IActionResult> GetIncomingLetter(Guid id)
+    {
+        try
+        {
+            var letter = await _incomingService.GetByIdAsync(id);
+            if (letter == null)
+            {
+                return NotFound(new { message = "Incoming letter not found" });
+            }
+
+            return Ok(letter);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving incoming letter {IncomingId}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving incoming letter" });
+        }
+    }
+
+    /// <summary>Register an incoming letter (UC-COR-04 / §21.S.2) — serial allocated server-side.</summary>
     [HttpPost("incoming")]
-    public async Task<ActionResult<IncomingDto>> CreateIncoming([FromBody] CreateIncomingDto dto)
+    public async Task<IActionResult> CreateIncomingLetter([FromBody] CreateIncomingDto model)
     {
         try
         {
-            var result = await _incomingService.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetIncomingById), new { id = result.Id }, result);
+            var letter = await _incomingService.CreateAsync(model);
+            return CreatedAtAction(nameof(GetIncomingLetter), new { id = letter.Id }, letter);
+        }
+        // Must precede the catch-all: ValidationException derives from Exception, so without
+        // this it is swallowed into a 500, leaving the client no `errors` map to flag fields.
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while creating incoming letter");
+            return StatusCode(500, new { message = "An error occurred while creating incoming letter" });
         }
     }
 
-    /// <summary>
-    /// Update incoming letter
-    /// </summary>
-    [HttpPut("incoming/{id}")]
-    public async Task<ActionResult<IncomingDto>> UpdateIncoming(Guid id, [FromBody] UpdateIncomingDto dto)
+    /// <summary>Update an incoming letter (UC-COR-06) — serial and charity ownership immutable.</summary>
+    [HttpPut("incoming/{id:guid}")]
+    public async Task<IActionResult> UpdateIncomingLetter(Guid id, [FromBody] UpdateIncomingDto model)
     {
         try
         {
-            if (id != dto.Id)
-                return BadRequest("ID mismatch");
-
-            var result = await _incomingService.UpdateAsync(dto);
-            return Ok(result);
+            var letter = await _incomingService.UpdateAsync(id, model);
+            return Ok(letter);
         }
-        catch (KeyNotFoundException ex)
+        // Must precede the catch-all: ValidationException derives from Exception, so without
+        // this it is swallowed into a 500, leaving the client no `errors` map to flag fields.
+        catch (FluentValidation.ValidationException ex)
         {
-            return NotFound(ex.Message);
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while updating incoming letter {IncomingId}", id);
+            return StatusCode(500, new { message = "An error occurred while updating incoming letter" });
         }
     }
 
-    /// <summary>
-    /// Delete incoming letter
-    /// </summary>
-    [HttpDelete("incoming/{id}")]
-    public async Task<ActionResult> DeleteIncoming(Guid id)
+    /// <summary>Delete an incoming letter (UC-COR-07) — the General Director's alone (SuperAdmin only).</summary>
+    [HttpDelete("incoming/{id:guid}")]
+    [Authorize(Roles = "SuperAdmin")]
+    public async Task<IActionResult> DeleteIncomingLetter(Guid id)
     {
         try
         {
-            await _incomingService.DeleteAsync(id);
-            return NoContent();
+            await _incomingService.DeleteAsync(id, GetCurrentUserId());
+            _logger.LogInformation("Incoming letter {IncomingId} deleted by {DeletedBy}", id, User.Identity?.Name);
+            return Ok(new { message = "Incoming letter deleted successfully" });
         }
-        catch (KeyNotFoundException ex)
+        catch (InvalidOperationException ex)
         {
-            return NotFound(ex.Message);
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deleting incoming letter {IncomingId}", id);
+            return StatusCode(500, new { message = "An error occurred while deleting incoming letter" });
         }
     }
 
-    #endregion
-
-    #region Outgoing Letters
-
-    /// <summary>
-    /// Get outgoing letter by ID
-    /// </summary>
-    [HttpGet("outgoing/{id}")]
-    public async Task<ActionResult<OutgoingDto>> GetOutgoingById(Guid id)
+    /// <summary>The advisory next incoming serial (UC-COR-03) — read-only form field.</summary>
+    [HttpGet("incoming/next-serial")]
+    public async Task<IActionResult> GetNextIncomingSerial([FromQuery] int? year, [FromQuery] Guid? charityId)
     {
         try
         {
-            var result = await _outgoingService.GetByIdAsync(id);
-            return Ok(result);
+            var next = await _incomingService.GetNextSerialAsync(year, charityId);
+            return Ok(next);
         }
-        catch (KeyNotFoundException ex)
+        catch (Exception ex)
         {
-            return NotFound(ex.Message);
+            _logger.LogError(ex, "Error occurred while retrieving the next incoming serial");
+            return StatusCode(500, new { message = "An error occurred while retrieving the next incoming serial" });
         }
     }
 
+    /// <summary>The §21.S.1 status options — the spec's tri-state, Arabic-stored.</summary>
+    [HttpGet("incoming/statuses")]
+    public async Task<IActionResult> GetIncomingStatuses()
+    {
+        try
+        {
+            var statuses = await _incomingService.GetAvailableStatusesAsync();
+            return Ok(statuses);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving incoming letter statuses");
+            return StatusCode(500, new { message = "An error occurred while retrieving incoming letter statuses" });
+        }
+    }
+
+    /// <summary>The two §21.S.3 lists (UC-COR-09): attached employees and available ones.</summary>
+    [HttpGet("incoming/{id:guid}/employees")]
+    public async Task<IActionResult> GetIncomingEmployees(Guid id)
+    {
+        try
+        {
+            var employees = await _incomingService.GetEmployeesAsync(id);
+            return Ok(employees);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving employees of incoming letter {IncomingId}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving the letter's employees" });
+        }
+    }
+
+    /// <summary>Attach an employee to an incoming letter (UC-COR-09).</summary>
+    [HttpPost("incoming/{id:guid}/employees")]
+    public async Task<IActionResult> AttachIncomingEmployee(Guid id, [FromBody] AttachEmployeeDto model)
+    {
+        try
+        {
+            await _incomingService.AttachEmployeeAsync(id, model.UserId);
+            return Ok(new { message = "Employee attached successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while attaching employee {UserId} to incoming letter {IncomingId}", model.UserId, id);
+            return StatusCode(500, new { message = "An error occurred while attaching the employee" });
+        }
+    }
+
+    /// <summary>Detach an employee from an incoming letter (UC-COR-09).</summary>
+    [HttpDelete("incoming/{id:guid}/employees/{userId:guid}")]
+    public async Task<IActionResult> DetachIncomingEmployee(Guid id, Guid userId)
+    {
+        try
+        {
+            await _incomingService.DetachEmployeeAsync(id, userId);
+            return Ok(new { message = "Employee detached successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while detaching employee {UserId} from incoming letter {IncomingId}", userId, id);
+            return StatusCode(500, new { message = "An error occurred while detaching the employee" });
+        }
+    }
+
+    // ========== Outgoing letters (UC-COR-10…19) ==========
+
     /// <summary>
-    /// Get paginated list of outgoing letters
+    /// The §21.S.4 outgoing register (UC-COR-10 / UC-COR-11) — scoped server-side to the
+    /// caller's charity.
     /// </summary>
     [HttpGet("outgoing")]
-    public async Task<ActionResult<(IEnumerable<OutgoingListDto> Items, int TotalCount)>> GetOutgoingPaged([FromQuery] OutgoingFilterDto filter)
+    public async Task<IActionResult> GetOutgoingLetters([FromQuery] OutgoingFilterDto filter)
     {
-        var result = await _outgoingService.GetPagedAsync(filter);
-        return Ok(result);
+        try
+        {
+            var result = await _outgoingService.GetPagedAsync(filter ?? new OutgoingFilterDto());
+            return Ok(new { items = result.Items, totalCount = result.TotalCount, page = result.Page });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving outgoing letters");
+            return StatusCode(500, new { message = "An error occurred while retrieving outgoing letters" });
+        }
     }
 
-    /// <summary>
-    /// Create new outgoing letter
-    /// </summary>
+    /// <summary>View an outgoing letter (UC-COR-14).</summary>
+    [HttpGet("outgoing/{id:guid}")]
+    public async Task<IActionResult> GetOutgoingLetter(Guid id)
+    {
+        try
+        {
+            var letter = await _outgoingService.GetByIdAsync(id);
+            if (letter == null)
+            {
+                return NotFound(new { message = "Outgoing letter not found" });
+            }
+
+            return Ok(letter);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving outgoing letter {OutgoingId}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving outgoing letter" });
+        }
+    }
+
+    /// <summary>Register an outgoing letter (UC-COR-13 / §21.S.5) — serial allocated server-side.</summary>
     [HttpPost("outgoing")]
-    public async Task<ActionResult<OutgoingDto>> CreateOutgoing([FromBody] CreateOutgoingDto dto)
+    public async Task<IActionResult> CreateOutgoingLetter([FromBody] CreateOutgoingDto model)
     {
         try
         {
-            var result = await _outgoingService.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetOutgoingById), new { id = result.Id }, result);
+            var letter = await _outgoingService.CreateAsync(model);
+            return CreatedAtAction(nameof(GetOutgoingLetter), new { id = letter.Id }, letter);
+        }
+        // Must precede the catch-all: ValidationException derives from Exception, so without
+        // this it is swallowed into a 500, leaving the client no `errors` map to flag fields.
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while creating outgoing letter");
+            return StatusCode(500, new { message = "An error occurred while creating outgoing letter" });
         }
     }
 
-    /// <summary>
-    /// Update outgoing letter
-    /// </summary>
-    [HttpPut("outgoing/{id}")]
-    public async Task<ActionResult<OutgoingDto>> UpdateOutgoing(Guid id, [FromBody] UpdateOutgoingDto dto)
+    /// <summary>Update an outgoing letter (UC-COR-15) — serial and charity ownership immutable.</summary>
+    [HttpPut("outgoing/{id:guid}")]
+    public async Task<IActionResult> UpdateOutgoingLetter(Guid id, [FromBody] UpdateOutgoingDto model)
     {
         try
         {
-            if (id != dto.Id)
-                return BadRequest("ID mismatch");
-
-            var result = await _outgoingService.UpdateAsync(dto);
-            return Ok(result);
+            var letter = await _outgoingService.UpdateAsync(id, model);
+            return Ok(letter);
         }
-        catch (KeyNotFoundException ex)
+        // Must precede the catch-all: ValidationException derives from Exception, so without
+        // this it is swallowed into a 500, leaving the client no `errors` map to flag fields.
+        catch (FluentValidation.ValidationException ex)
         {
-            return NotFound(ex.Message);
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
-        }
-    }
-
-    /// <summary>
-    /// Delete outgoing letter
-    /// </summary>
-    [HttpDelete("outgoing/{id}")]
-    public async Task<ActionResult> DeleteOutgoing(Guid id)
-    {
-        try
-        {
-            await _outgoingService.DeleteAsync(id);
-            return NoContent();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-    }
-
-    #endregion
-
-    #region Import Operations
-
-    /// <summary>
-    /// Validate incoming letters import file (UC-12.3)
-    /// </summary>
-    [HttpPost("import/incoming/validate")]
-    public async Task<ActionResult<ImportValidationResultDto>> ValidateIncomingImport([FromBody] ImportIncomingRequestDto request)
-    {
-        try
-        {
-            var result = await _incomingService.ValidateImportAsync(request);
-            return Ok(result);
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {
-            return BadRequest(ex.Message);
+            _logger.LogError(ex, "Error occurred while updating outgoing letter {OutgoingId}", id);
+            return StatusCode(500, new { message = "An error occurred while updating outgoing letter" });
         }
     }
 
-    /// <summary>
-    /// Import incoming letters (UC-12.1)
-    /// </summary>
-    [HttpPost("import/incoming")]
-    public async Task<ActionResult<ImportResultDto>> ImportIncoming([FromBody] ImportIncomingRequestDto request)
+    /// <summary>Delete an outgoing letter (UC-COR-16) — the General Director's alone (SuperAdmin only).</summary>
+    [HttpDelete("outgoing/{id:guid}")]
+    [Authorize(Roles = "SuperAdmin")]
+    public async Task<IActionResult> DeleteOutgoingLetter(Guid id)
     {
         try
         {
-            var result = await _incomingService.ImportAsync(request);
-            return Ok(result);
+            await _outgoingService.DeleteAsync(id, GetCurrentUserId());
+            _logger.LogInformation("Outgoing letter {OutgoingId} deleted by {DeletedBy}", id, User.Identity?.Name);
+            return Ok(new { message = "Outgoing letter deleted successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {
-            return BadRequest(ex.Message);
+            _logger.LogError(ex, "Error occurred while deleting outgoing letter {OutgoingId}", id);
+            return StatusCode(500, new { message = "An error occurred while deleting outgoing letter" });
         }
     }
 
-    /// <summary>
-    /// Validate outgoing letters import file (UC-12.3)
-    /// </summary>
-    [HttpPost("import/outgoing/validate")]
-    public async Task<ActionResult<ImportValidationResultDto>> ValidateOutgoingImport([FromBody] ImportOutgoingRequestDto request)
-    {
-        try
-        {
-            var result = await _outgoingService.ValidateImportAsync(request);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
-    }
-
-    /// <summary>
-    /// Import outgoing letters (UC-12.2)
-    /// </summary>
-    [HttpPost("import/outgoing")]
-    public async Task<ActionResult<ImportResultDto>> ImportOutgoing([FromBody] ImportOutgoingRequestDto request)
-    {
-        try
-        {
-            var result = await _outgoingService.ImportAsync(request);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
-    }
-
-    /// <summary>
-    /// Download import template (UC-12.9)
-    /// </summary>
-    [HttpGet("import/template/{type}")]
-    public async Task<ActionResult> DownloadTemplate(string type)
-    {
-        try
-        {
-            TemplateDownloadDto template;
-
-            if (type.ToLower() == "incoming")
-            {
-                template = await _incomingService.DownloadTemplateAsync();
-            }
-            else if (type.ToLower() == "outgoing")
-            {
-                template = await _outgoingService.DownloadTemplateAsync();
-            }
-            else
-            {
-                return BadRequest("Invalid template type. Use 'incoming' or 'outgoing'");
-            }
-
-            return File(template.FileContent, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", template.FileName);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
-    }
-
-    #endregion
-
-    #region Export Operations
-
-    /// <summary>
-    /// Export incoming letters (UC-12.10)
-    /// </summary>
-    [HttpPost("export/incoming")]
-    public async Task<ActionResult<ExportResultDto>> ExportIncoming([FromBody] ExportIncomingRequestDto request)
-    {
-        try
-        {
-            var result = await _incomingService.ExportAsync(request);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
-    }
-
-    /// <summary>
-    /// Export outgoing letters (UC-12.11)
-    /// </summary>
-    [HttpPost("export/outgoing")]
-    public async Task<ActionResult<ExportResultDto>> ExportOutgoing([FromBody] ExportOutgoingRequestDto request)
-    {
-        try
-        {
-            var result = await _outgoingService.ExportAsync(request);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
-    }
-
-    #endregion
-
-    #region Import/Export History
-
-    /// <summary>
-    /// Get import history (UC-12.7)
-    /// </summary>
-    [HttpGet("import/history")]
-    public async Task<ActionResult<IEnumerable<ImportHistoryItemDto>>> GetImportHistory()
-    {
-        var incomingHistory = await _incomingService.GetImportHistoryAsync();
-        var outgoingHistory = await _outgoingService.GetImportHistoryAsync();
-
-        var allHistory = incomingHistory.Concat(outgoingHistory);
-        return Ok(allHistory);
-    }
-
-    /// <summary>
-    /// Rollback import (UC-12.8)
-    /// </summary>
-    [HttpPost("import/rollback/{importId}")]
-    public async Task<ActionResult> RollbackImport(Guid importId)
-    {
-        try
-        {
-            await _incomingService.RollbackImportAsync(importId);
-            return Ok(new { message = "Import rolled back successfully" });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
-    }
-
-    /// <summary>
-    /// Get export history (UC-12.14)
-    /// </summary>
-    [HttpGet("export/history")]
-    public async Task<ActionResult<IEnumerable<ExportHistoryItemDto>>> GetExportHistory()
-    {
-        var history = await _outgoingService.GetExportHistoryAsync();
-        return Ok(history);
-    }
-
-    #endregion
-
-    #region Business Logic Endpoints
-
-    /// <summary>
-    /// Check if Incoming ID is unique
-    /// </summary>
-    [HttpGet("incoming/check-unique/{incomingId}")]
-    public async Task<ActionResult<bool>> CheckIncomingIdUnique(string incomingId, Guid? excludeId = null)
-    {
-        var result = await _incomingService.IsIncomingIdUniqueAsync(incomingId, excludeId);
-        return Ok(result);
-    }
-
-    /// <summary>
-    /// Check if Outgoing ID is unique
-    /// </summary>
-    [HttpGet("outgoing/check-unique/{outgoingId}")]
-    public async Task<ActionResult<bool>> CheckOutgoingIdUnique(string outgoingId, Guid? excludeId = null)
-    {
-        var result = await _outgoingService.IsOutgoingIdUniqueAsync(outgoingId, excludeId);
-        return Ok(result);
-    }
-
-    /// <summary>
-    /// Get next serial number for incoming letters
-    /// </summary>
-    [HttpGet("incoming/next-serial")]
-    public async Task<ActionResult<int>> GetNextIncomingSerial([FromQuery] int? departmentId, [FromQuery] int? year)
-    {
-        var result = await _incomingService.GetNextSerialNumberAsync(departmentId, year);
-        return Ok(result);
-    }
-
-    /// <summary>
-    /// Get next serial number for outgoing letters
-    /// </summary>
+    /// <summary>The advisory next outgoing serial (UC-COR-12) — read-only form field.</summary>
     [HttpGet("outgoing/next-serial")]
-    public async Task<ActionResult<int>> GetNextOutgoingSerial([FromQuery] int? departmentId, [FromQuery] int? year)
+    public async Task<IActionResult> GetNextOutgoingSerial([FromQuery] int? year, [FromQuery] Guid? charityId)
     {
-        var result = await _outgoingService.GetNextSerialNumberAsync(departmentId, year);
-        return Ok(result);
+        try
+        {
+            var next = await _outgoingService.GetNextSerialAsync(year, charityId);
+            return Ok(next);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving the next outgoing serial");
+            return StatusCode(500, new { message = "An error occurred while retrieving the next outgoing serial" });
+        }
     }
 
-    /// <summary>
-    /// Get available statuses for incoming letters
-    /// </summary>
-    [HttpGet("incoming/statuses")]
-    public async Task<ActionResult<IEnumerable<string>>> GetIncomingStatuses()
-    {
-        var result = await _incomingService.GetAvailableStatusesAsync();
-        return Ok(result);
-    }
-
-    /// <summary>
-    /// Get status colors for incoming letters
-    /// </summary>
-    [HttpGet("incoming/status-colors")]
-    public async Task<ActionResult<Dictionary<string, string>>> GetIncomingStatusColors()
-    {
-        var result = await _incomingService.GetStatusColorsAsync();
-        return Ok(result);
-    }
-
-    /// <summary>
-    /// Get available categories for outgoing letters
-    /// </summary>
+    /// <summary>The §21.S.5 category options (UC-COR-17) — table-backed, bilingual.</summary>
     [HttpGet("outgoing/categories")]
-    public async Task<ActionResult<Dictionary<int, string>>> GetOutgoingCategories()
-    {
-        var result = await _outgoingService.GetAvailableCategoriesAsync();
-        return Ok(result);
-    }
-
-    /// <summary>
-    /// Create child outgoing letter
-    /// </summary>
-    [HttpPost("outgoing/{parentOutgoingId}/child")]
-    public async Task<ActionResult<OutgoingDto>> CreateChildOutgoing(Guid parentOutgoingId, [FromBody] CreateChildOutgoingDto dto)
+    public async Task<IActionResult> GetOutgoingCategories()
     {
         try
         {
-            var result = await _outgoingService.CreateChildOutgoingAsync(parentOutgoingId, dto);
-            return Ok(result);
+            var categories = await _outgoingService.GetAvailableCategoriesAsync();
+            return Ok(categories);
         }
-        catch (KeyNotFoundException ex)
+        catch (Exception ex)
         {
-            return NotFound(ex.Message);
+            _logger.LogError(ex, "Error occurred while retrieving outgoing categories");
+            return StatusCode(500, new { message = "An error occurred while retrieving outgoing categories" });
+        }
+    }
+
+    /// <summary>The two §21.S.6 grids (UC-COR-18): attached orphans and the charity's unattached ones.</summary>
+    [HttpGet("outgoing/{id:guid}/orphans")]
+    public async Task<IActionResult> GetOutgoingOrphans(Guid id)
+    {
+        try
+        {
+            var orphans = await _outgoingService.GetOrphansAsync(id);
+            return Ok(orphans);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving orphans of outgoing letter {OutgoingId}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving the letter's orphans" });
+        }
+    }
+
+    /// <summary>Attach an orphan report to an outgoing letter (UC-COR-18 — BR-26 / BR-27 guards).</summary>
+    [HttpPost("outgoing/{id:guid}/orphans")]
+    public async Task<IActionResult> AttachOutgoingOrphan(Guid id, [FromBody] AttachOrphanDto model)
+    {
+        try
+        {
+            await _outgoingService.AttachOrphanAsync(id, model.OrphanId);
+            return Ok(new { message = "Orphan report attached successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while attaching orphan {OrphanId} to outgoing letter {OutgoingId}", model.OrphanId, id);
+            return StatusCode(500, new { message = "An error occurred while attaching the orphan report" });
+        }
+    }
+
+    /// <summary>Detach an orphan report from an outgoing letter (UC-COR-18).</summary>
+    [HttpDelete("outgoing/{id:guid}/orphans/{orphanId:guid}")]
+    public async Task<IActionResult> DetachOutgoingOrphan(Guid id, Guid orphanId)
+    {
+        try
+        {
+            await _outgoingService.DetachOrphanAsync(id, orphanId);
+            return Ok(new { message = "Orphan report detached successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while detaching orphan {OrphanId} from outgoing letter {OutgoingId}", orphanId, id);
+            return StatusCode(500, new { message = "An error occurred while detaching the orphan report" });
         }
     }
 
     /// <summary>
-    /// Get child outgoing letters
+    /// The §21.S.7 report (UC-COR-19): outgoing letters carrying the requested orphan's
+    /// report. The child code (كود اليتيم) is mandatory.
     /// </summary>
-    [HttpGet("outgoing/{parentOutgoingId}/children")]
-    public async Task<ActionResult<IEnumerable<ChildOutGoingDto>>> GetChildOutgoings(Guid parentOutgoingId)
+    [HttpGet("outgoing/reports/by-orphans")]
+    public async Task<IActionResult> GetOrphansByOutgoingLetter([FromQuery] OutgoingOrphanReportFilterDto filter)
     {
         try
         {
-            var result = await _outgoingService.GetChildOutgoingsAsync(parentOutgoingId);
-            return Ok(result);
+            var result = await _outgoingService.GetOrphanReportAsync(filter ?? new OutgoingOrphanReportFilterDto());
+            return Ok(new { items = result.Items, totalCount = result.TotalCount, page = result.Page });
         }
-        catch (KeyNotFoundException ex)
+        catch (InvalidOperationException ex)
         {
-            return NotFound(ex.Message);
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while building the orphans-by-outgoing-letter report");
+            return StatusCode(500, new { message = "An error occurred while building the report" });
         }
     }
 
-    /// <summary>
-    /// Delete child outgoing letter
-    /// </summary>
-    [HttpDelete("outgoing/child/{childId}")]
-    public async Task<ActionResult> DeleteChildOutgoing(Guid childId)
+    /// <summary>The caller's user id from the token — the delete audit stamp.</summary>
+    private Guid? GetCurrentUserId()
     {
-        try
-        {
-            var result = await _outgoingService.DeleteChildOutgoingAsync(childId);
-            if (result)
-                return Ok(new { message = "Child outgoing letter deleted successfully" });
-            else
-                return BadRequest("Failed to delete child outgoing letter");
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
+        var value = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(value, out var id) ? id : null;
     }
-
-    #endregion
 }

@@ -1,622 +1,369 @@
+using AutoMapper;
+using FluentValidation;
 using IIROSA.Application.DTOs.CheckManagement;
 using IIROSA.Application.Interfaces;
+using IIROSA.Domain.Contracts.Persistence;
 using IIROSA.Domain.Entities;
+using IIROSA.Domain.Entities.Lookups;
 using IIROSA.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using AutoMapper;
 
 namespace IIROSA.Application.Services;
 
 /// <summary>
-/// Check Service Implementation
-/// Implements business logic for Check management following UC-11.1 to UC-11.10
-/// IMPORTANT: Only Admin, Super Admin, and Accountant roles can access this service.
-/// Charity users are explicitly blocked from this module.
+/// General cheques service (chapter 16, UC-CHQ-01..10).
+///
+/// Tenancy: every read and write is scoped to the caller's charity from the JWT.
+/// A charity user is pinned to their own charity whatever they send; a head-office
+/// user may pass an explicit charity id, is pinned to their country when the token
+/// carries one, and otherwise sees all charities. Only the UnitOfWork persists.
 /// </summary>
 public class CheckService : ICheckService
 {
     private readonly ICheckRepository _checkRepository;
-    private readonly IMapper _mapper;
+    private readonly IRepository<Bank> _bankRepository;
+    private readonly ICharityRepository _charityRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CheckService> _logger;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IMapper _mapper;
+
+    private readonly IValidator<CreateCheckDto> _createValidator;
+    private readonly IValidator<UpdateCheckDto> _updateValidator;
+    private readonly IValidator<CheckFilterDto> _filterValidator;
 
     public CheckService(
         ICheckRepository checkRepository,
+        IRepository<Bank> bankRepository,
+        ICharityRepository charityRepository,
+        IUnitOfWork unitOfWork,
+        ILogger<CheckService> logger,
+        ICurrentUserService currentUser,
         IMapper mapper,
-        ILogger<CheckService> logger)
+        IValidator<CreateCheckDto> createValidator,
+        IValidator<UpdateCheckDto> updateValidator,
+        IValidator<CheckFilterDto> filterValidator)
     {
         _checkRepository = checkRepository;
-        _mapper = mapper;
+        _bankRepository = bankRepository;
+        _charityRepository = charityRepository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
+        _currentUser = currentUser;
+        _mapper = mapper;
+        _createValidator = createValidator;
+        _updateValidator = updateValidator;
+        _filterValidator = filterValidator;
     }
 
-    // ========== CRUD Operations ==========
-
-    public async Task<CheckPagedResult<CheckListDto>> GetChecksFilteredAsync(CheckFilterDto filter)
+    /// <inheritdoc />
+    public async Task<CheckPagedResult<CheckListDto>> GetChecksAsync(CheckFilterDto filter)
     {
-        try
+        filter ??= new CheckFilterDto();
+        _filterValidator.ValidateAndThrow(filter);
+
+        var query = ApplyFilters(ScopedQuery(), filter);
+
+        var totalCount = await query.CountAsync();
+        var page = Math.Max(filter.Page, 1);
+        var pageSize = Math.Clamp(filter.PageSize, 1, 200);
+
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new CheckPagedResult<CheckListDto>
         {
-            _logger.LogInformation("Retrieving checks with filter: {@Filter}", filter);
-
-            System.Linq.Expressions.Expression<Func<Check, bool>>? filterExpression = null;
-
-            if (filter != null)
-            {
-                filterExpression = c =>
-                    (string.IsNullOrWhiteSpace(filter.CheckStatus) || c.CheckStatus == filter.CheckStatus) &&
-                    (!filter.FK_BankId.HasValue || c.FK_BankId == filter.FK_BankId.Value) &&
-                    (string.IsNullOrWhiteSpace(filter.Currency) || c.Currency == filter.Currency) &&
-                    (!filter.StartDate.HasValue || c.CheckDate >= filter.StartDate.Value) &&
-                    (!filter.EndDate.HasValue || c.CheckDate <= filter.EndDate.Value) &&
-                    (!filter.MinAmount.HasValue || c.Amount >= filter.MinAmount.Value) &&
-                    (!filter.MaxAmount.HasValue || c.Amount <= filter.MaxAmount.Value) &&
-                    (string.IsNullOrWhiteSpace(filter.SearchText) ||
-                     c.CheckNumber.Contains(filter.SearchText) ||
-                     c.BeneficiaryName.Contains(filter.SearchText));
-            }
-
-            var (items, totalCount) = await _checkRepository.GetChecksPagedAsync(
-                filterExpression,
-                q => q.OrderByDescending(c => c.CheckDate),
-                filter?.Page ?? 1,
-                filter?.PageSize ?? 20);
-
-            var checkDtos = _mapper.Map<List<CheckListDto>>(items);
-
-            return new CheckPagedResult<CheckListDto>
-            {
-                Items = checkDtos,
-                TotalCount = totalCount,
-                Page = filter?.Page ?? 1,
-                PageSize = filter?.PageSize ?? 20
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving checks with filter: {@Filter}", filter);
-            throw;
-        }
+            Items = _mapper.Map<List<CheckListDto>>(items),
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 
+    /// <inheritdoc />
     public async Task<CheckDetailDto?> GetCheckByIdAsync(Guid id)
     {
-        try
-        {
-            var check = await _checkRepository.GetByIdAsync(id);
-            if (check == null)
-            {
-                _logger.LogWarning("Check with ID {CheckId} not found", id);
-                return null;
-            }
-
-            return _mapper.Map<CheckDetailDto>(check);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving check detail for ID: {CheckId}", id);
-            throw;
-        }
+        var check = await ScopedQuery().FirstOrDefaultAsync(c => c.Id == id);
+        return check is null ? null : _mapper.Map<CheckDetailDto>(check);
     }
 
+    /// <inheritdoc />
     public async Task<CheckDetailDto> CreateCheckAsync(CreateCheckDto dto)
     {
-        try
+        _createValidator.ValidateAndThrow(dto);
+
+        var bank = await _bankRepository.AsQueryable().FirstOrDefaultAsync(b => b.Id == dto.BankId);
+        if (bank is null)
         {
-            _logger.LogInformation("Creating new check: {@Check}", dto);
+            throw new InvalidOperationException($"Bank {dto.BankId} does not exist");
+        }
 
-            var check = _mapper.Map<Check>(dto);
-            check.CheckStatus = "Pending";
-
-            // Auto-generate amount in words if not provided
-            if (string.IsNullOrWhiteSpace(check.AmountInWords))
+        // Tenancy: a charity user owns the cheque whatever they send; an HQ user may
+        // attribute it to an explicit charity (validated) or leave it unattributed.
+        Guid? charityId = dto.CharityId;
+        if (_currentUser.CharityId.HasValue)
+        {
+            if (dto.CharityId.HasValue && dto.CharityId != _currentUser.CharityId)
             {
-                check.AmountInWords = ConvertAmountToWords(check.Amount, check.Currency);
+                _logger.LogWarning(
+                    "User {UserId} of charity {CallerCharityId} tried to issue a cheque for charity {RequestedCharityId}; owner forced to their own charity",
+                    _currentUser.UserId, _currentUser.CharityId, dto.CharityId);
             }
-
-            await _checkRepository.AddAsync(check);
-            await _checkRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Check created successfully with ID: {CheckId}", check.Id);
-
-            return _mapper.Map<CheckDetailDto>(check);
+            charityId = _currentUser.CharityId;
         }
-        catch (Exception ex)
+        else if (charityId.HasValue)
         {
-            _logger.LogError(ex, "Error occurred while creating check: {@Check}", dto);
-            throw;
+            var charityExists = await _charityRepository.AsQueryable().AnyAsync(ch => ch.Id == charityId.Value);
+            if (!charityExists)
+            {
+                throw new InvalidOperationException($"Charity {charityId} does not exist");
+            }
         }
+
+        dto.Currency = dto.Currency.Trim().ToUpperInvariant();
+        await EnsureUniqueAsync(dto.CheckNumber, dto.BankId!.Value, charityId, excludeId: null);
+
+        var check = _mapper.Map<Check>(dto);
+        check.FK_BankId = bank.Id;
+        check.FK_CharityId = charityId;
+        if (string.IsNullOrWhiteSpace(check.AmountInWords))
+        {
+            check.AmountInWords = ArabicAmountInWords.Convert(check.Amount, check.Currency);
+        }
+
+        await _checkRepository.InsertAsync(check);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Cheque {CheckNumber} issued for charity {CharityId} by user {UserId}",
+            check.CheckNumber, check.FK_CharityId, _currentUser.UserId);
+
+        var created = await ScopedQuery().FirstAsync(c => c.Id == check.Id);
+        return _mapper.Map<CheckDetailDto>(created);
     }
 
-    public async Task<CheckDetailDto> UpdateCheckAsync(Guid id, UpdateCheckDto dto)
+    /// <inheritdoc />
+    public async Task<CheckDetailDto> UpdateCheckAsync(UpdateCheckDto dto)
     {
-        try
+        _updateValidator.ValidateAndThrow(dto);
+
+        var check = await ScopedQuery().FirstOrDefaultAsync(c => c.Id == dto.Id);
+        if (check is null)
         {
-            var check = await _checkRepository.GetByIdAsync(id);
-            if (check == null)
-            {
-                throw new InvalidOperationException($"Check with ID {id} not found");
-            }
-
-            // Validate that check can be modified
-            if (!check.CanModify)
-            {
-                throw new InvalidOperationException("Cannot modify a check that is not in Pending status");
-            }
-
-            // Update only non-null properties
-            if (!string.IsNullOrWhiteSpace(dto.CheckNumber))
-                check.CheckNumber = dto.CheckNumber;
-
-            if (dto.CheckDate.HasValue)
-                check.CheckDate = dto.CheckDate.Value;
-
-            if (dto.DueDate.HasValue)
-                check.DueDate = dto.DueDate.Value;
-
-            if (!string.IsNullOrWhiteSpace(dto.Currency))
-                check.Currency = dto.Currency;
-
-            if (dto.BeneficiaryType != null)
-                check.BeneficiaryType = dto.BeneficiaryType;
-
-            if (!string.IsNullOrWhiteSpace(dto.BeneficiaryName))
-                check.BeneficiaryName = dto.BeneficiaryName;
-
-            if (dto.FK_ChequeBeneficiaryId.HasValue)
-                check.FK_ChequeBeneficiaryId = dto.FK_ChequeBeneficiaryId.Value;
-
-            if (dto.BeneficiaryAddress != null)
-                check.BeneficiaryAddress = dto.BeneficiaryAddress;
-
-            if (dto.BeneficiaryPhone != null)
-                check.BeneficiaryPhone = dto.BeneficiaryPhone;
-
-            if (dto.BeneficiaryEmail != null)
-                check.BeneficiaryEmail = dto.BeneficiaryEmail;
-
-            if (dto.BeneficiaryIdNumber != null)
-                check.BeneficiaryIdNumber = dto.BeneficiaryIdNumber;
-
-            if (dto.Amount.HasValue)
-            {
-                check.Amount = dto.Amount.Value;
-                // Auto-generate amount in words
-                check.AmountInWords = ConvertAmountToWords(check.Amount, check.Currency);
-            }
-
-            if (!string.IsNullOrWhiteSpace(dto.PaymentReason))
-                check.PaymentReason = dto.PaymentReason;
-
-            if (dto.PaymentDescription != null)
-                check.PaymentDescription = dto.PaymentDescription;
-
-            if (dto.FK_BankId.HasValue)
-                check.FK_BankId = dto.FK_BankId.Value;
-
-            if (dto.BankBranch != null)
-                check.BankBranch = dto.BankBranch;
-
-            if (dto.AccountNumber != null)
-                check.AccountNumber = dto.AccountNumber;
-
-            if (dto.Notes != null)
-                check.Notes = dto.Notes;
-
-            _checkRepository.Update(check);
-            await _checkRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Check updated successfully: {CheckId}", id);
-
-            return _mapper.Map<CheckDetailDto>(check);
+            throw new KeyNotFoundException($"Check {dto.Id} not found");
         }
-        catch (Exception ex)
+
+        var bank = await _bankRepository.AsQueryable().FirstOrDefaultAsync(b => b.Id == dto.BankId);
+        if (bank is null)
         {
-            _logger.LogError(ex, "Error occurred while updating check {CheckId}: {@Check}", id, dto);
-            throw;
+            throw new InvalidOperationException($"Bank {dto.BankId} does not exist");
         }
+
+        dto.Currency = dto.Currency.Trim().ToUpperInvariant();
+        await EnsureUniqueAsync(dto.CheckNumber, dto.BankId!.Value, check.FK_CharityId, excludeId: check.Id);
+
+        // The charity assignment never moves on edit — the issuer stays the owner.
+        var amountOrCurrencyChanged = check.Amount != dto.Amount
+            || !string.Equals(check.Currency, dto.Currency, StringComparison.OrdinalIgnoreCase);
+        var wordsUntouched = string.Equals(dto.AmountInWords?.Trim(), check.AmountInWords?.Trim(), StringComparison.Ordinal);
+
+        check.CheckNumber = dto.CheckNumber;
+        check.CheckDate = dto.CheckDate;
+        check.Currency = dto.Currency;
+        check.ChequeType = string.IsNullOrWhiteSpace(dto.ChequeType) ? "Individuals" : dto.ChequeType;
+        check.FK_BankId = bank.Id;
+        check.FK_ChequeBeneficiaryId = dto.ChequeBeneficiaryId;
+        check.BeneficiaryType = dto.BeneficiaryType;
+        check.BeneficiaryName = dto.BeneficiaryName;
+        check.BeneficiaryAddress = dto.BeneficiaryAddress;
+        check.BeneficiaryPhone = dto.BeneficiaryPhone;
+        check.BeneficiaryEmail = dto.BeneficiaryEmail;
+        check.BeneficiaryIdNumber = dto.BeneficiaryIdNumber;
+        check.BankBranch = dto.BankBranch;
+        check.AccountNumber = dto.AccountNumber;
+        check.Amount = dto.Amount;
+        check.IsDamaged = dto.IsDamaged;
+        check.IsReturned = dto.IsReturned;
+        check.IsDispensed = dto.IsDispensed;
+        check.IsDone = dto.IsDone;
+        check.Notes = dto.Comment;
+
+        // تفقيط: regenerate when the field arrives blank, or when the amount/currency
+        // changed and the client echoed the previous words back untouched.
+        if (string.IsNullOrWhiteSpace(dto.AmountInWords) || (amountOrCurrencyChanged && wordsUntouched))
+        {
+            check.AmountInWords = ArabicAmountInWords.Convert(check.Amount, check.Currency);
+        }
+        else
+        {
+            check.AmountInWords = dto.AmountInWords;
+        }
+
+        _checkRepository.Update(check);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("Cheque {CheckId} updated by user {UserId}", check.Id, _currentUser.UserId);
+
+        var updated = await ScopedQuery().FirstAsync(c => c.Id == check.Id);
+        return _mapper.Map<CheckDetailDto>(updated);
     }
 
-    public async Task DeleteCheckAsync(Guid id)
+    /// <inheritdoc />
+    public async Task<CheckStatementDto> GetStatementAsync(CheckFilterDto filter)
     {
-        try
+        filter ??= new CheckFilterDto();
+        _filterValidator.ValidateAndThrow(filter);
+
+        var query = ApplyFilters(ScopedQuery(), filter);
+
+        var totalCount = await query.CountAsync();
+        var page = Math.Max(filter.Page, 1);
+        var pageSize = Math.Clamp(filter.PageSize, 1, 200);
+
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        // Totals over the whole filtered set, not just the page.
+        var totals = await query
+            .GroupBy(c => c.Currency)
+            .Select(g => new { Currency = g.Key, Total = g.Sum(c => c.Amount) })
+            .ToListAsync();
+
+        return new CheckStatementDto
         {
-            var check = await _checkRepository.GetByIdAsync(id);
-            if (check == null)
-            {
-                throw new InvalidOperationException($"Check with ID {id} not found");
-            }
-
-            // Validate that check can be deleted
-            if (!check.CanModify)
-            {
-                throw new InvalidOperationException("Cannot delete a check that is not in Pending status");
-            }
-
-            _checkRepository.Delete(check);
-            await _checkRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Check deleted successfully: {CheckId}", id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while deleting check {CheckId}", id);
-            throw;
-        }
+            Items = _mapper.Map<List<CheckListDto>>(items),
+            TotalCount = totalCount,
+            TotalPages = pageSize > 0 ? (int)Math.Ceiling((decimal)totalCount / pageSize) : 0,
+            TotalByCurrency = totals.ToDictionary(t => t.Currency, t => t.Total),
+            GeneratedOn = DateTime.UtcNow
+        };
     }
 
-    // ========== Check-Specific Operations ==========
-
-    public async Task SetCheckAmountAsync(Guid id, SetCheckAmountDto dto)
+    /// <inheritdoc />
+    public Task<AmountInWordsDto> GetAmountInWordsAsync(decimal amount, string currency)
     {
-        try
+        if (amount < 0)
         {
-            var check = await _checkRepository.GetByIdAsync(id);
-            if (check == null)
-            {
-                throw new InvalidOperationException($"Check with ID {id} not found");
-            }
-
-            if (!check.CanModify)
-            {
-                throw new InvalidOperationException("Cannot modify a check that is not in Pending status");
-            }
-
-            check.Amount = dto.Amount;
-            check.Currency = dto.Currency;
-            check.AmountInWords = string.IsNullOrWhiteSpace(dto.AmountInWords)
-                ? ConvertAmountToWords(dto.Amount, dto.Currency)
-                : dto.AmountInWords;
-
-            _checkRepository.Update(check);
-            await _checkRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Check amount updated for check {CheckId}: Amount={Amount}, Currency={Currency}", id, dto.Amount, dto.Currency);
+            throw new ValidationException("Amount cannot be negative");
         }
-        catch (Exception ex)
+
+        currency = (currency ?? string.Empty).Trim().ToUpperInvariant();
+        if (currency.Length != 3)
         {
-            _logger.LogError(ex, "Error occurred while setting check amount for check {CheckId}", id);
-            throw;
+            throw new ValidationException("Currency must be a 3-letter ISO code");
         }
+
+        return Task.FromResult(new AmountInWordsDto
+        {
+            Amount = amount,
+            Currency = currency,
+            Words = ArabicAmountInWords.Convert(amount, currency)
+        });
     }
 
-    public async Task SetCheckDateAsync(Guid id, SetCheckDateDto dto)
+    #region Helpers
+
+    /// <summary>
+    /// The register query narrowed to what the caller may see: their own charity when
+    /// bound to one; otherwise head-office scope — an explicit charity, their country
+    /// when the token carries one, or every charity.
+    /// </summary>
+    private IQueryable<Check> ScopedQuery()
     {
-        try
+        var query = _checkRepository.Query();
+
+        if (_currentUser.CharityId.HasValue)
         {
-            var check = await _checkRepository.GetByIdAsync(id);
-            if (check == null)
-            {
-                throw new InvalidOperationException($"Check with ID {id} not found");
-            }
-
-            if (!check.CanModify)
-            {
-                throw new InvalidOperationException("Cannot modify a check that is not in Pending status");
-            }
-
-            // Validate dates
-            if (dto.DueDate.HasValue && dto.DueDate.Value < dto.CheckDate)
-            {
-                throw new InvalidOperationException("Due date cannot be before check date");
-            }
-
-            check.CheckDate = dto.CheckDate;
-            check.DueDate = dto.DueDate;
-
-            _checkRepository.Update(check);
-            await _checkRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Check dates updated for check {CheckId}: CheckDate={CheckDate}, DueDate={DueDate}", id, dto.CheckDate, dto.DueDate);
+            return query.Where(c => c.FK_CharityId == _currentUser.CharityId);
         }
-        catch (Exception ex)
+
+        if (!_currentUser.IsHeadOffice)
         {
-            _logger.LogError(ex, "Error occurred while setting check date for check {CheckId}", id);
-            throw;
+            _logger.LogWarning(
+                "Unscopeable caller {UserId} reached the cheque register; scope narrowed to nothing",
+                _currentUser.UserId);
+            return query.Where(c => false);
         }
+
+        return query;
     }
 
-    public async Task MarkCheckAsClearedAsync(Guid id, MarkCheckClearedDto dto)
+    /// <summary>
+    /// Applies the shared §16.S.1/§16.S.3 filters (charity is resolved by the scope;
+    /// a country-scoped HQ caller stays inside their country) and the register order.
+    /// </summary>
+    private IQueryable<Check> ApplyFilters(IQueryable<Check> query, CheckFilterDto filter)
     {
-        try
+        if (_currentUser.CharityId.HasValue)
         {
-            var check = await _checkRepository.GetByIdAsync(id);
-            if (check == null)
+            query = query.Where(c => c.FK_CharityId == _currentUser.CharityId);
+        }
+        else if (_currentUser.IsHeadOffice)
+        {
+            if (filter.CharityId.HasValue)
             {
-                throw new InvalidOperationException($"Check with ID {id} not found");
+                query = query.Where(c => c.FK_CharityId == filter.CharityId.Value);
             }
-
-            if (!check.CanBeCleared)
+            else if (_currentUser.CountryId.HasValue)
             {
-                throw new InvalidOperationException("Only issued checks can be marked as cleared");
+                query = query.Where(c => c.Charity != null && c.Charity.CountryId == _currentUser.CountryId);
             }
-
-            check.CheckStatus = "Cleared";
-            check.ClearanceDate = dto.ClearanceDate;
-            check.BankReference = dto.BankReference;
-            check.ClearanceNotes = dto.ClearanceNotes;
-
-            _checkRepository.Update(check);
-            await _checkRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Check marked as cleared: {CheckId}", id);
         }
-        catch (Exception ex)
+
+        if (filter.BankId.HasValue)
         {
-            _logger.LogError(ex, "Error occurred while marking check as cleared {CheckId}", id);
-            throw;
+            query = query.Where(c => c.FK_BankId == filter.BankId.Value);
         }
+
+        if (filter.DateFrom.HasValue)
+        {
+            query = query.Where(c => c.CheckDate >= filter.DateFrom.Value);
+        }
+
+        if (filter.DateTo.HasValue)
+        {
+            // Inclusive end date: through the last moment of the day.
+            var endExclusive = filter.DateTo.Value.Date.AddDays(1);
+            query = query.Where(c => c.CheckDate < endExclusive);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.ChequeType))
+        {
+            query = query.Where(c => c.ChequeType == filter.ChequeType);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.SearchText))
+        {
+            var term = filter.SearchText.Trim();
+            query = query.Where(c => c.CheckNumber.Contains(term) || c.BeneficiaryName.Contains(term));
+        }
+
+        return query.OrderByDescending(c => c.CheckDate).ThenByDescending(c => c.CreatedOn);
     }
 
-    public async Task VoidCheckAsync(Guid id, VoidCheckDto dto)
+    /// <summary>
+    /// A cheque number is unique per bank per charity among live rows (§16.S.2);
+    /// the filtered unique index is the last line of defence.
+    /// </summary>
+    private async Task EnsureUniqueAsync(string checkNumber, int bankId, Guid? charityId, Guid? excludeId)
     {
-        try
+        var number = checkNumber.Trim();
+        var clash = await _checkRepository.Query().AnyAsync(c =>
+            c.CheckNumber == number &&
+            c.FK_BankId == bankId &&
+            c.FK_CharityId == charityId &&
+            (excludeId == null || c.Id != excludeId));
+
+        if (clash)
         {
-            var check = await _checkRepository.GetByIdAsync(id);
-            if (check == null)
-            {
-                throw new InvalidOperationException($"Check with ID {id} not found");
-            }
-
-            if (!check.CanBeVoided)
-            {
-                throw new InvalidOperationException("Check cannot be voided");
-            }
-
-            if (string.IsNullOrWhiteSpace(dto.VoidNotes))
-            {
-                throw new InvalidOperationException("Void notes are required");
-            }
-
-            check.CheckStatus = "Void";
-            check.VoidDate = dto.VoidDate;
-            check.VoidReason = dto.VoidReason;
-            check.VoidNotes = dto.VoidNotes;
-
-            _checkRepository.Update(check);
-            await _checkRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Check voided: {CheckId}, Reason: {Reason}", id, dto.VoidReason);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while voiding check {CheckId}", id);
-            throw;
+            throw new InvalidOperationException($"Cheque number {number} already exists for this bank");
         }
     }
 
-    public async Task<CheckReconciliationDto> ReconcileChecksAsync(CheckReconciliationDto reconciliation)
-    {
-        try
-        {
-            _logger.LogInformation("Reconciling checks: {CheckCount} checks", reconciliation.ReconciledCheckIds.Count);
-
-            foreach (var checkId in reconciliation.ReconciledCheckIds)
-            {
-                var check = await _checkRepository.GetByIdAsync(checkId);
-                if (check != null && check.CheckStatus == "Issued")
-                {
-                    check.CheckStatus = "Cleared";
-                    check.ClearanceDate = reconciliation.ReconciliationDate;
-                    check.ClearanceNotes = $"Reconciled: {reconciliation.ReconciliationNotes}";
-
-                    _checkRepository.Update(check);
-                }
-            }
-
-            await _checkRepository.SaveChangesAsync();
-
-            reconciliation.TotalChecksReconciled = reconciliation.ReconciledCheckIds.Count;
-
-            var unreconciledChecks = await _checkRepository.GetUnreconciledChecksAsync();
-            reconciliation.TotalAmountReconciled = unreconciledChecks
-                .Where(c => reconciliation.ReconciledCheckIds.Contains(c.Id))
-                .Sum(c => c.Amount);
-
-            reconciliation.UnreconciledChecks = unreconciledChecks.Count();
-
-            _logger.LogInformation("Checks reconciled successfully: {Count} checks", reconciliation.TotalChecksReconciled);
-
-            return reconciliation;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while reconciling checks");
-            throw;
-        }
-    }
-
-    public async Task<CheckReportDto> GenerateCheckReportAsync(CheckReportFilterDto filter)
-    {
-        try
-        {
-            _logger.LogInformation("Generating check report: {@Filter}", filter);
-
-            var allChecks = await _checkRepository.GetByDateRangeAsync(filter.StartDate, filter.EndDate);
-            var filteredChecks = allChecks.AsQueryable();
-
-            // Apply filters
-            if (!string.IsNullOrWhiteSpace(filter.CheckStatus))
-            {
-                filteredChecks = filteredChecks.Where(c => c.CheckStatus == filter.CheckStatus);
-            }
-
-            if (filter.FK_BankId.HasValue)
-            {
-                filteredChecks = filteredChecks.Where(c => c.FK_BankId == filter.FK_BankId.Value);
-            }
-
-            if (!string.IsNullOrWhiteSpace(filter.Currency))
-            {
-                filteredChecks = filteredChecks.Where(c => c.Currency == filter.Currency);
-            }
-
-            var checksList = filteredChecks.ToList();
-
-            var report = new CheckReportDto
-            {
-                Summary = new CheckStatusSummaryDto
-                {
-                    TotalChecks = checksList.Count,
-                    PendingChecks = checksList.Count(c => c.CheckStatus == "Pending"),
-                    IssuedChecks = checksList.Count(c => c.CheckStatus == "Issued"),
-                    ClearedChecks = checksList.Count(c => c.CheckStatus == "Cleared"),
-                    VoidedChecks = checksList.Count(c => c.CheckStatus == "Void"),
-                    TotalAmount = checksList.Sum(c => c.Amount),
-                    PendingAmount = checksList.Where(c => c.CheckStatus == "Pending").Sum(c => c.Amount),
-                    ClearedAmount = checksList.Where(c => c.CheckStatus == "Cleared").Sum(c => c.Amount),
-                    AmountByCurrency = checksList.GroupBy(c => c.Currency)
-                        .ToDictionary(g => g.Key, g => g.Sum(c => c.Amount)),
-                    CountByBank = checksList.Where(c => c.FK_BankId.HasValue)
-                        .GroupBy(c => c.FK_BankId!.Value)
-                        .ToDictionary(g => g.Key.ToString(), g => g.Count())
-                },
-                DetailedChecks = _mapper.Map<List<CheckListDto>>(checksList),
-                ClearedChecks = _mapper.Map<List<CheckListDto>>(checksList.Where(c => c.CheckStatus == "Cleared")),
-                PendingChecks = _mapper.Map<List<CheckListDto>>(checksList.Where(c => c.CheckStatus == "Pending")),
-                VoidChecks = _mapper.Map<List<CheckListDto>>(checksList.Where(c => c.CheckStatus == "Void")),
-                ReportGeneratedOn = DateTime.UtcNow
-            };
-
-            _logger.LogInformation("Check report generated successfully");
-
-            return report;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while generating check report");
-            throw;
-        }
-    }
-
-    // ========== View Operations ==========
-
-    public async Task<List<CheckListDto>> GetPendingChecksAsync()
-    {
-        try
-        {
-            var pendingChecks = await _checkRepository.GetPendingChecksAsync();
-            return _mapper.Map<List<CheckListDto>>(pendingChecks);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving pending checks");
-            throw;
-        }
-    }
-
-    public async Task<List<CheckListDto>> GetIssuedChecksAsync()
-    {
-        try
-        {
-            var issuedChecks = await _checkRepository.GetIssuedChecksAsync();
-            return _mapper.Map<List<CheckListDto>>(issuedChecks);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving issued checks");
-            throw;
-        }
-    }
-
-    public async Task<List<CheckListDto>> GetClearedChecksAsync()
-    {
-        try
-        {
-            var clearedChecks = await _checkRepository.GetClearedChecksAsync();
-            return _mapper.Map<List<CheckListDto>>(clearedChecks);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving cleared checks");
-            throw;
-        }
-    }
-
-    public async Task<List<CheckListDto>> GetVoidedChecksAsync()
-    {
-        try
-        {
-            var voidedChecks = await _checkRepository.GetVoidedChecksAsync();
-            return _mapper.Map<List<CheckListDto>>(voidedChecks);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving voided checks");
-            throw;
-        }
-    }
-
-    public async Task<List<CheckListDto>> GetUnreconciledChecksAsync()
-    {
-        try
-        {
-            var unreconciledChecks = await _checkRepository.GetUnreconciledChecksAsync();
-            return _mapper.Map<List<CheckListDto>>(unreconciledChecks);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving unreconciled checks");
-            throw;
-        }
-    }
-
-    public async Task<CheckStatusSummaryDto> GetCheckStatusSummaryAsync()
-    {
-        try
-        {
-            var allChecks = await _checkRepository.GetAllAsync();
-
-            var summary = new CheckStatusSummaryDto
-            {
-                TotalChecks = allChecks.Count(),
-                PendingChecks = allChecks.Count(c => c.CheckStatus == "Pending"),
-                IssuedChecks = allChecks.Count(c => c.CheckStatus == "Issued"),
-                ClearedChecks = allChecks.Count(c => c.CheckStatus == "Cleared"),
-                VoidedChecks = allChecks.Count(c => c.CheckStatus == "Void"),
-                TotalAmount = allChecks.Sum(c => c.Amount),
-                PendingAmount = allChecks.Where(c => c.CheckStatus == "Pending").Sum(c => c.Amount),
-                ClearedAmount = allChecks.Where(c => c.CheckStatus == "Cleared").Sum(c => c.Amount),
-                AmountByCurrency = allChecks.GroupBy(c => c.Currency)
-                    .ToDictionary(g => g.Key, g => g.Sum(c => c.Amount)),
-                CountByBank = allChecks.Where(c => c.FK_BankId.HasValue)
-                    .GroupBy(c => c.FK_BankId!.Value)
-                    .ToDictionary(g => g.Key.ToString(), g => g.Count())
-            };
-
-            return summary;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving check status summary");
-            throw;
-        }
-    }
-
-    // ========== Export ==========
-
-    public async Task<byte[]> ExportChecksToExcelAsync(CheckFilterDto filter)
-    {
-        try
-        {
-            _logger.LogInformation("Exporting checks to Excel with filter: {@Filter}", filter);
-
-            var result = await GetChecksFilteredAsync(filter);
-
-            // TODO: Implement Excel export using EPPlus or ClosedXML
-            throw new NotImplementedException("Excel export functionality not yet implemented");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while exporting checks to Excel");
-            throw;
-        }
-    }
-
-    // ========== Helper Methods ==========
-
-    private string ConvertAmountToWords(decimal amount, string currency)
-    {
-        // TODO: Implement proper number-to-words conversion
-        // For now, return a placeholder
-        return $"{amount} {currency}";
-    }
+    #endregion
 }

@@ -30,4 +30,30 @@ public class Bank : LookupEntity
     /// Bank phone number
     /// </summary>
     public string? Phone { get; set; }
+
+    // ========== Cheque print positions (UC-CHQ-08) ==========
+    // Coordinate offsets, in millimetres from the top-right edge of the cheque leaf, at which
+    // each field is printed so it lands on the bank's pre-printed stationery. All nullable:
+    // a bank without configured positions falls back to the default layout, and the client
+    // is told there is nothing to align to rather than receiving fake coordinates.
+
+    /// <summary>Date field offset (تاريخ الشيك).</summary>
+    public decimal? ChequeDateX { get; set; }
+    /// <summary>Date field offset (تاريخ الشيك).</summary>
+    public decimal? ChequeDateY { get; set; }
+
+    /// <summary>Beneficiary name offset (اسم المستفيد).</summary>
+    public decimal? PayeeX { get; set; }
+    /// <summary>Beneficiary name offset (اسم المستفيد).</summary>
+    public decimal? PayeeY { get; set; }
+
+    /// <summary>Amount in digits offset (المبلغ).</summary>
+    public decimal? AmountX { get; set; }
+    /// <summary>Amount in digits offset (المبلغ).</summary>
+    public decimal? AmountY { get; set; }
+
+    /// <summary>Amount in Arabic words offset (المبلغ بالحروف).</summary>
+    public decimal? AmountWordsX { get; set; }
+    /// <summary>Amount in Arabic words offset (المبلغ بالحروف).</summary>
+    public decimal? AmountWordsY { get; set; }
 }

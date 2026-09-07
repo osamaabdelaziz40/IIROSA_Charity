@@ -1,108 +1,111 @@
 namespace IIROSA.Application.DTOs.IncomingOutgoing;
 
 /// <summary>
-/// Base Incoming Letter DTO
+/// Incoming letter detail DTO (epic 16, UC-COR-05) — clean camelCase wire: the FK_* entity
+/// names surface as departmentId / assignedUserId / serialTxt, never fk_DepartmentId.
 /// </summary>
 public class IncomingDto
 {
     public Guid Id { get; set; }
     public int? Serial { get; set; }
-    public string? Serial_Txt { get; set; }
+    public string? SerialTxt { get; set; }
     public string Subject { get; set; } = string.Empty;
     public DateTime? Date { get; set; }
-    public string? IncomingNumber { get; set; }
-    public string IncomingId { get; set; } = string.Empty;
-    public string? Body { get; set; }
     public string? LetterNumber { get; set; }
     public DateTime? LetterDate { get; set; }
     public int? Year { get; set; }
     public string? Status { get; set; }
     public string? LetterDescription { get; set; }
-    public int? FK_DepartmentId { get; set; }
+    public int? DepartmentId { get; set; }
     public string? DepartmentName { get; set; }
-    public Guid? FK_UserId { get; set; }
-    public string? UserName { get; set; }
+    public Guid? AssignedUserId { get; set; }
+    public string? AssignedUserName { get; set; }
     public Guid? OutgoingId { get; set; }
+    public string? OutgoingLetterNumber { get; set; }
     public Guid? UploadedFileId { get; set; }
     public string? UploadedFileName { get; set; }
+    public Guid? CharityId { get; set; }
+    public string? CharityName { get; set; }
     public DateTime CreatedOn { get; set; }
     public DateTime UpdatedOn { get; set; }
 }
 
 /// <summary>
-/// Create Incoming Letter DTO
+/// Register an incoming letter (epic 16, UC-COR-04 / §21.S.2). Serial is allocated
+/// server-side per charity + year — it is never accepted from the payload.
 /// </summary>
 public class CreateIncomingDto
 {
-    public string Subject { get; set; } = string.Empty;
     public DateTime? Date { get; set; }
-    public string? IncomingNumber { get; set; }
-    public string IncomingId { get; set; } = string.Empty;
-    public string? Body { get; set; }
     public string? LetterNumber { get; set; }
     public DateTime? LetterDate { get; set; }
-    public int? Year { get; set; }
+    public int? DepartmentId { get; set; }
+    public string Subject { get; set; } = string.Empty;
     public string? Status { get; set; }
-    public string? LetterDescription { get; set; }
-    public int? FK_DepartmentId { get; set; }
+    public Guid? AssignedUserId { get; set; }
     public Guid? OutgoingId { get; set; }
+    public string? LetterDescription { get; set; }
     public Guid? UploadedFileId { get; set; }
 }
 
 /// <summary>
-/// Update Incoming Letter DTO
+/// Update an incoming letter (epic 16, UC-COR-06). Serial / charity ownership are immutable.
 /// </summary>
 public class UpdateIncomingDto
 {
     public Guid Id { get; set; }
-    public string Subject { get; set; } = string.Empty;
     public DateTime? Date { get; set; }
-    public string? IncomingNumber { get; set; }
-    public string IncomingId { get; set; } = string.Empty;
-    public string? Body { get; set; }
     public string? LetterNumber { get; set; }
     public DateTime? LetterDate { get; set; }
-    public int? Year { get; set; }
+    public int? DepartmentId { get; set; }
+    public string Subject { get; set; } = string.Empty;
     public string? Status { get; set; }
-    public string? LetterDescription { get; set; }
-    public int? FK_DepartmentId { get; set; }
+    public Guid? AssignedUserId { get; set; }
     public Guid? OutgoingId { get; set; }
+    public string? LetterDescription { get; set; }
     public Guid? UploadedFileId { get; set; }
 }
 
 /// <summary>
-/// Incoming Letter List DTO
+/// Incoming letter list row (epic 16, UC-COR-01 / §21.S.1 grid)
 /// </summary>
 public class IncomingListDto
 {
     public Guid Id { get; set; }
     public int? Serial { get; set; }
-    public string? Serial_Txt { get; set; }
+    public string? SerialTxt { get; set; }
     public string Subject { get; set; } = string.Empty;
-    public DateTime? Date { get; set; }
-    public string IncomingId { get; set; } = string.Empty;
     public string? LetterNumber { get; set; }
-    public string? Status { get; set; }
+    public DateTime? LetterDate { get; set; }
+    public DateTime? Date { get; set; }
+    public int? DepartmentId { get; set; }
     public string? DepartmentName { get; set; }
+    public string? AssignedUserName { get; set; }
+    public string? Status { get; set; }
     public int? Year { get; set; }
+    public Guid? UploadedFileId { get; set; }
+    public string? UploadedFileName { get; set; }
     public DateTime CreatedOn { get; set; }
 }
 
 /// <summary>
-/// Incoming Letter Filter DTO
-/// Implements filter requirements from UC-12.1
+/// Incoming letter filter (epic 16, UC-COR-01 / UC-COR-02 — §21.S.1 search criteria).
+/// CharityId is the HQ caller's explicit narrow; a charity caller is pinned server-side.
 /// </summary>
 public class IncomingFilterDto
 {
     public int PageNumber { get; set; } = 1;
-    public int PageSize { get; set; } = 10;
+    public int PageSize { get; set; } = 20;
     public string? SearchTerm { get; set; }
-    public DateTime? StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
+    public int? Serial { get; set; }
+    public string? LetterNumber { get; set; }
     public int? DepartmentId { get; set; }
     public string? Status { get; set; }
     public int? Year { get; set; }
-    public Guid? CreatedByUserId { get; set; }
-    public string? SortBy { get; set; } = "Date"; // Date, Serial, Subject, LetterDate
-    public string? SortOrder { get; set; } = "Descending"; // Ascending, Descending
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public Guid? AssignedUserId { get; set; }
+    public Guid? CharityId { get; set; }
+    public string? SortBy { get; set; } = "Date";
+    public string? SortOrder { get; set; } = "desc";
 }

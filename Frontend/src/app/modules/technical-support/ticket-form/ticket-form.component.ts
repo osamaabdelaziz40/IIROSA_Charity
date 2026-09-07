@@ -7,13 +7,14 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { TechnicalSupportService } from '../services/technical-support.service';
 import {
   CreateTicketRequest,
-  TicketCategory,
-  TicketPriority,
+  UpdateTicketRequest,
+  TicketLookups,
+  LookupOption,
   SupportTicket
 } from '../../../core/models/technical-support.model';
-import { ApiResponse } from '../../../core/models/common.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
+import { NotificationService } from '../../../core/services/notification.service';
 
 @Component({
   selector: 'app-ticket-form',
@@ -49,16 +50,17 @@ export class TicketFormComponent implements OnInit {
     ];
   }
 
-  selectedFile: File | null = null;
-  filePreview: string | null = null;
-
   // Auto-detected information
   browserInfo: string = '';
   pageUrl: string = '';
 
-  // Enum values
-  categories = Object.values(TicketCategory);
-  priorities = Object.values(TicketPriority);
+  // Loaded ticket (edit mode) — carries the current statusId for the update payload
+  loadedTicket: SupportTicket | null = null;
+
+  // Lookup options from GET /api/SupportTickets/lookups
+  lookups: TicketLookups | null = null;
+  categories: LookupOption[] = [];
+  priorities: LookupOption[] = [];
 
   // Page actions for header
   pageActions = [
@@ -75,7 +77,8 @@ export class TicketFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private technicalSupportService: TechnicalSupportService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private notification: NotificationService
   ) {
     this.ticketForm = this.createForm();
     this.browserInfo = this.technicalSupportService.detectBrowserInfo();
@@ -93,6 +96,8 @@ export class TicketFormComponent implements OnInit {
       }
     });
 
+    this.loadLookups();
+
     // Pre-fill system information
     this.ticketForm.patchValue({
       browserInfo: this.browserInfo,
@@ -103,8 +108,8 @@ export class TicketFormComponent implements OnInit {
   private createForm(): FormGroup {
     return this.fb.group({
       title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(200)]],
-      category: [TicketCategory.Other, [Validators.required]],
-      priority: [TicketPriority.Medium, [Validators.required]],
+      category: [null, [Validators.required]],
+      priority: [null, [Validators.required]],
       message: ['', [Validators.required, Validators.minLength(10)]],
       userAction: [''],
       browserInfo: [''],
@@ -112,14 +117,35 @@ export class TicketFormComponent implements OnInit {
     });
   }
 
+  loadLookups(): void {
+    this.technicalSupportService.getTicketLookups().subscribe({
+      next: (lookups: TicketLookups) => {
+        this.lookups = lookups;
+        this.categories = lookups.categories ?? [];
+        this.priorities = lookups.priorities ?? [];
+
+        // Default the selects to the first option in create mode once options are known
+        if (!this.isEditMode) {
+          if (this.categories.length > 0 && !this.ticketForm.get('category')?.value) {
+            this.ticketForm.patchValue({ category: this.categories[0].id });
+          }
+          if (this.priorities.length > 0 && !this.ticketForm.get('priority')?.value) {
+            this.ticketForm.patchValue({ priority: this.priorities[0].id });
+          }
+        }
+      }
+    });
+  }
+
   loadTicket(id: string): void {
     this.loading = true;
     this.technicalSupportService.getTicketById(id).subscribe({
       next: (ticket: SupportTicket) => {
+        this.loadedTicket = ticket;
         this.ticketForm.patchValue({
           title: ticket.title,
-          category: ticket.category,
-          priority: ticket.priority,
+          category: ticket.categoryId,
+          priority: ticket.priorityId,
           message: ticket.message,
           userAction: ticket.userAction
         });
@@ -127,6 +153,7 @@ export class TicketFormComponent implements OnInit {
       },
       error: () => {
         this.loading = false;
+        this.notification.error(this.translate.instant('technicalSupport.messages.operationFailed'));
         this.router.navigate(['/technical-support']);
       }
     });
@@ -140,21 +167,52 @@ export class TicketFormComponent implements OnInit {
 
     this.submitting = true;
 
-    const request: CreateTicketRequest = {
-      ...this.ticketForm.value,
-      attachedFile: this.selectedFile || undefined
-    };
+    if (this.isEditMode && this.ticketId) {
+      const request: UpdateTicketRequest = {
+        id: this.ticketId,
+        title: this.ticketForm.value.title,
+        message: this.ticketForm.value.message,
+        categoryId: Number(this.ticketForm.value.category),
+        priorityId: Number(this.ticketForm.value.priority),
+        // Status stays managed by the dedicated status/solve actions —
+        // omitted from the payload so the backend leaves it unchanged.
+        statusId: this.loadedTicket?.statusId ?? undefined
+      };
 
-    this.technicalSupportService.createTicket(request).subscribe({
-      next: (response: ApiResponse<SupportTicket>) => {
-        this.submitting = false;
-        this.technicalSupportService.notifyTicketsUpdated();
-        this.router.navigate(['/technical-support', response.value!.id]);
-      },
-      error: () => {
-        this.submitting = false;
-      }
-    });
+      this.technicalSupportService.updateTicket(this.ticketId, request).subscribe({
+        next: () => {
+          this.submitting = false;
+          this.technicalSupportService.notifyTicketsUpdated();
+          this.router.navigate(['/technical-support', this.ticketId]);
+        },
+        error: () => {
+          this.submitting = false;
+          this.notification.error(this.translate.instant('technicalSupport.messages.operationFailed'));
+        }
+      });
+    } else {
+      const request: CreateTicketRequest = {
+        title: this.ticketForm.value.title,
+        message: this.ticketForm.value.message,
+        categoryId: Number(this.ticketForm.value.category),
+        priorityId: Number(this.ticketForm.value.priority),
+        userAction: this.ticketForm.value.userAction || undefined,
+        browserInfo: this.browserInfo,
+        pageUrl: this.pageUrl
+      };
+
+      this.technicalSupportService.createTicket(request).subscribe({
+        next: (ticket: SupportTicket) => {
+          this.submitting = false;
+          this.technicalSupportService.notifyTicketsUpdated();
+          this.router.navigate(['/technical-support', ticket.id]);
+        },
+        error: () => {
+          this.submitting = false;
+          this.notification.error(this.translate.instant('technicalSupport.messages.operationFailed'));
+        }
+      });
+    }
   }
 
   onCancel(): void {
@@ -165,82 +223,8 @@ export class TicketFormComponent implements OnInit {
     }
   }
 
-  onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.handleFileSelection(input.files[0]);
-    }
-  }
-
-  onFileDropped(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
-      this.handleFileSelection(event.dataTransfer.files[0]);
-    }
-  }
-
-  onDragOver(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
-  private handleFileSelection(file: File): void {
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      alert(this.translate.instant('validation.fileTooLarge'));
-      return;
-    }
-
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf',
-                          'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    if (!allowedTypes.includes(file.type)) {
-      alert(this.translate.instant('validation.invalidFileType'));
-      return;
-    }
-
-    this.selectedFile = file;
-
-    // Create preview for images
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        this.filePreview = e.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    } else {
-      this.filePreview = null;
-    }
-  }
-
-  removeFile(): void {
-    this.selectedFile = null;
-    this.filePreview = null;
-  }
-
-  getFileName(): string {
-    return this.selectedFile?.name || '';
-  }
-
-  getFileSize(): string {
-    if (!this.selectedFile) return '';
-    const bytes = this.selectedFile.size;
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-  }
-
-  getFileIcon(): string {
-    if (!this.selectedFile) return '';
-    const type = this.selectedFile.type;
-    if (type.includes('image')) return 'fe fe-image';
-    if (type.includes('pdf')) return 'fe fe-file-text';
-    if (type.includes('word') || type.includes('document')) return 'fe fe-file';
-    return 'fe fe-file';
+  trackByLookupId(index: number, option: LookupOption): number {
+    return option.id;
   }
 
   // Form validation helpers
@@ -276,13 +260,5 @@ export class TicketFormComponent implements OnInit {
         this.markFormGroupTouched(control);
       }
     });
-  }
-
-  getCategoryTranslation(category: TicketCategory): string {
-    return this.translate.instant(`technicalSupport.categories.${category}`);
-  }
-
-  getPriorityTranslation(priority: TicketPriority): string {
-    return this.translate.instant(`technicalSupport.priorities.${priority}`);
   }
 }

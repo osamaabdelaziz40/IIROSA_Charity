@@ -2,132 +2,176 @@
   <app-page-header
     [title]="'periodicReports.title' | translate"
     [subtitle]="'periodicReports.subtitle' | translate"
-    [showAdd]="true"
-    addRoute="create"
-  ></app-page-header>
+    [icon]="'fas fa-file-alt'">
+  </app-page-header>
 
-  <!-- Tabs - UC-6.14, UC-6.15 -->
-  <ul class="nav nav-tabs mb-3">
-    <li class="nav-item" [class.active]="activeTab === 'all'">
-      <a class="nav-link" [class.active]="activeTab === 'all'" (click)="onTabChange('all')">
-        <i class="fas fa-list me-2"></i>
-        <span translate>periodicReports.tabs.all</span>
-      </a>
-    </li>
-    <li class="nav-item" [class.active]="activeTab === 'pending'">
-      <a class="nav-link" [class.active]="activeTab === 'pending'" (click)="onTabChange('pending')">
-        <i class="fas fa-clock me-2"></i>
-        <span translate>periodicReports.tabs.pending</span>
-      </a>
-    </li>
-    <li class="nav-item" [class.active]="activeTab === 'approved'">
-      <a class="nav-link" [class.active]="activeTab === 'approved'" (click)="onTabChange('approved')">
-        <i class="fas fa-check-circle me-2"></i>
-        <span translate>periodicReports.tabs.approved</span>
-      </a>
-    </li>
-    <li class="nav-item" [class.active]="activeTab === 'rejected'">
-      <a class="nav-link" [class.active]="activeTab === 'rejected'" (click)="onTabChange('rejected')">
-        <i class="fas fa-times-circle me-2"></i>
-        <span translate>periodicReports.tabs.rejected</span>
-      </a>
-    </li>
-  </ul>
+  <!-- §14.S.4 hosts حالة اليتيم from the register — UC-ORR-09 entry point.
+       §14.S.1 extract commands — UC-ORR-12 accepted · UC-ORR-13 refused. -->
+  <div class="mb-3 text-start d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-primary btn-sm" routerLink="/periodic-orphan-reports/orphan-reports/search">
+      <i class="fas fa-search me-1"></i>
+      <span translate>periodicReports.search.openFromList</span>
+    </a>
+    <a class="btn btn-outline-success btn-sm" routerLink="/periodic-orphan-reports/orphan-reports/extract/accepted">
+      <i class="fas fa-file-excel me-1"></i>
+      <span translate>periodicReports.extract.accepted.openFromList</span>
+    </a>
+    <a class="btn btn-outline-danger btn-sm" routerLink="/periodic-orphan-reports/orphan-reports/extract/refused">
+      <i class="fas fa-file-excel me-1"></i>
+      <span translate>periodicReports.extract.refused.openFromList</span>
+    </a>
+    <a class="btn btn-outline-warning btn-sm" routerLink="/periodic-orphan-reports/orphan-reports/non-renewed">
+      <i class="fas fa-hourglass-half me-1"></i>
+      <span translate>periodicReports.nonRenewed.openFromList</span>
+    </a>
+    <a class="btn btn-outline-info btn-sm" routerLink="/periodic-orphan-reports/orphan-reports/report-numbers">
+      <i class="fas fa-hashtag me-1"></i>
+      <span translate>periodicReports.reportNumbers.openFromList</span>
+    </a>
+  </div>
 
-  <!-- Filters -->
-  <div class="card mb-3">
+  <!-- §14.S.1 filters: الجمعية · من تاريخ · الي تاريخ · كود اليتيم · اسم اليتيم · أكواد -->
+  <div class="card shadow mb-4">
     <div class="card-body">
-      <div class="row g-3">
-        <!-- Search - UC-6.16 -->
-        <div class="col-md-4">
-          <div class="input-group">
+      <form [formGroup]="filterForm">
+        <div class="row mb-3">
+          <!-- الجمعية — HQ only (a charity caller is server-pinned to its own rows) -->
+          <div class="col-md-3" *ngIf="isHeadOffice">
+            <app-drop-down
+              [fg]="filterForm"
+              fcn="charityId"
+              [label]="'periodicReports.filters.charity'"
+              [initialData]="charityOptions"
+              [hasDefaultValue]="true"
+              (onDropDownChanged)="onSearch()">
+            </app-drop-down>
+          </div>
+
+          <!-- من تاريخ -->
+          <div class="col-md-2">
+            <label class="form-label" translate>periodicReports.filters.dateFrom</label>
+            <input type="date" class="form-control" formControlName="dateFrom" (change)="onSearch()">
+          </div>
+
+          <!-- الي تاريخ -->
+          <div class="col-md-2">
+            <label class="form-label" translate>periodicReports.filters.dateTo</label>
+            <input type="date" class="form-control" formControlName="dateTo" (change)="onSearch()">
+          </div>
+
+          <!-- كود اليتيم -->
+          <div class="col-md-2">
+            <label class="form-label" translate>periodicReports.filters.orphanCode</label>
             <input type="text" class="form-control"
-                   [placeholder]="'periodicReports.searchPlaceholder' | translate"
-                   [(ngModel)]="searchTerm"
-                   (keyup.enter)="onSearch()">
-            <button class="btn btn-outline-secondary" type="button" (click)="onSearch()">
-              <i class="fas fa-search"></i>
-            </button>
-            <button class="btn btn-outline-secondary" type="button" (click)="clearSearch()" *ngIf="searchTerm">
-              <i class="fas fa-times"></i>
-            </button>
+                   [placeholder]="'periodicReports.filters.orphanCode' | translate"
+                   formControlName="orphanCode" (keyup.enter)="onSearch()">
+          </div>
+
+          <!-- اسم اليتيم -->
+          <div class="col-md-2">
+            <label class="form-label" translate>periodicReports.filters.orphanName</label>
+            <input type="text" class="form-control"
+                   [placeholder]="'periodicReports.filters.orphanName' | translate"
+                   formControlName="orphanName" (keyup.enter)="onSearch()">
           </div>
         </div>
 
-        <!-- Export - UC-6.17 -->
-        <div class="col-md-8 text-end">
-          <button class="btn btn-success me-2" (click)="exportReports('excel')">
-            <i class="fas fa-file-excel me-2"></i>
-            <span translate>common.exportExcel</span>
-          </button>
+        <div class="row mb-3">
+          <!-- أكواد — codes-only grid view -->
+          <div class="col-md-3 form-check ms-2">
+            <input class="form-check-input" type="checkbox" id="codesOnly" formControlName="codesOnly">
+            <label class="form-check-label" for="codesOnly" translate>periodicReports.filters.codesOnly</label>
+          </div>
+
+          <!-- حالة الاعتماد — reviewer's pending-queue entry point (UC-ORR-07) -->
+          <div class="col-md-3">
+            <app-drop-down
+              [fg]="filterForm"
+              fcn="reviewStatusFilter"
+              [label]="'periodicReports.filters.status'"
+              [initialData]="statusOptions"
+              [hasDefaultValue]="true"
+              (onDropDownChanged)="onSearch()">
+            </app-drop-down>
+          </div>
         </div>
-      </div>
+
+        <div class="row">
+          <div class="col-12">
+            <button class="btn btn-primary" type="button" (click)="onSearch()">
+              <i class="fe fe-search mr-1"></i>
+              {{ 'common.search' | translate }}
+            </button>
+            <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary ml-2" type="button" (click)="clearFilters()">
+              <i class="fe fe-x mr-1"></i>
+              {{ 'common.clearFilters' | translate }}
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   </div>
 
-  <!-- Loading -->
   <app-loading *ngIf="loading"></app-loading>
 
-  <!-- Reports Table -->
-  <div class="card" *ngIf="!loading">
+  <!-- §14.S.1 grid: الرقم · رقم التقرير · التاريخ · تم الاعتماد · تاريخ الاعتماد · الاجراءات -->
+  <div class="card shadow mb-4" *ngIf="!loading">
     <div class="card-body p-0">
       <div class="table-responsive">
         <table class="table table-hover mb-0">
           <thead>
             <tr>
-              <th translate>periodicReports.reportNo</th>
-              <th translate>periodicReports.orphan</th>
-              <th translate>periodicReports.reportDate</th>
-              <th translate>periodicReports.status</th>
-              <th translate>periodicReports.prayerStatus</th>
-              <th translate>periodicReports.education</th>
-              <th translate>periodicReports.medical</th>
-              <th translate>periodicReports.reviewer</th>
+              <th translate>periodicReports.columns.serial</th>
+              <th translate>periodicReports.columns.reportNo</th>
+              <th *ngIf="codesOnly" translate>periodicReports.columns.orphanCode</th>
+              <th *ngIf="!codesOnly" translate>periodicReports.columns.reportDate</th>
+              <th translate>periodicReports.columns.approved</th>
+              <th *ngIf="!codesOnly" translate>periodicReports.columns.approvedDate</th>
               <th translate>common.actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let report of reports">
+            <tr *ngFor="let report of reports; let i = index; trackBy: trackByReportId">
+              <td>{{ serial(i) }}</td>
               <td>{{ report.reportNo || '-' }}</td>
+              <td *ngIf="codesOnly">{{ report.orphanCode || '-' }}</td>
+              <td *ngIf="!codesOnly">{{ report.reportDate | date: 'mediumDate' }}</td>
               <td>
-                <div class="d-flex align-items-center">
-                  <div class="flex-shrink-0">
-                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center">
-                      {{ report.orphanCode?.substring(0, 2) || '?' }}
-                    </div>
-                  </div>
-                  <div class="ms-2">
-                    <div class="fw-bold">{{ report.orphanName }}</div>
-                    <small class="text-muted">{{ report.orphanCode }}</small>
-                  </div>
+                <span class="badge" [ngClass]="statusClass(report.reviewStatus)">
+                  {{ 'periodicReports.status.' + (report.reviewStatus || 'Pending').toLowerCase() | translate }}
+                </span>
+                <!-- سبب الرفض on refused rows — the charity's correction driver (UC-ORR-08 AC 4) -->
+                <div class="small text-danger" *ngIf="report.isRefused">
+                  {{ report.refuseReason || '-' }}
                 </div>
               </td>
-              <td>{{ report.reportDate | date:'mediumDate' }}</td>
-              <td>
-                <span class="badge" [ngClass]="getStatusClass(report.reviewStatus)">
-                  {{ 'periodicReports.status.' + report.reviewStatus.toLowerCase() | translate }}
-                </span>
-              </td>
-              <td>{{ report.prayerStatus || '-' }}</td>
-              <td>{{ report.educationalLevelName || '-' }}</td>
-              <td>{{ report.medicalStatus || '-' }}</td>
-              <td>{{ report.reviewerName || '-' }}</td>
+              <td *ngIf="!codesOnly">{{ report.reviewedDate | date: 'mediumDate' }}</td>
               <td>
                 <div class="btn-group btn-group-sm">
-                  <a class="btn btn-light" [routerLink]="[report.id]" [title]="'common.view' | translate">
+                  <a class="btn btn-light" [routerLink]="[report.id]"
+                     [title]="'common.view' | translate">
                     <i class="fas fa-eye"></i>
                   </a>
-                  <button class="btn btn-light"
-                          *ngIf="canEditReport(report)"
-                          [routerLink]="[report.id, 'edit']"
-                          [title]="'common.edit' | translate">
+                  <!-- UC-ORR-17 — the §14.S.1 row print command -->
+                  <a class="btn btn-light" [routerLink]="[report.id, 'print']"
+                     [title]="'periodicReports.print.print' | translate">
+                    <i class="fas fa-print"></i>
+                  </a>
+                  <a class="btn btn-light" *ngIf="canEdit(report) && hasPermission('PeriodicReports.Edit')"
+                     [routerLink]="[report.id, 'edit']"
+                     [title]="'common.edit' | translate">
                     <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="btn btn-warning"
-                          *ngIf="!report.reviewed && canReview"
-                          [routerLink]="[report.id, 'review']"
-                          [title]="'periodicReports.review' | translate">
+                  </a>
+                  <a class="btn btn-warning" *ngIf="!report.reviewed && hasPermission('PeriodicReports.Review')"
+                     [routerLink]="[report.id, 'review']"
+                     [title]="'periodicReports.reviewReport' | translate">
                     <i class="fas fa-check"></i>
+                  </a>
+                  <!-- UC-ORR-06 — HQ-only delete; endpoint roles (SuperAdmin,Admin) are the control -->
+                  <button class="btn btn-danger" *ngIf="canDelete(report) && hasPermission('PeriodicReports.Delete')"
+                          (click)="deleteReport(report)"
+                          [title]="'common.delete' | translate">
+                    <i class="fas fa-trash"></i>
                   </button>
                 </div>
               </td>
@@ -136,20 +180,18 @@
         </table>
       </div>
 
-      <!-- Empty State -->
       <app-empty-state
         *ngIf="reports.length === 0"
         [icon]="'fas fa-file-alt'"
-        [title]="'periodicReports.noReports' | translate"
-        [message]="'periodicReports.noReportsMessage' | translate">
+        [title]="'periodicReports.empty.title' | translate"
+        [description]="'periodicReports.empty.message' | translate">
       </app-empty-state>
     </div>
 
-    <!-- Pagination -->
     <div class="card-footer" *ngIf="totalCount > 0">
       <app-pagination
         [totalCount]="totalCount"
-        [pageSize]="filter.pageSize"
+        [pageSize]="filter.pageSize!"
         [currentPage]="filter.pageNumber || 1"
         (pageChange)="onPageChange($event)">
       </app-pagination>

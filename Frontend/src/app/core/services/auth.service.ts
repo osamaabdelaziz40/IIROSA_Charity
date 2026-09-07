@@ -63,7 +63,122 @@ const PERMISSION_ROLES: Record<string, string[]> = {
   'Charities.View': ['SuperAdmin', 'Admin', 'Charity'],
   'Charities.Create': ['SuperAdmin', 'Admin'],
   'Charities.Edit': ['SuperAdmin', 'Admin'],
-  'Charities.Delete': ['SuperAdmin']
+  'Charities.Delete': ['SuperAdmin'],
+  // FamiliesController authorises SuperAdmin,Admin,Charity on every action (including the
+  // refugee child-routes); Create/Edit for HQ callers additionally require an explicit charity.
+  'Families.View': ['SuperAdmin', 'Admin', 'Charity'],
+  'Families.Create': ['SuperAdmin', 'Admin', 'Charity'],
+  'Families.Edit': ['SuperAdmin', 'Admin', 'Charity'],
+  // PUT /api/Families/{id}/charity is HQ-only on the server (SuperAdmin, Admin) — moving a
+  // family between charities is an HQ decision, never the charity's own (UC-FAM-06).
+  'Families.Transfer': ['SuperAdmin', 'Admin'],
+  // POST /api/Families/{familyId}/members/{memberId}/control — the members screen and the
+  // orphan/guardian move commands are HQ corrections too (UC-FAM-07/08, legacy role gate 0/3/4).
+  'Families.Members': ['SuperAdmin', 'Admin'],
+  // GET+POST /api/Families/provider-requests — the guardian-change queue. HQ reviews; a Charity
+  // raises requests and sees its own rows (the server scopes Charity callers to their charity).
+  'Families.ProviderRequests': ['SuperAdmin', 'Admin', 'Charity'],
+  // GET /api/Families/follow-up — UC-FAM-11 register-activity report. HQ sees all (narrowable);
+  // a Charity caller is scoped server-side to its own register's activity.
+  'Families.FollowUp': ['SuperAdmin', 'Admin', 'Charity'],
+  // POST /api/Reports/* — EP-18 report screens (18-1 onwards). Reports are caller-scoped
+  // server-side: a Charity caller is pinned to its own register whatever the payload says.
+  'Reports.View': ['SuperAdmin', 'Admin', 'Charity'],
+
+  // Orphan coding (UC-ORP / epic 8): the coding screens belong to HQ. The shared endpoints are
+  // deliberately wider server-side — GET /api/Families/orphans admits every role (a Charity
+  // caller is pinned to its own register) and code assignment tenancy-checks rather than
+  // role-gates — but both §13 screens are the HQ coding clerk's, so the route/menu hide them
+  // from Charity users. The worklist mode (codingStatus=Pending) is additionally refused
+  // server-side for Charity callers.
+  'OrphanCoding.View': ['SuperAdmin', 'Admin'],
+  'OrphanCoding.Edit': ['SuperAdmin', 'Admin'],
+
+  // OrphanPaymentsController (epic 10, chapter 15): batch CRUD, enrolment and the bank-file
+  // family are the HQ financial set per 00-Overview §4.3 (Accountant/FinancialOfficer = the
+  // WAR Fin. Director / Financial Officer actors); bank files & CSV stay HQ-only. Charity is
+  // admitted on the list/details reads (its rows are item-filtered to its own charity by the
+  // service — 10-7) and on Disburse, the row-action set (stop/print/receipt/cheque —
+  // UC-PAY-09..13, the charity's receipt workflow). The Charity-without-orphanId list guard
+  // on GET /api/OrphanPayments stays a server-side 403 regardless of this map.
+  'OrphanPayments.View': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer', 'Charity'],
+  'OrphanPayments.Create': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer'],
+  'OrphanPayments.Edit': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer'],
+  'OrphanPayments.Delete': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer'],
+  'OrphanPayments.AddOrphans': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer'],
+  'OrphanPayments.Disburse': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer', 'Charity'],
+  'OrphanPayments.BankFile': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer'],
+  'OrphanPayments.Import': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer'],
+
+  // Housing register (UC-HOU): the module's primary actor is the charity user; reads and
+  // writes ride the families surface (GET /api/Families?familyType=Housing and the re-cut
+  // HousingProjectsController), which authorise SuperAdmin,Admin,Charity server-side.
+  'HousingProjects.View': ['SuperAdmin', 'Admin', 'Charity'],
+  'HousingProjects.Create': ['SuperAdmin', 'Admin', 'Charity'],
+  'HousingProjects.Edit': ['SuperAdmin', 'Admin', 'Charity'],
+  'HousingProjects.Delete': ['SuperAdmin'],
+
+  // PeriodicOrphanReportsController (epic 9, UC-ORR): reads are broad (reviewers included),
+  // create/edit is the charity write path, delete is head-office only, review matches the
+  // server-side [Authorize(Roles)] split on the review endpoint.
+  'PeriodicReports.View': ['SuperAdmin', 'Admin', 'Accountant', 'Employee', 'Charity'],
+  'PeriodicReports.Create': ['SuperAdmin', 'Admin', 'Charity'],
+  'PeriodicReports.Edit': ['SuperAdmin', 'Admin', 'Charity'],
+  'PeriodicReports.Delete': ['SuperAdmin', 'Admin'],
+  'PeriodicReports.Review': ['SuperAdmin', 'Admin', 'Accountant', 'Employee'],
+  // Review P24 2026-08-24: the compare route declares this permission but the map had
+  // no entry, and an unmapped permission fails OPEN in hasPermission — every authenticated
+  // role could route to the HQ-only compare screen. Matches OrphanReportsController's
+  // [Authorize(Roles = "SuperAdmin,Admin")] on POST /compare.
+  'OrphanReports.Compare': ['SuperAdmin', 'Admin'],
+
+  // OfficeProjectManagementController: everything is Admin,SuperAdmin except delete, which is
+  // SuperAdmin only (UC-OFP-05 — the General Director's alone; permission matrix F/F row).
+  'OfficeDevelopmentProjects.View': ['SuperAdmin', 'Admin'],
+  'OfficeDevelopmentProjects.Create': ['SuperAdmin', 'Admin'],
+  'OfficeDevelopmentProjects.Edit': ['SuperAdmin', 'Admin'],
+  'OfficeDevelopmentProjects.Delete': ['SuperAdmin'],
+
+  // SeasonalAidController: campaign management, closure and reports are HQ only; the
+  // family-facing surfaces (eligible families, beneficiary registration, distributions,
+  // receipt confirmation) admit Charity too — the service scopes rows to the caller's charity.
+  'SeasonalAid.View': ['SuperAdmin', 'Admin', 'Charity'],
+  'SeasonalAid.Create': ['SuperAdmin', 'Admin'],
+  'SeasonalAid.Edit': ['SuperAdmin', 'Admin'],
+  'SeasonalAid.ManageBeneficiaries': ['SuperAdmin', 'Admin', 'Charity'],
+  'SeasonalAid.RecordDistribution': ['SuperAdmin', 'Admin', 'Charity'],
+  'SeasonalAid.Reports': ['SuperAdmin', 'Admin'],
+
+  // CheckManagementController: the register, statement and detail reads admit the
+  // financial read roles (FinancialOfficer = Financial Director); issue and edit are
+  // the financial approver set. Charity holds no cheque screen, but the service still
+  // scopes every row to the caller's charity token claim.
+  'GeneralChecks.View': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer'],
+  'GeneralChecks.Create': ['SuperAdmin', 'Accountant', 'FinancialOfficer'],
+  'GeneralChecks.Edit': ['SuperAdmin', 'Accountant', 'FinancialOfficer'],
+
+  // MissionManagementController (epic 15): everything is Admin,SuperAdmin except delete,
+  // which is SuperAdmin only (UC-MSN-08 — the General Director's alone).
+  'Missions.View': ['SuperAdmin', 'Admin'],
+  'Missions.Create': ['SuperAdmin', 'Admin'],
+  'Missions.Edit': ['SuperAdmin', 'Admin'],
+  'Missions.Delete': ['SuperAdmin'],
+
+  // IncomingOutgoingController (epic 16): the whole correspondence module is HQ staff —
+  // Admin,SuperAdmin on every action; delete is SuperAdmin only, mirroring the
+  // controller's [Authorize] shapes (UC-COR-01…19). Reads scope to the caller's charity.
+  'IncomingOutgoing.View': ['SuperAdmin', 'Admin'],
+  'IncomingOutgoing.Create': ['SuperAdmin', 'Admin'],
+  'IncomingOutgoing.Edit': ['SuperAdmin', 'Admin'],
+  'IncomingOutgoing.Delete': ['SuperAdmin'],
+
+  // HqTransfersController (epic 17): an HQ module — Fin. Director and Gen. Director map to
+  // Admin/SuperAdmin; reads are country-claim scoped server-side. ManageLimits (UC-TRF-07) is
+  // SuperAdmin-only — the consequential, few-should-do-it write (13-5 precedent).
+  'HqTransfers.View': ['SuperAdmin', 'Admin'],
+  'HqTransfers.Create': ['SuperAdmin', 'Admin'],
+  'HqTransfers.Edit': ['SuperAdmin', 'Admin'],
+  'HqTransfers.ManageLimits': ['SuperAdmin']
 };
 
 @Injectable({
@@ -101,7 +216,16 @@ export class AuthService {
         console.log('User:', response.user);
 
         const user = response.user;
-        this.setAuthData(response.token, response.refreshToken, response.expiration, user);
+
+        // Only persist a real token. On a failed login the API returns an ApiResponse
+        // without `token`, and localStorage.setItem(key, undefined) stores the literal
+        // string "undefined" — the interceptor then attaches `Bearer undefined` to every
+        // request (login included), which the backend rejects as a malformed JWT.
+        if (response.token) {
+          this.setAuthData(response.token, response.refreshToken, response.expiration, user);
+        } else {
+          this.clearAuthData();
+        }
 
         // Verify token was stored
         const storedToken = localStorage.getItem('accessToken');

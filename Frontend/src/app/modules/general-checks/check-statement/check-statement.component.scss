@@ -1,0 +1,28 @@
+.empty-state {
+  padding: 3rem 0;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.table {
+  th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+  }
+}
+
+@media print {
+  // طباعة — only the statement sheet reaches the paper.
+  .no-print,
+  app-breadcrumb {
+    display: none !important;
+  }
+
+  .statement-sheet {
+    border: none;
+  }
+}

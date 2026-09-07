@@ -1,12 +1,8 @@
-      $('.select2').select2(
-      {
-        theme: 'bootstrap4',
-      });
-      $('.select2-multi').select2(
-      {
-        multiple: true,
-        theme: 'bootstrap4',
-      });
+      // Select2 auto-init removed: this script is loaded by MainLayoutComponent
+      // long AFTER Angular has rendered the page, so $('.select2').select2(...)
+      // was re-initializing selects that DropDownComponent already owns — leaving
+      // duplicate 1px-wide widgets stacked next to the real ones. Select2 setup
+      // lives exclusively in DropDownComponent.initSelect2().
       $('.drgpicker').daterangepicker(
       {
         singleDatePicker: true,

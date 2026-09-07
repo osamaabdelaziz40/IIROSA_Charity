@@ -4,85 +4,84 @@ namespace IIROSA.Application.Interfaces;
 
 /// <summary>
 /// Mission Service Interface
-/// Defines business operations for Mission management following UC-8.1 to UC-8.13
+/// Business operations for Mission management (epic 15, UC-MSN-01…09)
 /// IMPORTANT: Only Admin and Super Admin roles can access these operations.
-/// Charity users are explicitly blocked from this module.
 /// </summary>
 public interface IMissionService
 {
-    // ========== CRUD Operations ==========
+    // ========== Reads ==========
 
     /// <summary>
-    /// Get missions with filtering and pagination (UC-8.10: View Mission List)
+    /// Get missions with filtering and pagination (UC-MSN-01 / UC-MSN-02)
     /// </summary>
     Task<MissionPagedResult<MissionListDto>> GetMissionsFilteredAsync(MissionFilterDto filter);
 
     /// <summary>
-    /// Get mission by ID (UC-8.11: View Mission Details)
+    /// Get mission by ID (UC-MSN-07 detail read) — includes navigations; an
+    /// out-of-scope id returns null exactly like a missing one.
     /// </summary>
     Task<MissionDetailDto?> GetMissionByIdAsync(Guid id);
 
     /// <summary>
-    /// Create new mission (UC-8.1: Create Mission)
+    /// The §20.U.1 register read: scoped to the caller's charity and country (NOT
+    /// assigned-to-me; the assigned user stays an optional filter).
+    /// </summary>
+    Task<MissionPagedResult<MissionListDto>> GetMyMissionsAsync(MissionFilterDto filter);
+
+    // ========== Writes ==========
+
+    /// <summary>
+    /// Create new mission (UC-MSN-06). Ownership (charity, country) is stamped
+    /// server-side from the caller's claims.
     /// </summary>
     Task<MissionDetailDto> CreateMissionAsync(CreateMissionDto dto);
 
     /// <summary>
-    /// Update mission (UC-8.7: Update Mission Details)
+    /// Update mission (UC-MSN-07) — a completed mission is immutable.
     /// </summary>
     Task<MissionDetailDto> UpdateMissionAsync(Guid id, UpdateMissionDto dto);
 
     /// <summary>
-    /// Delete mission
+    /// Delete mission (UC-MSN-08) — soft delete.
     /// </summary>
     Task DeleteMissionAsync(Guid id);
 
-    // ========== Mission-Specific Operations ==========
+    /// <summary>
+    /// Register the mission result (UC-MSN-09): findings + completion outcome + السبب.
+    /// </summary>
+    Task<MissionDetailDto> RegisterMissionResultAsync(Guid id, RegisterMissionResultDto dto);
+
+    // ========== Legacy fine-grained operations (UC-8.x capability variants) ==========
 
     /// <summary>
-    /// Set mission date (UC-8.2: Set Mission Date)
+    /// Set mission date (UC-8.2)
     /// </summary>
     Task SetMissionDateAsync(Guid id, DateTime missionDate);
 
     /// <summary>
-    /// Assign mission type (UC-8.3: Assign Mission Type)
+    /// Assign mission type (UC-8.3)
     /// </summary>
     Task AssignMissionTypeAsync(Guid id, int missionTypeId);
 
     /// <summary>
-    /// Assign mission time type (UC-8.4: Assign Mission Time Type)
+    /// Assign mission time type (UC-8.4)
     /// </summary>
     Task AssignMissionTimeTypeAsync(Guid id, int missionTimeTypeId);
 
     /// <summary>
-    /// Set mission location (UC-8.5: Set Mission Location)
+    /// Set mission location (UC-8.5)
     /// </summary>
     Task SetMissionLocationAsync(Guid id, MissionLocationDto location);
 
     /// <summary>
-    /// Assign mission owner (UC-8.6: Assign Mission Owner)
+    /// Assign mission owner (UC-8.6)
     /// </summary>
     Task AssignMissionOwnerAsync(Guid id, Guid userId);
-
-    /// <summary>
-    /// Complete mission (UC-8.8: Mark Mission as Completed)
-    /// </summary>
-    Task CompleteMissionAsync(Guid id, CompleteMissionDto dto);
-
-    /// <summary>
-    /// Record conference/entity information (UC-8.9: Record Conference/Entity)
-    /// </summary>
-    Task RecordConferenceEntityAsync(Guid id, string? conferenceName, string? entityName);
 
     // ========== View Operations ==========
 
     /// <summary>
-    /// Get missions assigned to current user (UC-8.12: View My Missions)
-    /// </summary>
-    Task<MissionPagedResult<MissionListDto>> GetMyMissionsAsync(Guid userId, MissionFilterDto filter);
-
-    /// <summary>
-    /// Get mission status summary (UC-8.13: Track Mission Status)
+    /// Get mission status summary (legacy UC-8.13 support)
     /// </summary>
     Task<MissionStatusSummaryDto> GetMissionStatusSummaryAsync();
 
@@ -94,7 +93,7 @@ public interface IMissionService
     // ========== Export ==========
 
     /// <summary>
-    /// Export missions to Excel (UC-8.10: Export to Excel)
+    /// Export missions to Excel (not in epic 15's scope)
     /// </summary>
     Task<byte[]> ExportMissionsToExcelAsync(MissionFilterDto filter);
 }

@@ -2,80 +2,108 @@ using IIROSA.Application.DTOs.MissionManagement;
 using IIROSA.Application.Interfaces;
 using IIROSA.Domain.Entities;
 using IIROSA.Domain.Interfaces;
+using Framework.Identity.Data.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using AutoMapper;
+using FluentValidation;
+using FluentValidation.Results;
 
 namespace IIROSA.Application.Services;
 
 /// <summary>
 /// Mission Service Implementation
-/// Implements business logic for Mission management following UC-8.1 to UC-8.13
-/// Integrates with Framework.Core for notifications and Framework.Identity for user operations
-/// IMPORTANT: Only Admin and Super Admin roles can access this service.
-/// Charity users are explicitly blocked from this module.
+/// Business logic for Mission management (epic 15, UC-MSN-01…09)
+///
+/// Head-office module: only Admin and Super Admin reach it. The caller's country claim, when
+/// present, scopes every read and write — a pinned caller cannot enumerate, edit or delete
+/// another country's missions by omitting the filter, and the single-record paths treat an
+/// out-of-scope row exactly like a missing one. Only the UnitOfWork saves; validators run in
+/// this layer per the platform rule.
 /// </summary>
 public class MissionService : IMissionService
 {
+    /// <summary>Upper bound for the page size a client can request in one call.</summary>
+    private const int MaxPageSize = 200;
+
     private readonly IMissionRepository _missionRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly ILogger<MissionService> _logger;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IValidator<CreateMissionDto> _createValidator;
+    private readonly IValidator<UpdateMissionDto> _updateValidator;
+    private readonly IValidator<RegisterMissionResultDto> _registerResultValidator;
+    private readonly IMissionTypeRepository _missionTypeRepository;
+    private readonly IMissionTimeTypeRepository _missionTimeTypeRepository;
+    private readonly IMissionInterviewTypeRepository _missionInterviewTypeRepository;
+    private readonly ICountryRepository _countryRepository;
+    private readonly IRegionRepository _regionRepository;
+    private readonly ICenterRepository _centerRepository;
+    private readonly IUserAppServiceExtended _userAppService;
 
     public MissionService(
         IMissionRepository missionRepository,
+        IUnitOfWork unitOfWork,
         IMapper mapper,
-        ILogger<MissionService> logger)
+        ILogger<MissionService> logger,
+        ICurrentUserService currentUser,
+        IValidator<CreateMissionDto> createValidator,
+        IValidator<UpdateMissionDto> updateValidator,
+        IValidator<RegisterMissionResultDto> registerResultValidator,
+        IMissionTypeRepository missionTypeRepository,
+        IMissionTimeTypeRepository missionTimeTypeRepository,
+        IMissionInterviewTypeRepository missionInterviewTypeRepository,
+        ICountryRepository countryRepository,
+        IRegionRepository regionRepository,
+        ICenterRepository centerRepository,
+        IUserAppServiceExtended userAppService)
     {
         _missionRepository = missionRepository;
+        _unitOfWork = unitOfWork;
         _mapper = mapper;
         _logger = logger;
+        _currentUser = currentUser;
+        _createValidator = createValidator;
+        _updateValidator = updateValidator;
+        _registerResultValidator = registerResultValidator;
+        _missionTypeRepository = missionTypeRepository;
+        _missionTimeTypeRepository = missionTimeTypeRepository;
+        _missionInterviewTypeRepository = missionInterviewTypeRepository;
+        _countryRepository = countryRepository;
+        _regionRepository = regionRepository;
+        _centerRepository = centerRepository;
+        _userAppService = userAppService;
     }
 
-    // ========== CRUD Operations ==========
+    // ========== Reads ==========
 
     /// <summary>
-    /// Get missions with filtering and pagination (UC-8.10: View Mission List)
+    /// Get missions with filtering and pagination (UC-MSN-01 / UC-MSN-02)
     /// </summary>
     public async Task<MissionPagedResult<MissionListDto>> GetMissionsFilteredAsync(MissionFilterDto filter)
     {
         try
         {
+            filter ??= new MissionFilterDto();
+
+            ApplyCallerScope(filter);
+
+            // Paging bounds arrive from the wire — clamp before Skip/Take so a zero or
+            // negative page cannot push Skip below zero, a zero page size cannot reach the
+            // total-pages division, and no caller can ask for the whole table in one call.
+            filter.Page = Math.Max(1, filter.Page);
+            filter.PageSize = Math.Clamp(filter.PageSize, 1, MaxPageSize);
+
             _logger.LogInformation("Retrieving missions with filter: {@Filter}", filter);
 
-            // Build filter expression
-            System.Linq.Expressions.Expression<Func<Mission, bool>>? filterExpression = null;
-
-            if (filter != null)
-            {
-                filterExpression = m =>
-                    (!filter.FK_MissionTypeId.HasValue || m.FK_MissionTypeId == filter.FK_MissionTypeId.Value) &&
-                    (!filter.FK_MissionTimeTypeId.HasValue || m.FK_MissionTimeTypeId == filter.FK_MissionTimeTypeId.Value) &&
-                    (!filter.FK_CountryId.HasValue || m.FK_CountryId == filter.FK_CountryId.Value) &&
-                    (!filter.FK_RegionId.HasValue || m.FK_RegionId == filter.FK_RegionId.Value) &&
-                    (!filter.FK_CenterId.HasValue || m.FK_CenterId == filter.FK_CenterId.Value) &&
-                    (!filter.FK_UserId.HasValue || m.FK_UserId == filter.FK_UserId.Value) &&
-                    (!filter.IsMissionCompleted.HasValue || m.IsMissionCompleted == filter.IsMissionCompleted.Value) &&
-                    (!filter.StartDate.HasValue || m.MissionDate >= filter.StartDate.Value) &&
-                    (!filter.EndDate.HasValue || m.MissionDate <= filter.EndDate.Value) &&
-                    (string.IsNullOrWhiteSpace(filter.SearchText) ||
-                     (m.MissionTarget != null && m.MissionTarget.Contains(filter.SearchText)));
-
-                // Add date range filter if specified
-                if (filter.StartDate.HasValue && filter.EndDate.HasValue)
-                {
-                    var startDate = filter.StartDate.Value;
-                    var endDate = filter.EndDate.Value;
-                    filterExpression = m => m.MissionDate >= startDate && m.MissionDate <= endDate;
-                }
-            }
-
-            // Default ordering by mission date descending
-            // Note: Ordering is handled in the repository call
+            var filterExpression = BuildFilterExpression(filter);
 
             var (items, totalCount) = await _missionRepository.GetMissionsPagedAsync(
                 filterExpression,
                 q => q.OrderByDescending(m => m.MissionDate),
-                filter?.Page ?? 1,
-                filter?.PageSize ?? 20);
+                filter.Page,
+                filter.PageSize);
 
             var missionDtos = _mapper.Map<List<MissionListDto>>(items);
 
@@ -83,8 +111,8 @@ public class MissionService : IMissionService
             {
                 Items = missionDtos,
                 TotalCount = totalCount,
-                Page = filter?.Page ?? 1,
-                PageSize = filter?.PageSize ?? 20
+                Page = filter.Page,
+                PageSize = filter.PageSize
             };
         }
         catch (Exception ex)
@@ -95,16 +123,26 @@ public class MissionService : IMissionService
     }
 
     /// <summary>
-    /// Get mission by ID (UC-8.11: View Mission Details)
+    /// Get mission by ID (UC-MSN-07 detail read) — with navigations and caller scope.
+    /// An out-of-scope id returns null, exactly like a missing one.
     /// </summary>
     public async Task<MissionDetailDto?> GetMissionByIdAsync(Guid id)
     {
         try
         {
-            var mission = await _missionRepository.GetByIdAsync(id);
+            var mission = await _missionRepository.IncludeNavigationProperties()
+                .FirstOrDefaultAsync(m => m.Id == id);
             if (mission == null)
             {
                 _logger.LogWarning("Mission with ID {MissionId} not found", id);
+                return null;
+            }
+
+            if (!IsWithinCallerScope(mission))
+            {
+                _logger.LogWarning(
+                    "Caller pinned to country {CallerCountry} requested mission {MissionId} of country {MissionCountry}; treating as not found",
+                    _currentUser.CountryId, id, mission.FK_CountryId);
                 return null;
             }
 
@@ -118,49 +156,60 @@ public class MissionService : IMissionService
     }
 
     /// <summary>
-    /// Create new mission (UC-8.1: Create Mission)
+    /// The register read of §20.U.1: scoped to the caller's charity and country — NOT
+    /// assigned-to-me. The assigned user stays an optional filter.
+    /// </summary>
+    public async Task<MissionPagedResult<MissionListDto>> GetMyMissionsAsync(MissionFilterDto filter)
+    {
+        return await GetMissionsFilteredAsync(filter);
+    }
+
+    // ========== Writes ==========
+
+    /// <summary>
+    /// Create new mission (UC-MSN-06)
     /// </summary>
     public async Task<MissionDetailDto> CreateMissionAsync(CreateMissionDto dto)
     {
+        await _createValidator.ValidateAndThrowAsync(dto);
+        await ValidateForeignKeysAsync(dto);
+
         try
         {
             _logger.LogInformation("Creating new mission: {@Mission}", dto);
 
-            // 1. Validate business rules
-            if (dto.MissionDate < DateTime.Today)
-            {
-                throw new InvalidOperationException("Mission date cannot be in the past");
-            }
-
-            // 2. Validate location cascade (Country → Region → Center)
-            if (dto.FK_CenterId.HasValue && !dto.FK_RegionId.HasValue)
-            {
-                throw new InvalidOperationException("Region must be specified when Center is selected");
-            }
-
-            if (dto.FK_RegionId.HasValue && !dto.FK_CountryId.HasValue)
-            {
-                throw new InvalidOperationException("Country must be specified when Region is selected");
-            }
-
-            // 3. Create mission entity
             var mission = _mapper.Map<Mission>(dto);
             mission.IsMissionCompleted = false;
 
-            // 4. Save to database
+            // Ownership is stamped server-side from the caller's charity claim — never from
+            // the payload. HQ callers without a claim save null.
+            mission.FK_CharityId = _currentUser.CharityId;
+
+            // The record's country belongs to the caller when their token pins one: pin it.
+            if (_currentUser.CountryId.HasValue)
+            {
+                if (dto.CountryId.HasValue && dto.CountryId.Value != _currentUser.CountryId.Value)
+                {
+                    _logger.LogWarning(
+                        "Caller pinned to country {CallerCountry} tried to file a mission under country {RequestedCountry}; pinning to {CallerCountry}",
+                        _currentUser.CountryId.Value, dto.CountryId.Value, _currentUser.CountryId.Value);
+                }
+                mission.FK_CountryId = _currentUser.CountryId.Value;
+            }
+
             await _missionRepository.AddAsync(mission);
-            await _missionRepository.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Mission created successfully with ID: {MissionId}", mission.Id);
 
             // TODO: Send notification to assigned user
             // Notification integration to be implemented using INotificationsManager
-            if (dto.FK_UserId != Guid.Empty)
+            if (mission.FK_UserId.HasValue && mission.FK_UserId.Value != Guid.Empty)
             {
-                _logger.LogInformation("TODO: Send notification to user {UserId} for mission {MissionId}", dto.FK_UserId, mission.Id);
+                _logger.LogInformation("TODO: Send notification to user {UserId} for mission {MissionId}", mission.FK_UserId, mission.Id);
             }
 
-            return _mapper.Map<MissionDetailDto>(mission);
+            return (await GetMissionByIdAsync(mission.Id))!;
         }
         catch (Exception ex)
         {
@@ -170,10 +219,13 @@ public class MissionService : IMissionService
     }
 
     /// <summary>
-    /// Update mission (UC-8.7: Update Mission Details)
+    /// Update mission (UC-MSN-07) — a completed mission is immutable (the register entry
+    /// is final; the sanctioned outcome path is UC-MSN-09).
     /// </summary>
     public async Task<MissionDetailDto> UpdateMissionAsync(Guid id, UpdateMissionDto dto)
     {
+        await _updateValidator.ValidateAndThrowAsync(dto);
+
         try
         {
             var mission = await _missionRepository.GetByIdAsync(id);
@@ -182,30 +234,19 @@ public class MissionService : IMissionService
                 throw new InvalidOperationException($"Mission with ID {id} not found");
             }
 
-            // Validate that mission is not completed
+            if (!IsWithinCallerScope(mission))
+            {
+                throw new InvalidOperationException($"Mission with ID {id} not found");
+            }
+
             if (mission.IsMissionCompleted)
             {
                 throw new InvalidOperationException("Cannot update a completed mission");
             }
 
-            // Validate mission date
-            if (dto.MissionDate.HasValue && dto.MissionDate.Value < DateTime.Today)
-            {
-                throw new InvalidOperationException("Mission date cannot be in the past");
-            }
+            await ValidateForeignKeysAsync(dto);
 
-            // Validate location cascade
-            if (dto.FK_CenterId.HasValue && !dto.FK_RegionId.HasValue)
-            {
-                throw new InvalidOperationException("Region must be specified when Center is selected");
-            }
-
-            if (dto.FK_RegionId.HasValue && !dto.FK_CountryId.HasValue)
-            {
-                throw new InvalidOperationException("Country must be specified when Region is selected");
-            }
-
-            // Update only non-null properties
+            // Apply only non-null properties
             if (!string.IsNullOrWhiteSpace(dto.MissionTarget))
                 mission.MissionTarget = dto.MissionTarget;
 
@@ -215,23 +256,37 @@ public class MissionService : IMissionService
             if (dto.Details != null)
                 mission.Details = dto.Details;
 
-            if (dto.MissionDate.HasValue)
+            // The date may not MOVE into the past — resaving an unchanged past date
+            // (the form always submits it) stays allowed.
+            if (dto.MissionDate.HasValue && dto.MissionDate.Value.Date != mission.MissionDate.Date)
+            {
+                if (dto.MissionDate.Value < DateTime.Today)
+                {
+                    throw new InvalidOperationException("Mission date cannot be in the past");
+                }
+
                 mission.MissionDate = dto.MissionDate.Value;
+            }
 
-            if (dto.FK_MissionTypeId.HasValue)
-                mission.FK_MissionTypeId = dto.FK_MissionTypeId.Value;
+            if (dto.MissionTypeId.HasValue)
+                mission.FK_MissionTypeId = dto.MissionTypeId.Value;
 
-            if (dto.FK_MissionTimeTypeId.HasValue)
-                mission.FK_MissionTimeTypeId = dto.FK_MissionTimeTypeId.Value;
+            if (dto.MissionTimeTypeId.HasValue)
+                mission.FK_MissionTimeTypeId = dto.MissionTimeTypeId.Value;
 
-            if (dto.FK_CountryId.HasValue)
-                mission.FK_CountryId = dto.FK_CountryId.Value;
+            if (dto.MissionInterviewTypeId.HasValue)
+                mission.FK_MissionInterviewTypeId = dto.MissionInterviewTypeId.Value;
 
-            if (dto.FK_RegionId.HasValue)
-                mission.FK_RegionId = dto.FK_RegionId.Value;
+            // A pinned caller cannot move the record out of their country — the payload
+            // value applies only to unscoped (HQ) callers.
+            if (dto.CountryId.HasValue)
+                mission.FK_CountryId = _currentUser.CountryId ?? dto.CountryId.Value;
 
-            if (dto.FK_CenterId.HasValue)
-                mission.FK_CenterId = dto.FK_CenterId.Value;
+            if (dto.RegionId.HasValue)
+                mission.FK_RegionId = dto.RegionId.Value;
+
+            if (dto.CenterId.HasValue)
+                mission.FK_CenterId = dto.CenterId.Value;
 
             if (dto.MissionLocation != null)
                 mission.MissionLocation = dto.MissionLocation;
@@ -245,12 +300,15 @@ public class MissionService : IMissionService
             if (dto.ConferenceName != null)
                 mission.ConferenceName = dto.ConferenceName;
 
+            if (dto.AssignedToUserId.HasValue && dto.AssignedToUserId.Value != Guid.Empty)
+                mission.FK_UserId = dto.AssignedToUserId.Value;
+
             _missionRepository.Update(mission);
-            await _missionRepository.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Mission updated successfully: {MissionId}", id);
 
-            return _mapper.Map<MissionDetailDto>(mission);
+            return (await GetMissionByIdAsync(id))!;
         }
         catch (Exception ex)
         {
@@ -260,7 +318,8 @@ public class MissionService : IMissionService
     }
 
     /// <summary>
-    /// Delete mission
+    /// Delete mission (UC-MSN-08) — soft delete via the entity's IsDeleted machinery,
+    /// saved through the UnitOfWork only.
     /// </summary>
     public async Task DeleteMissionAsync(Guid id)
     {
@@ -272,14 +331,13 @@ public class MissionService : IMissionService
                 throw new InvalidOperationException($"Mission with ID {id} not found");
             }
 
-            // Validate that mission is not completed
-            if (mission.IsMissionCompleted)
+            if (!IsWithinCallerScope(mission))
             {
-                throw new InvalidOperationException("Cannot delete a completed mission");
+                throw new InvalidOperationException($"Mission with ID {id} not found");
             }
 
             _missionRepository.Delete(mission);
-            await _missionRepository.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Mission deleted successfully: {MissionId}", id);
         }
@@ -290,10 +348,95 @@ public class MissionService : IMissionService
         }
     }
 
-    // ========== Mission-Specific Operations ==========
+    /// <summary>
+    /// Register the mission result (UC-MSN-09, §20.S.3): the findings + the completion
+    /// outcome + السبب. A mission whose result is already registered is immutable.
+    /// Replaces the copied CompleteMission/RecordConferenceEntity pair.
+    /// </summary>
+    public async Task<MissionDetailDto> RegisterMissionResultAsync(Guid id, RegisterMissionResultDto dto)
+    {
+        await _registerResultValidator.ValidateAndThrowAsync(dto);
+
+        try
+        {
+            var mission = await _missionRepository.GetByIdAsync(id);
+            if (mission == null)
+            {
+                throw new InvalidOperationException($"Mission with ID {id} not found");
+            }
+
+            if (!IsWithinCallerScope(mission))
+            {
+                throw new InvalidOperationException($"Mission with ID {id} not found");
+            }
+
+            // The register entry is final once ANY outcome is recorded, completed or not —
+            // IsMissionCompleted alone would let a not-completed result be re-registered
+            // indefinitely.
+            if (mission.IsMissionCompleted || !string.IsNullOrEmpty(mission.MissionCompletedTxt))
+            {
+                throw new InvalidOperationException("Mission result is already registered");
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.EntityName))
+                mission.EntityName = dto.EntityName;
+
+            if (!string.IsNullOrWhiteSpace(dto.ConferenceName))
+                mission.ConferenceName = dto.ConferenceName;
+
+            if (!string.IsNullOrWhiteSpace(dto.Details))
+                mission.Details = dto.Details;
+
+            if (!string.IsNullOrWhiteSpace(dto.MissionTarget))
+                mission.MissionTarget = dto.MissionTarget;
+
+            if (!string.IsNullOrWhiteSpace(dto.MissionDetails))
+                mission.MissionDetails = dto.MissionDetails;
+
+            if (!string.IsNullOrWhiteSpace(dto.MissionLocation))
+                mission.MissionLocation = dto.MissionLocation;
+
+            if (!string.IsNullOrWhiteSpace(dto.Village))
+                mission.Village = dto.Village;
+
+            if (dto.AssignedToUserId.HasValue && dto.AssignedToUserId.Value != Guid.Empty)
+            {
+                if (!await AssigneeExistsAsync(dto.AssignedToUserId.Value))
+                {
+                    throw new ValidationException(
+                        new[] { new ValidationFailure(nameof(dto.AssignedToUserId), "Assigned user does not exist") });
+                }
+
+                mission.FK_UserId = dto.AssignedToUserId.Value;
+            }
+
+            mission.IsMissionCompleted = dto.IsCompleted!.Value;
+            mission.MissionCompletedTxt = dto.Reason;
+            // §20.S.3: the completion date belongs to the completed outcome — a
+            // not-completed registration records the reason, never a completion date.
+            if (dto.IsCompleted.Value)
+            {
+                mission.MissionCompletedDate = DateTime.UtcNow;
+            }
+
+            _missionRepository.Update(mission);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Mission result registered: {MissionId} (completed: {IsCompleted})", id, mission.IsMissionCompleted);
+
+            return (await GetMissionByIdAsync(id))!;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while registering result for mission {MissionId}", id);
+            throw;
+        }
+    }
+
+    // ========== Legacy fine-grained operations (UC-8.x capability variants) ==========
 
     /// <summary>
-    /// Set mission date (UC-8.2: Set Mission Date)
+    /// Set mission date (UC-8.2)
     /// </summary>
     public async Task SetMissionDateAsync(Guid id, DateTime missionDate)
     {
@@ -301,6 +444,11 @@ public class MissionService : IMissionService
         {
             var mission = await _missionRepository.GetByIdAsync(id);
             if (mission == null)
+            {
+                throw new InvalidOperationException($"Mission with ID {id} not found");
+            }
+
+            if (!IsWithinCallerScope(mission))
             {
                 throw new InvalidOperationException($"Mission with ID {id} not found");
             }
@@ -317,7 +465,7 @@ public class MissionService : IMissionService
 
             mission.MissionDate = missionDate;
             _missionRepository.Update(mission);
-            await _missionRepository.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Mission date updated for mission {MissionId}: {MissionDate}", id, missionDate);
         }
@@ -329,7 +477,7 @@ public class MissionService : IMissionService
     }
 
     /// <summary>
-    /// Assign mission type (UC-8.3: Assign Mission Type)
+    /// Assign mission type (UC-8.3)
     /// </summary>
     public async Task AssignMissionTypeAsync(Guid id, int missionTypeId)
     {
@@ -341,6 +489,11 @@ public class MissionService : IMissionService
                 throw new InvalidOperationException($"Mission with ID {id} not found");
             }
 
+            if (!IsWithinCallerScope(mission))
+            {
+                throw new InvalidOperationException($"Mission with ID {id} not found");
+            }
+
             if (mission.IsMissionCompleted)
             {
                 throw new InvalidOperationException("Cannot modify a completed mission");
@@ -348,7 +501,7 @@ public class MissionService : IMissionService
 
             mission.FK_MissionTypeId = missionTypeId;
             _missionRepository.Update(mission);
-            await _missionRepository.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Mission type assigned for mission {MissionId}: {MissionTypeId}", id, missionTypeId);
         }
@@ -360,7 +513,7 @@ public class MissionService : IMissionService
     }
 
     /// <summary>
-    /// Assign mission time type (UC-8.4: Assign Mission Time Type)
+    /// Assign mission time type (UC-8.4)
     /// </summary>
     public async Task AssignMissionTimeTypeAsync(Guid id, int missionTimeTypeId)
     {
@@ -372,6 +525,11 @@ public class MissionService : IMissionService
                 throw new InvalidOperationException($"Mission with ID {id} not found");
             }
 
+            if (!IsWithinCallerScope(mission))
+            {
+                throw new InvalidOperationException($"Mission with ID {id} not found");
+            }
+
             if (mission.IsMissionCompleted)
             {
                 throw new InvalidOperationException("Cannot modify a completed mission");
@@ -379,7 +537,7 @@ public class MissionService : IMissionService
 
             mission.FK_MissionTimeTypeId = missionTimeTypeId;
             _missionRepository.Update(mission);
-            await _missionRepository.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Mission time type assigned for mission {MissionId}: {MissionTimeTypeId}", id, missionTimeTypeId);
         }
@@ -391,7 +549,7 @@ public class MissionService : IMissionService
     }
 
     /// <summary>
-    /// Set mission location (UC-8.5: Set Mission Location)
+    /// Set mission location (UC-8.5)
     /// </summary>
     public async Task SetMissionLocationAsync(Guid id, MissionLocationDto location)
     {
@@ -399,6 +557,11 @@ public class MissionService : IMissionService
         {
             var mission = await _missionRepository.GetByIdAsync(id);
             if (mission == null)
+            {
+                throw new InvalidOperationException($"Mission with ID {id} not found");
+            }
+
+            if (!IsWithinCallerScope(mission))
             {
                 throw new InvalidOperationException($"Mission with ID {id} not found");
             }
@@ -419,14 +582,16 @@ public class MissionService : IMissionService
                 throw new InvalidOperationException("Country must be specified when Region is selected");
             }
 
-            mission.FK_CountryId = location.FK_CountryId;
+            // A pinned caller cannot move the record to another country — the payload
+            // value applies only to unscoped (HQ) callers.
+            mission.FK_CountryId = _currentUser.CountryId ?? location.FK_CountryId;
             mission.FK_RegionId = location.FK_RegionId;
             mission.FK_CenterId = location.FK_CenterId;
             mission.MissionLocation = location.MissionLocation;
             mission.Village = location.Village;
 
             _missionRepository.Update(mission);
-            await _missionRepository.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Mission location updated for mission {MissionId}", id);
         }
@@ -438,7 +603,7 @@ public class MissionService : IMissionService
     }
 
     /// <summary>
-    /// Assign mission owner (UC-8.6: Assign Mission Owner)
+    /// Assign mission owner (UC-8.6)
     /// </summary>
     public async Task AssignMissionOwnerAsync(Guid id, Guid userId)
     {
@@ -450,11 +615,21 @@ public class MissionService : IMissionService
                 throw new InvalidOperationException($"Mission with ID {id} not found");
             }
 
+            if (!IsWithinCallerScope(mission))
+            {
+                throw new InvalidOperationException($"Mission with ID {id} not found");
+            }
+
+            if (mission.IsMissionCompleted)
+            {
+                throw new InvalidOperationException("Cannot modify a completed mission");
+            }
+
             var previousUserId = mission.FK_UserId;
             mission.FK_UserId = userId;
 
             _missionRepository.Update(mission);
-            await _missionRepository.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Mission owner assigned for mission {MissionId}: {UserId}", id, userId);
 
@@ -462,7 +637,6 @@ public class MissionService : IMissionService
             // Notification integration to be implemented using INotificationsManager
             _logger.LogInformation("TODO: Send notification to user {UserId} for mission assignment", userId);
 
-            // Notify previous owner if changed
             if (previousUserId.HasValue && previousUserId.Value != userId)
             {
                 _logger.LogInformation("TODO: Send notification to previous owner {UserId} for mission reassignment", previousUserId.Value);
@@ -475,103 +649,10 @@ public class MissionService : IMissionService
         }
     }
 
-    /// <summary>
-    /// Complete mission (UC-8.8: Mark Mission as Completed)
-    /// </summary>
-    public async Task CompleteMissionAsync(Guid id, CompleteMissionDto dto)
-    {
-        try
-        {
-            var mission = await _missionRepository.GetByIdAsync(id);
-            if (mission == null)
-            {
-                throw new InvalidOperationException($"Mission with ID {id} not found");
-            }
-
-            if (mission.IsMissionCompleted)
-            {
-                throw new InvalidOperationException("Mission is already completed");
-            }
-
-            mission.IsMissionCompleted = true;
-            mission.MissionCompletedDate = DateTime.UtcNow;
-            mission.MissionCompletedTxt = dto.MissionCompletedTxt;
-
-            _missionRepository.Update(mission);
-            await _missionRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Mission completed: {MissionId}", id);
-
-            // TODO: Send completion notification
-            // Notification integration to be implemented using INotificationsManager
-            if (mission.FK_UserId.HasValue)
-            {
-                _logger.LogInformation("TODO: Send completion notification to user {UserId} for mission {MissionId}", mission.FK_UserId.Value, id);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while completing mission {MissionId}", id);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Record conference/entity information (UC-8.9: Record Conference/Entity)
-    /// </summary>
-    public async Task RecordConferenceEntityAsync(Guid id, string? conferenceName, string? entityName)
-    {
-        try
-        {
-            var mission = await _missionRepository.GetByIdAsync(id);
-            if (mission == null)
-            {
-                throw new InvalidOperationException($"Mission with ID {id} not found");
-            }
-
-            if (mission.IsMissionCompleted)
-            {
-                throw new InvalidOperationException("Cannot modify a completed mission");
-            }
-
-            mission.ConferenceName = conferenceName;
-            mission.EntityName = entityName;
-
-            _missionRepository.Update(mission);
-            await _missionRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Conference/Entity information recorded for mission {MissionId}", id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while recording conference/entity for mission {MissionId}", id);
-            throw;
-        }
-    }
-
     // ========== View Operations ==========
 
     /// <summary>
-    /// Get missions assigned to current user (UC-8.12: View My Missions)
-    /// </summary>
-    public async Task<MissionPagedResult<MissionListDto>> GetMyMissionsAsync(Guid userId, MissionFilterDto filter)
-    {
-        try
-        {
-            _logger.LogInformation("Retrieving missions for user {UserId}", userId);
-
-            filter.FK_UserId = userId;
-            return await GetMissionsFilteredAsync(filter);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving missions for user {UserId}", userId);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Get mission status summary (UC-8.13: Track Mission Status)
+    /// Get mission status summary (legacy UC-8.13 support)
     /// </summary>
     public async Task<MissionStatusSummaryDto> GetMissionStatusSummaryAsync()
     {
@@ -620,7 +701,7 @@ public class MissionService : IMissionService
     // ========== Export ==========
 
     /// <summary>
-    /// Export missions to Excel (UC-8.10: Export to Excel)
+    /// Export missions to Excel (not in epic 15's scope — left as the copied TODO)
     /// </summary>
     public async Task<byte[]> ExportMissionsToExcelAsync(MissionFilterDto filter)
     {
@@ -639,5 +720,156 @@ public class MissionService : IMissionService
             _logger.LogError(ex, "Error occurred while exporting missions to Excel");
             throw;
         }
+    }
+
+    // ========== Scope + filter helpers ==========
+
+    /// <summary>
+    /// Pin the caller's country and charity claims onto the filter — pin, never widen.
+    /// A caller without the claims sees all (HQ module).
+    /// </summary>
+    private void ApplyCallerScope(MissionFilterDto filter)
+    {
+        var callerCountry = _currentUser.CountryId;
+        if (callerCountry.HasValue)
+        {
+            if (filter.CountryId.HasValue && filter.CountryId.Value != callerCountry.Value)
+            {
+                _logger.LogWarning(
+                    "Caller pinned to country {CallerCountry} requested country {RequestedCountry}; pinning to {CallerCountry}",
+                    callerCountry.Value, filter.CountryId.Value, callerCountry.Value);
+            }
+
+            filter.CountryId = callerCountry;
+        }
+
+        var callerCharity = _currentUser.CharityId;
+        if (callerCharity.HasValue)
+        {
+            if (filter.CharityId.HasValue && filter.CharityId.Value != callerCharity.Value)
+            {
+                _logger.LogWarning(
+                    "Caller pinned to charity {CallerCharity} requested charity {RequestedCharity}; pinning to {CallerCharity}",
+                    callerCharity.Value, filter.CharityId.Value, callerCharity.Value);
+            }
+
+            filter.CharityId = callerCharity;
+        }
+    }
+
+    /// <summary>
+    /// Whether the record is visible to the caller: a caller without claims sees
+    /// everything; a pinned caller sees only their own country's and charity's rows.
+    /// </summary>
+    private bool IsWithinCallerScope(Mission mission)
+    {
+        var callerCountry = _currentUser.CountryId;
+        if (callerCountry.HasValue && mission.FK_CountryId != callerCountry.Value)
+        {
+            return false;
+        }
+
+        var callerCharity = _currentUser.CharityId;
+        if (callerCharity.HasValue && mission.FK_CharityId != callerCharity)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Existence-check every FK the create payload names, so a bogus id fails as a 400
+    /// field error instead of a SQL foreign-key 500. The validator has already run, so
+    /// the required keys are non-null here.
+    /// </summary>
+    private async Task ValidateForeignKeysAsync(CreateMissionDto dto)
+    {
+        var failures = new List<ValidationFailure>();
+
+        if (!await _missionTypeRepository.ExistsAsync(dto.MissionTypeId))
+            failures.Add(new ValidationFailure(nameof(dto.MissionTypeId), "Mission type does not exist"));
+        if (!await _missionTimeTypeRepository.ExistsAsync(dto.MissionTimeTypeId))
+            failures.Add(new ValidationFailure(nameof(dto.MissionTimeTypeId), "Mission time type does not exist"));
+        if (!await _missionInterviewTypeRepository.ExistsAsync(dto.MissionInterviewTypeId))
+            failures.Add(new ValidationFailure(nameof(dto.MissionInterviewTypeId), "Mission interview type does not exist"));
+        if (!await _regionRepository.ExistsAsync(dto.RegionId!.Value))
+            failures.Add(new ValidationFailure(nameof(dto.RegionId), "Region does not exist"));
+        if (!await _centerRepository.ExistsAsync(dto.CenterId!.Value))
+            failures.Add(new ValidationFailure(nameof(dto.CenterId), "Center does not exist"));
+        if (dto.CountryId.HasValue && !await _countryRepository.ExistsAsync(dto.CountryId.Value))
+            failures.Add(new ValidationFailure(nameof(dto.CountryId), "Country does not exist"));
+        if (!await AssigneeExistsAsync(dto.AssignedToUserId))
+            failures.Add(new ValidationFailure(nameof(dto.AssignedToUserId), "Assigned user does not exist"));
+
+        if (failures.Count > 0)
+        {
+            throw new ValidationException(failures);
+        }
+    }
+
+    /// <summary>
+    /// Same existence checks for the patch-style update payload — only the values the
+    /// DTO actually carries are checked.
+    /// </summary>
+    private async Task ValidateForeignKeysAsync(UpdateMissionDto dto)
+    {
+        var failures = new List<ValidationFailure>();
+
+        if (dto.MissionTypeId.HasValue && !await _missionTypeRepository.ExistsAsync(dto.MissionTypeId.Value))
+            failures.Add(new ValidationFailure(nameof(dto.MissionTypeId), "Mission type does not exist"));
+        if (dto.MissionTimeTypeId.HasValue && !await _missionTimeTypeRepository.ExistsAsync(dto.MissionTimeTypeId.Value))
+            failures.Add(new ValidationFailure(nameof(dto.MissionTimeTypeId), "Mission time type does not exist"));
+        if (dto.MissionInterviewTypeId.HasValue && !await _missionInterviewTypeRepository.ExistsAsync(dto.MissionInterviewTypeId.Value))
+            failures.Add(new ValidationFailure(nameof(dto.MissionInterviewTypeId), "Mission interview type does not exist"));
+        if (dto.RegionId.HasValue && !await _regionRepository.ExistsAsync(dto.RegionId.Value))
+            failures.Add(new ValidationFailure(nameof(dto.RegionId), "Region does not exist"));
+        if (dto.CenterId.HasValue && !await _centerRepository.ExistsAsync(dto.CenterId.Value))
+            failures.Add(new ValidationFailure(nameof(dto.CenterId), "Center does not exist"));
+        if (dto.CountryId.HasValue && !await _countryRepository.ExistsAsync(dto.CountryId.Value))
+            failures.Add(new ValidationFailure(nameof(dto.CountryId), "Country does not exist"));
+        if (dto.AssignedToUserId.HasValue && dto.AssignedToUserId.Value != Guid.Empty
+            && !await AssigneeExistsAsync(dto.AssignedToUserId.Value))
+            failures.Add(new ValidationFailure(nameof(dto.AssignedToUserId), "Assigned user does not exist"));
+
+        if (failures.Count > 0)
+        {
+            throw new ValidationException(failures);
+        }
+    }
+
+    /// <summary>
+    /// Whether the named user exists — the user-management endpoint (/api/usermanagement,
+    /// the identity user store) is the assignee pick-list source, so an assignee must
+    /// resolve there. Employees and users are distinct populations: a user without an
+    /// employee record is a valid assignee (Mission.FK_UserId is an identity user id).
+    /// </summary>
+    private async Task<bool> AssigneeExistsAsync(Guid userId)
+    {
+        var user = await _userAppService.GetUserDetailAsync(userId);
+        return user != null;
+    }
+
+    /// <summary>
+    /// Build the combined filter expression — every predicate ANDs together; the dates
+    /// combine with the rest instead of replacing them.
+    /// </summary>
+    private static System.Linq.Expressions.Expression<Func<Mission, bool>>? BuildFilterExpression(MissionFilterDto filter)
+    {
+        return m =>
+            (!filter.MissionTypeId.HasValue || m.FK_MissionTypeId == filter.MissionTypeId.Value) &&
+            (!filter.MissionTimeTypeId.HasValue || m.FK_MissionTimeTypeId == filter.MissionTimeTypeId.Value) &&
+            (!filter.CharityId.HasValue || m.FK_CharityId == filter.CharityId.Value) &&
+            (!filter.CountryId.HasValue || m.FK_CountryId == filter.CountryId.Value) &&
+            (!filter.RegionId.HasValue || m.FK_RegionId == filter.RegionId.Value) &&
+            (!filter.CenterId.HasValue || m.FK_CenterId == filter.CenterId.Value) &&
+            (!filter.AssignedToUserId.HasValue || m.FK_UserId == filter.AssignedToUserId.Value) &&
+            (!filter.IsCompleted.HasValue || m.IsMissionCompleted == filter.IsCompleted.Value) &&
+            (!filter.DateFrom.HasValue || m.MissionDate >= filter.DateFrom.Value) &&
+            // DateTo is inclusive of its whole day: a date-only value binds midnight, so the
+            // bound is the start of the NEXT day, not the end of the named one.
+            (!filter.DateTo.HasValue || m.MissionDate < filter.DateTo.Value.Date.AddDays(1)) &&
+            (string.IsNullOrWhiteSpace(filter.Search) ||
+             (m.MissionTarget != null && m.MissionTarget.Contains(filter.Search)));
     }
 }

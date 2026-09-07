@@ -1,0 +1,188 @@
+- generic [ref=f5e5]:
+  - navigation [ref=f5e6]:
+    - button "" [ref=f5e7] [cursor=pointer]
+    - list [ref=f5e9]:
+      - listitem [ref=f5e10]:
+        - link "English " [ref=f5e11] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f5e12]: 
+          - text: English 
+      - listitem [ref=f5e13]:
+        - link "" [ref=f5e14] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f5e16]:
+        - link "" [ref=f5e17] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f5e20]:
+        - button [ref=f5e21] [cursor=pointer]:
+          - generic [ref=f5e22]:
+            - text: Welcome Stub User
+            - img "..." [ref=f5e23]
+          - text: 
+  - complementary [ref=f5e24]:
+    - generic [ref=f5e29]:
+      - text: 
+      - navigation [ref=f5e30]:
+        - link [ref=f5e32] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f5e33]
+        - paragraph [ref=f5e34]: Website Elements
+        - list [ref=f5e35]:
+          - listitem [ref=f5e36]:
+            - link " Home Page (current) " [ref=f5e37] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f5e38]: 
+              - generic [ref=f5e39]: Home Page
+              - generic [ref=f5e40]: (current)
+              - text: 
+            - list [ref=f5e41]:
+              - listitem [ref=f5e42]:
+                - link "Home" [ref=f5e43] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f5e44]:
+            - link " Users " [ref=f5e45] [cursor=pointer]:
+              - /url: "#user-management"
+              - generic [ref=f5e46]: 
+              - generic [ref=f5e47]: Users
+              - text: 
+          - listitem [ref=f5e48]:
+            - link " Employees " [ref=f5e49] [cursor=pointer]:
+              - /url: "#employees"
+              - generic [ref=f5e50]: 
+              - generic [ref=f5e51]: Employees
+              - text: 
+          - listitem [ref=f5e52]:
+            - link " NGOs " [ref=f5e53] [cursor=pointer]:
+              - /url: "#charities"
+              - generic [ref=f5e54]: 
+              - generic [ref=f5e55]: NGOs
+              - text: 
+          - listitem [ref=f5e56]:
+            - link " Office Projects " [ref=f5e57] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f5e58]: 
+              - generic [ref=f5e59]: Office Projects
+              - text: 
+          - listitem [ref=f5e60]:
+            - link " Housing Projects " [ref=f5e61] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f5e62]: 
+              - generic [ref=f5e63]: Housing Projects
+              - text: 
+          - listitem [ref=f5e64]:
+            - link " Seasonal Aid " [ref=f5e65] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f5e66]: 
+              - generic [ref=f5e67]: Seasonal Aid
+              - text: 
+            - list [ref=f5e682]:
+              - listitem [ref=f5e683]:
+                - link "All Seasonal Aid" [ref=f5e684] [cursor=pointer]:
+                  - /url: "#/seasonal-aid"
+              - listitem [ref=f5e685]:
+                - link "Add Seasonal Aid" [ref=f5e686] [cursor=pointer]:
+                  - /url: "#/seasonal-aid/create"
+          - listitem [ref=f5e68]:
+            - link " Incoming & Outgoing " [ref=f5e69] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f5e70]: 
+              - generic [ref=f5e71]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=f5e72]:
+            - link " Orphan Payments " [ref=f5e73] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f5e74]: 
+              - generic [ref=f5e75]: Orphan Payments
+              - text: 
+          - listitem [ref=f5e76]:
+            - link " Families " [ref=f5e77] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f5e78]: 
+              - generic [ref=f5e79]: Families
+              - text: 
+          - listitem [ref=f5e80]:
+            - link " General Checks " [ref=f5e81] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f5e82]: 
+              - generic [ref=f5e83]: General Checks
+              - text: 
+          - listitem [ref=f5e84]:
+            - link " Missions " [ref=f5e85] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f5e86]: 
+              - generic [ref=f5e87]: Missions
+              - text: 
+          - listitem [ref=f5e88]:
+            - link " Title " [ref=f5e89] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f5e90]: 
+              - generic [ref=f5e91]: Title
+              - text: 
+          - listitem [ref=f5e92]:
+            - link " Lookup Management " [ref=f5e93] [cursor=pointer]:
+              - /url: "#lookup-management"
+              - generic [ref=f5e94]: 
+              - generic [ref=f5e95]: Lookup Management
+              - text: 
+  - main [ref=f5e96]:
+    - generic [ref=f5e687]:
+      - navigation "breadcrumb" [ref=f5e689]:
+        - list [ref=f5e690]:
+          - listitem [ref=f5e691]:
+            - link "Home" [ref=f5e692] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=f5e693]:
+            - text: /
+            - generic [ref=f5e694]: Seasonal Aid
+      - generic [ref=f5e696]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f5e697]:
+          - generic [ref=f5e698]:
+            - generic [ref=f5e699]: 
+            - generic [ref=f5e700]:
+              - heading "Seasonal Aid" [level=3] [ref=f5e701]
+              - paragraph [ref=f5e702]: Manage seasonal aid campaigns
+          - generic [ref=f5e703]:
+            - button "Add Campaign" [ref=f5e704] [cursor=pointer]:
+              - generic [ref=f5e705]: 
+              - text: Add Campaign
+            - button "Export to Excel" [ref=f5e706] [cursor=pointer]:
+              - generic [ref=f5e707]: 
+              - text: Export to Excel
+      - generic [ref=f5e709]:
+        - generic [ref=f5e711]:
+          - generic [ref=f5e714]:
+            - generic [ref=f5e715]: Search
+            - textbox "Search" [ref=f5e716]:
+              - /placeholder: Search by campaign name...
+          - generic [ref=f5e719]:
+            - generic [ref=f5e720]: Campaign Type
+            - combobox [ref=f5e723] [cursor=pointer]:
+              - textbox [ref=f5e724]
+          - generic [ref=f5e727]:
+            - generic [ref=f5e728]: Status
+            - combobox [ref=f5e731] [cursor=pointer]:
+              - textbox "common.all" [ref=f5e732]
+        - table [ref=f5e734]:
+          - rowgroup [ref=f5e735]:
+            - row [ref=f5e736]:
+              - columnheader "Campaign Name" [ref=f5e737]
+              - columnheader "Campaign Type" [ref=f5e738]
+              - columnheader "Period" [ref=f5e739]
+              - columnheader "Budget" [ref=f5e740]
+              - columnheader "Beneficiaries" [ref=f5e741]
+              - columnheader "Assigned Charity" [ref=f5e742]
+              - columnheader "Status" [ref=f5e743]
+              - columnheader "Actions" [ref=f5e744]
+          - rowgroup [ref=f5e745]:
+            - row [ref=f5e746]:
+              - cell " No campaigns found" [ref=f5e747]:
+                - generic [ref=f5e748]:
+                  - generic [ref=f5e749]: 
+                  - paragraph [ref=f5e750]: No campaigns found
+  - contentinfo [ref=f5e454]:
+    - generic [ref=f5e456]:
+      - paragraph [ref=f5e458]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f5e460]: Version 1.0.0

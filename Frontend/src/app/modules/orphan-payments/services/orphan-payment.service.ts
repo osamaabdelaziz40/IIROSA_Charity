@@ -10,14 +10,14 @@ import {
   OrphanPaymentSearchRequest,
   OrphanPaymentPagedResult,
   AddOrphansToPaymentDto,
-  RemoveOrphanFromPaymentDto,
   OrphanSelectionFilter,
-  OrphanForSelectionDto,
+  OrphanSelectionPagedResult,
+  AddOrphansResultDto,
   ExportPaymentGroupOptions,
-  OrphanPaymentAuditLog,
-  OrphanPaymentStatistics,
-  BatchNumberGeneration,
-  OrphanPaymentItemDto
+  BatchNumberOptionDto,
+  UpdateOrphanPaymentItemDto,
+  OrphanPaymentItemDto,
+  PaymentSummary
 } from '../models/orphan-payment.model';
 
 @Injectable({
@@ -73,6 +73,58 @@ export class OrphanPaymentService {
   }
 
   /**
+   * UC-ORP-09 — one orphan's rows within a batch: the batch header stays complete, the rows
+   * narrow to the orphan. Without orphanId this is the plain UC-5.9 details read.
+   */
+  getOrphanPaymentDetails(id: string, orphanId?: string): Observable<OrphanPaymentDto> {
+    let params = new HttpParams();
+    if (orphanId) {
+      params = params.set('orphanId', orphanId);
+    }
+    return this.http.get<OrphanPaymentDto>(`${this.apiUrl}/${id}/details`, {
+      headers: this.getHeaders(),
+      params
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * UC-ORP-11 — the distinct batch numbers (رقم الحصة) in the caller's scope, most recent first.
+   */
+  getBatchNumbers(charityId?: string): Observable<BatchNumberOptionDto[]> {
+    let params = new HttpParams();
+    if (charityId) {
+      params = params.set('charityId', charityId);
+    }
+    return this.http.get<BatchNumberOptionDto[]>(`${this.apiUrl}/batch-numbers`, {
+      headers: this.getHeaders(),
+      params
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * UC-RPT-32 (§23.U.32 صفحة ملخص الصرف) — the batch's cover figures for the batch view's
+   * totals band. Cross-module endpoint (Dashboard, not OrphanPayments) — the call lives here
+   * because the panel lives on this module's batch screen (the story's recorded pick). The
+   * charity scope resolves server-side from the token; charityId is an HQ-only narrow.
+   */
+  getPaymentSummary(paymentId: string, charityId?: string): Observable<PaymentSummary> {
+    let params = new HttpParams().set('paymentId', paymentId);
+    if (charityId) {
+      params = params.set('charityId', charityId);
+    }
+    return this.http.get<PaymentSummary>(
+      `${environment.apiUrl}/api/Dashboard/payment-summary`,
+      { headers: this.getHeaders(), params }
+    ).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Create a new orphan payment group
    */
   createOrphanPayment(payment: CreateOrphanPaymentDto): Observable<OrphanPaymentDto> {
@@ -108,22 +160,30 @@ export class OrphanPaymentService {
   // ==================== ORPHAN MANAGEMENT ====================
 
   /**
-   * Get available orphans for selection (not in the payment group yet)
+   * Get available orphans for selection (not in the payment group yet).
+   * 10-2: typed to the live paged envelope — was a bare array that never matched the wire.
    */
-  getAvailableOrphans(groupId: string, filter: OrphanSelectionFilter): Observable<OrphanForSelectionDto[]> {
-    return this.http.get<OrphanForSelectionDto[]>(`${this.apiUrl}/${groupId}/available-orphans`, {
+  getAvailableOrphans(groupId: string, filter: OrphanSelectionFilter): Observable<OrphanSelectionPagedResult> {
+    // Review P18: the page comes from the caller (component pager) — was a hard-coded
+    // pageSize 200 that silently made orphans 201+ unenrollable.
+    return this.http.get<OrphanSelectionPagedResult>(`${this.apiUrl}/${groupId}/available-orphans`, {
       headers: this.getHeaders(),
-      params: this.buildHttpParams(filter)
+      params: this.buildHttpParams({
+        ...filter,
+        pageNumber: filter.pageNumber || 1,
+        pageSize: filter.pageSize || 10
+      })
     }).pipe(
       catchError(this.handleError)
     );
   }
 
   /**
-   * Add orphans to a payment group
+   * Add orphans to a payment group — server reports { message, addedCount, skippedCount }
+   * (already-in-group orphans are skipped server-side, UC-5.3 alternative flow).
    */
-  addOrphansToGroup(groupId: string, request: AddOrphansToPaymentDto): Observable<OrphanPaymentItemDto[]> {
-    return this.http.post<OrphanPaymentItemDto[]>(`${this.apiUrl}/${groupId}/orphans`, request, {
+  addOrphansToGroup(groupId: string, request: AddOrphansToPaymentDto): Observable<AddOrphansResultDto> {
+    return this.http.post<AddOrphansResultDto>(`${this.apiUrl}/${groupId}/orphans`, request, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -131,30 +191,28 @@ export class OrphanPaymentService {
   }
 
   /**
-   * Remove an orphan from a payment group
+   * Remove an orphan row from a payment group — live route is
+   * DELETE orphan-items/{orphanPaymentItemId} (was DELETE {groupId}/orphans with a body).
    */
-  removeOrphanFromGroup(groupId: string, request: RemoveOrphanFromPaymentDto): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${groupId}/orphans`, {
-      headers: this.getHeaders(),
-      body: request
+  removeOrphanItem(orphanPaymentItemId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/orphan-items/${orphanPaymentItemId}`, {
+      headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
     );
   }
 
+  // 10-3: getGroupOrphans removed — GET {id}/orphans never existed server-side; the row
+  // list comes from getOrphanPaymentDetails (GET {id}/details → dto.orphans).
+
   /**
-   * Get orphans in a payment group
+   * §15.1 row action (10-9): ONE endpoint for the whole flag family — action 0 is the
+   * stop/resume toggle (flag carries the direction); actions 1..4 land with 10-10..10-13.
+   * Returns the updated row for optimistic-update replacement.
    */
-  getGroupOrphans(groupId: string, page: number = 1, pageSize: number = 50): Observable<{
-    items: OrphanPaymentItemDto[];
-    totalCount: number;
-  }> {
-    return this.http.get<{
-      items: OrphanPaymentItemDto[];
-      totalCount: number;
-    }>(`${this.apiUrl}/${groupId}/orphans`, {
-      headers: this.getHeaders(),
-      params: { page, pageSize }
+  updateOrphanItem(dto: UpdateOrphanPaymentItemDto): Observable<OrphanPaymentItemDto> {
+    return this.http.post<OrphanPaymentItemDto>(`${this.apiUrl}/orphan-items`, dto, {
+      headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
     );
@@ -165,8 +223,10 @@ export class OrphanPaymentService {
   /**
    * Update exchange rate for a payment group
    */
+  // 10-4: verb fixes — the backend routes are PUT {id}/exchange-rate and POST
+  // {id}/lock-exchange-rate (typed { lockRate }); the old PATCH calls 405'd.
   updateExchangeRate(groupId: string, exchangeRate: number, currency: string, dontRemoveRate?: boolean): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${groupId}/exchange-rate`, {
+    return this.http.put<void>(`${this.apiUrl}/${groupId}/exchange-rate`, {
       exchangeRate,
       currency,
       dontRemoveRate
@@ -181,7 +241,7 @@ export class OrphanPaymentService {
    * Lock exchange rate (set DontRemoveRate flag)
    */
   lockExchangeRate(groupId: string): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${groupId}/lock-exchange-rate`, {}, {
+    return this.http.post<void>(`${this.apiUrl}/${groupId}/lock-exchange-rate`, { lockRate: true }, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -189,10 +249,10 @@ export class OrphanPaymentService {
   }
 
   /**
-   * Unlock exchange rate
+   * Unlock exchange rate — same endpoint, lockRate false (10-4: no separate unlock route)
    */
   unlockExchangeRate(groupId: string): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${groupId}/unlock-exchange-rate`, {}, {
+    return this.http.post<void>(`${this.apiUrl}/${groupId}/lock-exchange-rate`, { lockRate: false }, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -201,11 +261,10 @@ export class OrphanPaymentService {
 
   // ==================== BATCH UPLOAD STATUS ====================
 
-  /**
-   * Mark group as uploaded/ready for processing
-   */
+  // 10-4 verb alignment: the backend route is POST {id}/mark-uploaded with { isUploaded };
+  // there is no /unmark-uploaded route (the detail screen's 10-3 buttons were 405ing).
   markAsUploaded(groupId: string): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${groupId}/mark-uploaded`, {}, {
+    return this.http.post<void>(`${this.apiUrl}/${groupId}/mark-uploaded`, { isUploaded: true }, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -216,7 +275,7 @@ export class OrphanPaymentService {
    * Unmark group as uploaded (allow modifications again)
    */
   unmarkAsUploaded(groupId: string): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${groupId}/unmark-uploaded`, {}, {
+    return this.http.post<void>(`${this.apiUrl}/${groupId}/mark-uploaded`, { isUploaded: false }, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -224,23 +283,14 @@ export class OrphanPaymentService {
   }
 
   // ==================== BATCH NUMBER MANAGEMENT ====================
-
-  /**
-   * Generate next batch number
-   */
-  generateNextBatchNumber(): Observable<BatchNumberGeneration> {
-    return this.http.get<BatchNumberGeneration>(`${this.apiUrl}/batch-number/next`, {
-      headers: this.getHeaders()
-    }).pipe(
-      catchError(this.handleError)
-    );
-  }
+  // 10-2: generateNextBatchNumber() removed — GET /batch-number/next never existed server-side;
+  // the server auto-generates BatchNo on create when the field is left blank.
 
   /**
    * Update batch number manually
    */
   updateBatchNumber(groupId: string, batchNo: string): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${groupId}/batch-number`, { batchNo }, {
+    return this.http.put<void>(`${this.apiUrl}/${groupId}/batch-number`, { batchNo }, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -250,146 +300,26 @@ export class OrphanPaymentService {
   // ==================== EXPORT ====================
 
   /**
-   * Export payment group to Excel or PDF
+   * Export payment group to Excel or PDF — 10-3: aligned to the live GET {id}/export
+   * endpoint (query params, not the body-carrying POST that 405'd). 10-24 re-cuts the
+   * payload format.
    */
   exportGroup(groupId: string, options: ExportPaymentGroupOptions): Observable<Blob> {
-    return this.http.post(`${this.apiUrl}/${groupId}/export`, options, {
+    const params = new HttpParams()
+      .set('format', options.format)
+      .set('includePhotos', String(options.includePhotos))
+      .set('groupBy', options.groupBy ?? 'None');
+    return this.http.get(`${this.apiUrl}/${groupId}/export`, {
       headers: this.getHeaders(),
+      params,
       responseType: 'blob'
     }).pipe(
       catchError(this.handleError)
     );
   }
 
-  /**
-   * Export payment groups list to Excel
-   */
-  exportGroupsList(searchRequest: OrphanPaymentSearchRequest): Observable<Blob> {
-    return this.http.post(`${this.apiUrl}/export-list`, searchRequest, {
-      headers: this.getHeaders(),
-      responseType: 'blob'
-    }).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  /**
-   * Print payment group (returns printable HTML)
-   */
-  printGroup(groupId: string): Observable<string> {
-    return this.http.get(`${this.apiUrl}/${groupId}/print`, {
-      headers: this.getHeaders(),
-      responseType: 'text'
-    }).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  // ==================== STATISTICS ====================
-
-  /**
-   * Get orphan payment statistics
-   */
-  getStatistics(): Observable<OrphanPaymentStatistics> {
-    return this.http.get<OrphanPaymentStatistics>(`${this.apiUrl}/statistics`, {
-      headers: this.getHeaders()
-    }).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  /**
-   * Get group statistics by charity/region breakdown
-   */
-  getGroupStatistics(groupId: string): Observable<{
-    byCharity: { charityId: number; charityName: string; orphanCount: number }[];
-    byRegion: { regionId: number; regionName: string; orphanCount: number }[];
-    totalOrphans: number;
-  }> {
-    return this.http.get<{
-      byCharity: { charityId: number; charityName: string; orphanCount: number }[];
-      byRegion: { regionId: number; regionName: string; orphanCount: number }[];
-      totalOrphans: number;
-    }>(`${this.apiUrl}/${groupId}/statistics`, {
-      headers: this.getHeaders()
-    }).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  // ==================== AUDIT LOG ====================
-
-  /**
-   * Get audit log for a payment group
-   */
-  getAuditLogs(groupId: string, page: number = 1, pageSize: number = 20): Observable<OrphanPaymentAuditLog[]> {
-    return this.http.get<OrphanPaymentAuditLog[]>(`${this.apiUrl}/${groupId}/audit-logs`, {
-      headers: this.getHeaders(),
-      params: { page, pageSize }
-    }).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  // ==================== FILTER OPTIONS ====================
-
-  /**
-   * Get available charities for filter dropdown
-   */
-  getAvailableCharities(): Observable<{ id: number; name: string }[]> {
-    return this.http.get<{ id: number; name: string }[]>(`${this.apiUrl}/filter-options/charities`, {
-      headers: this.getHeaders()
-    }).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  /**
-   * Get available regions for filter dropdown
-   */
-  getAvailableRegions(): Observable<{ id: number; name: string }[]> {
-    return this.http.get<{ id: number; name: string }[]>(`${this.apiUrl}/filter-options/regions`, {
-      headers: this.getHeaders()
-    }).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  /**
-   * Get available centers for filter dropdown
-   */
-  getAvailableCenters(): Observable<{ id: number; name: string }[]> {
-    return this.http.get<{ id: number; name: string }[]>(`${this.apiUrl}/filter-options/centers`, {
-      headers: this.getHeaders()
-    }).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  // ==================== VALIDATION ====================
-
-  /**
-   * Check if batch number is unique
-   */
-  validateBatchNumber(batchNo: string, excludeId?: string): Observable<boolean> {
-    return this.http.get<boolean>(`${this.apiUrl}/validate-batch-number`, {
-      headers: this.getHeaders(),
-      params: { batchNo, excludeId: excludeId || '' }
-    }).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  /**
-   * Check if group can be modified (not uploaded/locked)
-   */
-  canModifyGroup(groupId: string): Observable<{ canModify: boolean; reason?: string }> {
-    return this.http.get<{ canModify: boolean; reason?: string }>(`${this.apiUrl}/${groupId}/can-modify`, {
-      headers: this.getHeaders()
-    }).pipe(
-      catchError(this.handleError)
-    );
-  }
+  // 10-3: printGroup and getAuditLogs removed — neither {id}/print nor {id}/audit-logs
+  // exists server-side (print returns with 10-24).
 
   // ==================== ERROR HANDLING ====================
 

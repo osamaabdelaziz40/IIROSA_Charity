@@ -45,6 +45,11 @@ public class UpdateOrphanPaymentDto
     /// </summary>
     public DateTime? GroupDate { get; set; }
 
+    /// <summary>
+    /// Distribution start date تاريخ بدء التوزيع (§15.S.2)
+    /// </summary>
+    public DateTime? PaymentDate { get; set; }
+
     // Financial Information
     /// <summary>
     /// Exchange rate for reporting purposes

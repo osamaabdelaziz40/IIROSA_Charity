@@ -6,17 +6,24 @@ using Microsoft.AspNetCore.Mvc;
 namespace IIROSA.Api.Controllers;
 
 /// <summary>
-/// Check Management API Controller
-/// Implements UC-11.1 to UC-11.10: Check CRUD operations and specialized actions
-/// Follows approved Framework.Core architecture
-/// IMPORTANT: Only Admin, Super Admin, and Accountant roles can access this controller.
-/// Charity users are explicitly blocked from this module.
+/// General cheques (chapter 16, UC-CHQ-01..10): the register (§16.S.1), the cheque
+/// form with تفقيط (§16.S.2), and the cheque statement (§16.S.3).
+///
+/// Reads are open to the financial read roles; issue/edit is the financial
+/// approver set. Charity users hold no cheque screens, but the service still
+/// scopes every row to the caller's charity from the token (defence in depth).
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin,SuperAdmin,Accountant")]
+[Authorize]
 public class CheckManagementController : ControllerBase
 {
+    /// <summary>Register/statement readers — financial read roles.</summary>
+    private const string ReadRoles = "SuperAdmin,Admin,Accountant,FinancialOfficer";
+
+    /// <summary>Issue/edit — financial approver roles only.</summary>
+    private const string WriteRoles = "SuperAdmin,Accountant,FinancialOfficer";
+
     private readonly ICheckService _checkService;
     private readonly ILogger<CheckManagementController> _logger;
 
@@ -28,54 +35,120 @@ public class CheckManagementController : ControllerBase
         _logger = logger;
     }
 
-    // ========== CRUD Operations ==========
-
     /// <summary>
-    /// Get all checks with filtering and pagination (UC-11.7: View Checks List)
+    /// UC-CHQ-01 — the cheque register. Charity, bank, date range, cheque type and
+    /// free-text filters; paged. Tenancy is applied by the service from the token.
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<CheckPagedResult<CheckListDto>>> GetChecks(
-        [FromQuery] CheckFilterDto filter)
+    [Authorize(Roles = ReadRoles)]
+    public async Task<ActionResult<CheckPagedResult<CheckListDto>>> GetChecks([FromQuery] CheckFilterDto filter)
     {
         try
         {
-            var result = await _checkService.GetChecksFilteredAsync(filter);
-            return Ok(result);
+            return Ok(await _checkService.GetChecksAsync(filter));
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while retrieving checks");
-            return StatusCode(500, new { message = "An error occurred while retrieving checks" });
+            _logger.LogError(ex, "Error retrieving cheques with filter {@Filter}", filter);
+            return StatusCode(500, new { message = "An error occurred while retrieving cheques" });
         }
     }
 
     /// <summary>
-    /// Get check by ID (UC-11.8: View Check Details)
+    /// UC-CHQ-07 — convert an amount into its Arabic words تفقيط for the given currency.
+    /// </summary>
+    [HttpGet("amount-in-words")]
+    [Authorize(Roles = WriteRoles)]
+    public async Task<ActionResult<AmountInWordsDto>> GetAmountInWords(
+        [FromQuery] decimal amount,
+        [FromQuery] string currency)
+    {
+        try
+        {
+            return Ok(await _checkService.GetAmountInWordsAsync(amount, currency));
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Invalid input" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error converting amount {Amount} {Currency} to words", amount, currency);
+            return StatusCode(500, new { message = "An error occurred while converting the amount" });
+        }
+    }
+
+    /// <summary>
+    /// UC-CHQ-09 — the cheque statement بيان الشيكات: the register's filters plus the
+    /// per-currency totals, rendered for printing.
+    /// </summary>
+    [HttpGet("report")]
+    [Authorize(Roles = ReadRoles)]
+    public async Task<ActionResult<CheckStatementDto>> GetStatement([FromQuery] CheckFilterDto filter)
+    {
+        try
+        {
+            return Ok(await _checkService.GetStatementAsync(filter));
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error building the cheque statement with filter {@Filter}", filter);
+            return StatusCode(500, new { message = "An error occurred while building the statement" });
+        }
+    }
+
+    /// <summary>
+    /// UC-CHQ-03 — a single cheque for review or edit.
     /// </summary>
     [HttpGet("{id}")]
+    [Authorize(Roles = ReadRoles)]
     public async Task<ActionResult<CheckDetailDto>> GetCheck(Guid id)
     {
         try
         {
             var check = await _checkService.GetCheckByIdAsync(id);
-            if (check == null)
-            {
-                return NotFound(new { message = "Check not found" });
-            }
-
-            return Ok(check);
+            return check is null
+                ? NotFound(new { message = "Check not found" })
+                : Ok(check);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while retrieving check {CheckId}", id);
-            return StatusCode(500, new { message = "An error occurred while retrieving check" });
+            _logger.LogError(ex, "Error retrieving cheque {CheckId}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving the cheque" });
         }
     }
 
     /// <summary>
-    /// Create new check (UC-11.1: Create Check)
+    /// UC-CHQ-02 — issue a cheque (§16.S.2). Bank, beneficiary name, cheque date,
+    /// cheque number, currency and amount are mandatory; the Arabic words are stamped
+    /// server-side when the caller does not send them.
     /// </summary>
     [HttpPost]
+    [Authorize(Roles = WriteRoles)]
     public async Task<ActionResult<CheckDetailDto>> CreateCheck([FromBody] CreateCheckDto model)
     {
         try
@@ -83,27 +156,19 @@ public class CheckManagementController : ControllerBase
             var check = await _checkService.CreateCheckAsync(model);
             return CreatedAtAction(nameof(GetCheck), new { id = check.Id }, check);
         }
-        catch (InvalidOperationException ex)
+        // Must precede the catch-all: ValidationException derives from Exception, so without this
+        // it is swallowed into a 500, leaving the client no `errors` map to flag fields against.
+        catch (FluentValidation.ValidationException ex)
         {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while creating check");
-            return StatusCode(500, new { message = "An error occurred while creating check" });
-        }
-    }
-
-    /// <summary>
-    /// Update check
-    /// </summary>
-    [HttpPut("{id}")]
-    public async Task<ActionResult<CheckDetailDto>> UpdateCheck(Guid id, [FromBody] UpdateCheckDto model)
-    {
-        try
-        {
-            var check = await _checkService.UpdateCheckAsync(id, model);
-            return Ok(check);
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (InvalidOperationException ex)
         {
@@ -111,22 +176,38 @@ public class CheckManagementController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while updating check {CheckId}", id);
-            return StatusCode(500, new { message = "An error occurred while updating check" });
+            _logger.LogError(ex, "Error issuing cheque {@Model}", model);
+            return StatusCode(500, new { message = "An error occurred while issuing the cheque" });
         }
     }
 
     /// <summary>
-    /// Delete check
+    /// UC-CHQ-04 — update a cheque. The record id travels in the body, matching the
+    /// legacy contract (PUT /api/CheckManagement with { id, ... }).
     /// </summary>
-    [HttpDelete("{id}")]
-    public async Task<ActionResult> DeleteCheck(Guid id)
+    [HttpPut]
+    [Authorize(Roles = WriteRoles)]
+    public async Task<ActionResult<CheckDetailDto>> UpdateCheck([FromBody] UpdateCheckDto model)
     {
         try
         {
-            await _checkService.DeleteCheckAsync(id);
-            _logger.LogInformation("Check {CheckId} deleted by {DeletedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Check deleted successfully" });
+            return Ok(await _checkService.UpdateCheckAsync(model));
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
         }
         catch (InvalidOperationException ex)
         {
@@ -134,281 +215,8 @@ public class CheckManagementController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while deleting check {CheckId}", id);
-            return StatusCode(500, new { message = "An error occurred while deleting check" });
-        }
-    }
-
-    // ========== Check-Specific Operations ==========
-
-    /// <summary>
-    /// Set check amount (UC-11.3: Set Check Amount)
-    /// </summary>
-    [HttpPut("{id}/amount")]
-    public async Task<ActionResult> SetCheckAmount(Guid id, [FromBody] SetCheckAmountDto model)
-    {
-        try
-        {
-            await _checkService.SetCheckAmountAsync(id, model);
-            _logger.LogInformation("Check amount updated for check {CheckId} by {UpdatedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Check amount updated successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while setting check amount for check {CheckId}", id);
-            return StatusCode(500, new { message = "An error occurred while setting check amount" });
-        }
-    }
-
-    /// <summary>
-    /// Set check date (UC-11.4: Set Check Date)
-    /// </summary>
-    [HttpPut("{id}/date")]
-    public async Task<ActionResult> SetCheckDate(Guid id, [FromBody] SetCheckDateDto model)
-    {
-        try
-        {
-            await _checkService.SetCheckDateAsync(id, model);
-            _logger.LogInformation("Check date updated for check {CheckId} by {UpdatedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Check date updated successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while setting check date for check {CheckId}", id);
-            return StatusCode(500, new { message = "An error occurred while setting check date" });
-        }
-    }
-
-    /// <summary>
-    /// Mark check as cleared (UC-11.5: Mark Check as Cleared)
-    /// </summary>
-    [HttpPut("{id}/clear")]
-    public async Task<ActionResult> MarkCheckAsCleared(Guid id, [FromBody] MarkCheckClearedDto model)
-    {
-        try
-        {
-            await _checkService.MarkCheckAsClearedAsync(id, model);
-            _logger.LogInformation("Check marked as cleared: {CheckId} by {ClearedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Check marked as cleared successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while marking check as cleared {CheckId}", id);
-            return StatusCode(500, new { message = "An error occurred while marking check as cleared" });
-        }
-    }
-
-    /// <summary>
-    /// Void check (UC-11.6: Void Check)
-    /// </summary>
-    [HttpPut("{id}/void")]
-    public async Task<ActionResult> VoidCheck(Guid id, [FromBody] VoidCheckDto model)
-    {
-        try
-        {
-            await _checkService.VoidCheckAsync(id, model);
-            _logger.LogInformation("Check voided: {CheckId} by {VoidedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Check voided successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while voiding check {CheckId}", id);
-            return StatusCode(500, new { message = "An error occurred while voiding check" });
-        }
-    }
-
-    /// <summary>
-    /// Reconcile checks (UC-11.9: Reconcile Checks)
-    /// </summary>
-    [HttpPost("reconcile")]
-    public async Task<ActionResult<CheckReconciliationDto>> ReconcileChecks([FromBody] CheckReconciliationDto model)
-    {
-        try
-        {
-            var result = await _checkService.ReconcileChecksAsync(model);
-            _logger.LogInformation("Checks reconciled: {Count} checks by {ReconciledBy}", result.TotalChecksReconciled, User.Identity?.Name);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while reconciling checks");
-            return StatusCode(500, new { message = "An error occurred while reconciling checks" });
-        }
-    }
-
-    /// <summary>
-    /// Generate check report (UC-11.10: Generate Check Report)
-    /// </summary>
-    [HttpPost("report")]
-    public async Task<ActionResult<CheckReportDto>> GenerateReport([FromBody] CheckReportFilterDto filter)
-    {
-        try
-        {
-            var report = await _checkService.GenerateCheckReportAsync(filter);
-            _logger.LogInformation("Check report generated by {GeneratedBy}", User.Identity?.Name);
-            return Ok(report);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while generating check report");
-            return StatusCode(500, new { message = "An error occurred while generating check report" });
-        }
-    }
-
-    // ========== View Operations ==========
-
-    /// <summary>
-    /// Get pending checks
-    /// </summary>
-    [HttpGet("pending")]
-    public async Task<ActionResult<List<CheckListDto>>> GetPendingChecks()
-    {
-        try
-        {
-            var pendingChecks = await _checkService.GetPendingChecksAsync();
-            return Ok(pendingChecks);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving pending checks");
-            return StatusCode(500, new { message = "An error occurred while retrieving pending checks" });
-        }
-    }
-
-    /// <summary>
-    /// Get issued checks
-    /// </summary>
-    [HttpGet("issued")]
-    public async Task<ActionResult<List<CheckListDto>>> GetIssuedChecks()
-    {
-        try
-        {
-            var issuedChecks = await _checkService.GetIssuedChecksAsync();
-            return Ok(issuedChecks);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving issued checks");
-            return StatusCode(500, new { message = "An error occurred while retrieving issued checks" });
-        }
-    }
-
-    /// <summary>
-    /// Get cleared checks
-    /// </summary>
-    [HttpGet("cleared")]
-    public async Task<ActionResult<List<CheckListDto>>> GetClearedChecks()
-    {
-        try
-        {
-            var clearedChecks = await _checkService.GetClearedChecksAsync();
-            return Ok(clearedChecks);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving cleared checks");
-            return StatusCode(500, new { message = "An error occurred while retrieving cleared checks" });
-        }
-    }
-
-    /// <summary>
-    /// Get voided checks
-    /// </summary>
-    [HttpGet("voided")]
-    public async Task<ActionResult<List<CheckListDto>>> GetVoidedChecks()
-    {
-        try
-        {
-            var voidedChecks = await _checkService.GetVoidedChecksAsync();
-            return Ok(voidedChecks);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving voided checks");
-            return StatusCode(500, new { message = "An error occurred while retrieving voided checks" });
-        }
-    }
-
-    /// <summary>
-    /// Get unreconciled checks
-    /// </summary>
-    [HttpGet("unreconciled")]
-    public async Task<ActionResult<List<CheckListDto>>> GetUnreconciledChecks()
-    {
-        try
-        {
-            var unreconciledChecks = await _checkService.GetUnreconciledChecksAsync();
-            return Ok(unreconciledChecks);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving unreconciled checks");
-            return StatusCode(500, new { message = "An error occurred while retrieving unreconciled checks" });
-        }
-    }
-
-    /// <summary>
-    /// Get check status summary
-    /// </summary>
-    [HttpGet("status-summary")]
-    public async Task<ActionResult<CheckStatusSummaryDto>> GetStatusSummary()
-    {
-        try
-        {
-            var summary = await _checkService.GetCheckStatusSummaryAsync();
-            return Ok(summary);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving check status summary");
-            return StatusCode(500, new { message = "An error occurred while retrieving check status summary" });
-        }
-    }
-
-    // ========== Export ==========
-
-    /// <summary>
-    /// Export checks to Excel (UC-11.7: Export to Excel)
-    /// </summary>
-    [HttpPost("export")]
-    public async Task<IActionResult> ExportChecks([FromBody] CheckFilterDto filter)
-    {
-        try
-        {
-            var excelBytes = await _checkService.ExportChecksToExcelAsync(filter);
-
-            _logger.LogInformation("Checks exported to Excel by {ExportedBy}", User.Identity?.Name);
-
-            return File(
-                excelBytes,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"checks_{DateTime.UtcNow:yyyyMMddHHmmss}.xlsx"
-            );
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while exporting checks to Excel");
-            return StatusCode(500, new { message = "An error occurred while exporting checks to Excel" });
+            _logger.LogError(ex, "Error updating cheque {@Model}", model);
+            return StatusCode(500, new { message = "An error occurred while updating the cheque" });
         }
     }
 }

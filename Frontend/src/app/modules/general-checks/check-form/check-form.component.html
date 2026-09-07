@@ -1,328 +1,300 @@
-<app-breadcrumb [items]="breadcrumbsWithAction"></app-breadcrumb>
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
 
-<app-page-header
-  [title]="isEditMode ? 'generalChecks.editCheck' : 'generalChecks.addCheck'"
-  [actions]="pageActions">
-</app-page-header>
+<div class="row justify-content-center">
+  <div class="col-12 col-xl-10">
+    <div class="card" *ngIf="!loading; else loadingTemplate">
+      <div class="card-header">
+        <h3 class="card-title">{{ (isEdit ? 'generalChecks.editCheck' : 'generalChecks.addCheck') | translate }}</h3>
+      </div>
+      <div class="card-body">
+        <form [formGroup]="checkForm" (ngSubmit)="onSubmit()">
 
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-12">
-      <div class="card shadow" *ngIf="!loading">
-        <div class="card-body">
-          <form [formGroup]="checkForm" (ngSubmit)="onSubmit()">
-            <!-- Check Information Section -->
-            <h5 class="mb-3">{{ 'generalChecks.checkInformation' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="checkForm"
-                  fcn="checkNumber"
-                  [label]="'generalChecks.checkNumber'"
-                  [placeholder]="'generalChecks.enterCheckNumber' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="checkForm"
-                  fcn="checkDate"
-                  [label]="'generalChecks.checkDate'"
-                  type="date-picker">
-                </app-input-text>
-              </div>
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="checkForm"
-                  fcn="dueDate"
-                  [label]="'generalChecks.dueDate'"
-                  type="date-picker">
-                </app-input-text>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="col-md-4">
+          <!-- Charity (head office only; a charity user's cheque is stamped server-side) -->
+          <div class="row" *ngIf="isHeadOffice && !isEdit">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">{{ 'generalChecks.charity' | translate }}</label>
                 <app-drop-down
                   [fg]="checkForm"
-                  fcn="currency"
-                  [label]="'generalChecks.currency'"
-                  [initialData]="currencyOptions">
+                  fcn="charityId"
+                  [label]="'generalChecks.charity'"
+                  [initialData]="charityOptions"
+                  [hasDefaultValue]="true">
                 </app-drop-down>
               </div>
             </div>
+          </div>
 
-            <!-- Beneficiary Information Section -->
-            <h5 class="mb-3 mt-4">{{ 'generalChecks.beneficiaryInformation' | translate }}</h5>
-
-            <div class="row mb-3">
-              <div class="col-md-12">
-                <div class="btn-group" role="group">
-                  <button
-                    type="button"
-                    class="btn btn-outline-primary"
-                    [class.active]="beneficiarySource === 'lookup'"
-                    (click)="beneficiarySource = 'lookup'; onBeneficiarySourceChange()">
-                    {{ 'generalChecks.fromLookup' | translate }}
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-outline-primary"
-                    [class.active]="beneficiarySource === 'new'"
-                    (click)="beneficiarySource = 'new'; onBeneficiarySourceChange()">
-                    {{ 'generalChecks.newEntry' | translate }}
-                  </button>
+          <!-- §16.S.2 — cheque information -->
+          <h6 class="text-muted text-uppercase small mb-3">{{ 'generalChecks.checkInformation' | translate }}</h6>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">{{ 'generalChecks.checkNumber' | translate }} *</label>
+                <input type="text" class="form-control" formControlName="checkNumber"
+                       [placeholder]="'generalChecks.enterCheckNumber' | translate" />
+                <div class="invalid-feedback d-block"
+                     *ngIf="checkForm.controls['checkNumber'].invalid && checkForm.controls['checkNumber'].touched">
+                  {{ 'generalChecks.checkNumberRequired' | translate }}
                 </div>
               </div>
             </div>
-
-            <!-- From Lookup -->
-            <div *ngIf="beneficiarySource === 'lookup'" class="row">
-              <div class="col-md-12">
-                <app-drop-down
-                  [fg]="checkForm"
-                  fcn="beneficiaryId"
-                  [label]="'generalChecks.beneficiaryName'"
-                  [initialData]="beneficiaryOptions"
-                  (onDropDownChanged)="onBeneficiarySelected()">
-                </app-drop-down>
-              </div>
-            </div>
-
-            <!-- New Entry -->
-            <div *ngIf="beneficiarySource === 'new'">
-              <div class="row">
-                <div class="col-md-4">
-                  <app-input-text
-                    [fg]="checkForm"
-                    fcn="beneficiaryName"
-                    [label]="'generalChecks.beneficiaryName'"
-                    [placeholder]="'generalChecks.enterBeneficiaryName' | translate">
-                  </app-input-text>
-                </div>
-                <div class="col-md-4">
-                  <app-drop-down
-                    [fg]="checkForm"
-                    fcn="beneficiaryType"
-                    [label]="'generalChecks.beneficiaryType'"
-                    [initialData]="beneficiaryTypeOptions">
-                  </app-drop-down>
-                </div>
-                <div class="col-md-4">
-                  <app-input-text
-                    [fg]="checkForm"
-                    fcn="idNumber"
-                    [label]="'generalChecks.idPassportNumber'"
-                    [placeholder]="'generalChecks.enterIdNumber' | translate">
-                  </app-input-text>
-                </div>
-              </div>
-              <div class="row">
-                <div class="col-md-4">
-                  <app-input-text
-                    [fg]="checkForm"
-                    fcn="beneficiaryAddress"
-                    [label]="'generalChecks.beneficiaryAddress'"
-                    [placeholder]="'generalChecks.enterAddress' | translate">
-                  </app-input-text>
-                </div>
-                <div class="col-md-4">
-                  <app-input-text
-                    [fg]="checkForm"
-                    fcn="beneficiaryPhone"
-                    [label]="'generalChecks.beneficiaryPhone'"
-                    [placeholder]="'generalChecks.enterPhone' | translate">
-                  </app-input-text>
-                </div>
-                <div class="col-md-4">
-                  <app-input-text
-                    [fg]="checkForm"
-                    fcn="beneficiaryEmail"
-                    [label]="'generalChecks.beneficiaryEmail'"
-                    type="email"
-                    [placeholder]="'generalChecks.enterEmail' | translate">
-                  </app-input-text>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">{{ 'generalChecks.checkDate' | translate }} *</label>
+                <input type="date" class="form-control" formControlName="checkDate" />
+                <div class="invalid-feedback d-block"
+                     *ngIf="checkForm.controls['checkDate'].invalid && checkForm.controls['checkDate'].touched">
+                  {{ 'generalChecks.checkDateRequired' | translate }}
                 </div>
               </div>
             </div>
-
-            <!-- Financial Information Section -->
-            <h5 class="mb-3 mt-4">{{ 'generalChecks.financialInformation' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-6">
-                <app-input-text
-                  [fg]="checkForm"
-                  fcn="amount"
-                  [label]="'generalChecks.amount'"
-                  type="number"
-                  [min]="0.01"
-                  [step]="0.01"
-                  [placeholder]="'generalChecks.enterAmount' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-6">
-                <app-input-text
-                  [fg]="checkForm"
-                  fcn="amountInWords"
-                  [label]="'generalChecks.amountInWords'"
-                  [readonly]="true"
-                  [helpText]="'generalChecks.amountInWordsAutoGenerated' | translate">
-                </app-input-text>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="col-md-6">
-                <app-drop-down
-                  [fg]="checkForm"
-                  fcn="paymentReason"
-                  [label]="'generalChecks.paymentReason'"
-                  [initialData]="paymentReasonOptions">
-                </app-drop-down>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="col-md-12">
-                <app-input-text
-                  [fg]="checkForm"
-                  fcn="paymentDescription"
-                  [label]="'generalChecks.paymentDescription'"
-                  type="textarea"
-                  [rows]="3"
-                  [placeholder]="'generalChecks.enterPaymentDescription' | translate">
-                </app-input-text>
-              </div>
-            </div>
-
-            <!-- Bank Information Section -->
-            <h5 class="mb-3 mt-4">{{ 'generalChecks.bankInformation' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-6">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">{{ 'generalChecks.bank' | translate }} *</label>
                 <app-drop-down
                   [fg]="checkForm"
                   fcn="bankId"
                   [label]="'generalChecks.bank'"
-                  [initialData]="bankOptions">
+                  [initialData]="bankOptions"
+                  [hasDefaultValue]="true">
                 </app-drop-down>
-              </div>
-              <div class="col-md-6">
-                <app-input-text
-                  [fg]="checkForm"
-                  fcn="branch"
-                  [label]="'generalChecks.branch'"
-                  [placeholder]="'generalChecks.enterBranch' | translate">
-                </app-input-text>
+                <div class="invalid-feedback d-block"
+                     *ngIf="checkForm.controls['bankId'].invalid && checkForm.controls['bankId'].touched">
+                  {{ 'generalChecks.bankRequired' | translate }}
+                </div>
               </div>
             </div>
-
-            <div class="row">
-              <div class="col-md-6">
-                <app-input-text
-                  [fg]="checkForm"
-                  fcn="accountNumber"
-                  [label]="'generalChecks.accountNumber'"
-                  [placeholder]="'generalChecks.enterAccountNumber' | translate">
-                </app-input-text>
-              </div>
-            </div>
-
-            <!-- Status Information Section -->
-            <h5 class="mb-3 mt-4">{{ 'generalChecks.statusInformation' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-4">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">{{ 'generalChecks.currency' | translate }} *</label>
                 <app-drop-down
                   [fg]="checkForm"
-                  fcn="checkStatus"
-                  [label]="'generalChecks.checkStatus'"
-                  [initialData]="checkStatusOptions">
+                  fcn="currency"
+                  [label]="'generalChecks.currency'"
+                  [initialData]="currencyOptions"
+                  [hasDefaultValue]="true">
                 </app-drop-down>
-              </div>
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="checkForm"
-                  fcn="issueDate"
-                  [label]="'generalChecks.issueDate'"
-                  type="date-picker">
-                </app-input-text>
-              </div>
-              <div class="col-md-4">
-                <div class="custom-control custom-checkbox mt-4">
-                  <input
-                    type="checkbox"
-                    class="custom-control-input"
-                    id="requiresApproval"
-                    formControlName="requiresApproval">
-                  <label class="custom-control-label" for="requiresApproval">
-                    {{ 'generalChecks.requiresApproval' | translate }}
-                  </label>
+                <div class="invalid-feedback d-block"
+                     *ngIf="checkForm.controls['currency'].invalid && checkForm.controls['currency'].touched">
+                  {{ 'generalChecks.currencyRequired' | translate }}
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- Check Image Section -->
-            <h5 class="mb-3 mt-4">{{ 'generalChecks.checkImage' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-12">
-                <div class="form-group">
-                  <label>{{ 'generalChecks.uploadCheckImage' | translate }}</label>
-                  <div class="check-image-upload" *ngIf="!showCheckImageUpload">
-                    <button
-                      type="button"
-                      class="btn btn-outline-primary"
-                      (click)="toggleCheckImageUpload()">
-                      <i class="fe fe-upload"></i>
-                      {{ 'generalChecks.uploadCheckImage' | translate }}
-                    </button>
-                  </div>
-                  <div *ngIf="showCheckImageUpload" class="check-image-upload-form">
-                    <input
-                      type="file"
-                      class="form-control-file"
-                      (change)="onCheckImageSelected($event)">
-                    <div class="mt-2" *ngIf="selectedCheckImage || existingCheckImageUrl">
-                      <span class="file-name">{{ selectedCheckImage?.name }}</span>
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-danger ml-2"
-                        (click)="removeCheckImage()">
-                        <i class="fe fe-trash"></i>
-                      </button>
-                    </div>
-                  </div>
+          <!-- Beneficiary (UC-CHQ-05 type-ahead on the reusable table) -->
+          <h6 class="text-muted text-uppercase small mb-3 mt-4">{{ 'generalChecks.beneficiaryInformation' | translate }}</h6>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group position-relative">
+                <label class="form-label">{{ 'generalChecks.beneficiaryName' | translate }} *</label>
+                <input type="text" class="form-control" formControlName="beneficiaryName"
+                       [placeholder]="'generalChecks.enterBeneficiaryName' | translate"
+                       autocomplete="off"
+                       (blur)="hideSuggestions()" />
+                <div class="invalid-feedback d-block"
+                     *ngIf="checkForm.controls['beneficiaryName'].invalid && checkForm.controls['beneficiaryName'].touched">
+                  {{ 'generalChecks.beneficiaryNameRequired' | translate }}
                 </div>
+                <!-- Type-ahead suggestions -->
+                <ul class="list-group beneficiary-suggestions" *ngIf="showSuggestions">
+                  <li class="list-group-item list-group-item-action"
+                      *ngFor="let option of beneficiarySuggestions; trackBy: trackBySuggestion"
+                      (mousedown)="pickBeneficiary(option)">
+                    <strong>{{ option.nameAr || option.nameEn }}</strong>
+                    <span class="text-muted small mr-2" *ngIf="option.beneficiaryType">
+                      {{ 'generalChecks.beneficiaryTypes.' + option.beneficiaryType | translate }}
+                    </span>
+                  </li>
+                </ul>
               </div>
             </div>
-
-            <!-- Form Actions -->
-            <div class="mt-4">
+            <div class="col-md-6">
               <div class="form-group">
-                <button type="submit" class="btn btn-primary" [disabled]="saving">
-                  <i class="fe fe-save mr-1" *ngIf="!saving"></i>
-                  <span class="spinner-border spinner-border-sm mr-1" *ngIf="saving"></span>
-                  {{ (isEditMode ? ('common.save' | translate) : ('common.create' | translate)) }}
-                </button>
-                <button type="button" class="btn btn-secondary ml-2" (click)="onCancel()" [disabled]="saving">
-                  <i class="fe fe-x mr-1"></i>
-                  {{ 'common.cancel' | translate }}
-                </button>
+                <label class="form-label">{{ 'generalChecks.beneficiaryType' | translate }}</label>
+                <input type="text" class="form-control" formControlName="beneficiaryType" />
               </div>
             </div>
-          </form>
-        </div>
-      </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">{{ 'generalChecks.beneficiaryAddress' | translate }}</label>
+                <input type="text" class="form-control" formControlName="beneficiaryAddress" />
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="form-group">
+                <label class="form-label">{{ 'generalChecks.beneficiaryPhone' | translate }}</label>
+                <input type="text" class="form-control" formControlName="beneficiaryPhone" />
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="form-group">
+                <label class="form-label">{{ 'generalChecks.idPassportNumber' | translate }}</label>
+                <input type="text" class="form-control" formControlName="beneficiaryIdNumber" />
+              </div>
+            </div>
+          </div>
 
-      <!-- Loading State -->
-      <div *ngIf="loading" class="text-center py-5">
+          <!-- Financial (UC-CHQ-07 تفقيط) -->
+          <h6 class="text-muted text-uppercase small mb-3 mt-4">{{ 'generalChecks.financialInformation' | translate }}</h6>
+          <div class="row">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">{{ 'generalChecks.amount' | translate }} *</label>
+                <input type="number" class="form-control" formControlName="amount"
+                       step="0.01" min="0.01"
+                       [placeholder]="'generalChecks.enterAmount' | translate" />
+                <div class="invalid-feedback d-block"
+                     *ngIf="checkForm.controls['amount'].invalid && checkForm.controls['amount'].touched">
+                  {{ 'generalChecks.amountMustBePositive' | translate }}
+                </div>
+              </div>
+            </div>
+            <div class="col-md-8">
+              <div class="form-group">
+                <label class="form-label">
+                  {{ 'generalChecks.amountInWords' | translate }}
+                  <span class="text-muted small">({{ 'generalChecks.amountInWordsAutoGenerated' | translate }})</span>
+                </label>
+                <input type="text" class="form-control" formControlName="amountInWords" dir="rtl" />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">{{ 'generalChecks.branch' | translate }}</label>
+                <input type="text" class="form-control" formControlName="bankBranch" />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">{{ 'generalChecks.accountNumber' | translate }}</label>
+                <input type="text" class="form-control" formControlName="accountNumber" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Cheque type (feeds the statement radio شيكات إيتام / شيكات أفراد) -->
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">{{ 'generalChecks.chequeType' | translate }}</label>
+                <div class="d-flex align-items-center mt-2">
+                  <div class="custom-control custom-radio mr-4">
+                    <input type="radio" id="typeIndividuals" class="custom-control-input"
+                           formControlName="chequeType" value="Individuals" />
+                    <label class="custom-control-label" for="typeIndividuals">
+                      {{ 'generalChecks.chequeTypes.Individuals' | translate }}
+                    </label>
+                  </div>
+                  <div class="custom-control custom-radio">
+                    <input type="radio" id="typeOrphans" class="custom-control-input"
+                           formControlName="chequeType" value="Orphans" />
+                    <label class="custom-control-label" for="typeOrphans">
+                      {{ 'generalChecks.chequeTypes.Orphans' | translate }}
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- §16.S.2 — optional flags -->
+          <h6 class="text-muted text-uppercase small mb-3 mt-4">{{ 'generalChecks.flags' | translate }}</h6>
+          <div class="row">
+            <div class="col-12">
+              <div class="d-flex flex-wrap">
+                <div class="custom-control custom-checkbox mr-4 mb-2">
+                  <input type="checkbox" id="isDamaged" class="custom-control-input" formControlName="isDamaged" />
+                  <label class="custom-control-label" for="isDamaged">{{ 'generalChecks.isDamaged' | translate }}</label>
+                </div>
+                <div class="custom-control custom-checkbox mr-4 mb-2">
+                  <input type="checkbox" id="isReturned" class="custom-control-input" formControlName="isReturned" />
+                  <label class="custom-control-label" for="isReturned">{{ 'generalChecks.isReturned' | translate }}</label>
+                </div>
+                <div class="custom-control custom-checkbox mr-4 mb-2">
+                  <input type="checkbox" id="isDispensed" class="custom-control-input" formControlName="isDispensed" />
+                  <label class="custom-control-label" for="isDispensed">{{ 'generalChecks.isDispensed' | translate }}</label>
+                </div>
+                <div class="custom-control custom-checkbox mb-2">
+                  <input type="checkbox" id="isDone" class="custom-control-input" formControlName="isDone" />
+                  <label class="custom-control-label" for="isDone">{{ 'generalChecks.isDone' | translate }}</label>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-8 mt-2">
+              <div class="form-group">
+                <label class="form-label">{{ 'generalChecks.comment' | translate }}</label>
+                <textarea class="form-control" formControlName="comment" rows="2"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Commands: طباعة / طباعة مصري / حفظ -->
+          <div class="card-footer bg-white border-0 d-flex justify-content-end gap-2 px-0">
+            <button type="button" class="btn btn-outline-secondary" (click)="printCheque(false)">
+              <i class="fe fe-printer mr-1"></i> {{ 'generalChecks.print' | translate }}
+            </button>
+            <button type="button" class="btn btn-outline-secondary" (click)="printCheque(true)">
+              <i class="fe fe-printer mr-1"></i> {{ 'generalChecks.printEgyptian' | translate }}
+            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="saving">
+              <i class="fe fe-save mr-1"></i>
+              {{ (saving ? 'common.saving' : 'generalChecks.save') | translate }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <ng-template #loadingTemplate>
+      <div class="text-center py-5">
         <div class="spinner-border text-primary" role="status">
           <span class="sr-only">{{ 'common.loading' | translate }}</span>
         </div>
-        <p class="mt-3 text-muted">{{ 'common.loading' | translate }}...</p>
       </div>
+    </ng-template>
+  </div>
+</div>
+
+<!-- Print overlay — visible only to the printer (@media print) -->
+<div class="print-area" *ngIf="printModel">
+  <!-- Egyptian stationery: fields positioned by the bank's mm offsets (UC-CHQ-08) -->
+  <div class="cheque-leaf" *ngIf="printModel.egyptian && printModel.positions">
+    <span class="cheque-field cheque-date"
+          [ngStyle]="{ 'top.mm': pos(printModel.positions.dateY, 16), 'right.mm': pos(printModel.positions.dateX, 150) }">
+      {{ printModel.checkDate | date:'dd/MM/yyyy' }}
+    </span>
+    <span class="cheque-field cheque-payee"
+          [ngStyle]="{ 'top.mm': pos(printModel.positions.payeeY, 32), 'right.mm': pos(printModel.positions.payeeX, 95) }">
+      {{ printModel.beneficiaryName }}
+    </span>
+    <span class="cheque-field cheque-amount"
+          [ngStyle]="{ 'top.mm': pos(printModel.positions.amountY, 32), 'right.mm': pos(printModel.positions.amountX, 150) }">
+      {{ printModel.amount | number:'1.2-2' }} {{ printModel.currency }}
+    </span>
+    <span class="cheque-field cheque-words"
+          [ngStyle]="{ 'top.mm': pos(printModel.positions.amountWordsY, 50), 'right.mm': pos(printModel.positions.amountWordsX, 12) }">
+      {{ printModel.amountInWords }}
+    </span>
+  </div>
+
+  <!-- Default layout: a formatted cheque card -->
+  <div class="cheque-card" *ngIf="!printModel.egyptian || !printModel.positions">
+    <div class="d-flex justify-content-between">
+      <strong>{{ printModel.bankName }}</strong>
+      <span>{{ printModel.checkDate | date:'dd/MM/yyyy' }}</span>
+    </div>
+    <hr />
+    <div class="cheque-card-line">
+      {{ 'generalChecks.beneficiaryName' | translate }}: <strong>{{ printModel.beneficiaryName }}</strong>
+    </div>
+    <div class="cheque-card-line cheque-card-amount">
+      {{ printModel.amount | number:'1.2-2' }} {{ printModel.currency }}
+    </div>
+    <div class="cheque-card-line cheque-card-words" dir="rtl">{{ printModel.amountInWords }}</div>
+    <div class="cheque-card-line text-muted small">
+      {{ 'generalChecks.checkNumber' | translate }}: {{ printModel.checkNumber }}
     </div>
   </div>
 </div>

@@ -1,6 +1,7 @@
 using IIROSA.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
@@ -20,16 +21,20 @@ namespace IIROSA.Infrastructure.Data.Interceptors
     /// </summary>
     public class AuditLogSaveChangesInterceptor : SaveChangesInterceptor
     {
-        private readonly IAuditService _auditService;
+        private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<AuditLogSaveChangesInterceptor> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
+        // IAuditService must be resolved lazily (see CreateAuditLogAsync), not injected here:
+        // this interceptor is constructed while DbContextOptions are being built, and
+        // IAuditService -> IAuditLogRepository -> ApplicationDbContext loops straight back
+        // into that options lambda, exhausting the stack and hanging startup.
         public AuditLogSaveChangesInterceptor(
-            IAuditService auditService,
+            IServiceProvider serviceProvider,
             ILogger<AuditLogSaveChangesInterceptor> logger,
             IHttpContextAccessor httpContextAccessor)
         {
-            _auditService = auditService;
+            _serviceProvider = serviceProvider;
             _logger = logger;
             _httpContextAccessor = httpContextAccessor;
         }
@@ -163,10 +168,12 @@ namespace IIROSA.Infrastructure.Data.Interceptors
                     UserAgent = auditEntry.UserAgent
                 };
 
-                // Log the audit entry using the service
+                // Log the audit entry using the service (resolved lazily — by this point
+                // the ApplicationDbContext instance already exists, so no DI cycle occurs)
                 // Note: In a production environment, you might want to batch these
                 // or use a background task to avoid slowing down the main operation
-                _auditService.LogCreationAsync(auditLog, auditEntry.UserName, auditEntry.IpAddress, auditEntry.UserAgent)
+                _serviceProvider.GetRequiredService<IAuditService>()
+                    .LogCreationAsync(auditLog, auditEntry.UserName, auditEntry.IpAddress, auditEntry.UserAgent)
                     .ContinueWith(t => _logger.LogError(t.Exception, "Failed to log audit entry"),
                         CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
             }

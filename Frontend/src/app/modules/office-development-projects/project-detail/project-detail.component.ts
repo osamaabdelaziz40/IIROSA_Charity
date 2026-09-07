@@ -144,8 +144,10 @@ export class ProjectDetailComponent implements OnInit {
     }
   }
 
+  // §18.U.04: a wrongly-entered or changed record can be corrected — completion is a data
+  // field, not a lock, so a finished project stays editable (and deletable for SuperAdmin).
   canEdit(): boolean {
-    return this.project !== null && !this.project.isFinished;
+    return this.project !== null;
   }
 
   canMarkAsCompleted(): boolean {

@@ -1,12 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using IIROSA.Domain.Entities;
-using IIROSA.Domain.Entities.Lookups;
 
 namespace IIROSA.Domain.Configurations;
 
 /// <summary>
-/// Entity Framework Configuration for Check entity
+/// Entity Framework Configuration for Check entity (chapter 16, UC-CHQ)
 /// </summary>
 public class CheckConfiguration : IEntityTypeConfiguration<Check>
 {
@@ -23,8 +22,6 @@ public class CheckConfiguration : IEntityTypeConfiguration<Check>
 
         builder.Property(x => x.CheckDate)
             .IsRequired();
-
-        builder.Property(x => x.DueDate);
 
         builder.Property(x => x.Currency)
             .IsRequired()
@@ -59,12 +56,6 @@ public class CheckConfiguration : IEntityTypeConfiguration<Check>
         builder.Property(x => x.AmountInWords)
             .HasMaxLength(500);
 
-        builder.Property(x => x.PaymentReason)
-            .HasMaxLength(100);
-
-        builder.Property(x => x.PaymentDescription)
-            .HasMaxLength(1000);
-
         // ========== Bank Information ==========
         builder.Property(x => x.BankBranch)
             .HasMaxLength(200);
@@ -72,25 +63,12 @@ public class CheckConfiguration : IEntityTypeConfiguration<Check>
         builder.Property(x => x.AccountNumber)
             .HasMaxLength(50);
 
-        // ========== Status Information ==========
-        builder.Property(x => x.CheckStatus)
+        // ========== Tenancy & flags ==========
+        builder.Property(x => x.ChequeType)
             .IsRequired()
-            .HasMaxLength(50)
-            .HasDefaultValue("Pending");
+            .HasMaxLength(20)
+            .HasDefaultValue("Individuals");
 
-        builder.Property(x => x.BankReference)
-            .HasMaxLength(100);
-
-        builder.Property(x => x.ClearanceNotes)
-            .HasMaxLength(1000);
-
-        builder.Property(x => x.VoidReason)
-            .HasMaxLength(100);
-
-        builder.Property(x => x.VoidNotes)
-            .HasMaxLength(1000);
-
-        // ========== Additional Information ==========
         builder.Property(x => x.Notes)
             .HasMaxLength(2000);
 
@@ -105,11 +83,20 @@ public class CheckConfiguration : IEntityTypeConfiguration<Check>
             .HasForeignKey(x => x.FK_BankId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(x => x.Charity)
+            .WithMany()
+            .HasForeignKey(x => x.FK_CharityId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // ========== Indexes ==========
-        builder.HasIndex(x => x.CheckNumber).IsUnique();
+        // A cheque number identifies a leaf inside one bank's cheque book for one charity;
+        // soft-deleted rows must not block re-using a number from a cancelled booklet.
+        builder.HasIndex(x => new { x.CheckNumber, x.FK_BankId, x.FK_CharityId })
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0");
+
         builder.HasIndex(x => x.CheckDate);
-        builder.HasIndex(x => x.CheckStatus);
-        builder.HasIndex(x => x.DueDate);
+        builder.HasIndex(x => x.FK_CharityId);
         builder.HasIndex(x => x.FK_ChequeBeneficiaryId);
         builder.HasIndex(x => x.FK_BankId);
     }

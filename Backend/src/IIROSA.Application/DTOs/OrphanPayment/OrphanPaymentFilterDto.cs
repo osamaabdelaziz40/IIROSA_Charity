@@ -10,6 +10,12 @@ public class OrphanPaymentFilterDto
     /// </summary>
     public string? SearchTerm { get; set; }
 
+    /// <summary>
+    /// UC-ORP-08/11 — exact batch-number match (رقم الدفعة from the reference list; trimmed
+    /// compare). Distinct from SearchTerm's contains-match.
+    /// </summary>
+    public string? BatchNo { get; set; }
+
     // Payment Period Filters (UC-5.13)
     /// <summary>
     /// Filter by payment period start date from
@@ -38,9 +44,16 @@ public class OrphanPaymentFilterDto
     public bool? IsBatchUploaded { get; set; }
 
     /// <summary>
-    /// Filter by charity (UC-5.12)
+    /// Filter by charity (UC-5.12). Guid to match Charity ids — the item-level join
+    /// that applies it is owned by 10-7.
     /// </summary>
-    public int? CharityId { get; set; }
+    public Guid? CharityId { get; set; }
+
+    /// <summary>
+    /// UC-ORP-08 — an orphan's payment history: restricts the group list to the batches
+    /// containing this orphan. Required for charity-role callers, who may not list all groups.
+    /// </summary>
+    public Guid? OrphanId { get; set; }
 
     // Pagination
     /// <summary>

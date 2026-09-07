@@ -53,6 +53,18 @@ public class CountryDto : LookupDto
     public string? FlagIcon { get; set; }
     public int RegionCount { get; set; }
     public int CenterCount { get; set; }
+
+    /// <summary>
+    /// HQ transfer ceiling for this country (UC-TRF-06) — NULL = unlimited. Read-only carry;
+    /// the write lives in 17-7's max-amount endpoint, not the country CRUD.
+    /// </summary>
+    public decimal? MaxTransferAmount { get; set; }
+
+    /// <summary>National-id regex rule (UC-SYS-11) — NULL = no rule, input stays free-form.</summary>
+    public string? NationalIdPattern { get; set; }
+
+    /// <summary>National-id exact length rule (UC-SYS-11) — NULL = no rule.</summary>
+    public int? NationalIdLength { get; set; }
 }
 
 public class CreateCountryDto
@@ -66,6 +78,8 @@ public class CreateCountryDto
     public string? FlagIcon { get; set; }
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; } = 0;
+    public string? NationalIdPattern { get; set; }
+    public int? NationalIdLength { get; set; }
 }
 
 public class UpdateCountryDto
@@ -79,6 +93,8 @@ public class UpdateCountryDto
     public string? FlagIcon { get; set; }
     public bool? IsActive { get; set; }
     public int? SortOrder { get; set; }
+    public string? NationalIdPattern { get; set; }
+    public int? NationalIdLength { get; set; }
 }
 
 /// <summary>
@@ -239,6 +255,36 @@ public class UpdateMissionTimeTypeDto
 }
 
 /// <summary>
+/// MissionInterviewType-specific DTOs (UC-MSN-04)
+/// </summary>
+public class MissionInterviewTypeDto : LookupDto
+{
+    public string? TypeCode { get; set; }
+}
+
+public class CreateMissionInterviewTypeDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? TypeCode { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateMissionInterviewTypeDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? TypeCode { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+/// <summary>
 /// ProjectType-specific DTOs
 /// </summary>
 public class ProjectTypeDto : LookupDto
@@ -338,6 +384,258 @@ public class UpdateNGOTypeDto
 }
 
 /// <summary>
+/// Education-level-specific DTOs (UC-ORP-11 — orphan reference data)
+/// </summary>
+public class EducationLevelDto : LookupDto
+{
+}
+
+public class CreateEducationLevelDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateEducationLevelDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+/// <summary>
+/// Health-status-specific DTOs (UC-ORP-11 — orphan reference data)
+/// </summary>
+public class HealthStatusDto : LookupDto
+{
+}
+
+public class CreateHealthStatusDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateHealthStatusDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+/// <summary>
+/// Refuse-reason DTOs (epic 9, UC-ORR-08 — periodic report refusal catalogue)
+/// </summary>
+public class RefuseReasonDto : LookupDto
+{
+}
+
+public class CreateRefuseReasonDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateRefuseReasonDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+// ==================== Refugee register lookups (epic 7, UC-REF-03) ====================
+
+public class HouseOwnershipDto : LookupDto
+{
+}
+
+public class CreateHouseOwnershipDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateHouseOwnershipDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+public class HouseStatusDto : LookupDto
+{
+}
+
+public class CreateHouseStatusDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateHouseStatusDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+public class IncomeTypeDto : LookupDto
+{
+}
+
+public class CreateIncomeTypeDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateIncomeTypeDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+public class SocialStatusDto : LookupDto
+{
+}
+
+public class CreateSocialStatusDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateSocialStatusDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+public class RelationDto : LookupDto
+{
+}
+
+public class CreateRelationDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateRelationDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+public class ReasonOfRelDto : LookupDto
+{
+}
+
+public class CreateReasonOfRelDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateReasonOfRelDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+// نوع السكن — shared catalogue (§12.S.2 refugee form)
+public class HousingTypeDto : LookupDto
+{
+}
+
+public class CreateHousingTypeDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateHousingTypeDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+/// <summary>
 /// Paged result for lookup queries
 /// </summary>
 public class LookupPagedResult<T>
@@ -354,10 +652,31 @@ public class LookupPagedResult<T>
 /// </summary>
 public class LookupFilterDto
 {
+    /// <summary>
+    /// Platform ceiling for a single lookup page (19-4). Requests above it are clamped;
+    /// totalCount always carries the true filtered count, so a catalogue that outgrows a
+    /// page is detectable (totalPages > 1) rather than silently truncated.
+    /// </summary>
+    public const int MaxPageSize = 5000;
+
     public string? SearchText { get; set; }
     public bool? IsActive { get; set; }
-    public int Page { get; set; } = 1;
-    public int PageSize { get; set; } = 20;
+
+    private int _page = 1;
+    private int _pageSize = 20;
+
+    public int Page
+    {
+        get => _page;
+        set => _page = Math.Max(1, value);
+    }
+
+    public int PageSize
+    {
+        get => _pageSize;
+        set => _pageSize = Math.Clamp(value, 1, MaxPageSize);
+    }
+
     public int? CountryId { get; set; }  // For filtering regions by country
     public int? RegionId { get; set; }   // For filtering centers by region
 }
@@ -399,4 +718,55 @@ public class BulkExportDto
     public string Format { get; set; } = "Excel"; // Excel, CSV, JSON
     public bool IncludeInactive { get; set; } = false;
     public string Language { get; set; } = "Both"; // Arabic, English, Both
+}
+
+/// <summary>
+/// Marital-status-specific DTOs (UC-SYS-05 — guardian reference data)
+/// </summary>
+public class MaritalStatusDto : LookupDto
+{
+}
+
+public class CreateMaritalStatusDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateMaritalStatusDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+/// <summary>Guardian job / profession — المهنة (UC-SYS-09, epic 19)</summary>
+public class JobDto : LookupDto
+{
+}
+
+public class CreateJobDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateJobDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
 }

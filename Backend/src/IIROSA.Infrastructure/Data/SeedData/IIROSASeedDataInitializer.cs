@@ -69,6 +69,46 @@ namespace IIROSA.Infrastructure.Data.SeedData
                 await TechnicalSupportSeedData.SeedAllAsync(_appContext);
                 _logger.LogInformation("Technical Support lookup data seeding completed successfully");
 
+                // Step 4: Seed Missions module lookup data (epic 15)
+                _logger.LogInformation("Step 4: Seeding Missions lookup data...");
+                await MissionLookupSeedData.SeedAllAsync(_appContext);
+                _logger.LogInformation("Missions lookup data seeding completed successfully");
+
+                // Step 5: Seed Correspondence module lookup data (epic 16)
+                _logger.LogInformation("Step 5: Seeding Correspondence lookup data...");
+                await CorrespondenceLookupSeedData.SeedAllAsync(_appContext);
+                _logger.LogInformation("Correspondence lookup data seeding completed successfully");
+
+                // Step 6: Seed Periodic Orphan Reports refuse-reason catalogue (epic 9, UC-ORR-08)
+                _logger.LogInformation("Step 6: Seeding Periodic Reports refuse reasons...");
+                await RefuseReasonSeedData.SeedRefuseReasonsAsync(_appContext);
+                _logger.LogInformation("Periodic Reports refuse reasons seeding completed successfully");
+
+                // Step 7: Seed Housing module catalogue (epic 6, UC-HOU-05)
+                _logger.LogInformation("Step 7: Seeding Housing buildings and flats...");
+                await HousingLookupSeedData.SeedAllAsync(_appContext);
+                _logger.LogInformation("Housing catalogue seeding completed successfully");
+
+                // Step 8: Seed Refugee register lookups (epic 7, UC-REF-03)
+                _logger.LogInformation("Step 8: Seeding Refugee register lookups...");
+                await RefugeeLookupSeedData.SeedAllAsync(_appContext);
+                _logger.LogInformation("Refugee register lookup seeding completed successfully");
+
+                // Step 9: Seed guardian reference catalogue (epic 19, UC-SYS-05)
+                _logger.LogInformation("Step 9: Seeding guardian marital statuses...");
+                await GuardianLookupSeedData.SeedAllAsync(_appContext);
+                _logger.LogInformation("Guardian reference catalogue seeding completed successfully");
+
+                // Step 10: Seed the bank catalogue starter set (epic 19, UC-SYS-08)
+                _logger.LogInformation("Step 10: Seeding starter bank catalogue...");
+                await BankSeedData.SeedBanksAsync(_appContext);
+                _logger.LogInformation("Bank catalogue seeding completed successfully");
+
+                // Step 11: Fill country NID validation rules (epic 19, UC-SYS-11)
+                _logger.LogInformation("Step 11: Seeding country NID rules...");
+                await CountryNidRuleSeedData.SeedNidRulesAsync(_appContext);
+                _logger.LogInformation("Country NID rules seeding completed successfully");
+
                 // Final state
                 var finalRoles = await _identityContext.Roles.CountAsync();
                 var finalUsers = await _identityContext.Users.CountAsync();

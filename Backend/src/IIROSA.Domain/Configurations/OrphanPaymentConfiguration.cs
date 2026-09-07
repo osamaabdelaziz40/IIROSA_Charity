@@ -33,6 +33,10 @@ public class OrphanPaymentConfiguration : IEntityTypeConfiguration<OrphanPayment
         builder.Property(x => x.GroupDate)
             .IsRequired();
 
+        // تاريخ بدء التوزيع — nullable for legacy rows, mandatory at the validator (10-2)
+        builder.Property(x => x.PaymentDate)
+            .IsRequired(false);
+
         // Financial Information
         builder.Property(x => x.ExchangeRate)
             .HasColumnType("decimal(18,4)");
@@ -62,9 +66,10 @@ public class OrphanPaymentConfiguration : IEntityTypeConfiguration<OrphanPayment
             .HasMaxLength(2000);
 
         // Indexes
+        // 10-2 defect fix: filter was PostgreSQL-quoted syntax — invalid on SQL Server
         builder.HasIndex(x => x.BatchNo)
             .IsUnique()
-            .HasFilter("\"BatchNo\" IS NOT NULL AND \"IsDeleted\" = false");
+            .HasFilter("[BatchNo] IS NOT NULL AND [IsDeleted] = 0");
         builder.HasIndex(x => x.GroupName);
         builder.HasIndex(x => x.PaymentPeriodFrom);
         builder.HasIndex(x => x.PaymentPeriodTo);

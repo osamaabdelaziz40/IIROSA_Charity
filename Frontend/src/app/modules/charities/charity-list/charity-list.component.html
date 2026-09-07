@@ -7,7 +7,10 @@
   [actions]="pageActions">
 </app-page-header>
 
-<div class="card">
+<div class="">
+  <div class="">
+    
+<div class="card shadow mb-4">
   <div class="card-body">
     <!-- Filters using shared components -->
     <form [formGroup]="filterForm">
@@ -73,17 +76,26 @@
         </div>
       </div>
 
-      <div class="row mb-3" *ngIf="hasActiveFilters()">
+      <div class="row">
         <div class="col-12">
-          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+          <button class="btn btn-primary" (click)="onSearch()">
+            <i class="fe fe-search mr-1"></i>
+            {{ 'common.search' | translate }}
+          </button>
+          <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary ml-2" (click)="clearFilters()">
             <i class="fe fe-x mr-1"></i>
             {{ 'common.clearFilters' | translate }}
           </button>
         </div>
       </div>
     </form>
+  </div>
+  
+</div>
 
-    <!-- Loading State -->
+<div class="card shadow mb-4" >
+  <div class="card-body"> 
+<!-- Loading State -->
     <div *ngIf="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status">
         <span class="sr-only">{{ 'common.loading' | translate }}</span>
@@ -141,11 +153,13 @@
                 <button type="button" class="btn btn-sm btn-light" [title]="'common.edit' | translate" (click)="editCharity(charity.id)">
                   <i class="fe fe-edit"></i>
                 </button>
-                <div class="dropdown">
-                  <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown">
+                <div class="dropdown" [class.show]="openRowMenuId === charity.id">
+                  <button type="button" class="btn btn-sm btn-light dropdown-toggle"
+                          [attr.aria-expanded]="openRowMenuId === charity.id"
+                          (click)="toggleRowMenu(charity)">
                     <i class="fe fe-more-vertical"></i>
                   </button>
-                  <div class="dropdown-menu dropdown-menu-right">
+                  <div class="dropdown-menu dropdown-menu-right" [class.show]="openRowMenuId === charity.id">
                     <a class="dropdown-item" href="javascript:void(0)" (click)="toggleCharityStatus(charity)">
                       <i class="fe fe-power mr-2" [ngClass]="charity.isActive ? 'fe-alert-circle' : 'fe-check-circle'"></i>
                       {{ charity.isActive ? ('charities.deactivate' | translate) : ('charities.activate' | translate) }}
@@ -197,5 +211,9 @@
       [totalCount]="totalCount"
       (pageChange)="onPageChange($event)">
     </app-pagination>
+  </div>
+</div>
+
+    
   </div>
 </div>

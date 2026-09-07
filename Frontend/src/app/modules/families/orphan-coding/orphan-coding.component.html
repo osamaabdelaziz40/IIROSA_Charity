@@ -1,0 +1,167 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'orphanCoding.title' | translate"
+  [subtitle]="'orphanCoding.subtitle' | translate"
+  [icon]="'fe fe-hash'">
+</app-page-header>
+
+<div class="card">
+  <div class="card-body">
+    <!-- §13.S.1 fields: الجمعية / اسم اليتيم / الكود -->
+    <form [formGroup]="filterForm" (ngSubmit)="search()">
+      <div class="row mb-3">
+        <!-- الجمعية — HQ only; Charity callers are pinned server-side -->
+        <div class="col-md-3" *ngIf="isHQ">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="charityId"
+            [label]="'orphanCoding.charity'"
+            [initialData]="charityOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onCharityChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- اسم اليتيم — type-ahead (UC-ORP-02) -->
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="filterForm"
+            fcn="orphanName"
+            [label]="'orphanCoding.orphanName'"
+            [placeholder]="'orphanCoding.orphanNamePlaceholder' | translate">
+          </app-input-text>
+        </div>
+
+        <!-- الكود — resolve the name from a code (UC-ORP-07) -->
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="filterForm"
+            fcn="code"
+            [label]="'orphanCoding.code'"
+            [placeholder]="'orphanCoding.codePlaceholder' | translate">
+          </app-input-text>
+        </div>
+
+        <div class="col-md-3 d-flex align-items-end">
+          <!-- بحث -->
+          <button type="submit" class="btn btn-primary ml-2" [disabled]="loading">
+            <i class="fe fe-search mr-1"></i>
+            {{ 'orphanCoding.search' | translate }}
+          </button>
+          <!-- غلق -->
+          <button type="button" class="btn btn-secondary" (click)="close()">
+            <i class="fe fe-x mr-1"></i>
+            {{ 'orphanCoding.close' | translate }}
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- §13.S.1 grid: الرقم · إسم اليتيم · إسم الأب · إسم الأم · الجمعية + الكود -->
+    <div *ngIf="!loading" class="table-responsive">
+      <table class="table table-hover table-striped">
+        <thead>
+          <tr>
+            <th>{{ 'orphanCoding.serial' | translate }}</th>
+            <th>{{ 'orphanCoding.orphanName' | translate }}</th>
+            <th>{{ 'orphanCoding.fatherName' | translate }}</th>
+            <th>{{ 'orphanCoding.motherName' | translate }}</th>
+            <th>{{ 'orphanCoding.charity' | translate }}</th>
+            <th>{{ 'orphanCoding.code' | translate }}</th>
+            <th>{{ 'common.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let orphan of results; let i = index; trackBy: trackByOrphanId">
+            <td>{{ getSerial(i) }}</td>
+            <td>{{ orphan.fullName }}</td>
+            <td>{{ orphan.fatherName || '-' }}</td>
+            <td>{{ orphan.motherName || '-' }}</td>
+            <td>{{ orphan.charityName || '-' }}</td>
+            <td>
+              <!-- Inline code cell: display, or تعديل الكود edit (UC-ORP-05/06) -->
+              <ng-container *ngIf="editingOrphanId !== orphan.orphanId; else editCell">
+                <strong>{{ orphan.code || '-' }}</strong>
+              </ng-container>
+              <ng-template #editCell>
+                <div class="d-flex align-items-center">
+                  <input type="text" class="form-control form-control-sm code-input ml-1"
+                         [(ngModel)]="editCode"
+                         (ngModelChange)="onEditCodeChange()"
+                         [placeholder]="'orphanCoding.codePlaceholder' | translate"
+                         [ngModelOptions]="{ standalone: true }" />
+                  <ng-container [ngSwitch]="codeCheckStatus">
+                    <i *ngSwitchCase="'checking'" class="fe fe-loader text-muted"></i>
+                    <i *ngSwitchCase="'available'" class="fe fe-check-circle text-success"
+                       [title]="'orphanCoding.codeAvailable' | translate"></i>
+                    <i *ngSwitchCase="'taken'" class="fe fe-x-circle text-danger"
+                       [title]="'orphanCoding.codeTaken' | translate"></i>
+                  </ng-container>
+                </div>
+                <small class="text-danger" *ngIf="codeCheckStatus === 'taken' && codeCheckResult?.existingOrphanName">
+                  {{ 'orphanCoding.codeHeldBy' | translate }}: {{ codeCheckResult?.existingOrphanName }}
+                </small>
+              </ng-template>
+            </td>
+            <td>
+              <div class="btn-group">
+                <!-- تعديل الكود → SaveCode / CancelSavingCode (UC-ORP-05/06) -->
+                <ng-container *ngIf="editingOrphanId !== orphan.orphanId; else editActions">
+                  <button type="button" class="btn btn-sm btn-light"
+                          (click)="startEdit(orphan)"
+                          [title]="'orphanCoding.editCode' | translate">
+                    <i class="fe fe-edit-2"></i>
+                  </button>
+                  <!-- تم — open the payment history (UC-ORP-08/09) -->
+                  <button type="button" class="btn btn-sm btn-light"
+                          (click)="selectOrphan(orphan)"
+                          [title]="'orphanCoding.select' | translate">
+                    <i class="fe fe-check"></i>
+                  </button>
+                </ng-container>
+                <ng-template #editActions>
+                  <button type="button" class="btn btn-sm btn-success"
+                          (click)="saveCode(orphan)"
+                          [disabled]="saving || codeCheckStatus === 'taken' || codeCheckStatus === 'checking'"
+                          [title]="'orphanCoding.saveCode' | translate">
+                    <i class="fe fe-save"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-light"
+                          (click)="cancelEdit()"
+                          [title]="'orphanCoding.cancelCode' | translate">
+                    <i class="fe fe-x"></i>
+                  </button>
+                </ng-template>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="searched && results.length === 0">
+            <td colspan="7" class="text-center py-5">
+              <div class="empty-state">
+                <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+                <p class="text-muted">{{ 'orphanCoding.noResults' | translate }}</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- تم — the selected orphan's payment history (UC-ORP-08/09) -->
+<app-orphan-payment-history
+  *ngIf="selectedOrphan"
+  [orphan]="selectedOrphan"
+  (closed)="onHistoryClosed()">
+</app-orphan-payment-history>

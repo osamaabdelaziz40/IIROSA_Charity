@@ -1,5 +1,4 @@
 using IIROSA.Application.DTOs.OfficeProjectManagement;
-using IIROSA.Application.DTOs.LookupManagement;
 using IIROSA.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,11 +6,12 @@ using Microsoft.AspNetCore.Mvc;
 namespace IIROSA.Api.Controllers;
 
 /// <summary>
-/// Office Project Management API Controller
-/// Implements UC-7.1 to UC-7.14: Office Project CRUD operations and specialized actions
-/// Follows approved Framework.Core architecture
-/// IMPORTANT: Only Admin and Super Admin roles can access this controller.
-/// Charity users are explicitly blocked from this module.
+/// Office Project Management API Controller (UC-OFP-01…06): list, view, create, update, delete,
+/// completion tracking and the Excel report.
+///
+/// Roles: the spec's actors (Gen. Director ≈ SuperAdmin, Staff ≈ Admin) map to the permission
+/// matrix row "Office development projects" F/F/–/–/– — everything is Admin,SuperAdmin except
+/// delete, which is the General Director's alone (UC-OFP-05).
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -29,10 +29,10 @@ public class OfficeProjectManagementController : ControllerBase
         _logger = logger;
     }
 
-    // ========== CRUD Operations ==========
+    // ========== Reads ==========
 
     /// <summary>
-    /// Get all office projects with filtering and pagination (UC-7.10: View Project List)
+    /// Get all office projects with filtering and pagination (UC-OFP-01: list)
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<OfficeProjectPagedResult<OfficeProjectListDto>>> GetProjects(
@@ -51,7 +51,7 @@ public class OfficeProjectManagementController : ControllerBase
     }
 
     /// <summary>
-    /// Get office project by ID (UC-7.11: View Project Details)
+    /// Get office project by ID (UC-OFP-04: view)
     /// </summary>
     [HttpGet("{id}")]
     public async Task<ActionResult<OfficeProjectDetailDto>> GetProject(Guid id)
@@ -73,8 +73,10 @@ public class OfficeProjectManagementController : ControllerBase
         }
     }
 
+    // ========== Writes ==========
+
     /// <summary>
-    /// Create new office project (UC-7.1: Create Office Project)
+    /// Create new office project (UC-OFP-03)
     /// </summary>
     [HttpPost]
     public async Task<ActionResult<OfficeProjectDetailDto>> CreateProject([FromBody] CreateOfficeProjectDto model)
@@ -83,6 +85,20 @@ public class OfficeProjectManagementController : ControllerBase
         {
             var project = await _projectService.CreateProjectAsync(model);
             return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
+        }
+        // Must precede the catch-all: ValidationException derives from Exception, so without this
+        // it is swallowed into a 500, leaving the client no `errors` map to flag fields against.
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (InvalidOperationException ex)
         {
@@ -96,7 +112,7 @@ public class OfficeProjectManagementController : ControllerBase
     }
 
     /// <summary>
-    /// Update office project (UC-7.8: Update Project Details)
+    /// Update office project (UC-OFP-04)
     /// </summary>
     [HttpPut("{id}")]
     public async Task<ActionResult<OfficeProjectDetailDto>> UpdateProject(Guid id, [FromBody] UpdateOfficeProjectDto model)
@@ -105,6 +121,18 @@ public class OfficeProjectManagementController : ControllerBase
         {
             var project = await _projectService.UpdateProjectAsync(id, model);
             return Ok(project);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (InvalidOperationException ex)
         {
@@ -118,9 +146,11 @@ public class OfficeProjectManagementController : ControllerBase
     }
 
     /// <summary>
-    /// Delete office project
+    /// Delete office project — soft delete (UC-OFP-05). General Director only: the spec names no
+    /// other actor for deletion and the permission matrix gives Staff no delete here.
     /// </summary>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "SuperAdmin")]
     public async Task<ActionResult> DeleteProject(Guid id)
     {
         try
@@ -140,148 +170,8 @@ public class OfficeProjectManagementController : ControllerBase
         }
     }
 
-    // ========== Project-Specific Operations ==========
-
     /// <summary>
-    /// Set project budget (UC-7.2: Set Project Budget)
-    /// </summary>
-    [HttpPut("{id}/budget")]
-    public async Task<ActionResult> SetProjectBudget(Guid id, [FromBody] SetProjectBudgetDto model)
-    {
-        try
-        {
-            await _projectService.SetProjectBudgetAsync(id, model);
-            _logger.LogInformation("Project budget updated for project {ProjectId} by {UpdatedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Project budget updated successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while setting project budget for project {ProjectId}", id);
-            return StatusCode(500, new { message = "An error occurred while setting project budget" });
-        }
-    }
-
-    /// <summary>
-    /// Specify project donor (UC-7.3: Specify Project Donor)
-    /// </summary>
-    [HttpPut("{id}/donor")]
-    public async Task<ActionResult> SpecifyProjectDonor(Guid id, [FromBody] SpecifyProjectDonorDto model)
-    {
-        try
-        {
-            await _projectService.SpecifyProjectDonorAsync(id, model);
-            _logger.LogInformation("Project donor specified for project {ProjectId} by {UpdatedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Project donor specified successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while specifying project donor for project {ProjectId}", id);
-            return StatusCode(500, new { message = "An error occurred while specifying project donor" });
-        }
-    }
-
-    /// <summary>
-    /// Set beneficiaries count (UC-7.4: Set Beneficiaries Count)
-    /// </summary>
-    [HttpPut("{id}/beneficiaries")]
-    public async Task<ActionResult> SetBeneficiariesCount(Guid id, [FromBody] SetBeneficiariesCountDto model)
-    {
-        try
-        {
-            await _projectService.SetBeneficiariesCountAsync(id, model);
-            _logger.LogInformation("Beneficiaries count set for project {ProjectId} by {UpdatedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Beneficiaries count set successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while setting beneficiaries count for project {ProjectId}", id);
-            return StatusCode(500, new { message = "An error occurred while setting beneficiaries count" });
-        }
-    }
-
-    /// <summary>
-    /// Assign project location (UC-7.5: Assign Project Location)
-    /// </summary>
-    [HttpPut("{id}/location")]
-    public async Task<ActionResult> AssignProjectLocation(Guid id, [FromBody] AssignProjectLocationDto model)
-    {
-        try
-        {
-            await _projectService.AssignProjectLocationAsync(id, model);
-            _logger.LogInformation("Project location assigned for project {ProjectId} by {UpdatedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Project location assigned successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while assigning project location for project {ProjectId}", id);
-            return StatusCode(500, new { message = "An error occurred while assigning project location" });
-        }
-    }
-
-    /// <summary>
-    /// Attach project document (UC-7.6: Attach Project Documents)
-    /// </summary>
-    [HttpPut("{id}/documents")]
-    public async Task<ActionResult> AttachProjectDocument(Guid id, [FromBody] AttachProjectDocumentDto model)
-    {
-        try
-        {
-            await _projectService.AttachProjectDocumentAsync(id, model);
-            _logger.LogInformation("Project document attached for project {ProjectId} by {UpdatedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Project document attached successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while attaching project document for project {ProjectId}", id);
-            return StatusCode(500, new { message = "An error occurred while attaching project document" });
-        }
-    }
-
-    /// <summary>
-    /// Upload project report (UC-7.7: Upload Project Report)
-    /// </summary>
-    [HttpPut("{id}/report")]
-    public async Task<ActionResult> UploadProjectReport(Guid id, [FromBody] UploadProjectReportDto model)
-    {
-        try
-        {
-            await _projectService.UploadProjectReportAsync(id, model);
-            _logger.LogInformation("Project report uploaded for project {ProjectId} by {UpdatedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Project report uploaded successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while uploading project report for project {ProjectId}", id);
-            return StatusCode(500, new { message = "An error occurred while uploading project report" });
-        }
-    }
-
-    /// <summary>
-    /// Mark project as completed (UC-7.9: Mark Project as Completed)
+    /// Mark project as completed (module completion tracking; feeds the progress view)
     /// </summary>
     [HttpPut("{id}/complete")]
     public async Task<ActionResult> MarkProjectAsCompleted(Guid id, [FromBody] MarkProjectCompletedDto model)
@@ -303,135 +193,14 @@ public class OfficeProjectManagementController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Set project dates (UC-7.13: Set Project Dates)
-    /// </summary>
-    [HttpPut("{id}/dates")]
-    public async Task<ActionResult> SetProjectDates(Guid id, [FromBody] SetProjectDatesDto model)
-    {
-        try
-        {
-            await _projectService.SetProjectDatesAsync(id, model);
-            _logger.LogInformation("Project dates updated for project {ProjectId} by {UpdatedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Project dates updated successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while setting project dates for project {ProjectId}", id);
-            return StatusCode(500, new { message = "An error occurred while setting project dates" });
-        }
-    }
+    // ========== Report (UC-OFP-06) ==========
 
     /// <summary>
-    /// Assign project to charity (UC-7.14: Assign Project to Charity)
+    /// Export projects to Excel (UC-OFP-06: report). A read like the list — GET with the filter
+    /// bound from the query string, scoped to the caller's country by the service.
     /// </summary>
-    [HttpPut("{id}/assign-charity")]
-    public async Task<ActionResult> AssignProjectToCharity(Guid id, [FromBody] AssignProjectToCharityDto model)
-    {
-        try
-        {
-            await _projectService.AssignProjectToCharityAsync(id, model);
-            _logger.LogInformation("Project assigned to charity for project {ProjectId} by {UpdatedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Project assigned to charity successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while assigning project to charity for project {ProjectId}", id);
-            return StatusCode(500, new { message = "An error occurred while assigning project to charity" });
-        }
-    }
-
-    // ========== View Operations ==========
-
-    /// <summary>
-    /// Get projects assigned to a specific charity (UC-7.14)
-    /// </summary>
-    [HttpGet("charity/{charityId}")]
-    public async Task<ActionResult<OfficeProjectPagedResult<OfficeProjectListDto>>> GetProjectsByCharity(
-        Guid charityId,
-        [FromQuery] OfficeProjectFilterDto filter)
-    {
-        try
-        {
-            var result = await _projectService.GetProjectsByCharityAsync(charityId, filter);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving office projects for charity {CharityId}", charityId);
-            return StatusCode(500, new { message = "An error occurred while retrieving office projects for charity" });
-        }
-    }
-
-    /// <summary>
-    /// Get project status summary (UC-7.12: Track Project Progress)
-    /// </summary>
-    [HttpGet("status-summary")]
-    public async Task<ActionResult<OfficeProjectStatusSummaryDto>> GetStatusSummary()
-    {
-        try
-        {
-            var summary = await _projectService.GetProjectStatusSummaryAsync();
-            return Ok(summary);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving office project status summary");
-            return StatusCode(500, new { message = "An error occurred while retrieving office project status summary" });
-        }
-    }
-
-    /// <summary>
-    /// Get ongoing projects
-    /// </summary>
-    [HttpGet("ongoing")]
-    public async Task<ActionResult<List<OfficeProjectListDto>>> GetOngoingProjects()
-    {
-        try
-        {
-            var ongoingProjects = await _projectService.GetOngoingProjectsAsync();
-            return Ok(ongoingProjects);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving ongoing office projects");
-            return StatusCode(500, new { message = "An error occurred while retrieving ongoing office projects" });
-        }
-    }
-
-    /// <summary>
-    /// Get completed projects
-    /// </summary>
-    [HttpGet("completed")]
-    public async Task<ActionResult<List<OfficeProjectListDto>>> GetCompletedProjects()
-    {
-        try
-        {
-            var completedProjects = await _projectService.GetCompletedProjectsAsync();
-            return Ok(completedProjects);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving completed office projects");
-            return StatusCode(500, new { message = "An error occurred while retrieving completed office projects" });
-        }
-    }
-
-    // ========== Export ==========
-
-    /// <summary>
-    /// Export projects to Excel (UC-7.10: Export to Excel)
-    /// </summary>
-    [HttpPost("export")]
-    public async Task<IActionResult> ExportProjects([FromBody] OfficeProjectFilterDto filter)
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportProjects([FromQuery] OfficeProjectFilterDto filter)
     {
         try
         {
@@ -455,6 +224,4 @@ public class OfficeProjectManagementController : ControllerBase
             return StatusCode(500, new { message = "An error occurred while exporting office projects to Excel" });
         }
     }
-
-    // ========== Lookup Data ==========
 }

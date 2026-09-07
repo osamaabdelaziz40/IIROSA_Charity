@@ -38,6 +38,8 @@ public class EmployeeDetailDto
     public decimal? Salary { get; set; }
     public bool IsActive { get; set; }
     public string? Notes { get; set; }
+    public Guid? FK_UserId { get; set; }
+    public bool HasAccount => FK_UserId.HasValue;
     public DateTime CreatedOn { get; set; }
     public DateTime? UpdatedOn { get; set; }
     public List<string> Roles { get; set; } = new();
@@ -94,8 +96,9 @@ public class UpdateEmployeeDto
 public class EmployeeSearchDto
 {
     public string? SearchText { get; set; }
-    public string? Department { get; set; }
+    public int? DepartmentId { get; set; }
     public string? Position { get; set; }
+    public string? Role { get; set; }
     public bool? IsActive { get; set; }
     public int PageNumber { get; set; } = 1;
     public int PageSize { get; set; } = 20;
@@ -107,11 +110,22 @@ public class EmployeeSearchDto
 public class EmployeeFilterDto
 {
     public string? SearchText { get; set; }
-    public string? Department { get; set; }
+    public int? DepartmentId { get; set; }
     public string? Position { get; set; }
+    public string? Role { get; set; }
     public bool? IsActive { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
+}
+
+/// <summary>
+/// Result of the UC-EMP-02 username availability check. The server echoes the
+/// (trimmed) name it actually checked so the client can discard stale replies.
+/// </summary>
+public class EmployeeUserNameAvailabilityDto
+{
+    public string UserName { get; set; } = string.Empty;
+    public bool IsAvailable { get; set; }
 }
 
 /// <summary>

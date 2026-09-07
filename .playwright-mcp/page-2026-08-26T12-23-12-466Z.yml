@@ -1,0 +1,281 @@
+- generic [ref=f10e5]:
+  - navigation [ref=f10e6]:
+    - button [ref=f10e7] [cursor=pointer]
+    - list [ref=f10e9]:
+      - listitem [ref=f10e10]:
+        - link "English " [ref=f10e11] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f10e12]:
+        - link "" [ref=f10e13] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f10e15]:
+        - link [ref=f10e16] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f10e18]:
+        - button [ref=f10e19] [cursor=pointer]:
+          - generic [ref=f10e20]:
+            - text: Welcome System Admin
+            - img "..." [ref=f10e21]
+          - text: 
+  - complementary [ref=f10e22]:
+    - navigation [ref=f10e23]:
+      - link [ref=f10e25] [cursor=pointer]:
+        - /url: "#/"
+        - img "IIROSA Logo" [ref=f10e26]
+      - paragraph [ref=f10e27]: Website Elements
+      - list [ref=f10e28]:
+        - listitem [ref=f10e29]:
+          - link "Home Page (current) " [ref=f10e30] [cursor=pointer]:
+            - /url: "#dashboard"
+            - generic [ref=f10e31]: Home Page
+            - generic [ref=f10e32]: (current)
+            - text: 
+          - list [ref=f10e33]:
+            - listitem [ref=f10e34]:
+              - link "Home" [ref=f10e35] [cursor=pointer]:
+                - /url: "#/"
+        - listitem [ref=f10e36]:
+          - link "Users " [ref=f10e37] [cursor=pointer]:
+            - /url: "#user-management"
+            - generic [ref=f10e38]: Users
+            - text: 
+        - listitem [ref=f10e39]:
+          - link "Employees " [ref=f10e40] [cursor=pointer]:
+            - /url: "#employees"
+            - generic [ref=f10e41]: Employees
+            - text: 
+        - listitem [ref=f10e42]:
+          - link "NGOs " [ref=f10e43] [cursor=pointer]:
+            - /url: "#charities"
+            - generic [ref=f10e44]: NGOs
+            - text: 
+        - listitem [ref=f10e45]:
+          - link "Office Projects " [ref=f10e46] [cursor=pointer]:
+            - /url: "#office-development-projects"
+            - generic [ref=f10e47]: Office Projects
+            - text: 
+        - listitem [ref=f10e48]:
+          - link "Housing Projects " [ref=f10e49] [cursor=pointer]:
+            - /url: "#housing-projects"
+            - generic [ref=f10e50]: Housing Projects
+            - text: 
+        - listitem [ref=f10e51]:
+          - link "Seasonal Aid " [ref=f10e52] [cursor=pointer]:
+            - /url: "#seasonal-aid"
+            - generic [ref=f10e53]: Seasonal Aid
+            - text: 
+        - listitem [ref=f10e54]:
+          - link "Incoming & Outgoing " [ref=f10e55] [cursor=pointer]:
+            - /url: "#incoming-outgoing"
+            - generic [ref=f10e56]: Incoming & Outgoing
+            - text: 
+        - listitem [ref=f10e57]:
+          - link "Orphan Payments " [ref=f10e58] [cursor=pointer]:
+            - /url: "#orphan-payments"
+            - generic [ref=f10e59]: Orphan Payments
+            - text: 
+        - listitem [ref=f10e60]:
+          - link "Families " [ref=f10e61] [cursor=pointer]:
+            - /url: "#families"
+            - generic [ref=f10e62]: Families
+            - text: 
+        - listitem [ref=f10e63]:
+          - link "Reports " [ref=f10e64] [cursor=pointer]:
+            - /url: "#reports"
+            - generic [ref=f10e65]: Reports
+            - text: 
+          - list [ref=f10e66]:
+            - listitem [ref=f10e67]:
+              - link "All Reports" [ref=f10e68] [cursor=pointer]:
+                - /url: "#/reports/all"
+            - listitem [ref=f10e69]:
+              - link "Family Follow-Up" [ref=f10e70] [cursor=pointer]:
+                - /url: "#/reports/family-orphans"
+            - listitem [ref=f10e71]:
+              - link "Orphan data" [ref=f10e72] [cursor=pointer]:
+                - /url: "#/reports/orphans"
+            - listitem [ref=f10e73]:
+              - link "Excluded Orphans" [ref=f10e74] [cursor=pointer]:
+                - /url: "#/reports/excluded-orphans"
+            - listitem [ref=f10e75]:
+              - link "Orphans with Ended Sponsorship" [ref=f10e76] [cursor=pointer]:
+                - /url: "#/reports/finished-sponsorship-orphans"
+            - listitem [ref=f10e77]:
+              - link "Unsponsored Orphans" [ref=f10e78] [cursor=pointer]:
+                - /url: "#/reports/unsponsored-orphans"
+            - listitem [ref=f10e79]:
+              - link "Widows Requiring Sponsorship" [ref=f10e80] [cursor=pointer]:
+                - /url: "#/reports/widows-allowing-sponsorship"
+            - listitem [ref=f10e81]:
+              - link "Registered Meza Cards" [ref=f10e82] [cursor=pointer]:
+                - /url: "#/reports/meza-cards"
+            - listitem [ref=f10e83]:
+              - link "Assistance Family Data" [ref=f10e84] [cursor=pointer]:
+                - /url: "#/reports/beneficiary-family-details"
+            - listitem [ref=f10e85]:
+              - link "Family Projects" [ref=f10e86] [cursor=pointer]:
+                - /url: "#/reports/registered-family-projects"
+            - listitem [ref=f10e87]:
+              - link "Guardian Change Reports" [ref=f10e88] [cursor=pointer]:
+                - /url: "#/reports/provider-sponsor-changes"
+            - listitem [ref=f10e89]:
+              - link "Family & Orphan Entry Tracking" [ref=f10e90] [cursor=pointer]:
+                - /url: "#/reports/family-orphans-entries"
+            - listitem [ref=f10e91]:
+              - link "Coded Orphans Needing a Report" [ref=f10e92] [cursor=pointer]:
+                - /url: "#/reports/orphans-missing-reports"
+            - listitem [ref=f10e93]:
+              - link "Orphans Missing Files" [ref=f10e94] [cursor=pointer]:
+                - /url: "#/reports/orphans-missing-files"
+            - listitem [ref=f10e95]:
+              - link "Reports Awaiting Approval" [ref=f10e96] [cursor=pointer]:
+                - /url: "#/reports/reports-awaiting-approval"
+            - listitem [ref=f10e97]:
+              - link "Refused Reports" [ref=f10e98] [cursor=pointer]:
+                - /url: "#/reports/refused-reports"
+            - listitem [ref=f10e99]:
+              - link "Orphans without a Renewed Report" [ref=f10e100] [cursor=pointer]:
+                - /url: "#/reports/non-renewed-reports"
+            - listitem [ref=f10e101]:
+              - link "Charity Follow-up" [ref=f10e102] [cursor=pointer]:
+                - /url: "#/reports/charity-payment-tracking"
+            - listitem [ref=f10e103]:
+              - link "Missed Payments (Previous Batches)" [ref=f10e104] [cursor=pointer]:
+                - /url: "#/reports/missed-payments"
+            - listitem [ref=f10e105]:
+              - link "Orphan Photographs" [ref=f10e106] [cursor=pointer]:
+                - /url: "#/reports/orphan-files"
+            - listitem [ref=f10e107]:
+              - link "Print the Survey Questionnaire" [ref=f10e108] [cursor=pointer]:
+                - /url: "#/reports/survey-questionnaire"
+            - listitem [ref=f10e109]:
+              - link "Orphans Receiving Nothing" [ref=f10e110] [cursor=pointer]:
+                - /url: "#/reports/orphans-without-payment"
+            - listitem [ref=f10e111]:
+              - link "Follow-up and Handover Sheets" [ref=f10e112] [cursor=pointer]:
+                - /url: "#/reports/follow-up-sheets"
+            - listitem [ref=f10e113]:
+              - link "Missing outgoing attachments" [ref=f10e114] [cursor=pointer]:
+                - /url: "#/reports/missing-outgoing-attachments"
+            - listitem [ref=f10e115]:
+              - link "Cheque Statement" [ref=f10e116] [cursor=pointer]:
+                - /url: "#/reports/cheque-statement"
+            - listitem [ref=f10e117]:
+              - link "New Orphans and Widows" [ref=f10e118] [cursor=pointer]:
+                - /url: "#/reports/new-beneficiaries"
+            - listitem [ref=f10e119]:
+              - link "Family orphan list by date" [ref=f10e120] [cursor=pointer]:
+                - /url: "#/reports/family-orphans-by-date"
+        - listitem [ref=f10e121]:
+          - link "General Cheques " [ref=f10e122] [cursor=pointer]:
+            - /url: "#general-checks"
+            - generic [ref=f10e123]: General Cheques
+            - text: 
+        - listitem [ref=f10e124]:
+          - link "Missions " [ref=f10e125] [cursor=pointer]:
+            - /url: "#missions"
+            - generic [ref=f10e126]: Missions
+            - text: 
+        - listitem [ref=f10e127]:
+          - link "Periodic Orphan Reports " [ref=f10e128] [cursor=pointer]:
+            - /url: "#periodic-orphan-reports"
+            - generic [ref=f10e129]: Periodic Orphan Reports
+            - text: 
+        - listitem [ref=f10e130]:
+          - link "Financial Transfers " [ref=f10e131] [cursor=pointer]:
+            - /url: "#hq-transfers"
+            - generic [ref=f10e132]: Financial Transfers
+            - text: 
+        - listitem [ref=f10e133]:
+          - link "Technical Support " [ref=f10e134] [cursor=pointer]:
+            - /url: "#technical-support"
+            - generic [ref=f10e135]: Technical Support
+            - text: 
+        - listitem [ref=f10e136]:
+          - link "Lookup Management " [ref=f10e137] [cursor=pointer]:
+            - /url: "#lookup-management"
+            - generic [ref=f10e138]: Lookup Management
+            - text: 
+  - main [ref=f10e139]:
+    - generic [ref=f10e144]:
+      - generic [ref=f10e146]:
+        - heading "All Reports" [level=2] [ref=f10e147]
+        - paragraph [ref=f10e148]: Report directory — pick a report to open it
+      - generic [ref=f10e149]:
+        - link [ref=f10e151] [cursor=pointer]:
+          - /url: "#/reports/family-orphans"
+          - strong [ref=f10e155]: Family Follow-Up
+          - generic [ref=f10e156]: View
+        - link [ref=f10e162] [cursor=pointer]:
+          - /url: "#/reports/orphans"
+          - strong [ref=f10e166]: Orphan data
+          - generic [ref=f10e167]: View
+        - link [ref=f10e173] [cursor=pointer]:
+          - /url: "#/reports/excluded-orphans"
+          - strong [ref=f10e177]: Excluded Orphans
+          - generic [ref=f10e178]: View
+        - link [ref=f10e184] [cursor=pointer]:
+          - /url: "#/reports/finished-sponsorship-orphans"
+          - strong [ref=f10e188]: Orphans with Ended Sponsorship
+          - generic [ref=f10e189]: View
+        - link [ref=f10e195] [cursor=pointer]:
+          - /url: "#/reports/unsponsored-orphans"
+          - strong [ref=f10e199]: Unsponsored Orphans
+          - generic [ref=f10e200]: View
+        - link [ref=f10e206] [cursor=pointer]:
+          - /url: "#/reports/widows-allowing-sponsorship"
+          - strong [ref=f10e210]: Widows Requiring Sponsorship
+          - generic [ref=f10e211]: View
+        - link [ref=f10e217] [cursor=pointer]:
+          - /url: "#/reports/meza-cards"
+          - strong [ref=f10e221]: Registered Meza Cards
+          - generic [ref=f10e222]: View
+        - link [ref=f10e228] [cursor=pointer]:
+          - /url: "#/reports/beneficiary-family-details"
+          - strong [ref=f10e232]: Assistance Family Data
+          - generic [ref=f10e233]: View
+        - link [ref=f10e239] [cursor=pointer]:
+          - /url: "#/reports/registered-family-projects"
+          - strong [ref=f10e243]: Family Projects
+          - generic [ref=f10e244]: View
+        - link [ref=f10e250] [cursor=pointer]:
+          - /url: "#/reports/provider-sponsor-changes"
+          - strong [ref=f10e254]: Guardian Change Reports
+          - generic [ref=f10e255]: View
+        - link [ref=f10e261] [cursor=pointer]:
+          - /url: "#/reports/family-orphans-entries"
+          - strong [ref=f10e265]: Family & Orphan Entry Tracking
+          - generic [ref=f10e266]: View
+        - link [ref=f10e272] [cursor=pointer]:
+          - /url: "#/reports/orphans-missing-reports"
+          - strong [ref=f10e276]: Coded Orphans Needing a Report
+          - generic [ref=f10e277]: View
+      - generic [ref=f10e282]:
+        - navigation [ref=f10e283]:
+          - list [ref=f10e284]:
+            - listitem [ref=f10e285]:
+              - link:
+                - /url: javascript:void(0)
+            - listitem [ref=f10e286]:
+              - link:
+                - /url: javascript:void(0)
+            - listitem [ref=f10e287]:
+              - link "1" [ref=f10e288] [cursor=pointer]:
+                - /url: javascript:void(0)
+            - listitem [ref=f10e289]:
+              - link "2" [ref=f10e290] [cursor=pointer]:
+                - /url: javascript:void(0)
+            - listitem [ref=f10e291]:
+              - link "3" [ref=f10e292] [cursor=pointer]:
+                - /url: javascript:void(0)
+            - listitem [ref=f10e293]:
+              - link [ref=f10e294] [cursor=pointer]:
+                - /url: javascript:void(0)
+            - listitem [ref=f10e295]:
+              - link [ref=f10e296] [cursor=pointer]:
+                - /url: javascript:void(0)
+        - generic [ref=f10e297]: Showing 1 to 12 of 26
+  - contentinfo [ref=f10e298]:
+    - generic [ref=f10e300]:
+      - paragraph [ref=f10e302]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f10e304]: Version 1.0.0

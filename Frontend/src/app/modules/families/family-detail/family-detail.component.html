@@ -92,7 +92,18 @@
           <span *ngIf="family.modifiedOn"> | {{ 'common.modifiedDate' | translate }}: {{ family.modifiedOn | date:'medium' }}</span>
         </div>
         <div>
-          <button class="btn btn-sm btn-outline-secondary" (click)="exportToPDF()">
+          <a *ngIf="canManageMembers" class="btn btn-sm btn-outline-secondary"
+             [routerLink]="['/families', familyId, 'members']">
+            <i class="fe fe-users mr-1"></i>
+            {{ 'families.members.manageMembers' | translate }}
+          </a>
+          <!-- UC-FAM-09 — «طلب تعديل العائل»: propose a new guardian for this family. -->
+          <button *ngIf="canRaiseProviderRequest" class="btn btn-sm btn-outline-secondary ml-2"
+                  (click)="openProviderRequestModal()">
+            <i class="fe fe-user-check mr-1"></i>
+            {{ 'families.providerRequests.raiseAction' | translate }}
+          </button>
+          <button class="btn btn-sm btn-outline-secondary ml-2" (click)="exportToPDF()">
             <i class="fe fe-file-text mr-1"></i>
             {{ 'common.exportPDF' | translate }}
           </button>
@@ -444,6 +455,60 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- UC-FAM-09 raise modal «طلب تعديل العائل» — propose a new guardian for this family. -->
+<div class="modal-backdrop" *ngIf="showProviderRequestModal"></div>
+<div class="modal-dialog" *ngIf="showProviderRequestModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">{{ 'families.providerRequests.raiseTitle' | translate }}</h5>
+      <button type="button" class="close" (click)="closeProviderRequestModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info">
+        {{ 'families.providerRequests.raiseHint' | translate }}
+      </div>
+
+      <div class="form-group">
+        <label>{{ 'families.providerRequests.colNewGuardian' | translate }}</label>
+        <input type="text" class="form-control" name="requestNewGuardianName"
+               [(ngModel)]="requestNewGuardianName"
+               [placeholder]="'families.providerRequests.newGuardianPlaceholder' | translate" />
+      </div>
+
+      <div class="form-group">
+        <label>{{ 'families.providerRequests.colNationalId' | translate }}</label>
+        <input type="text" class="form-control" name="requestNewGuardianNationalId"
+               [(ngModel)]="requestNewGuardianNationalId"
+               [placeholder]="'families.providerRequests.nationalIdPlaceholder' | translate" />
+      </div>
+
+      <div class="form-group">
+        <label>{{ 'families.providerRequests.colRelationship' | translate }}</label>
+        <input type="text" class="form-control" name="requestRelationship"
+               [(ngModel)]="requestRelationship"
+               [placeholder]="'families.providerRequests.relationshipPlaceholder' | translate" />
+      </div>
+
+      <div class="form-group">
+        <label>{{ 'families.providerRequests.colReason' | translate }}</label>
+        <textarea class="form-control" name="requestReason" rows="3"
+                  [(ngModel)]="requestReason"
+                  [placeholder]="'families.providerRequests.reasonPlaceholder' | translate"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeProviderRequestModal()">
+        {{ 'common.cancel' | translate }}
+      </button>
+      <button type="button" class="btn btn-primary" [disabled]="raisingProviderRequest"
+              (click)="submitProviderRequest()">
+        <span class="spinner-border spinner-border-sm mr-1" *ngIf="raisingProviderRequest"></span>
+        {{ 'common.submit' | translate }}
+      </button>
     </div>
   </div>
 </div>

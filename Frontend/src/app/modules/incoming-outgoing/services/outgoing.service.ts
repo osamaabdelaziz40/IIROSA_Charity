@@ -7,15 +7,20 @@ import {
   OutgoingDto,
   CreateOutgoingDto,
   UpdateOutgoingDto,
-  OutgoingSearchRequest,
-  OutgoingPagedResult
+  OutgoingFilterDto,
+  OutgoingPagedResult,
+  OutgoingCategoryOptionDto,
+  OutgoingOrphansDto,
+  OutgoingOrphanReportFilterDto,
+  OutgoingOrphanReportResult
 } from '../models/outgoing.model';
+import { NextSerialDto } from '../models/incoming.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class OutgoingService {
-  private apiUrl = `${environment.apiUrl}/api/Outgoing`;
+  private apiUrl = `${environment.apiUrl}/api/IncomingOutgoing/outgoing`;
 
   constructor(private http: HttpClient) {}
 
@@ -39,14 +44,18 @@ export class OutgoingService {
     return params;
   }
 
-  getOutgoingLetters(searchRequest: OutgoingSearchRequest): Observable<OutgoingPagedResult> {
-    return this.http.get<OutgoingPagedResult>(`${this.apiUrl}`, {
+  // ========== UC-COR-10 / UC-COR-11 — the §21.S.4 register ==========
+
+  getOutgoingLetters(filter: OutgoingFilterDto): Observable<OutgoingPagedResult> {
+    return this.http.get<OutgoingPagedResult>(this.apiUrl, {
       headers: this.getHeaders(),
-      params: this.buildHttpParams(searchRequest)
+      params: this.buildHttpParams(filter)
     }).pipe(
       catchError(this.handleError)
     );
   }
+
+  // ========== UC-COR-14 — view ==========
 
   getOutgoingLetter(id: string): Observable<OutgoingDto> {
     return this.http.get<OutgoingDto>(`${this.apiUrl}/${id}`, {
@@ -56,8 +65,10 @@ export class OutgoingService {
     );
   }
 
+  // ========== UC-COR-13 / UC-COR-15 — register / update ==========
+
   createOutgoingLetter(letter: CreateOutgoingDto): Observable<OutgoingDto> {
-    return this.http.post<OutgoingDto>(`${this.apiUrl}`, letter, {
+    return this.http.post<OutgoingDto>(this.apiUrl, letter, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -72,6 +83,8 @@ export class OutgoingService {
     );
   }
 
+  // ========== UC-COR-16 — delete ==========
+
   deleteOutgoingLetter(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`, {
       headers: this.getHeaders()
@@ -80,40 +93,59 @@ export class OutgoingService {
     );
   }
 
-  exportToExcel(searchRequest: OutgoingSearchRequest): Observable<Blob> {
-    return this.http.post(`${this.apiUrl}/export`, searchRequest, {
+  // ========== UC-COR-12 — the advisory next serial ==========
+
+  getNextSerial(year?: number, charityId?: string): Observable<NextSerialDto> {
+    return this.http.get<NextSerialDto>(`${this.apiUrl}/next-serial`, {
       headers: this.getHeaders(),
-      responseType: 'blob'
+      params: this.buildHttpParams({ year, charityId })
     }).pipe(
       catchError(this.handleError)
     );
   }
 
-  exportToPDF(searchRequest: OutgoingSearchRequest): Observable<Blob> {
-    return this.http.post(`${this.apiUrl}/export/pdf`, searchRequest, {
-      headers: this.getHeaders(),
-      responseType: 'blob'
+  // ========== UC-COR-17 — the §21.S.5 category options ==========
+
+  getAvailableCategories(): Observable<OutgoingCategoryOptionDto[]> {
+    return this.http.get<OutgoingCategoryOptionDto[]>(`${this.apiUrl}/categories`, {
+      headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
     );
   }
 
-  downloadTemplate(): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/template`, {
-      headers: this.getHeaders(),
-      responseType: 'blob'
+  // ========== UC-COR-18 — the §21.S.6 orphan report attachment ==========
+
+  getOrphans(outgoingId: string): Observable<OutgoingOrphansDto> {
+    return this.http.get<OutgoingOrphansDto>(`${this.apiUrl}/${outgoingId}/orphans`, {
+      headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
     );
   }
 
-  importLetters(file: File, options: any): Observable<any> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('options', JSON.stringify(options));
+  attachOrphan(outgoingId: string, orphanId: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${outgoingId}/orphans`, { orphanId }, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
 
-    return this.http.post(`${this.apiUrl}/import`, formData, {
-      headers: this.getHeaders().delete('Content-Type'),
+  detachOrphan(outgoingId: string, orphanId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${outgoingId}/orphans/${orphanId}`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // ========== UC-COR-19 — the §21.S.7 orphans-by-letter report ==========
+
+  getOrphanReport(filter: OutgoingOrphanReportFilterDto): Observable<OutgoingOrphanReportResult> {
+    return this.http.get<OutgoingOrphanReportResult>(`${this.apiUrl}/reports/by-orphans`, {
+      headers: this.getHeaders(),
+      params: this.buildHttpParams(filter)
     }).pipe(
       catchError(this.handleError)
     );

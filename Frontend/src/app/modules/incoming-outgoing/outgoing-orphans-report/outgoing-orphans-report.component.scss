@@ -1,0 +1,8 @@
+/* Report screens print clean — hide the shell chrome */
+@media print {
+  app-breadcrumb,
+  app-page-header,
+  app-pagination {
+    display: none;
+  }
+}

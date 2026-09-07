@@ -15,6 +15,9 @@ public class OrphanPaymentDto
     public DateTime PaymentPeriodTo { get; set; }
     public DateTime GroupDate { get; set; }
 
+    // Distribution start date تاريخ بدء التوزيع — null on legacy rows
+    public DateTime? PaymentDate { get; set; }
+
     // Financial Information
     public decimal? ExchangeRate { get; set; }
     public string? Currency { get; set; }

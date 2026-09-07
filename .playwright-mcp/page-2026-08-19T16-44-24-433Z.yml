@@ -1,0 +1,640 @@
+- generic [ref=f38e5]:
+  - navigation [ref=f38e6]:
+    - button "" [ref=f38e7] [cursor=pointer]
+    - list [ref=f38e9]:
+      - listitem [ref=f38e10]:
+        - link "العربية " [ref=f38e11] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f38e12]: 
+          - text: العربية 
+      - listitem [ref=f38e13]:
+        - link "" [ref=f38e14] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f38e16]:
+        - link "" [ref=f38e17] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f38e20]:
+        - button [ref=f38e21] [cursor=pointer]:
+          - generic [ref=f38e22]:
+            - text: مرحبا System Admin
+            - img "..." [ref=f38e23]
+          - text: 
+  - complementary [ref=f38e24]:
+    - generic [ref=f38e29]:
+      - text: 
+      - navigation [ref=f38e30]:
+        - link [ref=f38e32] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f38e33]
+        - paragraph [ref=f38e34]: عناصر الموقع
+        - list [ref=f38e35]:
+          - listitem [ref=f38e36]:
+            - link " الصفحة الرئيسية (current) " [ref=f38e37] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f38e38]: 
+              - generic [ref=f38e39]: الصفحة الرئيسية
+              - generic [ref=f38e40]: (current)
+              - text: 
+            - list [ref=f38e41]:
+              - listitem [ref=f38e42]:
+                - link "الرئيسية" [ref=f38e43] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f38e44]:
+            - link " المستخدمون " [ref=f38e45] [cursor=pointer]:
+              - /url: "#user-management"
+              - generic [ref=f38e46]: 
+              - generic [ref=f38e47]: المستخدمون
+              - text: 
+          - listitem [ref=f38e48]:
+            - link " الموظفون " [ref=f38e49] [cursor=pointer]:
+              - /url: "#employees"
+              - generic [ref=f38e50]: 
+              - generic [ref=f38e51]: الموظفون
+              - text: 
+          - listitem [ref=f38e52]:
+            - link " الجمعيات " [ref=f38e53] [cursor=pointer]:
+              - /url: "#charities"
+              - generic [ref=f38e54]: 
+              - generic [ref=f38e55]: الجمعيات
+              - text: 
+            - list [ref=f38e56]:
+              - listitem [ref=f38e57]:
+                - link "جميع الجمعيات" [ref=f38e58] [cursor=pointer]:
+                  - /url: "#/charities"
+              - listitem [ref=f38e59]:
+                - link "إضافة جمعية" [ref=f38e60] [cursor=pointer]:
+                  - /url: "#/charities/create"
+          - listitem [ref=f38e61]:
+            - link " مشاريع المكتب " [ref=f38e62] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f38e63]: 
+              - generic [ref=f38e64]: مشاريع المكتب
+              - text: 
+          - listitem [ref=f38e65]:
+            - link " مشاريع الإسكان " [ref=f38e66] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f38e67]: 
+              - generic [ref=f38e68]: مشاريع الإسكان
+              - text: 
+          - listitem [ref=f38e69]:
+            - link " المساعدات الموسمية " [ref=f38e70] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f38e71]: 
+              - generic [ref=f38e72]: المساعدات الموسمية
+              - text: 
+          - listitem [ref=f38e73]:
+            - link " الوارد والصادر " [ref=f38e74] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f38e75]: 
+              - generic [ref=f38e76]: الوارد والصادر
+              - text: 
+          - listitem [ref=f38e77]:
+            - link " مدفوعات الأيتام " [ref=f38e78] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f38e79]: 
+              - generic [ref=f38e80]: مدفوعات الأيتام
+              - text: 
+          - listitem [ref=f38e81]:
+            - link " Families " [ref=f38e82] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f38e83]: 
+              - generic [ref=f38e84]: Families
+              - text: 
+          - listitem [ref=f38e85]:
+            - link " الشيكات العامة " [ref=f38e86] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f38e87]: 
+              - generic [ref=f38e88]: الشيكات العامة
+              - text: 
+          - listitem [ref=f38e89]:
+            - link " المهام " [ref=f38e90] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f38e91]: 
+              - generic [ref=f38e92]: المهام
+              - text: 
+          - listitem [ref=f38e93]:
+            - link " العنوان " [ref=f38e94] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f38e95]: 
+              - generic [ref=f38e96]: العنوان
+              - text: 
+          - listitem [ref=f38e97]:
+            - link " إدارة الجداول المرجعية " [ref=f38e98] [cursor=pointer]:
+              - /url: "#lookup-management"
+              - generic [ref=f38e99]: 
+              - generic [ref=f38e100]: إدارة الجداول المرجعية
+              - text: 
+  - main [ref=f38e101]:
+    - generic [ref=f38e103]:
+      - navigation "breadcrumb" [ref=f38e105]:
+        - list [ref=f38e106]:
+          - listitem [ref=f38e107]:
+            - link "الرئيسية" [ref=f38e108] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=f38e109]:
+            - text: /
+            - generic [ref=f38e110]: الجمعيات
+      - generic [ref=f38e112]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f38e113]:
+          - generic [ref=f38e114]:
+            - generic [ref=f38e115]: 
+            - generic [ref=f38e116]:
+              - heading "الجمعيات" [level=3] [ref=f38e117]
+              - paragraph [ref=f38e118]: إدارة الجمعيات الخيرية
+          - generic [ref=f38e119]:
+            - button "إضافة جمعية" [ref=f38e120] [cursor=pointer]:
+              - generic [ref=f38e121]: 
+              - text: إضافة جمعية
+            - button "تصدير إلى Excel" [ref=f38e122] [cursor=pointer]:
+              - generic [ref=f38e123]: 
+              - text: تصدير إلى Excel
+      - generic [ref=f38e125]:
+        - generic [ref=f38e127]:
+          - generic [ref=f38e130]:
+            - generic [ref=f38e131]: بحث
+            - textbox "بحث" [ref=f38e132]:
+              - /placeholder: البحث بالاسم أو الرمز أو البريد الإلكتروني...
+          - generic [ref=f38e135]:
+            - generic [ref=f38e136]: الدولة
+            - combobox [ref=f38e139] [cursor=pointer]:
+              - textbox "السعودية" [ref=f38e140]
+            - combobox [ref=f38e143] [cursor=pointer]:
+              - textbox [ref=f38e144]
+            - combobox [ref=f38e147] [cursor=pointer]:
+              - textbox
+          - generic [ref=f38e150]:
+            - generic [ref=f38e151]: المنطقة
+            - combobox [disabled] [ref=f38e154]:
+              - textbox [disabled]
+            - combobox [disabled] [ref=f38e157]:
+              - textbox [disabled] [ref=f38e158]
+            - combobox [ref=f38e161] [cursor=pointer]:
+              - textbox
+          - generic [ref=f38e164]:
+            - generic [ref=f38e165]: المركز
+            - combobox [disabled] [ref=f38e168]:
+              - textbox [disabled]
+            - combobox [disabled] [ref=f38e171]:
+              - textbox [disabled] [ref=f38e172]
+            - combobox [ref=f38e175] [cursor=pointer]:
+              - textbox
+          - generic [ref=f38e178]:
+            - generic [ref=f38e179]: الحالة
+            - combobox [ref=f38e182] [cursor=pointer]:
+              - textbox "الكل" [ref=f38e183]
+            - combobox [ref=f38e186] [cursor=pointer]:
+              - textbox [ref=f38e187]
+            - combobox [ref=f38e190] [cursor=pointer]:
+              - textbox
+        - table [ref=f38e192]:
+          - rowgroup [ref=f38e193]:
+            - row [ref=f38e194]:
+              - columnheader "رمز الجمعية" [ref=f38e195]
+              - columnheader "اسم الجمعية" [ref=f38e196]
+              - columnheader "المنطقة" [ref=f38e197]
+              - columnheader "المركز" [ref=f38e198]
+              - columnheader "هاتف الاتصال" [ref=f38e199]
+              - columnheader "البريد الإلكتروني" [ref=f38e200]
+              - columnheader "الحالة" [ref=f38e201]
+              - columnheader "حقوق الإضافة" [ref=f38e202]
+              - columnheader "حقوق التعديل" [ref=f38e203]
+              - columnheader "الإجراءات" [ref=f38e204]
+          - rowgroup [ref=f38e205]:
+            - row [ref=f38e206]:
+              - cell [ref=f38e207]:
+                - strong [ref=f38e208]: "12345"
+              - cell "dga" [ref=f38e209]
+              - cell "جنوب سيناء" [ref=f38e211]
+              - cell "دهب" [ref=f38e212]
+              - cell "01067471965" [ref=f38e213]
+              - cell "osamaabdelaziz41@gmail.com" [ref=f38e214]
+              - cell "نشط" [ref=f38e215]
+              - cell "مفعل" [ref=f38e217]
+              - cell "مفعل" [ref=f38e219]
+              - cell [ref=f38e221]:
+                - generic [ref=f38e222]:
+                  - button "" [ref=f38e223] [cursor=pointer]
+                  - button "" [ref=f38e225] [cursor=pointer]
+                  - generic [ref=f38e227]:
+                    - button " " [ref=f38e228] [cursor=pointer]:
+                      - generic [ref=f38e229]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e230]:
+              - cell [ref=f38e231]:
+                - strong [ref=f38e232]: "345678"
+              - cell "dga2" [ref=f38e233]
+              - cell "جنوب سيناء" [ref=f38e235]
+              - cell "دهب" [ref=f38e236]
+              - cell "01067471965" [ref=f38e237]
+              - cell "osamaabdelaziz4100@gmail.com" [ref=f38e238]
+              - cell "نشط" [ref=f38e239]
+              - cell "مفعل" [ref=f38e241]
+              - cell "مفعل" [ref=f38e243]
+              - cell [ref=f38e245]:
+                - generic [ref=f38e246]:
+                  - button "" [ref=f38e247] [cursor=pointer]
+                  - button "" [ref=f38e249] [cursor=pointer]
+                  - generic [ref=f38e251]:
+                    - button " " [ref=f38e252] [cursor=pointer]:
+                      - generic [ref=f38e253]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e254]:
+              - cell [ref=f38e255]:
+                - strong [ref=f38e256]: "10002"
+              - cell "Headquarters" [ref=f38e257]
+              - cell "-" [ref=f38e259]
+              - cell "غير محدد" [ref=f38e260]
+              - cell [ref=f38e261]
+              - cell [ref=f38e262]
+              - cell "مقفل" [ref=f38e263]
+              - cell "معطل" [ref=f38e265]
+              - cell "معطل" [ref=f38e267]
+              - cell [ref=f38e269]:
+                - generic [ref=f38e270]:
+                  - button "" [ref=f38e271] [cursor=pointer]
+                  - button "" [ref=f38e273] [cursor=pointer]
+                  - generic [ref=f38e275]:
+                    - button " " [ref=f38e276] [cursor=pointer]:
+                      - generic [ref=f38e277]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e278]:
+              - cell [ref=f38e279]:
+                - strong [ref=f38e280]: "5555"
+              - cell "TestAdmin" [ref=f38e281]
+              - cell "-" [ref=f38e283]
+              - cell "غير محدد" [ref=f38e284]
+              - cell [ref=f38e285]
+              - cell [ref=f38e286]
+              - cell "نشط" [ref=f38e287]
+              - cell "معطل" [ref=f38e289]
+              - cell "معطل" [ref=f38e291]
+              - cell [ref=f38e293]:
+                - generic [ref=f38e294]:
+                  - button "" [ref=f38e295] [cursor=pointer]
+                  - button "" [ref=f38e297] [cursor=pointer]
+                  - generic [ref=f38e299]:
+                    - button " " [ref=f38e300] [cursor=pointer]:
+                      - generic [ref=f38e301]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e302]:
+              - cell [ref=f38e303]:
+                - strong [ref=f38e304]: "10009"
+              - cell "أيتام مكتب مصر" [ref=f38e305]
+              - cell "-" [ref=f38e307]
+              - cell "غير محدد" [ref=f38e308]
+              - cell [ref=f38e309]
+              - cell [ref=f38e310]
+              - cell "نشط" [ref=f38e311]
+              - cell "معطل" [ref=f38e313]
+              - cell "معطل" [ref=f38e315]
+              - cell [ref=f38e317]:
+                - generic [ref=f38e318]:
+                  - button "" [ref=f38e319] [cursor=pointer]
+                  - button "" [ref=f38e321] [cursor=pointer]
+                  - generic [ref=f38e323]:
+                    - button " " [ref=f38e324] [cursor=pointer]:
+                      - generic [ref=f38e325]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e326]:
+              - cell [ref=f38e327]:
+                - strong [ref=f38e328]: رمز الجمعية *
+              - cell "اسم الجمعية *" [ref=f38e329]
+              - cell "مرسى مطروح" [ref=f38e331]
+              - cell "مركز الضبعة" [ref=f38e332]
+              - cell "01054545111" [ref=f38e333]
+              - cell "01054545111@yahoo.com" [ref=f38e334]
+              - cell "نشط" [ref=f38e335]
+              - cell "مفعل" [ref=f38e337]
+              - cell "مفعل" [ref=f38e339]
+              - cell [ref=f38e341]:
+                - generic [ref=f38e342]:
+                  - button "" [ref=f38e343] [cursor=pointer]
+                  - button "" [ref=f38e345] [cursor=pointer]
+                  - generic [ref=f38e347]:
+                    - button " " [ref=f38e348] [cursor=pointer]:
+                      - generic [ref=f38e349]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e350]:
+              - cell [ref=f38e351]:
+                - strong [ref=f38e352]: "10003"
+              - cell "الجمعية الإسلامية للخدمات الاجتماعية - أوسيم" [ref=f38e353]
+              - cell "-" [ref=f38e355]
+              - cell "غير محدد" [ref=f38e356]
+              - cell [ref=f38e357]
+              - cell [ref=f38e358]
+              - cell "نشط" [ref=f38e359]
+              - cell "معطل" [ref=f38e361]
+              - cell "معطل" [ref=f38e363]
+              - cell [ref=f38e365]:
+                - generic [ref=f38e366]:
+                  - button "" [ref=f38e367] [cursor=pointer]
+                  - button "" [ref=f38e369] [cursor=pointer]
+                  - generic [ref=f38e371]:
+                    - button " " [ref=f38e372] [cursor=pointer]:
+                      - generic [ref=f38e373]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e374]:
+              - cell [ref=f38e375]:
+                - strong [ref=f38e376]: "52466"
+              - cell "الجمعية الإسلامية للخدمات الاجتماعية - الهياتم" [ref=f38e377]
+              - cell "-" [ref=f38e379]
+              - cell "المحلة الكبرى - حي ثاني" [ref=f38e380]
+              - cell "01126262963" [ref=f38e381]
+              - cell "alhyatem71@yahoo.com" [ref=f38e382]
+              - cell "نشط" [ref=f38e383]
+              - cell "مفعل" [ref=f38e385]
+              - cell "مفعل" [ref=f38e387]
+              - cell [ref=f38e389]:
+                - generic [ref=f38e390]:
+                  - button "" [ref=f38e391] [cursor=pointer]
+                  - button "" [ref=f38e393] [cursor=pointer]
+                  - generic [ref=f38e395]:
+                    - button " " [ref=f38e396] [cursor=pointer]:
+                      - generic [ref=f38e397]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e398]:
+              - cell [ref=f38e399]:
+                - strong [ref=f38e400]: "52423"
+              - cell "الجمعية الخيرية - وادى النطرون" [ref=f38e401]
+              - cell "-" [ref=f38e403]
+              - cell "وادي النطرون" [ref=f38e404]
+              - cell [ref=f38e405]
+              - cell [ref=f38e406]
+              - cell "مقفل" [ref=f38e407]
+              - cell "مفعل" [ref=f38e409]
+              - cell "مفعل" [ref=f38e411]
+              - cell [ref=f38e413]:
+                - generic [ref=f38e414]:
+                  - button "" [ref=f38e415] [cursor=pointer]
+                  - button "" [ref=f38e417] [cursor=pointer]
+                  - generic [ref=f38e419]:
+                    - button " " [ref=f38e420] [cursor=pointer]:
+                      - generic [ref=f38e421]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e422]:
+              - cell [ref=f38e423]:
+                - strong [ref=f38e424]: "10010"
+              - cell "الجمعية الخيرية الإسلامية بالعصايد" [ref=f38e425]
+              - cell "-" [ref=f38e427]
+              - cell "غير محدد" [ref=f38e428]
+              - cell [ref=f38e429]
+              - cell [ref=f38e430]
+              - cell "نشط" [ref=f38e431]
+              - cell "معطل" [ref=f38e433]
+              - cell "معطل" [ref=f38e435]
+              - cell [ref=f38e437]:
+                - generic [ref=f38e438]:
+                  - button "" [ref=f38e439] [cursor=pointer]
+                  - button "" [ref=f38e441] [cursor=pointer]
+                  - generic [ref=f38e443]:
+                    - button " " [ref=f38e444] [cursor=pointer]:
+                      - generic [ref=f38e445]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e446]:
+              - cell [ref=f38e447]:
+                - strong [ref=f38e448]: "52442"
+              - cell "الجمعية الخيرية الاسلامية - بئر العبد - شمال سيناء" [ref=f38e449]
+              - cell "-" [ref=f38e451]
+              - cell "بئر العبد" [ref=f38e452]
+              - cell "01007725406" [ref=f38e453]
+              - cell "gm3ia5yrea@gmail.com" [ref=f38e454]
+              - cell "نشط" [ref=f38e455]
+              - cell "مفعل" [ref=f38e457]
+              - cell "مفعل" [ref=f38e459]
+              - cell [ref=f38e461]:
+                - generic [ref=f38e462]:
+                  - button "" [ref=f38e463] [cursor=pointer]
+                  - button "" [ref=f38e465] [cursor=pointer]
+                  - generic [ref=f38e467]:
+                    - button " " [ref=f38e468] [cursor=pointer]:
+                      - generic [ref=f38e469]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e470]:
+              - cell [ref=f38e471]:
+                - strong [ref=f38e472]: "81004"
+              - cell "الجمعية الخيرية الاسلامية - ديو الوسطى" [ref=f38e473]
+              - cell "-" [ref=f38e475]
+              - cell "غير محدد" [ref=f38e476]
+              - cell [ref=f38e477]
+              - cell [ref=f38e478]
+              - cell "نشط" [ref=f38e479]
+              - cell "معطل" [ref=f38e481]
+              - cell "معطل" [ref=f38e483]
+              - cell [ref=f38e485]:
+                - generic [ref=f38e486]:
+                  - button "" [ref=f38e487] [cursor=pointer]
+                  - button "" [ref=f38e489] [cursor=pointer]
+                  - generic [ref=f38e491]:
+                    - button " " [ref=f38e492] [cursor=pointer]:
+                      - generic [ref=f38e493]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e494]:
+              - cell [ref=f38e495]:
+                - strong [ref=f38e496]: "81001"
+              - cell "الجمعية الخيرية الاسلامية والتنمية - ديروط الشريف" [ref=f38e497]
+              - cell "-" [ref=f38e499]
+              - cell "ديروط" [ref=f38e500]
+              - cell "01018588883" [ref=f38e501]
+              - cell "diroutelshref_296@yahoo.com" [ref=f38e502]
+              - cell "نشط" [ref=f38e503]
+              - cell "مفعل" [ref=f38e505]
+              - cell "مفعل" [ref=f38e507]
+              - cell [ref=f38e509]:
+                - generic [ref=f38e510]:
+                  - button "" [ref=f38e511] [cursor=pointer]
+                  - button "" [ref=f38e513] [cursor=pointer]
+                  - generic [ref=f38e515]:
+                    - button " " [ref=f38e516] [cursor=pointer]:
+                      - generic [ref=f38e517]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e518]:
+              - cell [ref=f38e519]:
+                - strong [ref=f38e520]: "52452"
+              - cell "الجمعية الخيرية لانشاء وتعمير المساجد - طهطا" [ref=f38e521]
+              - cell "-" [ref=f38e523]
+              - cell "غير محدد" [ref=f38e524]
+              - cell [ref=f38e525]
+              - cell [ref=f38e526]
+              - cell "نشط" [ref=f38e527]
+              - cell "معطل" [ref=f38e529]
+              - cell "معطل" [ref=f38e531]
+              - cell [ref=f38e533]:
+                - generic [ref=f38e534]:
+                  - button "" [ref=f38e535] [cursor=pointer]
+                  - button "" [ref=f38e537] [cursor=pointer]
+                  - generic [ref=f38e539]:
+                    - button " " [ref=f38e540] [cursor=pointer]:
+                      - generic [ref=f38e541]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e542]:
+              - cell [ref=f38e543]:
+                - strong [ref=f38e544]: "52434"
+              - cell "الجمعية الشرعية - ابو كبير" [ref=f38e545]
+              - cell "-" [ref=f38e547]
+              - cell "أبو كبير" [ref=f38e548]
+              - cell [ref=f38e549]
+              - cell [ref=f38e550]
+              - cell "نشط" [ref=f38e551]
+              - cell "معطل" [ref=f38e553]
+              - cell "معطل" [ref=f38e555]
+              - cell [ref=f38e557]:
+                - generic [ref=f38e558]:
+                  - button "" [ref=f38e559] [cursor=pointer]
+                  - button "" [ref=f38e561] [cursor=pointer]
+                  - generic [ref=f38e563]:
+                    - button " " [ref=f38e564] [cursor=pointer]:
+                      - generic [ref=f38e565]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e566]:
+              - cell [ref=f38e567]:
+                - strong [ref=f38e568]: "52422"
+              - cell "الجمعية الشرعية - العريش" [ref=f38e569]
+              - cell "-" [ref=f38e571]
+              - cell "العريش" [ref=f38e572]
+              - cell [ref=f38e573]
+              - cell [ref=f38e574]
+              - cell "نشط" [ref=f38e575]
+              - cell "معطل" [ref=f38e577]
+              - cell "معطل" [ref=f38e579]
+              - cell [ref=f38e581]:
+                - generic [ref=f38e582]:
+                  - button "" [ref=f38e583] [cursor=pointer]
+                  - button "" [ref=f38e585] [cursor=pointer]
+                  - generic [ref=f38e587]:
+                    - button " " [ref=f38e588] [cursor=pointer]:
+                      - generic [ref=f38e589]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e590]:
+              - cell [ref=f38e591]:
+                - strong [ref=f38e592]: "52465"
+              - cell "الجمعية الشرعية - قنتير" [ref=f38e593]
+              - cell "-" [ref=f38e595]
+              - cell "غير محدد" [ref=f38e596]
+              - cell [ref=f38e597]
+              - cell [ref=f38e598]
+              - cell "نشط" [ref=f38e599]
+              - cell "معطل" [ref=f38e601]
+              - cell "معطل" [ref=f38e603]
+              - cell [ref=f38e605]:
+                - generic [ref=f38e606]:
+                  - button "" [ref=f38e607] [cursor=pointer]
+                  - button "" [ref=f38e609] [cursor=pointer]
+                  - generic [ref=f38e611]:
+                    - button " " [ref=f38e612] [cursor=pointer]:
+                      - generic [ref=f38e613]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e614]:
+              - cell [ref=f38e615]:
+                - strong [ref=f38e616]: "55555"
+              - cell "اللاجئين اليمنيين - الجيزة - فيصل" [ref=f38e617]
+              - cell "-" [ref=f38e619]
+              - cell "حي فيصل" [ref=f38e620]
+              - cell [ref=f38e621]
+              - cell [ref=f38e622]
+              - cell "نشط" [ref=f38e623]
+              - cell "معطل" [ref=f38e625]
+              - cell "معطل" [ref=f38e627]
+              - cell [ref=f38e629]:
+                - generic [ref=f38e630]:
+                  - button "" [ref=f38e631] [cursor=pointer]
+                  - button "" [ref=f38e633] [cursor=pointer]
+                  - generic [ref=f38e635]:
+                    - button " " [ref=f38e636] [cursor=pointer]:
+                      - generic [ref=f38e637]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e638]:
+              - cell [ref=f38e639]:
+                - strong [ref=f38e640]: "81014"
+              - cell "ايتام مدينة شبين القناطر - القليوبية" [ref=f38e641]
+              - cell "-" [ref=f38e643]
+              - cell "شبين القناطر" [ref=f38e644]
+              - cell [ref=f38e645]
+              - cell [ref=f38e646]
+              - cell "نشط" [ref=f38e647]
+              - cell "معطل" [ref=f38e649]
+              - cell "مفعل" [ref=f38e651]
+              - cell [ref=f38e653]:
+                - generic [ref=f38e654]:
+                  - button "" [ref=f38e655] [cursor=pointer]
+                  - button "" [ref=f38e657] [cursor=pointer]
+                  - generic [ref=f38e659]:
+                    - button " " [ref=f38e660] [cursor=pointer]:
+                      - generic [ref=f38e661]: 
+                      - text: 
+                    - text:      
+            - row [ref=f38e662]:
+              - cell [ref=f38e663]:
+                - strong [ref=f38e664]: "81013"
+              - cell "ايتام مدينة وادي النطرون" [ref=f38e665]
+              - cell "-" [ref=f38e667]
+              - cell "وادي النطرون" [ref=f38e668]
+              - cell [ref=f38e669]
+              - cell [ref=f38e670]
+              - cell "نشط" [ref=f38e671]
+              - cell "معطل" [ref=f38e673]
+              - cell "معطل" [ref=f38e675]
+              - cell [ref=f38e677]:
+                - generic [ref=f38e678]:
+                  - button "" [ref=f38e679] [cursor=pointer]
+                  - button "" [ref=f38e681] [cursor=pointer]
+                  - generic [ref=f38e683]:
+                    - button " " [ref=f38e684] [cursor=pointer]:
+                      - generic [ref=f38e685]: 
+                      - text: 
+                    - text:      
+        - generic [ref=f38e686]:
+          - navigation [ref=f38e687]:
+            - list [ref=f38e688]:
+              - listitem [ref=f38e689]:
+                - link "":
+                  - /url: javascript:void(0)
+              - listitem [ref=f38e690]:
+                - link "":
+                  - /url: javascript:void(0)
+              - listitem [ref=f38e691]:
+                - link "1" [ref=f38e692] [cursor=pointer]:
+                  - /url: javascript:void(0)
+              - listitem [ref=f38e693]:
+                - link "2" [ref=f38e694] [cursor=pointer]:
+                  - /url: javascript:void(0)
+              - listitem [ref=f38e695]:
+                - link "3" [ref=f38e696] [cursor=pointer]:
+                  - /url: javascript:void(0)
+              - listitem [ref=f38e697]:
+                - link "4" [ref=f38e698] [cursor=pointer]:
+                  - /url: javascript:void(0)
+              - listitem [ref=f38e699]:
+                - link "5" [ref=f38e700] [cursor=pointer]:
+                  - /url: javascript:void(0)
+              - listitem [ref=f38e701]:
+                - link "" [ref=f38e702] [cursor=pointer]:
+                  - /url: javascript:void(0)
+              - listitem [ref=f38e704]:
+                - link "" [ref=f38e705] [cursor=pointer]:
+                  - /url: javascript:void(0)
+          - generic [ref=f38e707]: عرض 1 إلى 20 من 87
+  - contentinfo [ref=f38e708]:
+    - generic [ref=f38e710]:
+      - paragraph [ref=f38e712]: © 2026 IIROSA. جميع الحقوق محفوظة
+      - paragraph [ref=f38e714]: الإصدار 1.0.0

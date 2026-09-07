@@ -88,6 +88,19 @@
                 [label]="'families.phone'"
                 [placeholder]="'families.phonePlaceholder' | translate">
               </app-input-text>
+              <!-- UC-ORP-10 — duplicate-phone flag -->
+              <small class="text-danger d-block mt-1"
+                     *ngIf="phoneChecks['family'].status === 'duplicate'">
+                <i class="fe fe-alert-circle"></i>
+                {{ 'orphanCoding.phoneDuplicate' | translate }}
+                <span *ngIf="phoneChecks['family'].holderLabel">
+                  ({{ 'orphanCoding.phoneHeldBy' | translate }}: {{ phoneChecks['family'].holderLabel }})
+                </span>
+              </small>
+              <small class="text-muted d-block mt-1"
+                     *ngIf="phoneChecks['family'].status === 'checking'">
+                {{ 'orphanCoding.phoneChecking' | translate }}...
+              </small>
             </div>
             <div class="col-md-4">
               <app-drop-down
@@ -145,6 +158,7 @@
         [educationLevelOptions]="educationLevelOptions"
         [healthStatusOptions]="healthStatusOptions"
         [familyId]="familyId"
+        [phoneCheck]="phoneChecks['father']"
         (save)="saveFather()">
       </app-father-form>
 
@@ -154,6 +168,7 @@
         [educationLevelOptions]="educationLevelOptions"
         [healthStatusOptions]="healthStatusOptions"
         [familyId]="familyId"
+        [phoneCheck]="phoneChecks['mother']"
         (save)="saveMother()">
       </app-mother-form>
 
@@ -204,6 +219,19 @@
                   [label]="'families.phone'"
                   [placeholder]="'families.phonePlaceholder' | translate">
                 </app-input-text>
+                <!-- UC-ORP-10 — duplicate-phone flag -->
+                <small class="text-danger d-block mt-1"
+                       *ngIf="phoneChecks['provider'].status === 'duplicate'">
+                  <i class="fe fe-alert-circle"></i>
+                  {{ 'orphanCoding.phoneDuplicate' | translate }}
+                  <span *ngIf="phoneChecks['provider'].holderLabel">
+                    ({{ 'orphanCoding.phoneHeldBy' | translate }}: {{ phoneChecks['provider'].holderLabel }})
+                  </span>
+                </small>
+                <small class="text-muted d-block mt-1"
+                       *ngIf="phoneChecks['provider'].status === 'checking'">
+                  {{ 'orphanCoding.phoneChecking' | translate }}...
+                </small>
               </div>
               <div class="col-md-4">
                 <app-input-text

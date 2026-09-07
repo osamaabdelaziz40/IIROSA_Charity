@@ -1,0 +1,282 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e32]:
+    - navigation [ref=e33]:
+      - button "" [ref=e34] [cursor=pointer]
+      - list [ref=e36]:
+        - listitem [ref=e37]:
+          - link "العربية " [ref=e38] [cursor=pointer]:
+            - /url: "#"
+            - generic [ref=e39]: 
+            - text: العربية 
+        - listitem [ref=e40]:
+          - link "" [ref=e41] [cursor=pointer]:
+            - /url: "#"
+        - listitem [ref=e43]:
+          - link "" [ref=e44] [cursor=pointer]:
+            - /url: ./#
+        - listitem [ref=e47]:
+          - button [ref=e48] [cursor=pointer]:
+            - generic [ref=e49]:
+              - text: مرحبا System Admin
+              - img "..." [ref=e50]
+            - text: 
+    - complementary [ref=e51]:
+      - generic [ref=e56]:
+        - text: 
+        - navigation [ref=e57]:
+          - link [ref=e59] [cursor=pointer]:
+            - /url: "#/"
+            - img "IIROSA Logo" [ref=e60]
+          - paragraph [ref=e61]: عناصر الموقع
+          - list [ref=e62]:
+            - listitem [ref=e63]:
+              - link " الصفحة الرئيسية (current) " [ref=e64] [cursor=pointer]:
+                - /url: "#dashboard"
+                - generic [ref=e65]: 
+                - generic [ref=e66]: الصفحة الرئيسية
+                - generic [ref=e67]: (current)
+                - text: 
+              - list [ref=e68]:
+                - listitem [ref=e69]:
+                  - link "الرئيسية" [ref=e70] [cursor=pointer]:
+                    - /url: "#/"
+            - listitem [ref=e71]:
+              - link " المستخدمون " [ref=e72] [cursor=pointer]:
+                - /url: "#user-management"
+                - generic [ref=e73]: 
+                - generic [ref=e74]: المستخدمون
+                - text: 
+            - listitem [ref=e75]:
+              - link " الموظفون " [ref=e76] [cursor=pointer]:
+                - /url: "#employees"
+                - generic [ref=e77]: 
+                - generic [ref=e78]: الموظفون
+                - text: 
+            - listitem [ref=e79]:
+              - link " الجمعيات " [ref=e80] [cursor=pointer]:
+                - /url: "#charities"
+                - generic [ref=e81]: 
+                - generic [ref=e82]: الجمعيات
+                - text: 
+            - listitem [ref=e83]:
+              - link " مشاريع المكتب " [ref=e84] [cursor=pointer]:
+                - /url: "#office-development-projects"
+                - generic [ref=e85]: 
+                - generic [ref=e86]: مشاريع المكتب
+                - text: 
+              - list [ref=e500]:
+                - listitem [ref=e501]:
+                  - link "جميع مشاريع المكتب" [ref=e502] [cursor=pointer]:
+                    - /url: "#/office-development-projects"
+                - listitem [ref=e503]:
+                  - link "إضافة مشروع مكتب" [ref=e504] [cursor=pointer]:
+                    - /url: "#/office-development-projects/create"
+            - listitem [ref=e87]:
+              - link " مشاريع الإسكان " [ref=e88] [cursor=pointer]:
+                - /url: "#housing-projects"
+                - generic [ref=e89]: 
+                - generic [ref=e90]: مشاريع الإسكان
+                - text: 
+            - listitem [ref=e91]:
+              - link " المساعدات الموسمية " [ref=e92] [cursor=pointer]:
+                - /url: "#seasonal-aid"
+                - generic [ref=e93]: 
+                - generic [ref=e94]: المساعدات الموسمية
+                - text: 
+            - listitem [ref=e95]:
+              - link " الوارد والصادر " [ref=e96] [cursor=pointer]:
+                - /url: "#incoming-outgoing"
+                - generic [ref=e97]: 
+                - generic [ref=e98]: الوارد والصادر
+                - text: 
+            - listitem [ref=e99]:
+              - link " مدفوعات الأيتام " [ref=e100] [cursor=pointer]:
+                - /url: "#orphan-payments"
+                - generic [ref=e101]: 
+                - generic [ref=e102]: مدفوعات الأيتام
+                - text: 
+            - listitem [ref=e103]:
+              - link " الأسر " [ref=e104] [cursor=pointer]:
+                - /url: "#families"
+                - generic [ref=e105]: 
+                - generic [ref=e106]: الأسر
+                - text: 
+            - listitem [ref=e107]:
+              - link " التقارير " [ref=e108] [cursor=pointer]:
+                - /url: "#reports"
+                - generic [ref=e109]: 
+                - generic [ref=e110]: التقارير
+                - text: 
+            - listitem [ref=e111]:
+              - link " الشيكات العامة " [ref=e112] [cursor=pointer]:
+                - /url: "#general-checks"
+                - generic [ref=e113]: 
+                - generic [ref=e114]: الشيكات العامة
+                - text: 
+            - listitem [ref=e115]:
+              - link " المهام " [ref=e116] [cursor=pointer]:
+                - /url: "#missions"
+                - generic [ref=e117]: 
+                - generic [ref=e118]: المهام
+                - text: 
+            - listitem [ref=e119]:
+              - link " التقارير الدورية للأيتام " [ref=e120] [cursor=pointer]:
+                - /url: "#periodic-orphan-reports"
+                - generic [ref=e121]: 
+                - generic [ref=e122]: التقارير الدورية للأيتام
+                - text: 
+            - listitem [ref=e123]:
+              - link " الحوالات المالية " [ref=e124] [cursor=pointer]:
+                - /url: "#hq-transfers"
+                - generic [ref=e125]: 
+                - generic [ref=e126]: الحوالات المالية
+                - text: 
+            - listitem [ref=e127]:
+              - link " الدعم الفني " [ref=e128] [cursor=pointer]:
+                - /url: "#technical-support"
+                - generic [ref=e129]: 
+                - generic [ref=e130]: الدعم الفني
+                - text: 
+            - listitem [ref=e131]:
+              - link " إدارة الجداول المرجعية " [ref=e132] [cursor=pointer]:
+                - /url: "#lookup-management"
+                - generic [ref=e133]: 
+                - generic [ref=e134]: إدارة الجداول المرجعية
+                - text: 
+    - main [ref=e135]:
+      - generic [ref=e846]:
+        - generic [ref=e847]:
+          - navigation "breadcrumb" [ref=e849]:
+            - list [ref=e850]:
+              - listitem [ref=e851]:
+                - link "الرئيسية" [ref=e852] [cursor=pointer]:
+                  - /url: "#/dashboard"
+              - listitem [ref=e853]:
+                - text: /
+                - link "مشاريع التنمية المكتبية" [ref=e854] [cursor=pointer]:
+                  - /url: "#/office-development-projects"
+              - listitem [ref=e855]:
+                - text: /
+                - generic [ref=e856]: تفاصيل المشروع
+          - generic [ref=e857]:
+            - heading " تفاصيل المشروع" [level=2] [ref=e858]:
+              - generic [ref=e859]: 
+              - text: تفاصيل المشروع
+            - generic [ref=e860]:
+              - button " رجوع" [ref=e861] [cursor=pointer]:
+                - generic [ref=e862]: 
+                - text: رجوع
+              - button " تعديل" [ref=e863] [cursor=pointer]:
+                - generic [ref=e864]: 
+                - text: تعديل
+              - button " تعيين كمكتمل" [ref=e865] [cursor=pointer]:
+                - generic [ref=e866]: 
+                - text: تعيين كمكتمل
+              - button " حذف" [ref=e867] [cursor=pointer]:
+                - generic [ref=e868]: 
+                - text: حذف
+        - generic [ref=e870]:
+          - generic [ref=e872]:
+            - heading "المعلومات الأساسية" [level=5] [ref=e874]
+            - generic [ref=e875]:
+              - generic [ref=e876]:
+                - generic [ref=e878]:
+                  - generic [ref=e879]: اسم المشروع
+                  - generic [ref=e880]: Playwright Test Project
+                - generic [ref=e882]:
+                  - generic [ref=e883]: تاريخ المشروع
+                  - generic [ref=e884]: 9/2/2026
+              - generic [ref=e887]:
+                - generic [ref=e888]: وصف المشروع
+                - generic [ref=e889]: Test description
+              - generic [ref=e892]:
+                - generic [ref=e893]: تاريخ انتهاء المشروع
+                - generic [ref=e894]: 12/31/2026
+          - generic [ref=e896]:
+            - heading "تصنيف المشروع" [level=5] [ref=e898]
+            - generic [ref=e902]:
+              - generic [ref=e903]: نوع مشروع المكتب
+              - generic [ref=e904]: دواجن
+          - generic [ref=e906]:
+            - heading "الموقع" [level=5] [ref=e908]
+            - generic [ref=e910]:
+              - generic [ref=e912]:
+                - generic [ref=e913]: الدولة
+                - generic [ref=e914]: مصر
+              - generic [ref=e916]:
+                - generic [ref=e917]: المنطقة
+                - generic [ref=e918]: القاهرة
+              - generic [ref=e920]:
+                - generic [ref=e921]: المركز
+                - generic [ref=e922]: مدينة نصر - حي شرق
+              - generic [ref=e924]:
+                - generic [ref=e925]: اسم القرية
+                - generic [ref=e926]: Test Village
+          - generic [ref=e928]:
+            - heading "المعلومات المالية" [level=5] [ref=e930]
+            - generic [ref=e932]:
+              - generic [ref=e934]:
+                - generic [ref=e935]: تكلفة المشروع (جنيه مصري)
+                - generic [ref=e936]: 1,000.00 EGP
+              - generic [ref=e938]:
+                - generic [ref=e939]: تكلفة المشروع (ريال سعودي)
+                - generic [ref=e940]: 200.00 SAR
+              - generic [ref=e942]:
+                - generic [ref=e943]: اسم المتبرع
+                - generic [ref=e944]: Test Donor
+          - generic [ref=e946]:
+            - heading "المستفيدون" [level=5] [ref=e948]
+            - generic [ref=e950]:
+              - generic [ref=e952]:
+                - generic [ref=e953]: عدد المستفيدين
+                - generic [ref=e954]: "5"
+              - generic [ref=e956]:
+                - generic [ref=e957]: نوع المستفيدين
+                - generic [ref=e958]: أسر
+          - generic [ref=e960]:
+            - heading "تعيين الجمعية" [level=5] [ref=e962]
+            - generic [ref=e966]:
+              - generic [ref=e967]: الجمعية المعينة
+              - generic [ref=e968]: "-"
+          - generic [ref=e970]:
+            - heading "الحالة" [level=5] [ref=e972]
+            - generic [ref=e974]:
+              - generic [ref=e976]:
+                - generic [ref=e977]: مكتمل
+                - generic [ref=e978]: قيد التنفيذ
+              - generic [ref=e980]:
+                - generic [ref=e981]: تاريخ انتهاء المشروع
+                - generic [ref=e982]: 12/31/2026
+          - generic [ref=e984]:
+            - heading "المستندات" [level=5] [ref=e986]
+            - generic [ref=e988]:
+              - generic [ref=e990]:
+                - generic [ref=e991]: الملف المرفق
+                - generic [ref=e992]: "-"
+              - generic [ref=e994]:
+                - generic [ref=e995]: ملف تقرير المشروع
+                - generic [ref=e996]: "-"
+          - generic [ref=e998]:
+            - heading "سجل التدقيق" [level=5] [ref=e1000]
+            - generic [ref=e1001]:
+              - generic [ref=e1002]:
+                - generic [ref=e1004]:
+                  - generic [ref=e1005]: تم الإنشاء في
+                  - generic [ref=e1006]: 9/2/2026
+                - generic [ref=e1008]:
+                  - generic [ref=e1009]: تم التعديل في
+                  - generic [ref=e1010]: 9/2/2026
+              - generic [ref=e1011]:
+                - generic [ref=e1013]:
+                  - generic [ref=e1014]: أنشأ بواسطة
+                  - generic [ref=e1015]: Anonymous
+                - generic [ref=e1017]:
+                  - generic [ref=e1018]: عدل بواسطة
+                  - generic [ref=e1019]: "-"
+    - contentinfo [ref=e489]:
+      - generic [ref=e491]:
+        - paragraph [ref=e493]: © 2026 IIROSA. جميع الحقوق محفوظة
+        - paragraph [ref=e495]: الإصدار 1.0.0
+  - alert [ref=e1020]:
+    - 'heading "Success: تم إنشاء المشروع بنجاح" [level=2] [ref=e1028]'
+    - text: "!"

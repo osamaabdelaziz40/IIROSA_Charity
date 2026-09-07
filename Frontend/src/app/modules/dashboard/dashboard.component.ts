@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
+import type { ApexOptions } from 'apexcharts';
 import { BreadcrumbComponent, BreadcrumbItem, ApexChartComponent } from '../../shared/components';
 
 @Component({
@@ -39,30 +40,159 @@ export class DashboardComponent {
     { id: 3, title: 'Orphanage Visit', date: '2026-05-20', time: '02:00 PM' }
   ];
 
-  // Chart data
-  chartSeries = [
-    { name: 'Charities', data: [32, 66, 44, 55, 41, 24, 67, 22, 43, 32, 66, 44] },
-    { name: 'Orphans', data: [7, 30, 13, 23, 20, 12, 8, 13, 27, 7, 30, 13] }
-  ];
+  // Chart options are one-time readonly fields: the data is static, and handing
+  // apx-chart a fresh options object on every change-detection pass would force
+  // ApexCharts to re-render each cycle.
+  readonly monthlyChartOptions: ApexOptions = {
+    theme: { mode: 'dark' },
+    chart: {
+      type: 'bar',
+      height: 350,
+      background: 'transparent',
+      toolbar: { show: false },
+      zoom: { enabled: true }
+    },
+    series: [
+      { name: 'Charities', data: [32, 66, 44, 55, 41, 24, 67, 22, 43, 32, 66, 44] },
+      { name: 'Orphans', data: [7, 30, 13, 23, 20, 12, 8, 13, 27, 7, 30, 13] }
+    ],
+    plotOptions: {
+      bar: {
+        horizontal: false,
+        columnWidth: '40%',
+        borderRadius: 4
+      }
+    },
+    grid: {
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      strokeDashArray: 4
+    },
+    xaxis: {
+      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      labels: { style: { colors: '#9ca3af' } }
+    },
+    yaxis: { labels: { style: { colors: '#9ca3af' } } },
+    legend: { position: 'top', labels: { colors: '#9ca3af' } },
+    fill: { opacity: 1 }
+  };
 
-  chartCategories = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  readonly financialChartOptions: ApexOptions = {
+    theme: { mode: 'dark' },
+    chart: {
+      type: 'line',
+      height: 350,
+      background: 'transparent',
+      toolbar: { show: false },
+      zoom: { enabled: false }
+    },
+    series: [
+      { name: 'Donations', data: [31, 28, 30, 51, 42, 109, 100, 31, 40, 28, 31, 58] },
+      { name: 'Expenses', data: [11, 45, 20, 32, 34, 52, 41, 11, 32, 45, 11, 75] }
+    ],
+    stroke: {
+      curve: 'smooth',
+      width: 3
+    },
+    grid: {
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      strokeDashArray: 4
+    },
+    xaxis: {
+      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      labels: { style: { colors: '#9ca3af' } }
+    },
+    yaxis: { labels: { style: { colors: '#9ca3af' } } },
+    legend: { position: 'top', labels: { colors: '#9ca3af' } },
+    tooltip: { theme: 'dark' }
+  };
 
-  lineChartSeries = [
-    { name: 'Donations', data: [31, 28, 30, 51, 42, 109, 100, 31, 40, 28, 31, 58] },
-    { name: 'Expenses', data: [11, 45, 20, 32, 34, 52, 41, 11, 32, 45, 11, 75] }
-  ];
+  readonly familyGrowthChartOptions: ApexOptions = {
+    theme: { mode: 'dark' },
+    chart: {
+      type: 'area',
+      height: 350,
+      stacked: true,
+      background: 'transparent',
+      toolbar: { show: false }
+    },
+    series: [
+      { name: 'Active Families', data: [31, 28, 30, 51, 42, 109, 100, 31, 40, 28, 31, 58] },
+      { name: 'New Families', data: [11, 45, 20, 32, 34, 52, 41, 11, 32, 45, 11, 75] }
+    ],
+    stroke: {
+      curve: 'smooth',
+      width: 0
+    },
+    grid: {
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      strokeDashArray: 4
+    },
+    xaxis: {
+      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      labels: { style: { colors: '#9ca3af' } }
+    },
+    yaxis: { labels: { style: { colors: '#9ca3af' } } },
+    legend: { position: 'top', labels: { colors: '#9ca3af' } }
+  };
 
-  areaChartSeries = [
-    { name: 'Active Families', data: [31, 28, 30, 51, 42, 109, 100, 31, 40, 28, 31, 58] },
-    { name: 'New Families', data: [11, 45, 20, 32, 34, 52, 41, 11, 32, 45, 11, 75] }
-  ];
+  readonly budgetChartOptions: ApexOptions = {
+    theme: { mode: 'dark' },
+    chart: {
+      type: 'donut',
+      height: 350,
+      background: 'transparent',
+      toolbar: { show: false }
+    },
+    series: [44, 55, 20, 41],
+    labels: ['Education', 'Healthcare', 'Housing', 'Food'],
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '70%'
+        }
+      }
+    },
+    grid: {
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      strokeDashArray: 4
+    },
+    legend: { position: 'bottom', labels: { colors: '#9ca3af' } },
+    stroke: {
+      show: true,
+      colors: ['#1f2937']
+    }
+  };
 
-  donutChartSeries = [44, 55, 20, 41];
-  donutChartLabels = ['Education', 'Healthcare', 'Housing', 'Food'];
-
-  radarChartSeries = [
-    { name: 'This Year', data: [80, 50, 30, 40, 100, 20] },
-    { name: 'Last Year', data: [20, 30, 40, 80, 20, 80] }
-  ];
-  radarChartCategories = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6'];
+  readonly performanceChartOptions: ApexOptions = {
+    theme: { mode: 'dark' },
+    chart: {
+      type: 'radar',
+      height: 350,
+      background: 'transparent',
+      toolbar: { show: false }
+    },
+    series: [
+      { name: 'This Year', data: [80, 50, 30, 40, 100, 20] },
+      { name: 'Last Year', data: [20, 30, 40, 80, 20, 80] }
+    ],
+    plotOptions: {
+      radar: {
+        polygons: {
+          strokeColors: 'rgba(255, 255, 255, 0.1)',
+          connectorColors: 'rgba(255, 255, 255, 0.1)'
+        }
+      }
+    },
+    xaxis: {
+      categories: ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6'],
+      labels: { style: { colors: '#9ca3af' } }
+    },
+    yaxis: { labels: { style: { colors: '#9ca3af' } } }
+  };
 }

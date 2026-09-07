@@ -133,9 +133,12 @@ public class MissionRepository : Repository<Mission>, IMissionRepository
         return _dbSet
             .Include(m => m.MissionType)
             .Include(m => m.MissionTimeType)
+            .Include(m => m.MissionInterviewType)
             .Include(m => m.Country)
             .Include(m => m.Region)
-            .Include(m => m.Center);
+            .Include(m => m.Center)
+            .Include(m => m.AssignedUser)
+            .Include(m => m.Charity);
     }
 
     public IQueryable<Mission> IncludeSpecificNavigationProperties(params Expression<Func<Mission, object>>[] includes)

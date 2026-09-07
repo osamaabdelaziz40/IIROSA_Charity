@@ -38,4 +38,10 @@ public interface IOrphanPaymentItemRepository : IRepository<OrphanPaymentItem>
     /// Get items with orphan details for a payment group
     /// </summary>
     Task<IEnumerable<OrphanPaymentItem>> GetWithOrphansByGroupAsync(Guid orphanPaymentId);
+
+    /// <summary>
+    /// UC-ORP-11: payment groups containing orphans of the given charity — the charity scope of
+    /// the batch-number reference list.
+    /// </summary>
+    Task<List<Guid>> GetGroupIdsByCharityAsync(Guid charityId);
 }

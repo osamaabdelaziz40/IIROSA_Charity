@@ -42,7 +42,7 @@ public class OrphanRepository : Repository<Orphan>, IOrphanRepository
 
     public async Task<(IEnumerable<Orphan> Items, int TotalCount)> SearchFilteredAsync(
         string? searchTerm = null,
-        int? charityId = null,
+        Guid? charityId = null,
         int? regionId = null,
         int? centerId = null,
         string? sponsorshipStatus = null,
@@ -64,32 +64,41 @@ public class OrphanRepository : Repository<Orphan>, IOrphanRepository
                 (o.Family != null && o.Family.HeadOfFamily != null && o.Family.HeadOfFamily.Contains(searchTerm)));
         }
 
-        // Apply charity filter
-        // Note: FK_CharityId is Guid? but parameter is int? - there's a type mismatch in the data model
-        // TODO: Revisit this - charityId should be Guid? to match FK_CharityId type
-        // For now, this filter won't work correctly due to type mismatch
+        // Apply charity filter — review P17: uses the standing derived-charity model
+        // (Orphan.FK_CharityId ?? Family.FK_CharityId) so family-tenanted orphans match
+        // like they do on every other surface of this vertical.
         if (charityId.HasValue)
         {
-            // This won't work - int vs Guid comparison
-            // query = query.Where(o => o.FK_CharityId == charityId.Value);
+            var cid = charityId.Value;
+            query = query.Where(o => o.FK_CharityId == cid ||
+                (o.FK_CharityId == null && o.Family != null && o.Family.FK_CharityId == cid));
         }
 
-        // Apply region filter (via family)
-        // Note: Family doesn't have RegionId property - only Charity has it
-        // TODO: Implement region filtering via Charity relationship
+        // Apply region filter — review P17: Region/Center live on Charity (not Family),
+        // resolved through the same derived charity; previously a silent no-op.
         if (regionId.HasValue)
         {
-            // Can't filter by Family.RegionId as it doesn't exist
-            // Would need to join through Charity: o.Family.Charity.RegionId
+            var rid = regionId.Value;
+            var charityIdsInRegion = _context.Set<Charity>()
+                .Where(c => !c.IsDeleted && c.RegionId == rid)
+                .Select(c => c.Id);
+            query = query.Where(o =>
+                (o.FK_CharityId != null && charityIdsInRegion.Contains(o.FK_CharityId.Value)) ||
+                (o.FK_CharityId == null && o.Family != null && o.Family.FK_CharityId != null &&
+                 charityIdsInRegion.Contains(o.Family.FK_CharityId.Value)));
         }
 
-        // Apply center filter (via family)
-        // Note: Family doesn't have CenterId property - only Charity has it
-        // TODO: Implement center filtering via Charity relationship
+        // Apply center filter — review P17, same derived-charity path as region.
         if (centerId.HasValue)
         {
-            // Can't filter by Family.CenterId as it doesn't exist
-            // Would need to join through Charity: o.Family.Charity.CenterId
+            var centId = centerId.Value;
+            var charityIdsInCenter = _context.Set<Charity>()
+                .Where(c => !c.IsDeleted && c.CenterId == centId)
+                .Select(c => c.Id);
+            query = query.Where(o =>
+                (o.FK_CharityId != null && charityIdsInCenter.Contains(o.FK_CharityId.Value)) ||
+                (o.FK_CharityId == null && o.Family != null && o.Family.FK_CharityId != null &&
+                 charityIdsInCenter.Contains(o.Family.FK_CharityId.Value)));
         }
 
         // Apply sponsorship status filter
@@ -222,7 +231,9 @@ public class OrphanRepository : Repository<Orphan>, IOrphanRepository
     {
         return _dbSet
             .Include(o => o.Family)
-            .Include(o => o.Sponsor);
+            .Include(o => o.Sponsor)
+            // Refugee register (§12.S.2 اضافة ابن) — social status name
+            .Include(o => o.SocialStatus);
     }
 
     #endregion

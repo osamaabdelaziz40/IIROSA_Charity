@@ -9,12 +9,12 @@ import { IncomingOutgoingRoutingModule } from './incoming-outgoing-routing.modul
 import { IncomingLettersListComponent } from './incoming-letters/incoming-letters-list.component';
 import { IncomingLetterFormComponent } from './incoming-letters/incoming-letter-form.component';
 import { IncomingLetterDetailComponent } from './incoming-letters/incoming-letter-detail.component';
+import { IncomingLetterEmployeesComponent } from './incoming-employees/incoming-letter-employees.component';
 import { OutgoingLettersListComponent } from './outgoing-letters/outgoing-letters-list.component';
 import { OutgoingLetterFormComponent } from './outgoing-letters/outgoing-letter-form.component';
 import { OutgoingLetterDetailComponent } from './outgoing-letters/outgoing-letter-detail.component';
-import { ImportWizardComponent } from './import-wizard/import-wizard.component';
-import { ExportWizardComponent } from './export-wizard/export-wizard.component';
-import { HistoryComponent } from './history/history.component';
+import { OutgoingLetterOrphansComponent } from './outgoing-orphans/outgoing-letter-orphans.component';
+import { OutgoingOrphansReportComponent } from './outgoing-orphans-report/outgoing-orphans-report.component';
 
 @NgModule({
   declarations: [
@@ -30,12 +30,12 @@ import { HistoryComponent } from './history/history.component';
     IncomingLettersListComponent,
     IncomingLetterFormComponent,
     IncomingLetterDetailComponent,
+    IncomingLetterEmployeesComponent,
     OutgoingLettersListComponent,
     OutgoingLetterFormComponent,
     OutgoingLetterDetailComponent,
-    ImportWizardComponent,
-    ExportWizardComponent,
-    HistoryComponent
+    OutgoingLetterOrphansComponent,
+    OutgoingOrphansReportComponent
   ]
 })
 export class IncomingOutgoingModule { }

@@ -1,0 +1,16 @@
+.report-header {
+  border-bottom: 2px solid var(--primary, #6f42c1);
+}
+
+/* Keep action buttons out of the printed page (UC-PRJ-12). */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .card {
+    border: 1px solid #ccc;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+}

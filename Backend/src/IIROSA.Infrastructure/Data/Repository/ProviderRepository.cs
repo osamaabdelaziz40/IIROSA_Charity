@@ -48,6 +48,10 @@ public class ProviderRepository : Repository<Provider>, IProviderRepository
     /// </summary>
     public System.Linq.IQueryable<Provider> IncludeNavigationProperties()
     {
-        return _dbSet.Include(p => p.Family);
+        return _dbSet
+            .Include(p => p.Family)
+            // Refugee register (§12.S.2 اضافة معيل) — nationality + reason-of-relation names
+            .Include(p => p.Country)
+            .Include(p => p.ReasonOfRelation);
     }
 }

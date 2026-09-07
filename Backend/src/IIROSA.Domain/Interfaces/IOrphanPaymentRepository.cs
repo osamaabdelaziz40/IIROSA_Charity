@@ -39,7 +39,7 @@ public interface IOrphanPaymentRepository : IRepository<OrphanPayment>
         DateTime? groupDateFrom = null,
         DateTime? groupDateTo = null,
         bool? isBatchUploaded = null,
-        int? charityId = null,
+        Guid? charityId = null,
         int pageNumber = 1,
         int pageSize = 10,
         string? sortBy = null,

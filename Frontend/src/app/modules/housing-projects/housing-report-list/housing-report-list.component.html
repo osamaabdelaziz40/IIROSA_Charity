@@ -1,0 +1,210 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'housingProjects.reports.title' | translate"
+  [subtitle]="family?.code || ('housingProjects.reports.subtitle' | translate)"
+  [icon]="'fe fe-file-text'"
+  [actions]="pageActions">
+</app-page-header>
+
+<!-- Family context — the 6-4 aggregate is loading -->
+<div *ngIf="familyLoading" class="card">
+  <div class="card-body text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">{{ 'common.loading' | translate }}</span>
+    </div>
+  </div>
+</div>
+
+<ng-container *ngIf="!familyLoading">
+  <!-- §11.S.3 filters: الجمعية · يخص · اسم الابن · البحث بالكود (UC-HOU-07) -->
+  <div class="card shadow mb-4">
+    <div class="card-body">
+      <form [formGroup]="filterForm">
+        <div class="row mb-3">
+          <!-- الجمعية — HQ roles only; charity callers are pinned server-side -->
+          <div class="col-md-3" *ngIf="isHQ">
+            <app-drop-down
+              [fg]="filterForm"
+              fcn="charityId"
+              [label]="'housingProjects.filters.charity'"
+              [initialData]="charityOptions"
+              [hasDefaultValue]="true"
+              (onDropDownChanged)="onCharityChanged()">
+            </app-drop-down>
+          </div>
+
+          <!-- يخص — the §11.U.6 ChildOrParent discriminator -->
+          <div class="col-md-2">
+            <app-drop-down
+              [fg]="filterForm"
+              fcn="beneficiaryType"
+              [label]="'housingProjects.reports.filters.beneficiaryType'"
+              [initialData]="beneficiaryTypeOptions"
+              [hasDefaultValue]="true"
+              (onDropDownChanged)="onBeneficiaryTypeChanged()">
+            </app-drop-down>
+          </div>
+
+          <!-- اسم الابن — name narrowing among the family's child beneficiaries -->
+          <div class="col-md-3" *ngIf="beneficiaryType === 'Child'">
+            <div class="form-group">
+              <label>{{ 'housingProjects.reports.filters.childNameSearch' | translate }}</label>
+              <input type="text" class="form-control" formControlName="childSearch"
+                     [placeholder]="'housingProjects.reports.filters.childNameSearchPlaceholder' | translate"
+                     (keyup.enter)="onSearch()">
+            </div>
+          </div>
+
+          <!-- البحث بالكود — UC-HOU-07 exact child-code resolve (codes belong to children) -->
+          <div class="col-md-4" *ngIf="beneficiaryType === 'Child'">
+            <div class="form-group">
+              <label>{{ 'housingProjects.reports.filters.code' | translate }}</label>
+              <div class="input-group">
+                <input type="text" class="form-control" formControlName="codeSearch"
+                       [placeholder]="'housingProjects.reports.filters.codePlaceholder' | translate"
+                       (keyup.enter)="resolveByCode()">
+                <div class="input-group-append">
+                  <button class="btn btn-primary" type="button" (click)="resolveByCode()"
+                          [title]="'common.search' | translate">
+                    <i class="fe fe-search"></i>
+                  </button>
+                </div>
+              </div>
+              <!-- 0 rows = explicit not-found, never a silent empty grid -->
+              <small class="text-danger d-block mt-1" *ngIf="codeNotFound">
+                {{ 'housingProjects.reports.codeNotFound' | translate }}
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-12">
+            <button class="btn btn-primary" type="button" (click)="onSearch()">
+              <i class="fe fe-search mr-1"></i>
+              {{ 'common.search' | translate }}
+            </button>
+            <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary ml-2" type="button" (click)="clearFilters()">
+              <i class="fe fe-x mr-1"></i>
+              {{ 'common.clearFilters' | translate }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- UC-HOU-07 beneficiary summary — WHO is being reported on, before the grid -->
+  <div class="beneficiary-strip" *ngIf="selectedBeneficiary">
+    <span class="strip-label">{{ 'housingProjects.reports.beneficiary' | translate }}</span>
+    <span class="strip-name">{{ selectedBeneficiary.fullName }}</span>
+    <span class="strip-item" *ngIf="selectedBeneficiary.code">
+      {{ 'housingProjects.reports.filters.code' | translate }}: {{ selectedBeneficiary.code }}
+    </span>
+    <span class="strip-item" *ngIf="selectedBeneficiary.nationalId">
+      {{ 'housingProjects.reports.summary.nationalId' | translate }}: {{ selectedBeneficiary.nationalId }}
+    </span>
+    <span class="strip-item">
+      {{ 'housingProjects.reports.summary.type' | translate }}: {{ beneficiaryTypeLabel(selectedBeneficiary) }}
+    </span>
+    <span class="strip-item" *ngIf="selectedBeneficiary.age != null">
+      {{ 'housingProjects.reports.summary.age' | translate }}: {{ selectedBeneficiary.age }}
+    </span>
+  </div>
+
+  <!-- HQ picked another charity — the family is out of that scope by choice -->
+  <div *ngIf="charityOutOfScope" class="alert alert-info">
+    {{ 'housingProjects.reports.charityOutOfScope' | translate }}
+  </div>
+
+  <div class="card shadow mb-4">
+    <div class="card-body">
+      <!-- Loading State -->
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">{{ 'common.loading' | translate }}</span>
+        </div>
+      </div>
+
+      <!-- §11.S.3 grid: الرقم · رقم التقرير · التاريخ · تم الاعتماد · تاريخ الاعتماد -->
+      <div *ngIf="!loading" class="table-responsive">
+        <table class="table table-hover table-striped">
+          <thead>
+            <tr>
+              <th>{{ 'housingProjects.columns.serial' | translate }}</th>
+              <th>{{ 'housingProjects.reports.columns.reportNo' | translate }}</th>
+              <th>{{ 'housingProjects.reports.columns.reportDate' | translate }}</th>
+              <th>{{ 'housingProjects.reports.columns.isAccepted' | translate }}</th>
+              <th>{{ 'housingProjects.reports.columns.approvalDate' | translate }}</th>
+              <th>{{ 'common.actions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let report of reports; let i = index; trackBy: trackByReportId">
+              <!-- الرقم — continuous across pages -->
+              <td>{{ rowSerial(i) }}</td>
+              <!-- رقم التقرير -->
+              <td><strong>{{ report.reportNo || '—' }}</strong></td>
+              <!-- التاريخ -->
+              <td>{{ datePart(report.reportDate) }}</td>
+              <!-- تم الاعتماد -->
+              <td>
+                <span class="badge" [ngClass]="report.isAccepted ? 'badge-success' : 'badge-secondary'">
+                  {{ (report.isAccepted ? 'common.yes' : 'common.no') | translate }}
+                </span>
+              </td>
+              <!-- تاريخ الاعتماد -->
+              <td>{{ datePart(report.reviewedDate) }}</td>
+              <!-- الاجراءات — add/edit live (6-8); print stays epic 18; delete is live -->
+              <td>
+                <div class="btn-group">
+                  <button type="button" class="btn btn-sm btn-light"
+                          [disabled]="!selectedBeneficiary || charityOutOfScope"
+                          [title]="'housingProjects.reports.commands.add' | translate"
+                          [attr.aria-label]="'housingProjects.reports.commands.add' | translate"
+                          (click)="addReport()">
+                    <i class="fe fe-plus"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-light"
+                          [disabled]="report.isAccepted && !report.isRefused"
+                          [title]="'housingProjects.reports.commands.edit' | translate"
+                          [attr.aria-label]="'housingProjects.reports.commands.edit' | translate"
+                          (click)="editReport(report)">
+                    <i class="fe fe-edit-2"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-light"
+                          *ngIf="canDelete"
+                          [disabled]="report.isAccepted"
+                          [title]="'housingProjects.reports.commands.delete' | translate"
+                          (click)="deleteReport(report)">
+                    <i class="fe fe-trash-2"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-light" disabled
+                          [title]="'housingProjects.reports.commands.printDisabled' | translate"
+                          [attr.aria-label]="'housingProjects.reports.commands.print' | translate">
+                    <i class="fe fe-printer"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="!loading && reports.length === 0">
+              <td colspan="6" class="text-center text-muted py-4">
+                {{ (selectedBeneficiary && !charityOutOfScope
+                    ? 'housingProjects.reports.empty'
+                    : 'housingProjects.reports.noBeneficiary') | translate }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <app-pagination
+        [currentPage]="currentPage"
+        [pageSize]="pageSize"
+        [totalCount]="totalCount"
+        (pageChange)="onPageChange($event)">
+      </app-pagination>
+    </div>
+  </div>
+</ng-container>

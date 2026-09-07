@@ -5,58 +5,19 @@ using System.Linq.Expressions;
 namespace IIROSA.Domain.Interfaces;
 
 /// <summary>
-/// OfficeProject Repository Interface
-/// Defines data access operations for OfficeProject entity
-/// Implements use cases UC-7.1 through UC-7.14
+/// OfficeProject Repository Interface (UC-OFP-01…06)
 /// </summary>
 public interface IOfficeProjectRepository : IRepository<OfficeProject>
 {
-    // ========== OfficeProject-Specific Queries ==========
-
     /// <summary>
-    /// Get projects assigned to a specific charity (UC-7.14)
+    /// Get a single project with all navigation properties loaded, so the detail DTO carries the
+    /// lookup names and FK ids the edit form patches from (UC-OFP-04)
     /// </summary>
-    Task<IEnumerable<OfficeProject>> GetByCharityIdAsync(Guid charityId);
+    Task<OfficeProject?> GetByIdWithDetailsAsync(Guid id);
 
     /// <summary>
-    /// Get projects by completion status (UC-7.9, UC-7.10)
-    /// </summary>
-    Task<IEnumerable<OfficeProject>> GetByStatusAsync(bool isFinished);
-
-    /// <summary>
-    /// Get projects by project type (UC-7.1)
-    /// </summary>
-    Task<IEnumerable<OfficeProject>> GetByProjectTypeAsync(int projectTypeId);
-
-    /// <summary>
-    /// Get projects within a date range
-    /// </summary>
-    Task<IEnumerable<OfficeProject>> GetByDateRangeAsync(DateTime startDate, DateTime endDate);
-
-    /// <summary>
-    /// Get ongoing projects (not finished)
-    /// </summary>
-    Task<IEnumerable<OfficeProject>> GetOngoingProjectsAsync();
-
-    /// <summary>
-    /// Get completed projects
-    /// </summary>
-    Task<IEnumerable<OfficeProject>> GetCompletedProjectsAsync();
-
-    /// <summary>
-    /// Get projects by location filters (UC-7.5, UC-7.10)
-    /// </summary>
-    Task<IEnumerable<OfficeProject>> GetByLocationAsync(int? countryId, int? regionId, int? centerId);
-
-    /// <summary>
-    /// Get projects by donor name (UC-7.3)
-    /// </summary>
-    Task<IEnumerable<OfficeProject>> GetByDonorAsync(string donorName);
-
-    // ========== Filtering and Pagination ==========
-
-    /// <summary>
-    /// Get paginated projects with optional filtering and sorting (UC-7.10)
+    /// Get paginated projects with optional filtering and sorting; navigations included so list
+    /// rows and the report carry their names (UC-OFP-01, UC-OFP-06)
     /// </summary>
     Task<(IEnumerable<OfficeProject> Items, int TotalCount)> GetProjectsPagedAsync(
         Expression<Func<OfficeProject, bool>>? filter = null,
@@ -64,15 +25,8 @@ public interface IOfficeProjectRepository : IRepository<OfficeProject>
         int pageNumber = 1,
         int pageSize = 10);
 
-    // ========== Navigation Properties ==========
-
     /// <summary>
-    /// Include all navigation properties for eager loading
+    /// Eager-load the lookup/charity navigations shared by every read path
     /// </summary>
     IQueryable<OfficeProject> IncludeNavigationProperties();
-
-    /// <summary>
-    /// Include specific navigation properties
-    /// </summary>
-    IQueryable<OfficeProject> IncludeSpecificNavigationProperties(params Expression<Func<OfficeProject, object>>[] includes);
 }

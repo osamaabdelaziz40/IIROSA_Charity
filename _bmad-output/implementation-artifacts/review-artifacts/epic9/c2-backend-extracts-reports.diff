@@ -1,0 +1,3364 @@
+### CHUNK C2 - Backend extracts & reports root (stories 9-10..9-15 + 9-17; ReportsController/ReportService/Reports DTOs co-owned with the epic-18 session WIP)
+diff --git a/Backend/src/IIROSA.Application/DTOs/OrphanReport/OrphanReportFilterDto.cs b/Backend/src/IIROSA.Application/DTOs/OrphanReport/OrphanReportFilterDto.cs
+index 6d9e02d..b2e3e03 100644
+--- a/Backend/src/IIROSA.Application/DTOs/OrphanReport/OrphanReportFilterDto.cs
++++ b/Backend/src/IIROSA.Application/DTOs/OrphanReport/OrphanReportFilterDto.cs
+@@ -30,6 +30,18 @@ public class OrphanReportFilterDto
+     /// </summary>
+     public Guid? CharityId { get; set; }
+ 
++    /// <summary>
++    /// رقم التقرير — §14.U.11 extract criterion (contains match on the periodic report number)
++    /// </summary>
++    public string? ReportNo { get; set; }
++
++    /// <summary>
++    /// §14.U.15 أرقام التقارير المضافة — fill the statistics response's ReportNumbers
++    /// branch (the numbers-in-period extract). Requires the date window; the grouped
++    /// branch (9-10) is untouched.
++    /// </summary>
++    public bool IncludeReportNumbers { get; set; }
++
+     /// <summary>
+     /// Filter by Region - UC-6.5
+     /// </summary>
+diff --git a/Backend/src/IIROSA.Application/DTOs/OrphanReport/OrphanReportResultDto.cs b/Backend/src/IIROSA.Application/DTOs/OrphanReport/OrphanReportResultDto.cs
+index 507498e..c3b6ccc 100644
+--- a/Backend/src/IIROSA.Application/DTOs/OrphanReport/OrphanReportResultDto.cs
++++ b/Backend/src/IIROSA.Application/DTOs/OrphanReport/OrphanReportResultDto.cs
+@@ -20,6 +20,15 @@ public class OrphanReportResultDto
+     /// </summary>
+     public List<OrphanReportDto> Orphans { get; set; } = new();
+ 
++    /// <summary>
++    /// §14.U.11 detailed periodic-report rows (UC-ORR-11) — the extract this
++    /// endpoint now carries alongside the legacy orphan-registry pull.
++    /// </summary>
++    public List<OrphanReportDetailRow> Reports { get; set; } = new();
++
++    /// <summary>Matching report rows before the extract cap (the cap bounds rows, not the count).</summary>
++    public int ReportsTotalCount { get; set; }
++
+     /// <summary>
+     /// Generated timestamp
+     /// </summary>
+@@ -57,3 +66,46 @@ public class OrphanReportMetadataDto
+     public Guid? GeneratedByUserId { get; set; }
+     public string? GeneratedByUserName { get; set; }
+ }
++
++/// <summary>
++/// §14.U.11 detailed extract row (UC-ORR-11) — the periodic report's dimensions
++/// plus orphan identity and charity name. The general-purpose pull that
++/// 9-12/9-13 specialise with a review-state predicate.
++/// </summary>
++public class OrphanReportDetailRow
++{
++    public Guid ReportId { get; set; }
++    public string? ReportNo { get; set; }
++    public DateTime ReportDate { get; set; }
++    public DateTime? ReportPeriodFrom { get; set; }
++    public DateTime? ReportPeriodTo { get; set; }
++
++    // Orphan identity + charity
++    public string OrphanCode { get; set; } = string.Empty;
++    public string OrphanName { get; set; } = string.Empty;
++    public string? CharityName { get; set; }
++
++    // Review state
++    public string ReviewStatus { get; set; } = "Pending";
++    public bool Reviewed { get; set; }
++    public bool IsAccepted { get; set; }
++    public bool IsRefused { get; set; }
++    public string? RefuseReason { get; set; }
++
++    // Key report dimensions
++    public string? SchoolType { get; set; }
++    public string? School { get; set; }
++    public string? Faculty { get; set; }
++    public string? Specialization { get; set; }
++    public string? Grade { get; set; }
++    public string? EducationDegree { get; set; }
++    public int? EducationalLevelId { get; set; }
++    public string? EducationalLevelName { get; set; }
++    public string? MedicalStatus { get; set; }
++    public string? Disease { get; set; }
++    public string? Disability { get; set; }
++    public bool? Married { get; set; }
++    public DateTime? MarriageDate { get; set; }
++    public bool? Dead { get; set; }
++    public DateTime? DeathDate { get; set; }
++}
+diff --git a/Backend/src/IIROSA.Application/Interfaces/IOrphanReportService.cs b/Backend/src/IIROSA.Application/Interfaces/IOrphanReportService.cs
+index af0de10..0cec4d8 100644
+--- a/Backend/src/IIROSA.Application/Interfaces/IOrphanReportService.cs
++++ b/Backend/src/IIROSA.Application/Interfaces/IOrphanReportService.cs
+@@ -141,4 +141,54 @@ public class OrphanStatisticsDto
+     public int PendingCount { get; set; }
+     public int MaleCount { get; set; }
+     public int FemaleCount { get; set; }
++
++    /// <summary>
++    /// §14.S.3 grouped rows (UC-ORR-10): one row per
++    /// (الحاله التعليميه × المرحله الدراسه) with الاناث/الذكور/الاجمالي counts.
++    /// 9-15 extends this response with its numbers-in-period section — do not fork the DTO.
++    /// </summary>
++    public List<OrphanReportGroupCountRow> Groups { get; set; } = new();
++
++    /// <summary>
++    /// §14.U.15 أرقام التقارير المضافة (UC-ORR-15) — the ReportNo values created in the
++    /// window, newest first (capped at 1000; <see cref="ReportNumbersCount"/> is uncapped).
++    /// Filled only when the request sets <c>IncludeReportNumbers</c> with a date window.
++    /// </summary>
++    public List<OrphanReportNumberRow> ReportNumbers { get; set; } = new();
++
++    /// <summary>Matching in-window reports before the numbers cap.</summary>
++    public int ReportNumbersCount { get; set; }
++
++    /// <summary>In-window reports with a null ReportNo (legacy rows) — listed under a — bucket.</summary>
++    public int UnnumberedReportsCount { get; set; }
++}
++
++/// <summary>
++/// One §14.S.3 grouped-statistics row. The educational-status token is stable
++/// (studying/graduated/dropout/unspecified); the level name is resolved
++/// server-side (NameAr ?? NameEn), null when the report carries no level.
++/// </summary>
++public class OrphanReportGroupCountRow
++{
++    public string EducationalStatus { get; set; } = "unspecified";
++    public string? EducationalLevelName { get; set; }
++    public int FemaleCount { get; set; }
++    public int MaleCount { get; set; }
++    public int TotalCount { get; set; }
++}
++
++/// <summary>
++/// One §14.U.15 numbers-in-period row — the registered number with its orphan identity,
++/// dates and review state.
++/// </summary>
++public class OrphanReportNumberRow
++{
++    public Guid ReportId { get; set; }
++    /// <summary>رقم التقرير — null ReportNo renders under a — bucket (legacy rows).</summary>
++    public string? ReportNo { get; set; }
++    public string OrphanCode { get; set; } = string.Empty;
++    public string OrphanName { get; set; } = string.Empty;
++    public DateTime ReportDate { get; set; }
++    public DateTime CreatedOn { get; set; }
++    public string ReviewStatus { get; set; } = "Pending";
+ }
+diff --git a/Backend/src/IIROSA.Application/Services/OrphanReportService.cs b/Backend/src/IIROSA.Application/Services/OrphanReportService.cs
+index 83fee9e..17229fe 100644
+--- a/Backend/src/IIROSA.Application/Services/OrphanReportService.cs
++++ b/Backend/src/IIROSA.Application/Services/OrphanReportService.cs
+@@ -1,7 +1,9 @@
+ using IIROSA.Application.DTOs.OrphanReport;
+ using IIROSA.Application.Interfaces;
++using IIROSA.Domain.Contracts.Persistence;
+ using IIROSA.Domain.Entities;
+-using IIROSA.Infrastructure.Data.Repository;
++using IIROSA.Domain.Entities.Lookups;
++using IIROSA.Domain.Interfaces;
+ using Microsoft.EntityFrameworkCore;
+ using Microsoft.Extensions.Logging;
+ 
+@@ -17,6 +19,9 @@ public class OrphanReportService : IOrphanReportService
+     private readonly IRepository<Orphan> _orphanRepository;
+     private readonly IRepository<Charity> _charityRepository;
+     private readonly IRepository<Family> _familyRepository;
++    private readonly IRepository<PeriodicOrphanReport> _periodicReportRepository;
++    private readonly IRepository<EducationLevel> _educationLevelRepository;
++    private readonly ICurrentUserService _currentUser;
+     private readonly ILogger<OrphanReportService> _logger;
+ 
+     public OrphanReportService(
+@@ -24,12 +29,18 @@ public class OrphanReportService : IOrphanReportService
+         IRepository<Orphan> orphanRepository,
+         IRepository<Charity> charityRepository,
+         IRepository<Family> familyRepository,
++        IRepository<PeriodicOrphanReport> periodicReportRepository,
++        IRepository<EducationLevel> educationLevelRepository,
++        ICurrentUserService currentUser,
+         ILogger<OrphanReportService> logger)
+     {
+         _unitOfWork = unitOfWork;
+         _orphanRepository = orphanRepository;
+         _charityRepository = charityRepository;
+         _familyRepository = familyRepository;
++        _periodicReportRepository = periodicReportRepository;
++        _educationLevelRepository = educationLevelRepository;
++        _currentUser = currentUser;
+         _logger = logger;
+     }
+ 
+@@ -37,7 +48,7 @@ public class OrphanReportService : IOrphanReportService
+ 
+     public async Task<OrphanReportResultDto> GenerateReportAsync(OrphanReportFilterDto filter)
+     {
+-        var query = _orphanRepository.GetQueryable()
++        var query = _orphanRepository.AsQueryable()
+             .Include(o => o.Family)
+                 .ThenInclude(f => f!.Father)
+             .Include(o => o.Family)
+@@ -51,13 +62,14 @@ public class OrphanReportService : IOrphanReportService
+             .Include(o => o.Sponsor)
+             .Include(o => o.EducationLevel)
+             .Include(o => o.HealthStatus)
+-            .Include(o => o.FK_CharityId.HasValue ? o.Charity : null)
+             .Where(o => !o.IsDeleted);
+ 
+-        // Apply charity filter (UC-6.4)
+-        if (filter.CharityId.HasValue)
++        // Apply charity filter (UC-6.4) — caller scope: a charity claim pins and a
++        // forged request charityId is ignored (§14.U.11 AC 3).
++        var effectiveCharityId = _currentUser.CharityId ?? filter.CharityId;
++        if (effectiveCharityId.HasValue)
+         {
+-            query = query.Where(o => o.FK_CharityId == filter.CharityId.Value);
++            query = query.Where(o => o.FK_CharityId == effectiveCharityId.Value);
+         }
+ 
+         // Apply region filter (UC-6.5)
+@@ -98,6 +110,17 @@ public class OrphanReportService : IOrphanReportService
+ 
+         var orphans = await query.ToListAsync();
+ 
++        // Orphan has no Charity navigation — resolve charity names in one batch.
++        var charityIds = orphans.Where(o => o.FK_CharityId.HasValue)
++            .Select(o => o.FK_CharityId!.Value)
++            .Distinct()
++            .ToList();
++        var charityNames = charityIds.Count == 0
++            ? new Dictionary<Guid, string>()
++            : await _charityRepository.AsQueryable()
++                .Where(c => charityIds.Contains(c.Id))
++                .ToDictionaryAsync(c => c.Id, c => c.Name);
++
+         // Map to DTOs
+         var orphanDtos = new List<OrphanReportDto>();
+         foreach (var orphan in orphans)
+@@ -113,13 +136,15 @@ public class OrphanReportService : IOrphanReportService
+                 OrphanType = orphan.OrphanType,
+                 SponsorshipStatus = orphan.SponsorshipStatus,
+                 CharityId = orphan.FK_CharityId,
+-                CharityName = orphan.Charity?.Name,
++                CharityName = orphan.FK_CharityId.HasValue && charityNames.TryGetValue(orphan.FK_CharityId.Value, out var charityName)
++                    ? charityName
++                    : null,
+                 RegionId = orphan.Family?.RegionId,
+                 RegionName = orphan.Family?.Region?.Name,
+                 CenterId = orphan.Family?.CenterId,
+                 CenterName = orphan.Family?.Center?.Name,
+                 SponsorId = orphan.SponsorId,
+-                SponsorName = orphan.Sponsor?.Name,
++                SponsorName = orphan.Sponsor?.FullName,
+                 MonthlyAmount = orphan.MonthlyAmount,
+                 PhotoAttachmentId = orphan.PhotoAttachmentId
+             };
+@@ -130,8 +155,8 @@ public class OrphanReportService : IOrphanReportService
+                 dto.FamilyAddress = orphan.Family?.Address;
+                 dto.FatherName = orphan.Family?.Father?.FullName;
+                 dto.MotherName = orphan.Family?.Mother?.FullName;
+-                dto.ProviderName = orphan.Family?.Provider?.Name;
+-                dto.FamilyPhone = orphan.Family?.Phone;
++                dto.ProviderName = orphan.Family?.Provider?.FullName;
++                dto.FamilyPhone = orphan.Family?.PhoneNumber;
+             }
+ 
+             // Include Contact Information if requested (UC-6.1)
+@@ -215,15 +240,86 @@ public class OrphanReportService : IOrphanReportService
+             IncludeContactInformation = filter.IncludeContactInformation,
+             IncludeEducationDetails = filter.IncludeEducationDetails,
+             IncludeHealthDetails = filter.IncludeHealthDetails,
+-            GroupByCharity = filter.GroupByCharity,
+-            GeneratedOn = DateTime.UtcNow
++            GroupByCharity = filter.GroupByCharity
+         };
+ 
++        // ---- §14.U.11 detailed periodic-report extract (UC-ORR-11) ----
++        // The general-purpose pull 9-12/9-13 specialise with a review-state predicate.
++        // Rows are capped at 1000 per extract batch; ReportsTotalCount carries the uncapped count.
++        // TODO EP-10: batch filter (no Batch entity in the Domain today — 17-2 deferred-rule precedent)
++        var reports = _periodicReportRepository.AsQueryable();
++        if (effectiveCharityId.HasValue)
++            reports = reports.Where(r => r.CharityId == effectiveCharityId.Value);
++        if (!string.IsNullOrWhiteSpace(filter.ReportNo))
++        {
++            var reportNo = filter.ReportNo.Trim();
++            reports = reports.Where(r => r.ReportNo != null && r.ReportNo.Contains(reportNo));
++        }
++        if (filter.FromDate != default)
++            reports = reports.Where(r => r.ReportDate >= filter.FromDate.Date);
++        if (filter.ToDate != default)
++            // Inclusive end date — the whole of "to" (9-1 Task 3 rule)
++            reports = reports.Where(r => r.ReportDate < filter.ToDate.Date.AddDays(1));
++
++        var reportsTotal = await reports.CountAsync();
++
++        var detailRows = await reports
++            .OrderByDescending(r => r.ReportDate)
++            .Take(1000)
++            .Select(r => new OrphanReportDetailRow
++            {
++                ReportId = r.Id,
++                ReportNo = r.ReportNo,
++                ReportDate = r.ReportDate,
++                ReportPeriodFrom = r.ReportPeriodFrom,
++                ReportPeriodTo = r.ReportPeriodTo,
++                OrphanCode = r.Orphan.Code,
++                OrphanName = r.Orphan.FullName,
++                CharityName = r.Charity != null ? r.Charity.Name : null,
++                ReviewStatus = r.ReviewStatus ?? "Pending",
++                Reviewed = r.Reviewed,
++                IsAccepted = r.IsAccepted,
++                IsRefused = r.IsRefused,
++                RefuseReason = r.RefuseReason,
++                SchoolType = r.SchoolType,
++                School = r.School,
++                Faculty = r.Faculty,
++                Specialization = r.Specialization,
++                Grade = r.Grade,
++                EducationDegree = r.EducationDegree,
++                EducationalLevelId = r.EducationalLevelId,
++                MedicalStatus = r.MedicalStatus,
++                Disease = r.Disease,
++                Disability = r.Disability,
++                Married = r.Married,
++                MarriageDate = r.MarriageDate,
++                Dead = r.Dead,
++                DeathDate = r.DeathDate
++            })
++            .ToListAsync();
++
++        // Resolve the level names the projection cannot join inline (no nav on the report).
++        var levelIds = detailRows.Where(x => x.EducationalLevelId.HasValue)
++            .Select(x => x.EducationalLevelId!.Value)
++            .Distinct()
++            .ToList();
++        if (levelIds.Count > 0)
++        {
++            var levelNames = await _educationLevelRepository.AsQueryable()
++                .Where(l => levelIds.Contains(l.Id))
++                .ToDictionaryAsync(l => l.Id, l => l.NameAr ?? l.NameEn);
++            foreach (var row in detailRows.Where(x => x.EducationalLevelId.HasValue))
++                if (levelNames.TryGetValue(row.EducationalLevelId!.Value, out var name))
++                    row.EducationalLevelName = name;
++        }
++
+         return new OrphanReportResultDto
+         {
+             Metadata = metadata,
+             Summary = summary,
+             Orphans = orphanDtos,
++            Reports = detailRows,
++            ReportsTotalCount = reportsTotal,
+             GeneratedOn = DateTime.UtcNow
+         };
+     }
+@@ -326,11 +422,15 @@ public class OrphanReportService : IOrphanReportService
+ 
+     public async Task<OrphanStatisticsDto> GetOrphanStatisticsAsync(OrphanReportFilterDto filter)
+     {
+-        var query = _orphanRepository.GetQueryable().Where(o => !o.IsDeleted);
++        // Caller scope (UC-ORR-10 AC 3): a charity claim pins the aggregation to that
++        // charity and a forged request charityId is ignored; HQ may pass any explicit one.
++        var effectiveCharityId = _currentUser.CharityId ?? filter.CharityId;
+ 
+-        // Apply filters
+-        if (filter.CharityId.HasValue)
+-            query = query.Where(o => o.FK_CharityId == filter.CharityId.Value);
++        // ---- Scalar section (dashboard counts, additive — other screens read it) ----
++        var query = _orphanRepository.AsQueryable().Where(o => !o.IsDeleted);
++
++        if (effectiveCharityId.HasValue)
++            query = query.Where(o => o.FK_CharityId == effectiveCharityId.Value);
+         if (filter.RegionId.HasValue)
+             query = query.Where(o => o.Family != null && o.Family.RegionId == filter.RegionId.Value);
+         if (filter.CenterId.HasValue)
+@@ -338,7 +438,7 @@ public class OrphanReportService : IOrphanReportService
+ 
+         var orphans = await query.ToListAsync();
+ 
+-        return new OrphanStatisticsDto
++        var statistics = new OrphanStatisticsDto
+         {
+             TotalOrphans = orphans.Count,
+             SponsoredCount = orphans.Count(o => o.SponsorshipStatus == "Sponsored"),
+@@ -347,6 +447,92 @@ public class OrphanReportService : IOrphanReportService
+             MaleCount = orphans.Count(o => o.Gender == "Male"),
+             FemaleCount = orphans.Count(o => o.Gender == "Female")
+         };
++
++        // ---- §14.S.3 grouped rows (UC-ORR-10): الحاله التعليميه × المرحله الدراسه ----
++        // One grouped query over the periodic reports — the education-status
++        // classification mirrors the 9-9 filter mapping (dropout > graduated > studying).
++        var reports = _periodicReportRepository.AsQueryable();
++        if (effectiveCharityId.HasValue)
++            reports = reports.Where(r => r.CharityId == effectiveCharityId.Value);
++
++        var grouped = await reports
++            .GroupBy(r => new
++            {
++                EducationalStatus =
++                    r.DropOut == true ? "dropout"
++                    : !string.IsNullOrEmpty(r.HighestEducationalLevel) ? "graduated"
++                    : r.IsOrphanStudent == true ? "studying"
++                    : "unspecified",
++                EducationalLevelId = r.EducationalLevelId ?? 0
++            })
++            .Select(g => new
++            {
++                g.Key.EducationalStatus,
++                g.Key.EducationalLevelId,
++                Total = g.Count(),
++                // Gender is stored as the Arabic token (ذكر/أنثى); legacy rows may carry English
++                Female = g.Count(x => x.Orphan.Gender == "أنثى" || x.Orphan.Gender == "Female"),
++                Male = g.Count(x => x.Orphan.Gender == "ذكر" || x.Orphan.Gender == "Male")
++            })
++            .ToListAsync();
++
++        var levelIds = grouped.Where(g => g.EducationalLevelId != 0)
++            .Select(g => g.EducationalLevelId)
++            .Distinct()
++            .ToList();
++        var levelNames = levelIds.Count > 0
++            ? await _educationLevelRepository.AsQueryable()
++                .Where(l => levelIds.Contains(l.Id))
++                .ToDictionaryAsync(l => l.Id, l => l.NameAr ?? l.NameEn)
++            : new Dictionary<int, string>();
++
++        statistics.Groups = grouped
++            .Select(g => new OrphanReportGroupCountRow
++            {
++                EducationalStatus = g.EducationalStatus,
++                EducationalLevelName = g.EducationalLevelId != 0
++                    && levelNames.TryGetValue(g.EducationalLevelId, out var name)
++                        ? name
++                        : null,
++                FemaleCount = g.Female,
++                MaleCount = g.Male,
++                TotalCount = g.Total
++            })
++            .OrderByDescending(g => g.TotalCount)
++            .ToList();
++
++        // ---- §14.U.15 numbers-in-period branch (UC-ORR-15) ----
++        // The ReportNo values CREATED in the window (CreatedOn bounds, inclusive end date),
++        // additive to the grouped branch above — the shared statistics contract.
++        // TODO EP-10: payment-batch filter (no batch model yet; the window carries the semantic).
++        if (filter.IncludeReportNumbers && filter.FromDate != default && filter.ToDate != default)
++        {
++            var numbers = _periodicReportRepository.AsQueryable();
++            if (effectiveCharityId.HasValue)
++                numbers = numbers.Where(r => r.CharityId == effectiveCharityId.Value);
++            numbers = numbers.Where(r => r.CreatedOn >= filter.FromDate.Date
++                && r.CreatedOn < filter.ToDate.Date.AddDays(1));
++
++            statistics.ReportNumbersCount = await numbers.CountAsync();
++            statistics.UnnumberedReportsCount = await numbers.CountAsync(r => r.ReportNo == null);
++
++            statistics.ReportNumbers = await numbers
++                .OrderByDescending(r => r.CreatedOn)
++                .Take(1000)
++                .Select(r => new OrphanReportNumberRow
++                {
++                    ReportId = r.Id,
++                    ReportNo = r.ReportNo,
++                    OrphanCode = r.Orphan.Code,
++                    OrphanName = r.Orphan.FullName,
++                    ReportDate = r.ReportDate,
++                    CreatedOn = r.CreatedOn,
++                    ReviewStatus = r.ReviewStatus ?? "Pending"
++                })
++                .ToListAsync();
++        }
++
++        return statistics;
+     }
+ 
+     #endregion
+diff --git a/Backend/src/IIROSA.Api/Controllers/ReportsController.cs b/Backend/src/IIROSA.Api/Controllers/ReportsController.cs
+new file mode 100644
+index 0000000..07d5e3f
+--- /dev/null
++++ b/Backend/src/IIROSA.Api/Controllers/ReportsController.cs
+@@ -0,0 +1,592 @@
++using Microsoft.AspNetCore.Mvc;
++using Microsoft.AspNetCore.Authorization;
++using IIROSA.Application.DTOs.Reports;
++using IIROSA.Application.Interfaces;
++using IIROSA.Application.Exceptions;
++using Framework.Core;
++
++namespace IIROSA.Api.Controllers;
++
++/// <summary>
++/// Print-sheet payloads for the report keys the legacy contract served as
++/// <c>POST /api/Reports/&lt;report-key&gt;/export/pdf</c> (UC-FAM-14 طباعة كشوف المتابعة;
++/// epic 18 extends this controller with more keys).
++///
++/// Recorded deviation (client-side print ruling, epics 9/10/18): the route keeps its legacy
++/// <c>/export/pdf</c> shape verbatim, but the response is the sheet's JSON payload — the SPA
++/// renders the document and the browser's print-to-PDF produces the file. No server PDF
++/// pipeline exists on this stack; story 18-21 owns the jsPDF/Arabic-font decision.
++/// </summary>
++public class ReportsController : ApiController
++{
++    private readonly IReportSheetService _reportSheetService;
++    private readonly IReportService _reportService;
++    private readonly IPeriodicOrphanReportService _periodicReportService;
++
++    public ReportsController(
++        IReportSheetService reportSheetService,
++        IReportService reportService,
++        IPeriodicOrphanReportService periodicReportService,
++        ILogger<ReportsController> logger) : base(logger)
++    {
++        _reportSheetService = reportSheetService;
++        _reportService = reportService;
++        _periodicReportService = periodicReportService;
++    }
++
++    /// <summary>
++    /// UC-RPT-01 (§23.S.3 بيانات الأيتام) — read-only, caller-scoped orphan master listing.
++    /// Raw envelope per the 15-1 ruling (NOT ApiResponse — each endpoint keeps its own story's
++    /// contract); 400 carries <c>{ message, errors }</c> with PascalCase DTO keys → message list.
++    /// The charity scope is resolved inside the service from the token, never the payload.
++    /// </summary>
++    [HttpPost("orphans")]
++    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
++    public async Task<IActionResult> GetOrphanData([FromBody] OrphanDataFilterDto filter)
++    {
++        try
++        {
++            var result = await _reportService.GetOrphanDataAsync(filter);
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var errors = ex.Errors
++                .GroupBy(error => error.PropertyName ?? string.Empty)
++                .ToDictionary(
++                    group => group.Key,
++                    group => string.Join(" ", group.Select(error => error.ErrorMessage)));
++
++            return BadRequest(new { message = "One or more fields are invalid", errors });
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new { message = "Error running the orphan data report" });
++        }
++    }
++
++    /// <summary>
++    /// UC-RPT-03 (§23.S.4 الايتام المستبعدين) — the excluded set with the 6-column grid
++    /// contract. Read-only; one narrow (charity, HQ only — resolved inside the service from the
++    /// token). The exclusion WRITE path belongs to EP-08; nothing is deleted or un-excluded here.
++    /// </summary>
++    [HttpPost("excluded-orphans")]
++    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
++    public async Task<IActionResult> GetExcludedOrphans([FromBody] ExcludedOrphansFilterDto filter)
++    {
++        try
++        {
++            var result = await _reportService.GetExcludedOrphansAsync(filter);
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var errors = ex.Errors
++                .GroupBy(error => error.PropertyName ?? string.Empty)
++                .ToDictionary(
++                    group => group.Key,
++                    group => string.Join(" ", group.Select(error => error.ErrorMessage)));
++
++            return BadRequest(new { message = "One or more fields are invalid", errors });
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new { message = "Error running the excluded-orphans report" });
++        }
++    }
++
++    /// <summary>
++    /// UC-RPT-04 (§23.S.5 أيتام انتهت كفالتهم) — HQ-only (Gen. Director). The domain carries no
++    /// ended state today; per the recorded product ruling the set is empty with a logged gap —
++    /// the screen/endpoint/export contract ships now, the predicate lands with the state.
++    /// </summary>
++    [HttpPost("finished-sponsorship-orphans")]
++    [Authorize(Roles = "SuperAdmin,Admin")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
++    public async Task<IActionResult> GetFinishedSponsorshipOrphans([FromBody] OrphanStatusReportFilterDto filter)
++    {
++        try
++        {
++            var result = await _reportService.GetFinishedSponsorshipOrphansAsync(filter);
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var errors = ex.Errors
++                .GroupBy(error => error.PropertyName ?? string.Empty)
++                .ToDictionary(
++                    group => group.Key,
++                    group => string.Join(" ", group.Select(error => error.ErrorMessage)));
++
++            return BadRequest(new { message = "One or more fields are invalid", errors });
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new { message = "Error running the finished-sponsorship report" });
++        }
++    }
++
++    /// <summary>
++    /// UC-RPT-05 (§23.S.6 أيتام غير مكفولين) — HQ-only (Gen. Director). Coded orphans whose
++    /// status is Unsponsored (an empty Code is UNCODED, not unsponsored — EP-08 ruling).
++    /// Read-only; charity scope resolves inside the service from the token.
++    /// </summary>
++    [HttpPost("unsponsored-orphans")]
++    [Authorize(Roles = "SuperAdmin,Admin")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
++    public async Task<IActionResult> GetUnsponsoredOrphans([FromBody] OrphanStatusReportFilterDto filter)
++    {
++        try
++        {
++            var result = await _reportService.GetUnsponsoredOrphansAsync(filter);
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var errors = ex.Errors
++                .GroupBy(error => error.PropertyName ?? string.Empty)
++                .ToDictionary(
++                    group => group.Key,
++                    group => string.Join(" ", group.Select(error => error.ErrorMessage)));
++
++            return BadRequest(new { message = "One or more fields are invalid", errors });
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new { message = "Error running the unsponsored-orphans report" });
++        }
++    }
++
++    /// <summary>
++    /// UC-RPT-06 (§23.S.9 ارامل مطلوب لهم كفاله) — the 22-column widow grid over the family's
++    /// mother joined to the family's residence/income columns. Read-only, query-only (the spec
++    /// lists no استخراج command). No widow-sponsorship flag exists — the predicate is the data's
++    /// floor: mother alive, registered family, husband death date present, orphans present.
++    /// </summary>
++    [HttpPost("widows-allowing-sponsorship")]
++    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
++    public async Task<IActionResult> GetWidowsAllowingSponsorship([FromBody] WidowSponsorshipFilterDto filter)
++    {
++        try
++        {
++            var result = await _reportService.GetWidowsAllowingSponsorshipAsync(filter);
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var errors = ex.Errors
++                .GroupBy(error => error.PropertyName ?? string.Empty)
++                .ToDictionary(
++                    group => group.Key,
++                    group => string.Join(" ", group.Select(error => error.ErrorMessage)));
++
++            return BadRequest(new { message = "One or more fields are invalid", errors });
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new { message = "Error running the widows report" });
++        }
++    }
++
++    /// <summary>
++    /// UC-RPT-07 (§23.S.8 تقرير الكروت المسجله) + UC-RPT-08 (§23.U.8 استخراج كروت العائل) —
++    /// HQ-only. ONE action, ONE widened DTO serving both variants: the paged read (18-7) when
++    /// ReportNo is absent; the full-selection extract (18-8) when ReportNo is present. The
++    /// domain has no card column yet — both variants are empty with the gap logged until the
++    /// registration vertical lands the fields.
++    /// </summary>
++    [HttpPost("meza-cards")]
++    [Authorize(Roles = "SuperAdmin,Admin")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
++    public async Task<IActionResult> GetMezaCards([FromBody] MezaCardsFilterDto filter)
++    {
++        try
++        {
++            // ReportNo's presence is the §23.U.8 extract discriminator (single endpoint ruling).
++            var result = filter.ReportNo.HasValue
++                ? await _reportService.GetMezaCardsForExportAsync(filter)
++                : await _reportService.GetMezaCardsAsync(filter);
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var errors = ex.Errors
++                .GroupBy(error => error.PropertyName ?? string.Empty)
++                .ToDictionary(
++                    group => group.Key,
++                    group => string.Join(" ", group.Select(error => error.ErrorMessage)));
++
++            return BadRequest(new { message = "One or more fields are invalid", errors });
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new { message = "Error running the meza-cards report" });
++        }
++    }
++
++    /// <summary>
++    /// UC-RPT-09 (§23.S.13 بيانات أسر المساعدات) — the distinct families benefiting from
++    /// seasonal-aid assistance, one row per family with the campaigns aggregated. The legacy
++    /// screen was a bare extract with no grid; the platform adaptation renders a grid so
++    /// استخراج has rows to extract (recorded). Read-only; scope resolves inside the service.
++    /// </summary>
++    [HttpPost("beneficiary-family-details")]
++    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
++    public async Task<IActionResult> GetBeneficiaryFamilyDetails([FromBody] BeneficiaryFamilyFilterDto filter)
++    {
++        try
++        {
++            var result = await _reportService.GetBeneficiaryFamiliesAsync(filter);
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var errors = ex.Errors
++                .GroupBy(error => error.PropertyName ?? string.Empty)
++                .ToDictionary(
++                    group => group.Key,
++                    group => string.Join(" ", group.Select(error => error.ErrorMessage)));
++
++            return BadRequest(new { message = "One or more fields are invalid", errors });
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new { message = "Error running the beneficiary-families report" });
++        }
++    }
++
++    /// <summary>
++    /// UC-RPT-11 (§23.S.7 مشاريع الأسر) — HQ-only (Gen. Director). US-RPT-11 is typed "Create a
++    /// record" — a template artefact; this is a read. The row source (a project registered FOR a
++    /// family) does not exist in the domain yet — no HousingProject class, no FamilyId on
++    /// OfficeProject — so per the standing ruling the set is empty with a logged gap until a
++    /// family-project vertical lands the linkage. The screen/endpoint/export contract ships now.
++    /// </summary>
++    [HttpPost("registered-family-projects")]
++    [Authorize(Roles = "SuperAdmin,Admin")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
++    public async Task<IActionResult> GetRegisteredFamilyProjects([FromBody] FamilyProjectsFilterDto filter)
++    {
++        try
++        {
++            var result = await _reportService.GetRegisteredFamilyProjectsAsync(filter);
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var errors = ex.Errors
++                .GroupBy(error => error.PropertyName ?? string.Empty)
++                .ToDictionary(
++                    group => group.Key,
++                    group => string.Join(" ", group.Select(error => error.ErrorMessage)));
++
++            return BadRequest(new { message = "One or more fields are invalid", errors });
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new { message = "Error running the family-projects report" });
++        }
++    }
++
++    /// <summary>
++    /// UC-RPT-12 (§23.S.19 تقارير تعديل المعيل) — guardian change history: one row per
++    /// provider assignment with the current guardian's fields, audit stamps as تاريخ التعديل
++    /// and the family/charity/orphan context. Read-only; charity scope resolves server-side
++    /// from the token, never the payload.
++    /// </summary>
++    [HttpPost("provider-sponsor-changes")]
++    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
++    public async Task<IActionResult> GetProviderSponsorChanges([FromBody] ProviderChangeFilterDto filter)
++    {
++        try
++        {
++            var result = await _reportService.GetProviderSponsorChangesAsync(filter);
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var errors = ex.Errors
++                .GroupBy(error => error.PropertyName ?? string.Empty)
++                .ToDictionary(
++                    group => group.Key,
++                    group => string.Join(" ", group.Select(error => error.ErrorMessage)));
++
++            return BadRequest(new { message = "One or more fields are invalid", errors });
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new { message = "Error running the guardian-changes report" });
++        }
++    }
++
++    /// <summary>
++    /// UC-RPT-15 (§23.S.14 أيتام مكودون مطلوب لهم تقرير) — the summary grid: per-charity
++    /// count of coded orphans with no accepted report covering the trailing 12 months
++    /// (BR-11 semantics, aligned with the UC-ORR-14 chase list). Read-only; charity scope
++    /// resolves server-side from the token, never the payload.
++    /// </summary>
++    [HttpPost("orphans-missing-reports")]
++    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
++    public async Task<IActionResult> GetOrphansMissingReports([FromBody] OrphansMissingReportsFilterDto filter)
++    {
++        try
++        {
++            var result = await _reportService.GetOrphansMissingReportsAsync(filter);
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var errors = ex.Errors
++                .GroupBy(error => error.PropertyName ?? string.Empty)
++                .ToDictionary(
++                    group => group.Key,
++                    group => string.Join(" ", group.Select(error => error.ErrorMessage)));
++
++            return BadRequest(new { message = "One or more fields are invalid", errors });
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new { message = "Error running the orphans-missing-reports report" });
++        }
++    }
++
++    /// <summary>
++    /// UC-RPT-15 drill-down (ExtractDetails) — one charity's chase list. A charity caller
++    /// naming another charity is clamped to its own rows (pin-never-widen). Read-only.
++    /// </summary>
++    [HttpPost("orphans-missing-reports/details")]
++    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
++    public async Task<IActionResult> GetOrphansMissingReportsDetail([FromBody] OrphansMissingReportsDetailRequestDto request)
++    {
++        try
++        {
++            var result = await _reportService.GetOrphansMissingReportsDetailAsync(
++                request.CharityId, request.Page, request.PageSize);
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var errors = ex.Errors
++                .GroupBy(error => error.PropertyName ?? string.Empty)
++                .ToDictionary(
++                    group => group.Key,
++                    group => string.Join(" ", group.Select(error => error.ErrorMessage)));
++
++            return BadRequest(new { message = "One or more fields are invalid", errors });
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new { message = "Error running the orphans-missing-reports detail report" });
++        }
++    }
++
++    /// <summary>
++    /// UC-RPT-16 (§23.S.15 أيتام مطلوب لهم ملفات) — a charity's missing-files worklist: coded
++    /// orphans whose latest periodic report is flagged MissingDocuments. Read-only; charity
++    /// scope resolves server-side from the token, never the payload.
++    /// </summary>
++    [HttpPost("orphans-missing-files")]
++    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
++    public async Task<IActionResult> GetOrphansMissingFiles([FromBody] OrphansMissingFilesFilterDto filter)
++    {
++        try
++        {
++            var result = await _reportService.GetOrphansMissingFilesAsync(filter);
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var errors = ex.Errors
++                .GroupBy(error => error.PropertyName ?? string.Empty)
++                .ToDictionary(
++                    group => group.Key,
++                    group => string.Join(" ", group.Select(error => error.ErrorMessage)));
++
++            return BadRequest(new { message = "One or more fields are invalid", errors });
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new { message = "Error running the orphans-missing-files report" });
++        }
++    }
++
++    /// <summary>
++    /// UC-ORR-14 (§14.U.14 الأيتام بدون تقرير مجدد) — the chase list before a payment run:
++    /// the (scoped) charity's coded orphans with no accepted report covering the window.
++    /// <paramref name="request"/>.CountOnly collapses the legacy _Number variant. Read-only;
++    /// charity scope resolves server-side from the token, never the payload.
++    /// </summary>
++    [HttpPost("non-renewed-reports")]
++    [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
++    public async Task<IActionResult> GetNonRenewedReports([FromBody] NonRenewedReportsRequestDto request)
++    {
++        try
++        {
++            var result = await _reportService.GetNonRenewedReportAsync(request);
++            return Ok(result);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var errors = ex.Errors
++                .GroupBy(error => error.PropertyName ?? string.Empty)
++                .ToDictionary(
++                    group => group.Key,
++                    group => string.Join(" ", group.Select(error => error.ErrorMessage)));
++
++            return BadRequest(new { message = "One or more fields are invalid", errors });
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new { message = "Error running the non-renewed report" });
++        }
++    }
++
++    /// <summary>
++    /// UC-ORR-17 (§14.U.17 طباعة التقرير الدوري) — the periodic report form's print payload:
++    /// caller-scoped detail data + the resolved variant key (the collapsed 24-template matrix)
++    /// + the attachment ids present. A dedicated literal route so its role set stays this
++    /// story's (the family sheets' action keeps its own). Foreign/unknown id → 404 — there is
++    /// nothing to produce; the charity pin resolves inside the service from the token.
++    /// </summary>
++    [HttpPost("orphan-report-form/export/pdf")]
++    [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
++    public async Task<IActionResult> ExportOrphanReportForm([FromBody] ReportSheetRequestDto dto)
++    {
++        try
++        {
++            if (dto.ReportId is null || dto.ReportId == Guid.Empty)
++            {
++                return BadRequest(new ApiResponse { Success = false, Message = "Report id is required" });
++            }
++
++            var form = await _periodicReportService.GetPrintFormAsync(dto.ReportId.Value);
++            if (form == null)
++            {
++                return NotFound(new ApiResponse { Success = false, Message = "Report not found" });
++            }
++
++            return Ok(form);
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new ApiResponse { Success = false, Message = "Error producing the report form" });
++        }
++    }
++
++    /// <summary>
++    /// One template serves every key — the key selects the data, not a controller per sheet.
++    /// An empty selection refuses with 400 (nothing to produce) instead of an empty document.
++    /// </summary>
++    [HttpPost("{reportKey}/export/pdf")]
++    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
++    [ProducesResponseType(StatusCodes.Status200OK)]
++    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
++    public async Task<IActionResult> ExportSheetPdf(string reportKey, [FromBody] ReportSheetRequestDto dto)
++    {
++        try
++        {
++            // The route wins over any body value for the key (thin bind step, nothing more).
++            dto.ReportKey = reportKey;
++
++            var userCharityId = GetUserCharityId();
++            var userRole = GetUserRole();
++
++            object payload = dto.ReportKey switch
++            {
++                "family-update-tracking" =>
++                    await _reportSheetService.BuildUpdateTrackingSheetAsync(dto, userCharityId, userRole),
++                "guardian-identification-sheets" =>
++                    await _reportSheetService.BuildGuardianIdentificationSheetAsync(dto, userCharityId, userRole),
++                "widow-identification-sheets" =>
++                    await _reportSheetService.BuildWidowIdentificationSheetAsync(dto, userCharityId, userRole),
++                _ => throw new BusinessException("Unknown report key")
++            };
++
++            return Ok(payload);
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var response = new ApiResponse
++            {
++                Success = false,
++                Message = "One or more fields are invalid"
++            };
++            foreach (var group in ex.Errors.GroupBy(error => error.PropertyName ?? string.Empty))
++            {
++                response.ModelStateErrors.Add(new Item(group.Key, string.Join(" ", group.Select(error => error.ErrorMessage))));
++            }
++            return BadRequest(response);
++        }
++        catch (BusinessException ex)
++        {
++            return BadRequest(new ApiResponse { Success = false, Message = ex.Message });
++        }
++        catch (Exception)
++        {
++            return StatusCode(500, new ApiResponse { Success = false, Message = "Error producing the report sheet" });
++        }
++    }
++
++    #region Claims Helpers
++
++    private Guid? GetUserCharityId()
++    {
++        var charityIdClaim = User.FindFirst(IiroSaClaimTypes.CharityId)?.Value;
++        if (Guid.TryParse(charityIdClaim, out var charityId))
++        {
++            return charityId;
++        }
++        return null;
++    }
++
++    private string? GetUserRole()
++    {
++        // Tenancy keys on the Charity role wherever it appears — not on which role claim
++        // happens to be listed first. A multi-role user holding Charity is charity-scoped.
++        if (User.IsInRole("Charity"))
++        {
++            return "Charity";
++        }
++        return User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
++    }
++
++    #endregion
++}
+diff --git a/Backend/src/IIROSA.Application/Services/ReportService.cs b/Backend/src/IIROSA.Application/Services/ReportService.cs
+new file mode 100644
+index 0000000..3f383c4
+--- /dev/null
++++ b/Backend/src/IIROSA.Application/Services/ReportService.cs
+@@ -0,0 +1,1273 @@
++using AutoMapper;
++using FluentValidation;
++using IIROSA.Application.DTOs.Reports;
++using IIROSA.Application.Interfaces;
++using IIROSA.Domain.Contracts.Persistence;
++using IIROSA.Domain.Entities;
++using IIROSA.Domain.Interfaces;
++using Microsoft.EntityFrameworkCore;
++using Microsoft.Extensions.Logging;
++
++namespace IIROSA.Application.Services;
++
++/// <summary>
++/// UC-RPT-01 — read-only report projections (EP-18 epic skeleton). Composes over
++/// <c>TableNoTracking</c> with its own include chain (the orphan repository's
++/// <c>IncludeNavigationProperties</c> loads only Family + Sponsor + SocialStatus — not enough
++/// for the §23.S.3 column contract). Repositories never save; this service never writes.
++/// </summary>
++public class ReportService : IReportService
++{
++    private readonly IOrphanRepository _orphanRepository;
++    private readonly IRepository<Mother> _motherRepository;
++    private readonly IRepository<OrphanPaymentItem> _paymentItemRepository;
++    private readonly IRepository<Charity> _charityRepository;
++    private readonly IRepository<PeriodicOrphanReport> _periodicReportRepository;
++    private readonly IRepository<SeasonalAidBeneficiary> _beneficiaryRepository;
++    private readonly IRepository<Provider> _providerRepository;
++    private readonly IValidator<OrphanDataFilterDto> _validator;
++    private readonly IValidator<NonRenewedReportsRequestDto> _nonRenewedValidator;
++    private readonly IValidator<ExcludedOrphansFilterDto> _excludedOrphansValidator;
++    private readonly IValidator<OrphanStatusReportFilterDto> _orphanStatusReportValidator;
++    private readonly IValidator<WidowSponsorshipFilterDto> _widowSponsorshipValidator;
++    private readonly IValidator<MezaCardsFilterDto> _mezaCardsValidator;
++    private readonly IValidator<BeneficiaryFamilyFilterDto> _beneficiaryFamilyValidator;
++    private readonly IValidator<FamilyProjectsFilterDto> _familyProjectsValidator;
++    private readonly IValidator<ProviderChangeFilterDto> _providerChangeValidator;
++    private readonly IValidator<OrphansMissingReportsFilterDto> _orphansMissingReportsValidator;
++    private readonly IValidator<OrphansMissingFilesFilterDto> _orphansMissingFilesValidator;
++    private readonly ICurrentUserService _currentUser;
++    private readonly IMapper _mapper;
++    private readonly ILogger<ReportService> _logger;
++
++    public ReportService(
++        IOrphanRepository orphanRepository,
++        IRepository<Mother> motherRepository,
++        IRepository<OrphanPaymentItem> paymentItemRepository,
++        IRepository<Charity> charityRepository,
++        IRepository<PeriodicOrphanReport> periodicReportRepository,
++        IRepository<SeasonalAidBeneficiary> beneficiaryRepository,
++        IRepository<Provider> providerRepository,
++        IValidator<OrphanDataFilterDto> validator,
++        IValidator<NonRenewedReportsRequestDto> nonRenewedValidator,
++        IValidator<ExcludedOrphansFilterDto> excludedOrphansValidator,
++        IValidator<OrphanStatusReportFilterDto> orphanStatusReportValidator,
++        IValidator<WidowSponsorshipFilterDto> widowSponsorshipValidator,
++        IValidator<MezaCardsFilterDto> mezaCardsValidator,
++        IValidator<BeneficiaryFamilyFilterDto> beneficiaryFamilyValidator,
++        IValidator<FamilyProjectsFilterDto> familyProjectsValidator,
++        IValidator<ProviderChangeFilterDto> providerChangeValidator,
++        IValidator<OrphansMissingReportsFilterDto> orphansMissingReportsValidator,
++        IValidator<OrphansMissingFilesFilterDto> orphansMissingFilesValidator,
++        ICurrentUserService currentUser,
++        IMapper mapper,
++        ILogger<ReportService> logger)
++    {
++        _orphanRepository = orphanRepository;
++        _motherRepository = motherRepository;
++        _paymentItemRepository = paymentItemRepository;
++        _charityRepository = charityRepository;
++        _periodicReportRepository = periodicReportRepository;
++        _beneficiaryRepository = beneficiaryRepository;
++        _providerRepository = providerRepository;
++        _validator = validator;
++        _nonRenewedValidator = nonRenewedValidator;
++        _excludedOrphansValidator = excludedOrphansValidator;
++        _orphanStatusReportValidator = orphanStatusReportValidator;
++        _widowSponsorshipValidator = widowSponsorshipValidator;
++        _mezaCardsValidator = mezaCardsValidator;
++        _beneficiaryFamilyValidator = beneficiaryFamilyValidator;
++        _familyProjectsValidator = familyProjectsValidator;
++        _providerChangeValidator = providerChangeValidator;
++        _orphansMissingReportsValidator = orphansMissingReportsValidator;
++        _orphansMissingFilesValidator = orphansMissingFilesValidator;
++        _currentUser = currentUser;
++        _mapper = mapper;
++        _logger = logger;
++    }
++
++    /// <inheritdoc />
++    public async Task<ReportPagedResult<OrphanDataListDto>> GetOrphanDataAsync(
++        OrphanDataFilterDto filter,
++        CancellationToken cancellationToken = default)
++    {
++        // FluentValidation in the service layer (platform rule)
++        await _validator.ValidateAndThrowAsync(filter, cancellationToken);
++
++        // The platform has NO global soft-delete query filter — every read filters explicitly.
++        var query = _orphanRepository.TableNoTracking
++            .Where(o => !o.IsDeleted)
++            .Include(o => o.Family!).ThenInclude(f => f.Father)
++            .Include(o => o.Family!).ThenInclude(f => f.Mother)
++            .Include(o => o.Family!).ThenInclude(f => f.Provider)
++            .Include(o => o.Family!).ThenInclude(f => f.Region)
++            .Include(o => o.Family!).ThenInclude(f => f.Center)
++            .Include(o => o.Family!).ThenInclude(f => f.HouseOwnership)
++            .Include(o => o.Family!).ThenInclude(f => f.HouseStatus)
++            .Include(o => o.Family!).ThenInclude(f => f.HousingType)
++            .Include(o => o.EducationLevel)
++            .Include(o => o.HealthStatus)
++            .Include(o => o.SocialStatus)
++            .AsQueryable();
++
++        // Tenancy first — a charity caller is pinned to its own charity whatever the payload says.
++        query = await ApplyCharityScopeAsync(query, filter.CharityId, cancellationToken);
++
++        // الدفعة المالية المنصرقة للايتام — orphans enrolled in this payment batch
++        if (!string.IsNullOrWhiteSpace(filter.BatchNumber))
++        {
++            var batchNumber = filter.BatchNumber.Trim();
++            var orphansInBatch = _paymentItemRepository.TableNoTracking
++                .Where(item => !item.IsDeleted
++                    && item.OrphanPayment != null
++                    && !item.OrphanPayment.IsDeleted
++                    && item.OrphanPayment.BatchNo == batchNumber)
++                .Select(item => item.OrphanId);
++            query = query.Where(o => orphansInBatch.Contains(o.Id));
++        }
++
++        // المحافظة / المركز
++        if (filter.GovernorateId.HasValue)
++        {
++            query = query.Where(o => o.Family != null && o.Family.RegionId == filter.GovernorateId.Value);
++        }
++        if (filter.CenterId.HasValue)
++        {
++            query = query.Where(o => o.Family != null && o.Family.CenterId == filter.CenterId.Value);
++        }
++
++        // من / الى — age computed on the server from DateOfBirth
++        var today = DateTime.Today;
++        if (filter.AgeFrom.HasValue)
++        {
++            var ageFrom = filter.AgeFrom.Value;
++            query = query.Where(o => o.DateOfBirth != null
++                && EF.Functions.DateDiffYear(o.DateOfBirth.Value, today) >= ageFrom);
++        }
++        if (filter.AgeTo.HasValue)
++        {
++            var ageTo = filter.AgeTo.Value;
++            query = query.Where(o => o.DateOfBirth != null
++                && EF.Functions.DateDiffYear(o.DateOfBirth.Value, today) <= ageTo);
++        }
++
++        // Exclusion flags (§23.S.3): AllOrphans → no predicate; Excluded → excluded set only;
++        // default (NotExcluded) → not-excluded set. No exclusion columns exist yet (epic-wide
++        // no-migration ruling), so the excluded set is empty and NotExcluded excludes nobody —
++        // the degenerate cases are recorded, not patched with a migration.
++        if (filter.Excluded)
++        {
++            _logger.LogInformation("Orphan data report: Excluded set requested — empty until exclusion columns exist (recorded gap)");
++            return new ReportPagedResult<OrphanDataListDto>
++            {
++                Items = new List<OrphanDataListDto>(),
++                TotalCount = 0,
++                Page = filter.Page,
++                PageSize = filter.PageSize
++            };
++        }
++
++        var totalCount = await query.CountAsync(cancellationToken);
++
++        var page = await query
++            .OrderBy(o => o.Code)
++            .Skip((filter.Page - 1) * filter.PageSize)
++            .Take(filter.PageSize)
++            .ToListAsync(cancellationToken);
++
++        var items = _mapper.Map<List<OrphanDataListDto>>(page);
++
++        // Charity names resolve through one code path — a dictionary over the page's charity ids.
++        await ResolveCharityNamesAsync(items, cancellationToken);
++
++        return new ReportPagedResult<OrphanDataListDto>
++        {
++            Items = items,
++            TotalCount = totalCount,
++            Page = filter.Page,
++            PageSize = filter.PageSize
++        };
++    }
++
++    /// <inheritdoc />
++    public async Task<NonRenewedReportsResultDto> GetNonRenewedReportAsync(
++        NonRenewedReportsRequestDto request,
++        CancellationToken cancellationToken = default)
++    {
++        await _nonRenewedValidator.ValidateAndThrowAsync(request, cancellationToken);
++
++        var page = Math.Max(request.Page, 1);
++        var pageSize = request.PageSize <= 0 ? 20 : Math.Min(request.PageSize, 100);
++
++        // Coded, non-deleted orphans under the caller scope (pin-never-widen, AC 5) —
++        // uncoded orphans never join a payment run, so they are not chased.
++        var query = _orphanRepository.TableNoTracking
++            .Where(o => !o.IsDeleted && !string.IsNullOrEmpty(o.Code));
++        query = await ApplyCharityScopeAsync(query, request.CharityId, cancellationToken);
++
++        // BR-11: only an ACCEPTED report clears an orphan — pending/refused do not. A report
++        // covers the window when its period intersects [DateFrom, DateTo] (inclusive end); a
++        // report with an incomplete period falls back to its ReportDate inside the window.
++        // TODO EP-10: batch scoping (no Batch entity today; the window carries the semantic).
++        var windowStart = request.DateFrom.Date;
++        var windowEndExclusive = request.DateTo.Date.AddDays(1);
++
++        var reports = _periodicReportRepository.TableNoTracking
++            .Where(r => !r.IsDeleted && r.Reviewed && r.IsAccepted);
++
++        var acceptedIds = reports
++            .Where(r =>
++                (r.ReportPeriodFrom != null && r.ReportPeriodTo != null
++                    && r.ReportPeriodFrom < windowEndExclusive
++                    && r.ReportPeriodTo >= windowStart)
++                || ((r.ReportPeriodFrom == null || r.ReportPeriodTo == null)
++                    && r.ReportDate >= windowStart
++                    && r.ReportDate < windowEndExclusive))
++            .Select(r => r.OrphanId);
++
++        query = query.Where(o => !acceptedIds.Contains(o.Id));
++
++        var count = await query.CountAsync(cancellationToken);
++        if (request.CountOnly)
++        {
++            // The legacy _Number screens — just the number.
++            return new NonRenewedReportsResultDto
++            {
++                Count = count,
++                Items = new List<NonRenewedOrphanRowDto>(),
++                Page = 1,
++                PageSize = 0
++            };
++        }
++
++        var anyReports = _periodicReportRepository.TableNoTracking
++            .Where(r => !r.IsDeleted);
++
++        var rows = await query
++            .OrderBy(o => o.Code)
++            .Skip((page - 1) * pageSize)
++            .Take(pageSize)
++            .Select(o => new NonRenewedOrphanRowDto
++            {
++                OrphanId = o.Id,
++                Code = o.Code,
++                FullName = o.FullName,
++                FamilyCode = o.Family != null ? o.Family.Code : null,
++                // Any-state latest report — an accepted one would have cleared the orphan.
++                LastReportDate = anyReports
++                    .Where(r => r.OrphanId == o.Id)
++                    .OrderByDescending(r => r.ReportDate)
++                    .Select(r => (DateTime?)r.ReportDate)
++                    .FirstOrDefault(),
++                CharityId = o.FK_CharityId
++            })
++            .ToListAsync(cancellationToken);
++
++        await ResolveNonRenewedCharityNamesAsync(rows, cancellationToken);
++
++        return new NonRenewedReportsResultDto
++        {
++            Count = count,
++            Items = rows,
++            Page = page,
++            PageSize = pageSize
++        };
++    }
++
++    /// <inheritdoc />
++    public async Task<ReportPagedResult<ExcludedOrphanListDto>> GetExcludedOrphansAsync(
++        ExcludedOrphansFilterDto filter,
++        CancellationToken cancellationToken = default)
++    {
++        await _excludedOrphansValidator.ValidateAndThrowAsync(filter, cancellationToken);
++
++        // Degenerate set (18-1's recorded gap, re-proven for this story): NO exclusion column
++        // exists anywhere in the domain (verified — no Exclud* member on any entity or lookup).
++        // The excluded set is therefore empty by construction; the write path belongs to EP-08
++        // and the columns to a later migration — never this epic (no-migration ruling).
++        _logger.LogInformation(
++            "Excluded-orphans report (UC-RPT-03): empty — no exclusion columns exist yet (recorded gap); caller {Caller}",
++            _currentUser.UserId?.ToString() ?? "anonymous");
++
++        return new ReportPagedResult<ExcludedOrphanListDto>
++        {
++            Items = new List<ExcludedOrphanListDto>(),
++            TotalCount = 0,
++            Page = filter.Page,
++            PageSize = filter.PageSize
++        };
++    }
++
++    /// <inheritdoc />
++    public async Task<ReportPagedResult<OrphanStatusReportListDto>> GetFinishedSponsorshipOrphansAsync(
++        OrphanStatusReportFilterDto filter,
++        CancellationToken cancellationToken = default)
++    {
++        await _orphanStatusReportValidator.ValidateAndThrowAsync(filter, cancellationToken);
++
++        // Product ruling (2026-08-24, recorded): the domain has NO ended-sponsorship state —
++        // SponsorshipStatus is a free string (Sponsored/Unsponsored/Pending), there is no
++        // sponsorship end date and no sponsor-history entity; the dev DB holds no rows that
++        // could represent "ended" under any derivation. The report ships with an EMPTY set +
++        // logged gap; when EP-08/EP-10 add the state, the predicate lands in this method only.
++        _logger.LogInformation(
++            "Finished-sponsorship report (UC-RPT-04): empty — the domain has no ended state yet (recorded gap); caller {Caller}",
++            _currentUser.UserId?.ToString() ?? "anonymous");
++
++        return new ReportPagedResult<OrphanStatusReportListDto>
++        {
++            Items = new List<OrphanStatusReportListDto>(),
++            TotalCount = 0,
++            Page = filter.Page,
++            PageSize = filter.PageSize
++        };
++    }
++
++    /// <inheritdoc />
++    public async Task<ReportPagedResult<OrphanStatusReportListDto>> GetUnsponsoredOrphansAsync(
++        OrphanStatusReportFilterDto filter,
++        CancellationToken cancellationToken = default)
++    {
++        await _orphanStatusReportValidator.ValidateAndThrowAsync(filter, cancellationToken);
++
++        // EP-08 ruling: "unsponsored" = CODED orphan with status Unsponsored (the first code
++        // assignment flips null/Pending → Unsponsored). An empty Code is UNCODED — never here.
++        var query = _orphanRepository.TableNoTracking
++            .Where(o => !o.IsDeleted
++                && !string.IsNullOrEmpty(o.Code)
++                && o.SponsorshipStatus == "Unsponsored");
++
++        query = await ApplyCharityScopeAsync(query, filter.CharityId, cancellationToken);
++
++        var totalCount = await query.CountAsync(cancellationToken);
++
++        var today = DateTime.Today;
++        var page = await query
++            .OrderBy(o => o.Code)
++            .Skip((filter.Page - 1) * filter.PageSize)
++            .Take(filter.PageSize)
++            .Select(o => new OrphanStatusReportListDto
++            {
++                Code = o.Code,
++                FullName = o.FullName,
++                CharityId = o.FK_CharityId,
++                FamilyCode = o.Family != null ? o.Family.Code : null,
++                Age = o.DateOfBirth != null
++                    ? (int?)EF.Functions.DateDiffYear(o.DateOfBirth.Value, today)
++                    : null
++            })
++            .ToListAsync(cancellationToken);
++
++        await ResolveStatusReportCharityNamesAsync(page, cancellationToken);
++
++        return new ReportPagedResult<OrphanStatusReportListDto>
++        {
++            Items = page,
++            TotalCount = totalCount,
++            Page = filter.Page,
++            PageSize = filter.PageSize
++        };
++    }
++
++    /// <inheritdoc />
++    public async Task<ReportPagedResult<WidowSponsorshipListDto>> GetWidowsAllowingSponsorshipAsync(
++        WidowSponsorshipFilterDto filter,
++        CancellationToken cancellationToken = default)
++    {
++        await _widowSponsorshipValidator.ValidateAndThrowAsync(filter, cancellationToken);
++
++        // Data-source decision (story Dev Notes): no standalone Widow entity exists — the widow
++        // IS the family's mother; her residence/income columns live on Family (the epic-7
++        // refugee contract's column set). Predicate = the data's floor, recorded: no dedicated
++        // widow-sponsorship flag exists, so "requiring sponsorship" resolves to mother alive +
++        // registered family + husband death date present + at least one non-deleted orphan.
++        var query = _motherRepository.TableNoTracking
++            .Where(m => !m.IsDeleted
++                && m.IsAlive
++                && m.Family != null
++                && !m.Family.IsDeleted
++                && m.Family.Father != null
++                && !m.Family.Father.IsDeleted
++                && m.Family.Father.DeathDate != null
++                && m.Family.Orphans.Any(o => !o.IsDeleted));
++
++        query = await ApplyMotherCharityScopeAsync(query, filter.CharityId, cancellationToken);
++
++        var totalCount = await query.CountAsync(cancellationToken);
++
++        var rows = await query
++            .OrderBy(m => m.FullName)
++            .ThenBy(m => m.Family!.Code)
++            .Skip((filter.Page - 1) * filter.PageSize)
++            .Take(filter.PageSize)
++            .Select(m => new WidowSponsorshipListDto
++            {
++                WidowName = m.FullName,
++                GovernorateName = m.Family!.Region != null
++                    ? (m.Family.Region.NameAr ?? m.Family.Region.NameEn) : null,
++                CenterName = m.Family.Center != null
++                    ? (m.Family.Center.NameAr ?? m.Family.Center.NameEn) : null,
++                CityVillage = m.Family.CityVillage,
++                DetailedAddress = m.Family.Address,
++                MobileNumber = m.Phone,
++                // No backing column — recorded gap, renders blank.
++                MobileNumber2 = null,
++                HouseOwnershipName = m.Family.HouseOwnership != null
++                    ? (m.Family.HouseOwnership.NameAr ?? m.Family.HouseOwnership.NameEn) : null,
++                RentAmount = m.Family.RentAmount,
++                HousingTypeName = m.Family.HousingType != null
++                    ? (m.Family.HousingType.NameAr ?? m.Family.HousingType.NameEn) : null,
++                HouseStatusName = m.Family.HouseStatus != null
++                    ? (m.Family.HouseStatus.NameAr ?? m.Family.HouseStatus.NameEn) : null,
++                MonthlyIncome = m.Family.MonthlyIncome,
++                HusbandDeathDate = m.Family.Father!.DeathDate,
++                // No backing column — recorded gap (مشروع تنموي), renders blank.
++                DevelopmentProject = null,
++                EducationLevelName = m.EducationLevel != null
++                    ? (m.EducationLevel.NameAr ?? m.EducationLevel.NameEn) : null,
++                Profession = m.Job,
++                HealthStatusName = m.HealthStatus != null
++                    ? (m.HealthStatus.NameAr ?? m.HealthStatus.NameEn) : null,
++                NationalId = m.NationalId,
++                Notes = m.Notes,
++                CharityId = m.Family.FK_CharityId,
++                LastUpdatedDate = m.UpdatedOn
++            })
++            .ToListAsync(cancellationToken);
++
++        await ResolveWidowCharityNamesAsync(rows, cancellationToken);
++
++        return new ReportPagedResult<WidowSponsorshipListDto>
++        {
++            Items = rows,
++            TotalCount = totalCount,
++            Page = filter.Page,
++            PageSize = filter.PageSize
++        };
++    }
++
++    /// <inheritdoc />
++    public async Task<ReportPagedResult<MezaCardsListDto>> GetMezaCardsAsync(
++        MezaCardsFilterDto filter,
++        CancellationToken cancellationToken = default)
++    {
++        await _mezaCardsValidator.ValidateAndThrowAsync(filter, cancellationToken);
++
++        // Recorded product ruling (same as UC-RPT-03/04): the row source is FAMILIES CARRYING
++        // registered guardian Meza cards (AC 4), and the domain carries no Meza/card column
++        // anywhere (grep-proven 2026-08-24 — no Meza|Card member on any entity or lookup).
++        // No family can therefore be a card carrier today: the set is empty by construction and
++        // the gap is logged. When the guardian registration gains the card fields, the
++        // family+guardian+children projection and card predicate land HERE ALONE — the DTO
++        // contract already carries the keys, so no screen/export change will be needed.
++        _logger.LogInformation(
++            "Meza-cards report (UC-RPT-07): empty — no Meza/card column exists in the domain yet (recorded gap); caller {Caller}",
++            _currentUser.UserId?.ToString() ?? "anonymous");
++
++        return new ReportPagedResult<MezaCardsListDto>
++        {
++            Items = new List<MezaCardsListDto>(),
++            TotalCount = 0,
++            Page = filter.Page,
++            PageSize = filter.PageSize
++        };
++    }
++
++    /// <inheritdoc />
++    public async Task<ReportPagedResult<MezaCardsListDto>> GetMezaCardsForExportAsync(
++        MezaCardsFilterDto filter,
++        CancellationToken cancellationToken = default)
++    {
++        await _mezaCardsValidator.ValidateAndThrowAsync(filter, cancellationToken);
++
++        // 18-7's recorded gap carries over verbatim (Task 2 ruling): the row source is families
++        // carrying registered guardian Meza cards and NO Meza/card column exists domain-wide
++        // (grep-proven) — the extract is empty by construction with the gap logged. When the
++        // registration vertical adds card storage, the family+guardian+children projection AND
++        // the extract predicates (ReportNo/BatchId/date-range/MezaCardExist) land HERE ALONE,
++        // returning the FULL selection (the bank file is never page 1).
++        _logger.LogInformation(
++            "Meza-cards extract (UC-RPT-08, report {ReportNo}): empty — no Meza/card column exists in the domain yet (recorded gap); caller {Caller}",
++            filter.ReportNo, _currentUser.UserId?.ToString() ?? "anonymous");
++
++        return new ReportPagedResult<MezaCardsListDto>
++        {
++            Items = new List<MezaCardsListDto>(),
++            TotalCount = 0,
++            Page = 1,
++            // Never 0 — TotalPages divides by it (divide-by-zero on serialise caught in smoke).
++            PageSize = filter.PageSize
++        };
++    }
++
++    /// <inheritdoc />
++    public async Task<ReportPagedResult<BeneficiaryFamilyListDto>> GetBeneficiaryFamiliesAsync(
++        BeneficiaryFamilyFilterDto filter,
++        CancellationToken cancellationToken = default)
++    {
++        await _beneficiaryFamilyValidator.ValidateAndThrowAsync(filter, cancellationToken);
++
++        // No global soft-delete filter on this platform — filter explicitly at every level.
++        var query = _beneficiaryRepository.TableNoTracking
++            .Where(b => !b.IsDeleted
++                && b.Family != null
++                && !b.Family.IsDeleted
++                && b.Campaign != null
++                && !b.Campaign.IsDeleted);
++
++        query = await ApplyBeneficiaryCharityScopeAsync(query, filter.CharityId, cancellationToken);
++
++        // One row per DISTINCT benefiting family with the campaigns aggregated (story contract).
++        // GroupBy + string.Join has no SQL translation, so the grouping runs in memory over a
++        // narrow projection — the projection stays translatable, only the join is client-side.
++        var projected = await query
++            .OrderBy(b => b.Family!.Code)
++            .Select(b => new
++            {
++                b.FamilyId,
++                FamilyCode = b.Family!.Code,
++                HeadName = b.Family.Provider != null ? b.Family.Provider.FullName :
++                           b.Family.Father != null ? b.Family.Father.FullName :
++                           b.Family.Mother != null ? b.Family.Mother.FullName : null,
++                Phone = b.Family.PhoneNumber,
++                Address = b.Family.Address,
++                CharityId = b.Family.FK_CharityId,
++                CampaignName = b.Campaign!.Name
++            })
++            .ToListAsync(cancellationToken);
++
++        var grouped = projected
++            .GroupBy(b => b.FamilyId)
++            .Select(g => new BeneficiaryFamilyListDto
++            {
++                FamilyCode = g.First().FamilyCode,
++                HeadOfFamilyName = g.Select(x => x.HeadName).FirstOrDefault(x => x != null),
++                Phone = g.First().Phone,
++                Address = g.First().Address,
++                CharityId = g.First().CharityId,
++                CampaignNames = string.Join("، ", g
++                    .Where(x => !string.IsNullOrEmpty(x.CampaignName))
++                    .Select(x => x.CampaignName)
++                    .Distinct())
++            })
++            .ToList();
++
++        var totalCount = grouped.Count;
++        var items = grouped
++            .Skip((filter.Page - 1) * filter.PageSize)
++            .Take(filter.PageSize)
++            .ToList();
++
++        await ResolveBeneficiaryCharityNamesAsync(items, cancellationToken);
++
++        return new ReportPagedResult<BeneficiaryFamilyListDto>
++        {
++            Items = items,
++            TotalCount = totalCount,
++            Page = filter.Page,
++            PageSize = filter.PageSize
++        };
++    }
++
++    /// <inheritdoc />
++    public async Task<ReportPagedResult<FamilyProjectReportRowDto>> GetRegisteredFamilyProjectsAsync(
++        FamilyProjectsFilterDto filter,
++        CancellationToken cancellationToken = default)
++    {
++        await _familyProjectsValidator.ValidateAndThrowAsync(filter, cancellationToken);
++
++        // Row-source gap (grep-proven, standing 18-4 ruling): NO project entity carries a family
++        // link — no HousingProject class exists in the Domain and OfficeProject (donors,
++        // beneficiaries-count) has no FamilyId. §23.S.7's family+project row is unrepresentable
++        // today, so the set is empty with the gap logged. When a family-project vertical adds the
++        // entity/link, the whole projection (project columns + Family.Code/PhoneNumber/Provider +
++        // joined orphan name/code/national-id strings, ordered StartDate DESC) lands HERE ALONE.
++        _logger.LogInformation(
++            "Family-projects report (UC-RPT-11): empty — no project entity carries a family link yet (recorded gap); caller {Caller}",
++            _currentUser.UserId?.ToString() ?? "anonymous");
++
++        return new ReportPagedResult<FamilyProjectReportRowDto>
++        {
++            Items = new List<FamilyProjectReportRowDto>(),
++            TotalCount = 0,
++            Page = filter.Page,
++            // Never 0 — TotalPages divides by it (divide-by-zero on serialise caught in 18-8's smoke).
++            PageSize = filter.PageSize
++        };
++    }
++
++    /// <inheritdoc />
++    public async Task<ReportPagedResult<ProviderChangeReportRowDto>> GetProviderSponsorChangesAsync(
++        ProviderChangeFilterDto filter,
++        CancellationToken cancellationToken = default)
++    {
++        await _providerChangeValidator.ValidateAndThrowAsync(filter, cancellationToken);
++
++        // The platform keeps no guardian-change audit trail (recorded story finding): Provider
++        // holds the CURRENT assignment only. This report projects what exists — one row per
++        // provider assignment, تاريخ التعديل from the audit stamps — and the three
++        // prior-guardian columns (اسم المعيل السابق / صله القرابه السابقة / سبب التغيير)
++        // ship null. No storage is invented; a ProviderChangeHistory entity is a scope change.
++        // No global soft-delete filter on this platform — filter explicitly at every level.
++        var query = _providerRepository.TableNoTracking
++            .Where(p => !p.IsDeleted
++                && p.FamilyId != null
++                && p.Family != null
++                && !p.Family.IsDeleted);
++
++        query = await ApplyProviderCharityScopeAsync(query, filter.CharityId, cancellationToken);
++
++        var totalCount = await query.CountAsync(cancellationToken);
++
++        // تاريخ التعديل — UpdatedOn marks an edited record when it is later than CreatedOn.
++        var items = await query
++            .OrderByDescending(p => p.CreatedOn)
++            .ThenByDescending(p => p.UpdatedOn)
++            .Select(p => new ProviderChangeReportRowDto
++            {
++                ProviderId = p.Id,
++                FamilyId = p.FamilyId,
++                FamilyCode = p.Family!.Code,
++                NewGuardianName = p.FullName,
++                NewRelationship = p.RelationshipToFamily,
++                ChangeDate = p.UpdatedOn.HasValue && p.UpdatedOn > p.CreatedOn
++                    ? p.UpdatedOn
++                    : p.CreatedOn,
++                CharityId = p.Family.FK_CharityId
++            })
++            .Skip((filter.Page - 1) * filter.PageSize)
++            .Take(filter.PageSize)
++            .ToListAsync(cancellationToken);
++
++        await AttachProviderChangeOrphanCodesAsync(items, cancellationToken);
++        await ResolveProviderChangeCharityNamesAsync(items, cancellationToken);
++
++        return new ReportPagedResult<ProviderChangeReportRowDto>
++        {
++            Items = items,
++            TotalCount = totalCount,
++            Page = filter.Page,
++            PageSize = filter.PageSize
++        };
++    }
++
++    /// <summary>
++    /// كود اليتيم — the family's orphan codes joined per row. GroupBy + string.Join has no SQL
++    /// translation, so the join runs in memory over a narrow per-orphan projection fetched for
++    /// the page's families only (the 18-9 pattern).
++    /// </summary>
++    private async Task AttachProviderChangeOrphanCodesAsync(
++        List<ProviderChangeReportRowDto> items,
++        CancellationToken cancellationToken)
++    {
++        var familyIds = items
++            .Where(r => r.FamilyId.HasValue)
++            .Select(r => r.FamilyId!.Value)
++            .Distinct()
++            .ToList();
++        if (familyIds.Count == 0)
++        {
++            return;
++        }
++
++        var codes = await _orphanRepository.TableNoTracking
++            .Where(o => !o.IsDeleted && o.FamilyId != null && familyIds.Contains(o.FamilyId!.Value))
++            .Select(o => new { o.FamilyId, o.Code })
++            .ToListAsync(cancellationToken);
++
++        var joined = codes
++            .GroupBy(o => o.FamilyId!.Value)
++            .ToDictionary(g => g.Key, g => string.Join(", ", g.Select(o => o.Code).OrderBy(c => c)));
++
++        foreach (var row in items)
++        {
++            if (row.FamilyId.HasValue && joined.TryGetValue(row.FamilyId.Value, out var codes2))
++            {
++                row.OrphanCodes = codes2;
++            }
++        }
++    }
++
++    /// <summary>Charity-name resolution for the §23.S.19 guardian-change rows.</summary>
++    private async Task ResolveProviderChangeCharityNamesAsync(
++        List<ProviderChangeReportRowDto> rows,
++        CancellationToken cancellationToken)
++    {
++        var charityIds = rows
++            .Where(r => r.CharityId.HasValue)
++            .Select(r => r.CharityId!.Value)
++            .Distinct()
++            .ToList();
++        if (charityIds.Count == 0)
++        {
++            return;
++        }
++
++        var names = await _charityRepository.TableNoTracking
++            .Where(c => !c.IsDeleted && charityIds.Contains(c.Id))
++            .ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
++
++        foreach (var row in rows)
++        {
++            if (row.CharityId.HasValue && names.TryGetValue(row.CharityId.Value, out var name))
++            {
++                row.CharityName = name;
++            }
++        }
++    }
++
++    /// <inheritdoc />
++    public async Task<ReportPagedResult<OrphansMissingReportsSummaryDto>> GetOrphansMissingReportsAsync(
++        OrphansMissingReportsFilterDto filter,
++        CancellationToken cancellationToken = default)
++    {
++        await _orphansMissingReportsValidator.ValidateAndThrowAsync(filter, cancellationToken);
++
++        var query = await BuildOrphansMissingReportsQueryAsync(filter.CharityId, cancellationToken);
++
++        // §23.S.14 summary — one row per charity with its chase count. The page control pages
++        // the charity rows, so TotalCount is the number of groups (the 18-9 grouped-paging
++        // precedent). No global soft-delete filter on this platform — every level inside the
++        // builder filters !IsDeleted explicitly.
++        var grouped = query.GroupBy(o => o.FK_CharityId);
++        var totalCount = await grouped.CountAsync(cancellationToken);
++
++        var items = await grouped
++            .OrderByDescending(g => g.Count())
++            .ThenBy(g => g.Key)
++            .Select(g => new OrphansMissingReportsSummaryDto
++            {
++                CharityId = g.Key,
++                MissingCount = g.Count()
++            })
++            .Skip((filter.Page - 1) * filter.PageSize)
++            .Take(filter.PageSize)
++            .ToListAsync(cancellationToken);
++
++        await ResolveMissingReportsCharityNamesAsync(items, cancellationToken);
++
++        return new ReportPagedResult<OrphansMissingReportsSummaryDto>
++        {
++            Items = items,
++            TotalCount = totalCount,
++            Page = filter.Page,
++            PageSize = filter.PageSize
++        };
++    }
++
++    /// <inheritdoc />
++    public async Task<ReportPagedResult<OrphansMissingReportsDetailDto>> GetOrphansMissingReportsDetailAsync(
++        Guid charityId,
++        int page,
++        int pageSize,
++        CancellationToken cancellationToken = default)
++    {
++        var safePage = Math.Max(page, 1);
++        var safePageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
++
++        // Pin-never-widen (AC 3/4): the shared scope helper inside the builder pins a charity
++        // caller to its own charity whatever the drilled row said; the exact-charity filter
++        // then intersects — a charity caller drilling another charity's row gets the
++        // intersection (empty), never another charity's rows.
++        var query = await BuildOrphansMissingReportsQueryAsync(charityId, cancellationToken);
++        query = query.Where(o => o.FK_CharityId == charityId);
++
++        var totalCount = await query.CountAsync(cancellationToken);
++
++        // تاريخ آخر تقرير — latest report of ANY state for each orphan (an accepted one would
++        // have cleared it out of the chase set) — the UC-ORR-14 projection shape.
++        var anyReports = _periodicReportRepository.TableNoTracking
++            .Where(r => !r.IsDeleted);
++
++        var items = await query
++            .OrderBy(o => o.Code)
++            .Skip((safePage - 1) * safePageSize)
++            .Take(safePageSize)
++            .Select(o => new OrphansMissingReportsDetailDto
++            {
++                OrphanId = o.Id,
++                OrphanCode = o.Code,
++                OrphanName = o.FullName,
++                LastReportDate = anyReports
++                    .Where(r => r.OrphanId == o.Id)
++                    .OrderByDescending(r => r.ReportDate)
++                    .Select(r => (DateTime?)r.ReportDate)
++                    .FirstOrDefault()
++            })
++            .ToListAsync(cancellationToken);
++
++        return new ReportPagedResult<OrphansMissingReportsDetailDto>
++        {
++            Items = items,
++            TotalCount = totalCount,
++            Page = safePage,
++            PageSize = safePageSize
++        };
++    }
++
++    /// <summary>
++    /// The UC-RPT-15 chase set: coded (Code set), non-deleted orphans under the caller scope
++    /// with NO accepted report covering the trailing 12 months. "Covers" reuses BR-11 (the
++    /// UC-ORR-14 ruling): an accepted+reviewed report whose period intersects the window,
++    /// falling back to ReportDate inside the window when the period is incomplete — so this
++    /// chase list and the §14.U.14 one agree on who needs a report for the same window.
++    /// </summary>
++    private async Task<IQueryable<Orphan>> BuildOrphansMissingReportsQueryAsync(
++        Guid? requestedCharityId,
++        CancellationToken cancellationToken)
++    {
++        var windowStart = DateTime.UtcNow.AddMonths(-12).Date;
++        var windowEndExclusive = DateTime.UtcNow.Date.AddDays(1);
++
++        var query = _orphanRepository.TableNoTracking
++            .Where(o => !o.IsDeleted && !string.IsNullOrEmpty(o.Code));
++
++        query = await ApplyCharityScopeAsync(query, requestedCharityId, cancellationToken);
++
++        var acceptedIds = _periodicReportRepository.TableNoTracking
++            .Where(r => !r.IsDeleted && r.Reviewed && r.IsAccepted)
++            .Where(r =>
++                (r.ReportPeriodFrom != null && r.ReportPeriodTo != null
++                    && r.ReportPeriodFrom < windowEndExclusive
++                    && r.ReportPeriodTo >= windowStart)
++                || ((r.ReportPeriodFrom == null || r.ReportPeriodTo == null)
++                    && r.ReportDate >= windowStart
++                    && r.ReportDate < windowEndExclusive))
++            .Select(r => r.OrphanId);
++
++        return query.Where(o => !acceptedIds.Contains(o.Id));
++    }
++
++    /// <summary>Charity-name resolution for the §23.S.14 summary rows (live-column dictionary).</summary>
++    private async Task ResolveMissingReportsCharityNamesAsync(
++        List<OrphansMissingReportsSummaryDto> rows,
++        CancellationToken cancellationToken)
++    {
++        var charityIds = rows
++            .Where(r => r.CharityId.HasValue)
++            .Select(r => r.CharityId!.Value)
++            .Distinct()
++            .ToList();
++        if (charityIds.Count == 0)
++        {
++            return;
++        }
++
++        var names = await _charityRepository.TableNoTracking
++            .Where(c => !c.IsDeleted && charityIds.Contains(c.Id))
++            .ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
++
++        foreach (var row in rows)
++        {
++            if (row.CharityId.HasValue && names.TryGetValue(row.CharityId.Value, out var name))
++            {
++                row.CharityName = name;
++            }
++        }
++    }
++
++    /// <inheritdoc />
++    public async Task<ReportPagedResult<OrphansMissingFilesListDto>> GetOrphansMissingFilesAsync(
++        OrphansMissingFilesFilterDto filter,
++        CancellationToken cancellationToken = default)
++    {
++        await _orphansMissingFilesValidator.ValidateAndThrowAsync(filter, cancellationToken);
++
++        // The missing-files rule (story decision, one rule): an orphan is IN the worklist when
++        // its LATEST report (highest ReportDate) is flagged MissingDocuments == true — any
++        // review state; the flag is the signal. Expressed as the anti-semi-join EF translates
++        // cleanly: a flagged report with no later report for the same orphan. The hard-null
++        // attachment signals are deliberately NOT unioned (recorded in the story Dev Notes).
++        // No global soft-delete filter on this platform — explicit !IsDeleted at every level.
++        var missingOrphanIds = _periodicReportRepository.TableNoTracking
++            .Where(r => !r.IsDeleted && r.MissingDocuments == true
++                && !_periodicReportRepository.TableNoTracking.Any(later =>
++                    !later.IsDeleted
++                    && later.OrphanId == r.OrphanId
++                    && later.ReportDate > r.ReportDate))
++            .Select(r => r.OrphanId);
++
++        var query = _orphanRepository.TableNoTracking
++            .Where(o => !o.IsDeleted && missingOrphanIds.Contains(o.Id));
++
++        query = await ApplyCharityScopeAsync(query, filter.CharityId, cancellationToken);
++
++        var totalCount = await query.CountAsync(cancellationToken);
++
++        var items = await query
++            .OrderBy(o => o.Code)
++            .Skip((filter.Page - 1) * filter.PageSize)
++            .Take(filter.PageSize)
++            .Select(o => new OrphansMissingFilesListDto
++            {
++                OrphanId = o.Id,
++                FamilyId = o.FamilyId,
++                OrphanCode = o.Code,
++                OrphanName = o.FullName,
++                // العنوان / القريه — null-safe: an orphan without a live family renders empty
++                // columns, never a thrown NRE (decided).
++                Address = o.Family != null ? o.Family.Address : null,
++                Village = o.Family != null ? o.Family.CityVillage : null,
++                CharityId = o.FK_CharityId
++            })
++            .ToListAsync(cancellationToken);
++
++        await AttachMissingDocumentsNamesAsync(items, cancellationToken);
++        await ResolveMissingFilesCharityNamesAsync(items, cancellationToken);
++
++        return new ReportPagedResult<OrphansMissingFilesListDto>
++        {
++            Items = items,
++            TotalCount = totalCount,
++            Page = filter.Page,
++            PageSize = filter.PageSize
++        };
++    }
++
++    /// <summary>
++    /// ما ينقص — the latest report's MissingDocumentsName for the page's orphans. The name
++    /// rides the report row, so a flat per-orphan projection is fetched for the page and the
++    /// latest picked in memory (the 18-12 attach pattern).
++    /// </summary>
++    private async Task AttachMissingDocumentsNamesAsync(
++        List<OrphansMissingFilesListDto> items,
++        CancellationToken cancellationToken)
++    {
++        var orphanIds = items.Select(i => i.OrphanId).ToList();
++        if (orphanIds.Count == 0)
++        {
++            return;
++        }
++
++        var reports = await _periodicReportRepository.TableNoTracking
++            .Where(r => !r.IsDeleted && orphanIds.Contains(r.OrphanId))
++            .Select(r => new { r.OrphanId, r.ReportDate, r.MissingDocumentsName })
++            .ToListAsync(cancellationToken);
++
++        var latest = reports
++            .GroupBy(r => r.OrphanId)
++            .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.ReportDate).First());
++
++        foreach (var item in items)
++        {
++            if (latest.TryGetValue(item.OrphanId, out var row))
++            {
++                item.MissingDocumentsName = row.MissingDocumentsName;
++            }
++        }
++    }
++
++    /// <summary>Charity-name resolution for the §23.S.15 worklist rows (live-column dictionary).</summary>
++    private async Task ResolveMissingFilesCharityNamesAsync(
++        List<OrphansMissingFilesListDto> rows,
++        CancellationToken cancellationToken)
++    {
++        var charityIds = rows
++            .Where(r => r.CharityId.HasValue)
++            .Select(r => r.CharityId!.Value)
++            .Distinct()
++            .ToList();
++        if (charityIds.Count == 0)
++        {
++            return;
++        }
++
++        var names = await _charityRepository.TableNoTracking
++            .Where(c => !c.IsDeleted && charityIds.Contains(c.Id))
++            .ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
++
++        foreach (var row in rows)
++        {
++            if (row.CharityId.HasValue && names.TryGetValue(row.CharityId.Value, out var name))
++            {
++                row.CharityName = name;
++            }
++        }
++    }
++
++    /// <summary>
++    /// Pin-never-widen over the PROVIDER set (family-scoped mirror of ApplyCharityScopeAsync):
++    /// a charity caller is pinned to its own charity whatever the payload says; HQ may narrow
++    /// to one explicit charity; a CountryId claim is additionally pinned to that country's
++    /// charities; unconstrained HQ sees everything.
++    /// </summary>
++    private async Task<IQueryable<Provider>> ApplyProviderCharityScopeAsync(
++        IQueryable<Provider> query,
++        Guid? requestedCharityId,
++        CancellationToken cancellationToken)
++    {
++        if (_currentUser.CharityId.HasValue)
++        {
++            var pinned = _currentUser.CharityId.Value;
++            return query.Where(p => p.Family!.FK_CharityId == pinned);
++        }
++
++        if (_currentUser.IsHeadOffice && requestedCharityId.HasValue)
++        {
++            var narrowed = requestedCharityId.Value;
++            return query.Where(p => p.Family!.FK_CharityId == narrowed);
++        }
++
++        if (_currentUser.CountryId.HasValue)
++        {
++            var countryId = _currentUser.CountryId.Value;
++            var countryCharityIds = await _charityRepository.TableNoTracking
++                .Where(c => !c.IsDeleted && c.CountryId == countryId)
++                .Select(c => c.Id)
++                .ToListAsync(cancellationToken);
++            return query.Where(p => p.Family!.FK_CharityId != null
++                && countryCharityIds.Contains(p.Family.FK_CharityId.Value));
++        }
++
++        return query;
++    }
++
++    /// <summary>
++    /// Pin-never-widen over the SEASONAL-AID BENEFICIARY set (family-scoped mirror of
++    /// ApplyCharityScopeAsync): a charity caller is pinned to its own charity whatever the
++    /// payload says; HQ may narrow to one explicit charity; a CountryId claim is additionally
++    /// pinned to that country's charities; unconstrained HQ sees everything.
++    /// </summary>
++    private async Task<IQueryable<SeasonalAidBeneficiary>> ApplyBeneficiaryCharityScopeAsync(
++        IQueryable<SeasonalAidBeneficiary> query,
++        Guid? requestedCharityId,
++        CancellationToken cancellationToken)
++    {
++        if (_currentUser.CharityId.HasValue)
++        {
++            var pinned = _currentUser.CharityId.Value;
++            return query.Where(b => b.Family!.FK_CharityId == pinned);
++        }
++
++        if (_currentUser.IsHeadOffice && requestedCharityId.HasValue)
++        {
++            var narrowed = requestedCharityId.Value;
++            return query.Where(b => b.Family!.FK_CharityId == narrowed);
++        }
++
++        if (_currentUser.CountryId.HasValue)
++        {
++            var countryId = _currentUser.CountryId.Value;
++            var countryCharityIds = await _charityRepository.TableNoTracking
++                .Where(c => !c.IsDeleted && c.CountryId == countryId)
++                .Select(c => c.Id)
++                .ToListAsync(cancellationToken);
++            return query.Where(b => b.Family!.FK_CharityId != null
++                && countryCharityIds.Contains(b.Family!.FK_CharityId.Value));
++        }
++
++        return query;
++    }
++
++    /// <summary>Charity-name resolution for the §23.S.13 rows (same shape as the others).</summary>
++    private async Task ResolveBeneficiaryCharityNamesAsync(
++        List<BeneficiaryFamilyListDto> rows,
++        CancellationToken cancellationToken)
++    {
++        var charityIds = rows
++            .Where(r => r.CharityId.HasValue)
++            .Select(r => r.CharityId!.Value)
++            .Distinct()
++            .ToList();
++        if (charityIds.Count == 0)
++        {
++            return;
++        }
++
++        var names = await _charityRepository.TableNoTracking
++            .Where(c => !c.IsDeleted && charityIds.Contains(c.Id))
++            .ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
++
++        foreach (var row in rows)
++        {
++            if (row.CharityId.HasValue && names.TryGetValue(row.CharityId.Value, out var name))
++            {
++                row.CharityName = name;
++            }
++        }
++    }
++
++    /// <summary>
++    /// Pin-never-widen over the MOTHER set (family-scoped mirror of ApplyCharityScopeAsync):
++    /// the mother's tenancy rides its family's <c>FK_CharityId</c>.
++    /// </summary>
++    private async Task<IQueryable<Mother>> ApplyMotherCharityScopeAsync(
++        IQueryable<Mother> query,
++        Guid? requestedCharityId,
++        CancellationToken cancellationToken)
++    {
++        if (_currentUser.CharityId.HasValue)
++        {
++            var pinned = _currentUser.CharityId.Value;
++            return query.Where(m => m.Family!.FK_CharityId == pinned);
++        }
++
++        if (_currentUser.IsHeadOffice && requestedCharityId.HasValue)
++        {
++            var narrowed = requestedCharityId.Value;
++            return query.Where(m => m.Family!.FK_CharityId == narrowed);
++        }
++
++        if (_currentUser.CountryId.HasValue)
++        {
++            var countryId = _currentUser.CountryId.Value;
++            var countryCharityIds = await _charityRepository.TableNoTracking
++                .Where(c => !c.IsDeleted && c.CountryId == countryId)
++                .Select(c => c.Id)
++                .ToListAsync(cancellationToken);
++            return query.Where(m => m.Family!.FK_CharityId != null
++                && countryCharityIds.Contains(m.Family.FK_CharityId.Value));
++        }
++
++        return query;
++    }
++
++    /// <summary>Charity-name resolution for the §23.S.9 widow rows.</summary>
++    private async Task ResolveWidowCharityNamesAsync(
++        List<WidowSponsorshipListDto> rows,
++        CancellationToken cancellationToken)
++    {
++        var charityIds = rows
++            .Where(r => r.CharityId.HasValue)
++            .Select(r => r.CharityId!.Value)
++            .Distinct()
++            .ToList();
++        if (charityIds.Count == 0)
++        {
++            return;
++        }
++
++        var names = await _charityRepository.TableNoTracking
++            .Where(c => !c.IsDeleted && charityIds.Contains(c.Id))
++            .ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
++
++        foreach (var row in rows)
++        {
++            if (row.CharityId.HasValue && names.TryGetValue(row.CharityId.Value, out var name))
++            {
++                row.CharityName = name;
++            }
++        }
++    }
++
++    /// <summary>Charity-name resolution for the §23.S.5/§23.S.6 status-report rows.</summary>
++    private async Task ResolveStatusReportCharityNamesAsync(
++        List<OrphanStatusReportListDto> items,
++        CancellationToken cancellationToken)
++    {
++        var charityIds = items
++            .Where(i => i.CharityId.HasValue)
++            .Select(i => i.CharityId!.Value)
++            .Distinct()
++            .ToList();
++        if (charityIds.Count == 0)
++        {
++            return;
++        }
++
++        var names = await _charityRepository.TableNoTracking
++            .Where(c => !c.IsDeleted && charityIds.Contains(c.Id))
++            .ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
++
++        foreach (var item in items)
++        {
++            if (item.CharityId.HasValue && names.TryGetValue(item.CharityId.Value, out var name))
++            {
++                item.CharityName = name;
++            }
++        }
++    }
++
++    /// <summary>
++    /// Pin-never-widen (OfficeProjectService.ApplyCallerScope shape): a charity caller is pinned
++    /// to <c>ICurrentUserService.CharityId</c>; an HQ caller may narrow to one explicit charity;
++    /// a CountryId claim is additionally pinned to that country's charities; unconstrained HQ
++    /// sees everything.
++    /// </summary>
++    private async Task<IQueryable<Orphan>> ApplyCharityScopeAsync(
++        IQueryable<Orphan> query,
++        Guid? requestedCharityId,
++        CancellationToken cancellationToken)
++    {
++        // Charity caller — pinned; the payload's CharityId is never trusted (AC 3).
++        if (_currentUser.CharityId.HasValue)
++        {
++            var pinned = _currentUser.CharityId.Value;
++            return query.Where(o => o.FK_CharityId == pinned);
++        }
++
++        // HQ caller may narrow to one explicit charity.
++        if (_currentUser.IsHeadOffice && requestedCharityId.HasValue)
++        {
++            var narrowed = requestedCharityId.Value;
++            return query.Where(o => o.FK_CharityId == narrowed);
++        }
++
++        // Country claim — additionally pinned to the (non-deleted) charities of that country.
++        if (_currentUser.CountryId.HasValue)
++        {
++            var countryId = _currentUser.CountryId.Value;
++            var countryCharityIds = await _charityRepository.TableNoTracking
++                .Where(c => !c.IsDeleted && c.CountryId == countryId)
++                .Select(c => c.Id)
++                .ToListAsync(cancellationToken);
++            return query.Where(o => o.FK_CharityId != null && countryCharityIds.Contains(o.FK_CharityId.Value));
++        }
++
++        return query;
++    }
++
++    /// <summary>Resolves CharityName for the page's distinct charity ids (single code path).</summary>
++    private async Task ResolveCharityNamesAsync(List<OrphanDataListDto> items, CancellationToken cancellationToken)
++    {
++        var charityIds = items
++            .Where(i => i.CharityId.HasValue)
++            .Select(i => i.CharityId!.Value)
++            .Distinct()
++            .ToList();
++        if (charityIds.Count == 0)
++        {
++            return;
++        }
++
++        var names = await _charityRepository.TableNoTracking
++            .Where(c => !c.IsDeleted && charityIds.Contains(c.Id))
++            .ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
++
++        foreach (var item in items)
++        {
++            if (item.CharityId.HasValue && names.TryGetValue(item.CharityId.Value, out var name))
++            {
++                item.CharityName = name;
++            }
++        }
++    }
++
++    /// <summary>Charity-name resolution for the §14.U.14 chase-list rows (same shape as above).</summary>
++    private async Task ResolveNonRenewedCharityNamesAsync(
++        List<NonRenewedOrphanRowDto> rows,
++        CancellationToken cancellationToken)
++    {
++        var charityIds = rows
++            .Where(r => r.CharityId.HasValue)
++            .Select(r => r.CharityId!.Value)
++            .Distinct()
++            .ToList();
++        if (charityIds.Count == 0)
++        {
++            return;
++        }
++
++        var names = await _charityRepository.TableNoTracking
++            .Where(c => !c.IsDeleted && charityIds.Contains(c.Id))
++            .ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
++
++        foreach (var row in rows)
++        {
++            if (row.CharityId.HasValue && names.TryGetValue(row.CharityId.Value, out var name))
++            {
++                row.CharityName = name;
++            }
++        }
++    }
++}
+diff --git a/Backend/src/IIROSA.Application/Interfaces/IReportService.cs b/Backend/src/IIROSA.Application/Interfaces/IReportService.cs
+new file mode 100644
+index 0000000..40da007
+--- /dev/null
++++ b/Backend/src/IIROSA.Application/Interfaces/IReportService.cs
+@@ -0,0 +1,189 @@
++using IIROSA.Application.DTOs.Reports;
++
++namespace IIROSA.Application.Interfaces;
++
++/// <summary>
++/// UC-RPT-01 — read-only report projections (EP-18 epic skeleton). One method per report key;
++/// every caller scope is resolved server-side from <see cref="ICurrentUserService"/>
++/// (pin-never-widen), never from the payload. Nothing here writes.
++/// </summary>
++public interface IReportService
++{
++    /// <summary>
++    /// §23.S.3 بيانات الأيتام — the full orphan master listing with guardian, residence,
++    /// status, education and org columns, ordered by orphan code. Age is computed server-side
++    /// from DateOfBirth; lookup labels resolve NameAr ?? NameEn.
++    /// </summary>
++    /// <exception cref="FluentValidation.ValidationException">
++    /// Age below 1, AgeTo &lt; AgeFrom, or PageSize above 200.
++    /// </exception>
++    Task<ReportPagedResult<OrphanDataListDto>> GetOrphanDataAsync(
++        OrphanDataFilterDto filter,
++        CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// §14.U.14 الأيتام بدون تقرير مجدد (UC-ORR-14) — the chase list before a payment run:
++    /// the (scoped) charity's coded orphans with NO accepted report whose period intersects
++    /// the window. BR-11: only an accepted report clears an orphan — pending/refused do not.
++    /// <paramref name="request"/>.CountOnly returns just the count (the legacy _Number screens).
++    /// </summary>
++    /// <exception cref="FluentValidation.ValidationException">
++    /// Unset or inverted window, or an out-of-range page.
++    /// </exception>
++    Task<NonRenewedReportsResultDto> GetNonRenewedReportAsync(
++        NonRenewedReportsRequestDto request,
++        CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// §23.S.4 الايتام المستبعدين (UC-RPT-03) — the excluded set, one narrow (charity, HQ only)
++    /// and the 6-column grid contract. The exclusion write path belongs to EP-08; this read
++    /// reports whatever that vertical recorded. No exclusion columns exist today (epic-wide
++    /// no-migration ruling) — the set is empty and the gap is logged, never patched.
++    /// </summary>
++    /// <exception cref="FluentValidation.ValidationException">Out-of-range page bounds.</exception>
++    Task<ReportPagedResult<ExcludedOrphanListDto>> GetExcludedOrphansAsync(
++        ExcludedOrphansFilterDto filter,
++        CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// §23.S.5 أيتام انتهت كفالتهم (UC-RPT-04) — orphans whose sponsorship term has expired
++    /// and need re-ponsoring/closure. HQ-only endpoint roles. The domain carries NO ended state
++    /// today (verified: SponsorshipStatus is a free string — Sponsored/Unsponsored/Pending —
++    /// with no end date and no sponsor history; dev DB holds no such rows either). Per the
++    /// recorded product ruling the report ships with an EMPTY set + logged gap — the predicate
++    /// lands in one place when the sponsorship verticals add the state. No column invented.
++    /// </summary>
++    /// <exception cref="FluentValidation.ValidationException">Out-of-range page bounds.</exception>
++    Task<ReportPagedResult<OrphanStatusReportListDto>> GetFinishedSponsorshipOrphansAsync(
++        OrphanStatusReportFilterDto filter,
++        CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// §23.S.6 أيتام غير مكفولين (UC-RPT-05) — coded orphans whose sponsorship status is
++    /// Unsponsored. Per the EP-08 ruling the first code assignment flips null/Pending →
++    /// Unsponsored; an orphan with an empty <c>Code</c> is UNCODED, not unsponsored, and never
++    /// appears here. Shares the §23.S.5 filter/grid shape; only the predicate differs.
++    /// </summary>
++    /// <exception cref="FluentValidation.ValidationException">Out-of-range page bounds.</exception>
++    Task<ReportPagedResult<OrphanStatusReportListDto>> GetUnsponsoredOrphansAsync(
++        OrphanStatusReportFilterDto filter,
++        CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// §23.S.9 ارامل مطلوب لهم كفاله (UC-RPT-06) — the widow grid (22 columns) over the
++    /// family's MOTHER joined to the family's residence/income columns. The platform has no
++    /// standalone Widow entity and no dedicated widow-sponsorship flag, so the predicate is the
++    /// data's floor (recorded): mother alive + not deleted, family registered, husband death
++    /// date present on the father, and at least one non-deleted orphan in the family. Columns
++    /// with no backing field (Mobile2, DevelopmentProject) render null — recorded gap.
++    /// </summary>
++    /// <exception cref="FluentValidation.ValidationException">Out-of-range page bounds.</exception>
++    Task<ReportPagedResult<WidowSponsorshipListDto>> GetWidowsAllowingSponsorshipAsync(
++        WidowSponsorshipFilterDto filter,
++        CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// §23.S.8 تقرير الكروت المسجله (UC-RPT-07) — families carrying registered guardian Meza
++    /// cards, with orphan names/codes aggregated per row. The domain carries NO Meza/card column
++    /// anywhere (grep-proven) — no family can be a card carrier today, so per the recorded
++    /// product ruling (same as UC-RPT-03/04) the report ships with an EMPTY set + logged gap;
++    /// the family+guardian+children projection and the card predicate land in this one method
++    /// when the guardian registration gains the card fields. No column invented.
++    /// </summary>
++    /// <exception cref="FluentValidation.ValidationException">Out-of-range page bounds.</exception>
++    Task<ReportPagedResult<MezaCardsListDto>> GetMezaCardsAsync(
++        MezaCardsFilterDto filter,
++        CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// §23.U.8 استخراج كروت العائل (UC-RPT-08) — the bank-file extract over the SAME row
++    /// source as UC-RPT-07 with the extract keys applied (ReportNo, BatchId, date range,
++    /// MezaCardExist). Returns the FULL selection (the bank file is never page 1) in the paged
++    /// envelope with Page=1. The card-column gap recorded on 18-7 carries over unchanged: no
++    /// card storage exists yet, so the extract is empty with the gap logged — the projection and
++    /// extract predicates land in this one method when the registration vertical adds storage.
++    /// </summary>
++    /// <exception cref="FluentValidation.ValidationException">
++    /// ReportNo ≤ 0, inverted date range, or out-of-range page bounds.
++    /// </exception>
++    Task<ReportPagedResult<MezaCardsListDto>> GetMezaCardsForExportAsync(
++        MezaCardsFilterDto filter,
++        CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// §23.S.13 بيانات أسر المساعدات (UC-RPT-09) — the distinct families benefiting from
++    /// seasonal-aid assistance (SeasonalAidBeneficiary joined to Family/Campaign), one row per
++    /// family with the campaign names aggregated. The legacy screen had no grid — the platform
++    /// adaptation renders a grid so the استخراج command has rows to extract. The §23.U.9
++    /// <c>userId</c> payload key is ruled out: caller identity comes from the JWT.
++    /// </summary>
++    /// <exception cref="FluentValidation.ValidationException">Out-of-range page bounds.</exception>
++    Task<ReportPagedResult<BeneficiaryFamilyListDto>> GetBeneficiaryFamiliesAsync(
++        BeneficiaryFamilyFilterDto filter,
++        CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// §23.S.7 مشاريع الأسر (UC-RPT-11) — registered family projects: one row per project with
++    /// the family's orphans/guardian joined. US-RPT-11 is typed "Create a record" — a template
++    /// artefact; this is a read, like every story in this epic.
++    ///
++    /// Row-source gap (grep-proven, standing ruling): NO project entity carries a family link —
++    /// no <c>HousingProject</c> class exists in the Domain and <c>OfficeProject</c> (donors,
++    /// beneficiaries-count) has no FamilyId. §23.S.7's family+project row is therefore
++    /// unrepresentable today: the report ships with an EMPTY set + logged gap; the projection
++    /// lands in this one method when a family-project vertical adds the entity/link. The two
++    /// experience columns have no backing field anywhere — they render null either way.
++    /// </summary>
++    /// <exception cref="FluentValidation.ValidationException">Out-of-range page bounds.</exception>
++    Task<ReportPagedResult<FamilyProjectReportRowDto>> GetRegisteredFamilyProjectsAsync(
++        FamilyProjectsFilterDto filter,
++        CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// §23.S.19 تقارير تعديل المعيل (UC-RPT-12) — one row per provider assignment on a family
++    /// with the family/charity/orphan context joined. US-RPT-12 is typed "Update a record" —
++    /// a template artefact; this is a read.
++    ///
++    /// Data-source decision (story finding): the platform keeps NO guardian-change audit trail —
++    /// <c>Provider</c> holds the current assignment only, so the row projects the current
++    /// guardian and تاريخ التعديل from the audit stamps (UpdatedOn when later than CreatedOn).
++    /// The three prior-guardian columns (اسم المعيل السابق, صله القرابه السابقة, سبب التغيير)
++    /// ship null — no storage is invented; a ProviderChangeHistory entity is a scope change.
++    /// </summary>
++    /// <exception cref="FluentValidation.ValidationException">Out-of-range page bounds.</exception>
++    Task<ReportPagedResult<ProviderChangeReportRowDto>> GetProviderSponsorChangesAsync(
++        ProviderChangeFilterDto filter,
++        CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// §23.S.14 أيتام مكودون مطلوب لهم تقرير (UC-RPT-15) — the summary grid: one row per
++    /// charity with its count of coded orphans having no accepted report covering the trailing
++    /// 12 months (BR-11 period semantics — aligned with the UC-ORR-14 chase list so the two
++    /// screens agree on who needs a report). Read-only; charity scope pins server-side.
++    /// </summary>
++    /// <exception cref="FluentValidation.ValidationException">Out-of-range page bounds.</exception>
++    Task<ReportPagedResult<OrphansMissingReportsSummaryDto>> GetOrphansMissingReportsAsync(
++        OrphansMissingReportsFilterDto filter,
++        CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// §23.S.14 drill-down (ExtractDetails) — one charity's chase list. A charity caller
++    /// naming another charity is clamped to its own rows (pin-never-widen).
++    /// </summary>
++    Task<ReportPagedResult<OrphansMissingReportsDetailDto>> GetOrphansMissingReportsDetailAsync(
++        Guid charityId,
++        int page,
++        int pageSize,
++        CancellationToken cancellationToken = default);
++
++    /// <summary>
++    /// §23.S.15 أيتام مطلوب لهم ملفات (UC-RPT-16) — a charity's missing-files worklist: coded
++    /// orphans whose LATEST periodic report is flagged MissingDocuments. Read-only; charity
++    /// scope pins server-side. The epic's «import a file» wording is a template artefact —
++    /// §23.S.15 is a query screen (recorded ruling).
++    /// </summary>
++    /// <exception cref="FluentValidation.ValidationException">Out-of-range page bounds.</exception>
++    Task<ReportPagedResult<OrphansMissingFilesListDto>> GetOrphansMissingFilesAsync(
++        OrphansMissingFilesFilterDto filter,
++        CancellationToken cancellationToken = default);
++}
+diff --git a/Backend/src/IIROSA.Application/DTOs/Reports/Reports.cs b/Backend/src/IIROSA.Application/DTOs/Reports/Reports.cs
+new file mode 100644
+index 0000000..441becd
+--- /dev/null
++++ b/Backend/src/IIROSA.Application/DTOs/Reports/Reports.cs
+@@ -0,0 +1,681 @@
++namespace IIROSA.Application.DTOs.Reports;
++
++/// <summary>
++/// UC-RPT-01 (§23.S.3 بيانات الأيتام) — filter for the orphan-data report.
++/// Clean property names only (never <c>FK_*</c> — Newtonsoft emits <c>fK_…</c>, the 13-3/15-6
++/// defect class). The charity scope is resolved server-side from the caller; <see cref="CharityId"/>
++/// is honoured only for an HQ caller (pin-never-widen).
++/// </summary>
++public class OrphanDataFilterDto
++{
++    /// <summary>1-based page number.</summary>
++    public int Page { get; set; } = 1;
++
++    /// <summary>Page size — capped at 200 by the validator.</summary>
++    public int PageSize { get; set; } = 20;
++
++    /// <summary>الدفعة المالية المنصرقة للايتام — filters to orphans paid in this batch.</summary>
++    public string? BatchNumber { get; set; }
++
++    /// <summary>الجمعية — explicit charity narrow; HQ only (ignored for charity callers).</summary>
++    public Guid? CharityId { get; set; }
++
++    /// <summary>المحافظة — Family.RegionId.</summary>
++    public int? GovernorateId { get; set; }
++
++    /// <summary>المركز — Family.CenterId.</summary>
++    public int? CenterId { get; set; }
++
++    /// <summary>من — minimum age in years (≥ 1).</summary>
++    public int? AgeFrom { get; set; }
++
++    /// <summary>الى — maximum age in years (≥ 1, ≥ AgeFrom).</summary>
++    public int? AgeTo { get; set; }
++
++    /// <summary>
++    /// العمر checkbox (§23.S.3 binds the label to this flag) — accepted on the wire; the
++    /// finished-sponsorship semantics land with story 18-4 and are NOT applied here.
++    /// </summary>
++    public bool IsFinishedSponsorship { get; set; }
++
++    /// <summary>(unlabelled) — no exclusion predicate (mutually exclusive with <see cref="Excluded"/>).</summary>
++    public bool AllOrphans { get; set; }
++
++    /// <summary>المستبعدين — excluded set only. No exclusion columns exist yet (epic ruling: no
++    /// migration), so this set is empty and the report returns nothing.</summary>
++    public bool Excluded { get; set; }
++
++    /// <summary>(unlabelled) — default checked; not-excluded set.</summary>
++    public bool NotExcluded { get; set; } = true;
++}
++
++/// <summary>
++/// One grid row of the orphan-data report — the §23.S.3 column contract (identity, guardian,
++/// residence &amp; income, status, education, father, exclusion, audit/org). Columns with no
++/// backing field today (e.g. <see cref="ExclusionReason"/>, <see cref="MobileNumber2"/>) stay
++/// null and render blank — data is never invented (epic-wide no-migration ruling).
++/// </summary>
++public class OrphanDataListDto
++{
++    // ── identity ── رقم اليتيم · أسم اليتيم · الرقم القومى · تاريخ الميلاد · العمر · النوع
++    public string Code { get; set; } = string.Empty;
++    public string FullName { get; set; } = string.Empty;
++    public string? NationalId { get; set; }
++    public DateTime? DateOfBirth { get; set; }
++    /// <summary>Computed server-side from DateOfBirth.</summary>
++    public int? Age { get; set; }
++    public string? Gender { get; set; }
++
++    // ── guardian ── أسم المعيل · صلة القرابة · الرقم القومى للمعيل · مؤهل المعيل · مهنة المعيل
++    //                الحالة الصحية للمعيل · الحالة الإجتماعية للمعيل · مشروع تنموى للمعيل
++    /// <summary>Provider first, then Father, then Mother — first non-empty wins.</summary>
++    public string? GuardianName { get; set; }
++    /// <summary>Provider.RelationshipToFamily, falling back to Family.ProviderType.</summary>
++    public string? GuardianRelationship { get; set; }
++    public string? GuardianNationalId { get; set; }
++    public string? GuardianEducationLevel { get; set; }
++    public string? GuardianJob { get; set; }
++    public string? GuardianHealthStatus { get; set; }
++    /// <summary>Only Provider carries a social status today.</summary>
++    public string? GuardianSocialStatus { get; set; }
++    /// <summary>مشروع تنموى للمعيل — no backing column; renders blank.</summary>
++    public string? GuardianDevelopmentProject { get; set; }
++
++    // ── residence & income ── المحافظة · المركز · القرية/الحى · العنوان التفصيلى · ت الموبايل ·
++    //                           ت الموبايل2 · ملكية السكن · قيمة الايجار · نوع السكن · حالة مستويات السكن · قيمة الدخل
++    public string? GovernorateName { get; set; }
++    public string? CenterName { get; set; }
++    public string? CityVillage { get; set; }
++    public string? DetailedAddress { get; set; }
++    public string? MobileNumber { get; set; }
++    /// <summary>ت الموبايل2 — no backing column; renders blank.</summary>
++    public string? MobileNumber2 { get; set; }
++    public string? HouseOwnershipName { get; set; }
++    public decimal? RentAmount { get; set; }
++    public string? HousingTypeName { get; set; }
++    public string? HouseStatusName { get; set; }
++    public decimal? MonthlyIncome { get; set; }
++
++    // ── status ── الحالة الاجتماعية · الحالة الصحية · نوعية العمل
++    public string? SocialStatusName { get; set; }
++    public string? HealthStatusName { get; set; }
++    public string? Profession { get; set; }
++
++    // ── education ── المرحلة الدراسية · الصف الدراسى · اسم الموسسة التعليمية · الكلية · القسم · حاصل على موهل دراسى
++    public string? EducationLevelName { get; set; }
++    public string? GradeClass { get; set; }
++    public string? SchoolName { get; set; }
++    public string? FacultyName { get; set; }
++    public string? DepartmentName { get; set; }
++    /// <summary>حاصل على موهل دراسى — no backing column; renders blank (null, not false).</summary>
++    public bool? HasAcademicDegree { get; set; }
++
++    // ── father ── تاريخ وفاة الاب · سبب وفاة الاب
++    public DateTime? FatherDeathDate { get; set; }
++    /// <summary>سبب وفاة الاب — no backing column; renders blank.</summary>
++    public string? FatherDeathCause { get; set; }
++
++    // ── exclusion ── الاستبعاد · سبب الاستبعاد (no backing columns — recorded gap)
++    public bool IsExcluded { get; set; }
++    public string? ExclusionReason { get; set; }
++
++    // ── audit / org ── الملاحظات · أسم الجمعية · تاريخ اخر تحديث
++    public string? Notes { get; set; }
++    /// <summary>The orphan's charity id — resolved to <see cref="CharityName"/> server-side.</summary>
++    public Guid? CharityId { get; set; }
++    public string? CharityName { get; set; }
++    public DateTime? LastUpdatedDate { get; set; }
++}
++
++/// <summary>
++/// Paged envelope shared by every report key (OfficeProject shape,
++/// <c>OfficeProjectPagedResult&lt;T&gt;</c> at OfficeProjects.cs:187).
++/// </summary>
++public class ReportPagedResult<T>
++{
++    public List<T> Items { get; set; } = new();
++    public int TotalCount { get; set; }
++    public int Page { get; set; }
++    public int PageSize { get; set; }
++    public int TotalPages => (int)Math.Ceiling((decimal)TotalCount / PageSize);
++}
++
++// ---- §23.S.4 excluded orphans (UC-RPT-03) ---------------------------------------
++
++/// <summary>
++/// UC-RPT-03 (§23.S.4 الايتام المستبعدين) — filter for the excluded-orphans report.
++/// One filter: الجمعية (HQ narrow only; charity callers are pinned server-side).
++/// </summary>
++public class ExcludedOrphansFilterDto
++{
++    /// <summary>الجمعية — explicit charity narrow; HQ only (ignored for charity callers).</summary>
++    public Guid? CharityId { get; set; }
++
++    /// <summary>1-based page number.</summary>
++    public int Page { get; set; } = 1;
++
++    /// <summary>Page size — capped at 200 by the validator.</summary>
++    public int PageSize { get; set; } = 20;
++}
++
++/// <summary>
++/// One §23.S.4 grid row — رقم اليتيم · أسم اليتيم · الاستبعاد · سبب الاستبعاد ·
++/// أسم الجمعية · تاريخ اخر تحديث. The exclusion flag/reason have no backing columns today
++/// (epic-wide no-migration ruling) — the keys stay in the contract, values render blank.
++/// </summary>
++public class ExcludedOrphanListDto
++{
++    public string Code { get; set; } = string.Empty;
++    public string FullName { get; set; } = string.Empty;
++    /// <summary>الاستبعاد — no backing column; false today (recorded gap).</summary>
++    public bool IsExcluded { get; set; }
++    /// <summary>سبب الاستبعاد — no backing column; renders blank (recorded gap).</summary>
++    public string? ExclusionReason { get; set; }
++    public Guid? CharityId { get; set; }
++    public string? CharityName { get; set; }
++    public DateTime? LastUpdatedDate { get; set; }
++}
++
++// ---- §23.S.5 / §23.S.6 orphan status reports (UC-RPT-04, UC-RPT-05) --------------
++
++/// <summary>
++/// Shared filter for the §23.S.5 / §23.S.6 pair — the two screens carry the SAME contract
++/// (one charity narrow, HQ only); only the status predicate differs.
++/// </summary>
++public class OrphanStatusReportFilterDto
++{
++    /// <summary>الجمعية — explicit charity narrow; HQ only (ignored for charity callers).</summary>
++    public Guid? CharityId { get; set; }
++
++    /// <summary>1-based page number.</summary>
++    public int Page { get; set; } = 1;
++
++    /// <summary>Page size — capped at 200 by the validator.</summary>
++    public int PageSize { get; set; } = 20;
++}
++
++/// <summary>
++/// One §23.S.5 / §23.S.6 grid row — رقم اليتيم · أسم اليتيم · الجمعيه · كود العائله · العمر.
++/// Age is computed server-side from DateOfBirth.
++/// </summary>
++public class OrphanStatusReportListDto
++{
++    public string Code { get; set; } = string.Empty;
++    public string FullName { get; set; } = string.Empty;
++    public Guid? CharityId { get; set; }
++    public string? CharityName { get; set; }
++    public string? FamilyCode { get; set; }
++    public int? Age { get; set; }
++}
++
++// ---- §23.S.9 widows requiring sponsorship (UC-RPT-06) ----------------------------
++
++/// <summary>UC-RPT-06 — filter for POST /api/Reports/widows-allowing-sponsorship.</summary>
++public class WidowSponsorshipFilterDto
++{
++    /// <summary>الجمعية — HQ-only narrow; a charity caller is pinned server-side.</summary>
++    public Guid? CharityId { get; set; }
++
++    public int Page { get; set; } = 1;
++
++    public int PageSize { get; set; } = 20;
++}
++
++/// <summary>
++/// UC-RPT-06 — one §23.S.9 grid row: the widow (family mother) with her family's
++/// residence/income columns and her own education/profession/health columns. Columns with no
++/// backing field (Mobile2, DevelopmentProject) stay null and render blank — recorded gap,
++/// never a migration.
++/// </summary>
++public class WidowSponsorshipListDto
++{
++    public string WidowName { get; set; } = string.Empty;
++    public string? GovernorateName { get; set; }
++    public string? CenterName { get; set; }
++    public string? CityVillage { get; set; }
++    public string? DetailedAddress { get; set; }
++    public string? MobileNumber { get; set; }
++    /// <summary>No backing column today (same gap as 18-1's MobileNumber2).</summary>
++    public string? MobileNumber2 { get; set; }
++    public string? HouseOwnershipName { get; set; }
++    public decimal? RentAmount { get; set; }
++    public string? HousingTypeName { get; set; }
++    public string? HouseStatusName { get; set; }
++    public decimal? MonthlyIncome { get; set; }
++    public DateTime? HusbandDeathDate { get; set; }
++    /// <summary>No backing column today — مشروع تنموي gap.</summary>
++    public string? DevelopmentProject { get; set; }
++    public string? EducationLevelName { get; set; }
++    public string? Profession { get; set; }
++    public string? HealthStatusName { get; set; }
++    public string? NationalId { get; set; }
++    public string? Notes { get; set; }
++    public Guid? CharityId { get; set; }
++    public string? CharityName { get; set; }
++    public DateTime? LastUpdatedDate { get; set; }
++}
++
++// ---- §23.S.8 registered Meza cards (UC-RPT-07) -----------------------------------
++
++/// <summary>
++/// UC-RPT-07/08 — filter for POST /api/Reports/meza-cards. One DTO serves both variants:
++/// the paged read (18-7) and the extract (18-8, presence of <see cref="ReportNo"/> selects it).
++/// </summary>
++public class MezaCardsFilterDto
++{
++    /// <summary>الجمعية — HQ-only narrow; the endpoint roles are HQ-only anyway.</summary>
++    public Guid? CharityId { get; set; }
++
++    public int Page { get; set; } = 1;
++
++    public int PageSize { get; set; } = 20;
++
++    // ---- §23.U.8 extract keys (UC-RPT-08) — ride the same request DTO ----
++
++    /// <summary>Extract report number — mandatory for the extract; its presence selects the extract path.</summary>
++    public int? ReportNo { get; set; }
++
++    /// <summary>Include orphan codes in the bank file.</summary>
++    public bool IsCodes { get; set; } = false;
++
++    /// <summary>الدفعة — narrow to one payment batch.</summary>
++    public string? BatchId { get; set; }
++
++    /// <summary>Date range start (nullable).</summary>
++    public DateTime? DateFrom { get; set; }
++
++    /// <summary>Date range end (nullable); must be ≥ DateFrom when both set.</summary>
++    public DateTime? DateTo { get; set; }
++
++    /// <summary>Only rows that already carry a card.</summary>
++    public bool MezaCardExist { get; set; } = false;
++}
++
++/// <summary>
++/// UC-RPT-07 — one §23.S.8 grid row: a family with its guardian (provider) and the aggregated
++/// orphan names/codes. The Meza-card number/expiry have NO backing column today (grep-proven —
++/// no Meza/Card member exists domain-wide); the keys ship in the contract and render blank until
++/// the guardian registration gains them (recorded gap, never a migration).
++/// </summary>
++public class MezaCardsListDto
++{
++    public string FamilyCode { get; set; } = string.Empty;
++    public string GuardianName { get; set; } = string.Empty;
++    public string? GuardianNationalId { get; set; }
++    public string? Phone { get; set; }
++    /// <summary>Aggregated orphan names, joined per the §23.S.8 single-row contract.</summary>
++    public string? OrphanNames { get; set; }
++    /// <summary>Aggregated orphan codes, joined per the §23.S.8 single-row contract.</summary>
++    public string? OrphanCodes { get; set; }
++    /// <summary>No backing column — recorded gap.</summary>
++    public string? MezaCardNumber { get; set; }
++    /// <summary>No backing column — recorded gap.</summary>
++    public DateTime? MezaCardExpiry { get; set; }
++    public Guid? CharityId { get; set; }
++    public string? CharityName { get; set; }
++}
++
++// ---- §23.S.13 assistance family data (UC-RPT-09) ---------------------------------
++
++/// <summary>
++/// UC-RPT-09 — filter for POST /api/Reports/beneficiary-family-details. One optional narrow
++/// (الجمعية, HQ only); the charity scope resolves server-side from the caller. The legacy
++/// §23.U.9 payload's <c>userId</c> is ruled out — caller identity comes from the JWT.
++/// </summary>
++public class BeneficiaryFamilyFilterDto
++{
++    /// <summary>الجمعية — explicit charity narrow; HQ only (ignored for charity callers).</summary>
++    public Guid? CharityId { get; set; }
++
++    /// <summary>1-based page number.</summary>
++    public int Page { get; set; } = 1;
++
++    /// <summary>Page size — capped at 200 by the validator.</summary>
++    public int PageSize { get; set; } = 20;
++}
++
++/// <summary>
++/// UC-RPT-09 — one §23.S.13 grid row: a DISTINCT family benefiting from seasonal-aid
++/// assistance. الحملة aggregates every campaign the family was registered in (a family in two
++/// campaigns is still one row — the story fixes "one row per distinct benefiting family").
++/// </summary>
++public class BeneficiaryFamilyListDto
++{
++    public string FamilyCode { get; set; } = string.Empty;
++    /// <summary>رب الأسرة — Provider first, then Father, then Mother (first non-empty wins).</summary>
++    public string? HeadOfFamilyName { get; set; }
++    public string? Phone { get; set; }
++    public string? Address { get; set; }
++    public Guid? CharityId { get; set; }
++    public string? CharityName { get; set; }
++    /// <summary>الحملة — the family's campaign names, joined.</summary>
++    public string? CampaignNames { get; set; }
++}
++
++// ---- §23.S.7 family projects (UC-RPT-11) -----------------------------------------
++
++/// <summary>
++/// UC-RPT-11 — filter for POST /api/Reports/registered-family-projects. One optional narrow
++/// (الجمعية, HQ only); nothing else is filterable per §23.S.7.
++/// </summary>
++public class FamilyProjectsFilterDto
++{
++    /// <summary>الجمعية — explicit charity narrow; HQ only (ignored for charity callers).</summary>
++    public Guid? CharityId { get; set; }
++
++    /// <summary>1-based page number.</summary>
++    public int Page { get; set; } = 1;
++
++    /// <summary>Page size — capped at 200 by the validator.</summary>
++    public int PageSize { get; set; } = 20;
++}
++
++/// <summary>
++/// UC-RPT-11 — one §23.S.7 grid row: a family's registered project with the orphan
++/// name/code/national-id strings joined per row (one row per project, not per orphan).
++/// The two legacy productive-project columns have no backing field anywhere in the Domain
++/// (grep-proven) — they ship in the contract and render null (recorded gap, never a migration).
++/// </summary>
++public class FamilyProjectReportRowDto
++{
++    public string? OrphanNames { get; set; }
++    public string? OrphanNationalIds { get; set; }
++    public string? GuardianName { get; set; }
++    public string? OrphanCodes { get; set; }
++    public string FamilyCode { get; set; } = string.Empty;
++    public string? Phone { get; set; }
++    public Guid? CharityId { get; set; }
++    public string? CharityName { get; set; }
++    public string? ProjectStatus { get; set; }
++    /// <summary>عدد سنوات الخبره — no backing column; renders blank (recorded gap).</summary>
++    public int? YearsOfExperience { get; set; }
++    public decimal? TotalBudget { get; set; }
++    public string? BudgetCurrency { get; set; }
++    public DateTime? ProjectStartDate { get; set; }
++    public string? ProjectAddress { get; set; }
++    /// <summary>هل يوجد خبره — no backing column; renders blank (recorded gap).</summary>
++    public bool? HasExperience { get; set; }
++    public string? ProjectDescription { get; set; }
++}
++
++// ---- §23.S.19 guardian change history (UC-RPT-12) --------------------------------
++
++/// <summary>
++/// UC-RPT-12 (تقارير تعديل المعيل) — one row per provider assignment on a family. The platform
++/// keeps no guardian-change audit trail (no prior-value snapshot, no change reason — recorded
++/// gap), so the report projects the CURRENT guardian with its audit stamps; the three
++/// prior-guardian columns ship null and render empty.
++/// </summary>
++public class ProviderChangeFilterDto
++{
++    /// <summary>الجمعية — explicit charity narrow; HQ only (ignored for charity callers).</summary>
++    public Guid? CharityId { get; set; }
++
++    /// <summary>1-based page number.</summary>
++    public int Page { get; set; } = 1;
++
++    /// <summary>Page size (validator bounds 1–200).</summary>
++    public int PageSize { get; set; } = 20;
++}
++
++public class ProviderChangeReportRowDto
++{
++    public Guid ProviderId { get; set; }
++
++    /// <summary>كود الاسره — Family.Code.</summary>
++    public string FamilyCode { get; set; } = string.Empty;
++
++    /// <summary>FamilyId carried for the orphan-code join (not rendered).</summary>
++    public Guid? FamilyId { get; set; }
++
++    /// <summary>اسم المعيل السابق — no stored source (gap); renders empty.</summary>
++    public string? PreviousGuardianName { get; set; }
++
++    /// <summary>صله القرابه السابقة — no stored source (gap); renders empty.</summary>
++    public string? PreviousRelationship { get; set; }
++
++    /// <summary>سبب التغيير — no stored source (gap); renders empty.</summary>
++    public string? ChangeReason { get; set; }
++
++    /// <summary>اسم المعيل الجديد — Provider.FullName.</summary>
++    public string? NewGuardianName { get; set; }
++
++    /// <summary>صله القرابه الجديدة — Provider.RelationshipToFamily.</summary>
++    public string? NewRelationship { get; set; }
++
++    /// <summary>تاريخ التعديل — UpdatedOn when later than CreatedOn, else CreatedOn.</summary>
++    public DateTime? ChangeDate { get; set; }
++
++    public Guid? CharityId { get; set; }
++    public string? CharityName { get; set; }
++
++    /// <summary>كود اليتيم — the family's orphan codes, joined per row.</summary>
++    public string? OrphanCodes { get; set; }
++}
++
++// ---- §23.S.10 family & orphan entry tracking (UC-RPT-13) -------------------------
++
++/// <summary>
++/// UC-RPT-13 (متابعة إدخلات الأسر والأيتام) — the one-endpoint query behind the §23.S.10
++/// screen's two data commands: إجماليات (<see cref="Mode"/> = totals) and تفاصيل
++/// (<see cref="Mode"/> = details). The charity key arrives from the route
++/// (<c>GET /api/Families/{id}/follow-up</c>); Guid.Empty means كل الجهات (HQ only).
++/// </summary>
++public class FamilyEntryTrackingFilterDto
++{
++    /// <summary>الجمعية — from the route id; Guid.Empty = all charities (HQ only; a charity
++    /// caller is pinned server-side whatever the route says).</summary>
++    public Guid? CharityId { get; set; }
++
++    /// <summary>تاريخ بدء التقرير — entries on/after this date; omit → all entries.</summary>
++    public DateTime? Date { get; set; }
++
++    /// <summary>totals | details (validator whitelist; default details).</summary>
++    public string Mode { get; set; } = "details";
++
++    /// <summary>1-based page number (details mode only).</summary>
++    public int Page { get; set; } = 1;
++
++    /// <summary>Page size (details mode only; validator bounds 1–200).</summary>
++    public int PageSize { get; set; } = 20;
++}
++
++/// <summary>إجماليات إدخالات الأسر والأيتام — families and orphans entered since the date.</summary>
++public class FamilyFollowUpTotalsDto
++{
++    public int NewFamilies { get; set; }
++    public int NewOrphans { get; set; }
++    public DateTime? SinceDate { get; set; }
++}
++
++/// <summary>
++/// تفاصيل إدخالات الأسر الجديدة — one row per family entered on/after the date
++/// (كود الأسرة · رب الأسرة · الجمعية · تاريخ التسجيل · عدد الأيتام).
++/// </summary>
++public class FamilyFollowUpDetailDto
++{
++    public Guid FamilyId { get; set; }
++    public string FamilyCode { get; set; } = string.Empty;
++    public string HeadOfFamily { get; set; } = string.Empty;
++
++    /// <summary>The live tenancy column — carried for name resolution (not rendered).</summary>
++    public Guid? CharityId { get; set; }
++
++    public string? CharityName { get; set; }
++    public DateTime? RegistrationDate { get; set; }
++    public int OrphansCount { get; set; }
++}
++
++// ---- §23.S.14 coded orphans needing a report (UC-RPT-15) ------------------------
++
++/// <summary>
++/// UC-RPT-15 (أيتام مكودون مطلوب لهم تقرير) — the summary request. The screen's single
++/// filter is the optional charity narrow; the chase window is fixed to the trailing 12
++/// months (annual reporting cycle — §23.S.14 offers only الجمعية, so no window field).
++/// </summary>
++public class OrphansMissingReportsFilterDto
++{
++    /// <summary>الجمعية — explicit charity narrow; HQ only (ignored for charity callers).</summary>
++    public Guid? CharityId { get; set; }
++
++    /// <summary>1-based page number (pages the per-charity summary rows).</summary>
++    public int Page { get; set; } = 1;
++
++    /// <summary>Page size (validator bounds 1–200).</summary>
++    public int PageSize { get; set; } = 20;
++}
++
++/// <summary>One summary grid row — الجمعيه · عدد الايتام مطلوب لهم تقارير.</summary>
++public class OrphansMissingReportsSummaryDto
++{
++    /// <summary>Orphan.FK_CharityId — the group key; a null key renders بدون جمعية.</summary>
++    public Guid? CharityId { get; set; }
++
++    /// <summary>Charity.Name resolved per page (live-column dictionary — never the EF nav mirror).</summary>
++    public string? CharityName { get; set; }
++
++    /// <summary>عدد الايتام مطلوب لهم تقارير — the charity's coded orphans in the chase set.</summary>
++    public int MissingCount { get; set; }
++}
++
++/// <summary>
++/// UC-RPT-15 drill-down request (ExtractDetails) — one charity's chase list. A charity
++/// caller naming another charity is clamped to its own rows (pin-never-widen, AC 3/4).
++/// </summary>
++public class OrphansMissingReportsDetailRequestDto
++{
++    /// <summary>الجمعيه — the summary row clicked.</summary>
++    public Guid CharityId { get; set; }
++
++    /// <summary>1-based page number.</summary>
++    public int Page { get; set; } = 1;
++
++    /// <summary>Page size — clamped to 100 in the service.</summary>
++    public int PageSize { get; set; } = 20;
++}
++
++/// <summary>One drill-down row — كود اليتيم · اسم اليتيم · تاريخ آخر تقرير.</summary>
++public class OrphansMissingReportsDetailDto
++{
++    public Guid OrphanId { get; set; }
++
++    /// <summary>رقم اليتيم — coded orphans only (uncoded never join a payment run).</summary>
++    public string OrphanCode { get; set; } = string.Empty;
++
++    /// <summary>اسم اليتيم — Orphan.FullName.</summary>
++    public string OrphanName { get; set; } = string.Empty;
++
++    /// <summary>Latest report of ANY state — an accepted one would have cleared the orphan.</summary>
++    public DateTime? LastReportDate { get; set; }
++}
++
++// ---- §23.S.15 orphans missing files (UC-RPT-16) ---------------------------------
++
++/// <summary>
++/// UC-RPT-16 (أيتام مطلوب لهم ملفات) — the worklist filter. §23.S.15 offers only الجمعية;
++/// the missing-files rule itself is fixed (see the service).
++/// </summary>
++public class OrphansMissingFilesFilterDto
++{
++    /// <summary>الجمعية — explicit charity narrow; HQ only (ignored for charity callers).</summary>
++    public Guid? CharityId { get; set; }
++
++    /// <summary>1-based page number.</summary>
++    public int Page { get; set; } = 1;
++
++    /// <summary>Page size (validator bounds 1–200).</summary>
++    public int PageSize { get; set; } = 20;
++}
++
++/// <summary>
++/// One §23.S.15 worklist row. An orphan is IN the list when its LATEST periodic report is
++/// flagged <c>MissingDocuments == true</c>; <see cref="MissingDocumentsName"/> carries what is
++/// missing (export detail column — not part of the on-screen 5-column grid).
++/// </summary>
++public class OrphansMissingFilesListDto
++{
++    public Guid OrphanId { get; set; }
++
++    /// <summary>FamilyId carried for row identity (not rendered).</summary>
++    public Guid? FamilyId { get; set; }
++
++    /// <summary>رقم اليتيم — Orphan.Code.</summary>
++    public string OrphanCode { get; set; } = string.Empty;
++
++    /// <summary>اسم اليتيم — Orphan.FullName.</summary>
++    public string OrphanName { get; set; } = string.Empty;
++
++    /// <summary>العنوان — Family.Address; null-safe (orphans without a live family render empty).</summary>
++    public string? Address { get; set; }
++
++    /// <summary>القريه — Family.CityVillage; null-safe.</summary>
++    public string? Village { get; set; }
++
++    /// <summary>Orphan.FK_CharityId — the live tenancy column.</summary>
++    public Guid? CharityId { get; set; }
++
++    /// <summary>Charity.Name resolved per page (dictionary — never the EF nav mirror).</summary>
++    public string? CharityName { get; set; }
++
++    /// <summary>ما ينقص — the latest flagged report's MissingDocumentsName.</summary>
++    public string? MissingDocumentsName { get; set; }
++}
++
++// ---- §14.U.14 non-renewed chase list (UC-ORR-14) --------------------------------
++
++/// <summary>
++/// UC-ORR-14 (الأيتام بدون تقرير مجدد) — the chase-list request. The legacy realisation
++/// shipped four endpoint shapes (non-renewed-reports, …V2, …_Number, GetBeginingScreen);
++/// this is the collapsed one: <see cref="CountOnly"/> replaces the _Number variant, the
++/// V2/begin-screen layouts are presentation over the same query. The legacy
++/// <c>batchId</c> parameter is accepted nowhere yet — no Batch entity exists
++/// (TODO EP-10: batch scoping; the date window carries the semantic meanwhile).
++/// </summary>
++public class NonRenewedReportsRequestDto
++{
++    /// <summary>الجمعية — explicit charity narrow; HQ only (ignored for charity callers).</summary>
++    public Guid? CharityId { get; set; }
++
++    /// <summary>من — window start (inclusive).</summary>
++    public DateTime DateFrom { get; set; }
++
++    /// <summary>الي — window end (inclusive: the whole of "to").</summary>
++    public DateTime DateTo { get; set; }
++
++    /// <summary>
++    /// The legacy _Number screens — the response carries just <c>Count</c> with no rows.
++    /// </summary>
++    public bool CountOnly { get; set; }
++
++    /// <summary>1-based page number (ignored when <see cref="CountOnly"/>).</summary>
++    public int Page { get; set; } = 1;
++
++    /// <summary>Page size — clamped to 100 in the service (ignored when CountOnly).</summary>
++    public int PageSize { get; set; } = 20;
++}
++
++/// <summary>One chase-list row — the orphan and, if any, its latest report date.</summary>
++public class NonRenewedOrphanRowDto
++{
++    public Guid OrphanId { get; set; }
++    /// <summary>رقم اليتيم — coded orphans only (uncoded never join a payment run).</summary>
++    public string Code { get; set; } = string.Empty;
++    public string FullName { get; set; } = string.Empty;
++    public string? FamilyCode { get; set; }
++    /// <summary>Latest report date of ANY state (an accepted one would have cleared the orphan).</summary>
++    public DateTime? LastReportDate { get; set; }
++    public Guid? CharityId { get; set; }
++    public string? CharityName { get; set; }
++}
++
++/// <summary>
++/// The chase list. <see cref="Count"/> is always the full matched count; <see cref="Items"/>
++/// is empty when the request was <c>CountOnly</c>, otherwise one clamped page.
++/// </summary>
++public class NonRenewedReportsResultDto
++{
++    public int Count { get; set; }
++    public List<NonRenewedOrphanRowDto> Items { get; set; } = new();
++    public int Page { get; set; } = 1;
++    public int PageSize { get; set; } = 20;
++}
+diff --git a/Backend/src/IIROSA.Application/DTOs/Reports/ReportSheetDtos.cs b/Backend/src/IIROSA.Application/DTOs/Reports/ReportSheetDtos.cs
+new file mode 100644
+index 0000000..58d431a
+--- /dev/null
++++ b/Backend/src/IIROSA.Application/DTOs/Reports/ReportSheetDtos.cs
+@@ -0,0 +1,78 @@
++using IIROSA.Application.DTOs.Family;
++
++namespace IIROSA.Application.DTOs.Reports;
++
++/// <summary>
++/// UC-FAM-14 (§10.U.14 طباعة كشوف المتابعة) — one request shape for the three report keys
++/// served by <c>POST /api/Reports/{reportKey}/export/pdf</c>. The route wins over any body
++/// value for <see cref="ReportKey"/> (forced in the controller bind step).
++/// </summary>
++public class ReportSheetRequestDto
++{
++    /// <summary>Route-forced report key: family-update-tracking · guardian-identification-sheets · widow-identification-sheets.</summary>
++    public string ReportKey { get; set; } = string.Empty;
++
++    /// <summary>The activity day — required for family-update-tracking (ignored by the identification sheets).</summary>
++    public DateTime? Date { get; set; }
++
++    /// <summary>Optional charity scope; a Charity-role caller is forced to its own charity server-side.</summary>
++    public Guid? CharityId { get; set; }
++
++    /// <summary>
++    /// Optional family code — restricts an identification sheet to that one family
++    /// (the user-facing key; resolved to the family inside the service).
++    /// </summary>
++    public string? FamilyCode { get; set; }
++
++    /// <summary>
++    /// UC-ORR-17: the periodic report to print — required by the
++    /// <c>orphan-report-form</c> key (ignored by the family sheets).
++    /// </summary>
++    public Guid? ReportId { get; set; }
++}
++
++/// <summary>
++/// The printable sheet payload. The endpoint returns JSON (the platform's recorded
++/// client-side-print ruling): the SPA renders the document — the browser's print-to-PDF
++/// produces the file. Recorded deviation from the story's server-bytes plan: no server PDF
++/// pipeline exists on this stack (both export "pipelines" are TODO stubs) and 18-21 owns the
++/// jsPDF/Arabic-font decision.
++/// </summary>
++public class ReportSheetPayloadDto<TRow>
++{
++    /// <summary>The report key the sheet was built for (drives the client's variant rendering).</summary>
++    public string VariantKey { get; set; } = string.Empty;
++
++    /// <summary>Localized-agnostic sheet title (the client translates per variant).</summary>
++    public string Title { get; set; } = string.Empty;
++
++    /// <summary>Charity the sheet is scoped to, when known — null means all charities.</summary>
++    public string? CharityName { get; set; }
++
++    /// <summary>Server generation timestamp (UTC).</summary>
++    public DateTime GeneratedOn { get; set; }
++
++    /// <summary>The whole selection — sheets are never paged (but see <see cref="Truncated"/>).</summary>
++    public List<TRow> Rows { get; set; } = new();
++
++    /// <summary>
++    /// True when the selection exceeded the row ceiling and the sheet carries only the first
++    /// <see cref="Rows"/> up to it — the client must warn the operator the document is partial
++    /// (an audit-facing sheet must never print silently incomplete).
++    /// </summary>
++    public bool Truncated { get; set; }
++}
++
++/// <summary>
++/// One row of an identification sheet (guardian or widow): who they are, the family they
++/// belong to, and the identity columns the paper sheet carries.
++/// </summary>
++public class IdentificationSheetRowDto
++{
++    public string FamilyCode { get; set; } = string.Empty;
++    public string FullName { get; set; } = string.Empty;
++    public string? NationalId { get; set; }
++    public string? Relationship { get; set; }
++    public string? Phone { get; set; }
++    public string? CharityName { get; set; }
++}
+diff --git a/Backend/src/IIROSA.Application/Validators/Reports/NonRenewedReportsRequestValidator.cs b/Backend/src/IIROSA.Application/Validators/Reports/NonRenewedReportsRequestValidator.cs
+new file mode 100644
+index 0000000..0a0b604
+--- /dev/null
++++ b/Backend/src/IIROSA.Application/Validators/Reports/NonRenewedReportsRequestValidator.cs
+@@ -0,0 +1,35 @@
++using FluentValidation;
++using IIROSA.Application.DTOs.Reports;
++
++namespace IIROSA.Application.Validators.Reports;
++
++/// <summary>
++/// UC-ORR-14 (§14.U.14) — the only failure this read can produce: an inverted or unset
++/// window, or an out-of-range page. Invoked with ValidateAndThrowAsync in ReportService
++/// (service-layer rule).
++/// </summary>
++public class NonRenewedReportsRequestValidator : AbstractValidator<NonRenewedReportsRequestDto>
++{
++    public NonRenewedReportsRequestValidator()
++    {
++        // The window is the chase-list semantic (batchId is deferred to EP-10) — both ends required.
++        RuleFor(r => r.DateFrom)
++            .NotEqual(default(DateTime))
++            .WithMessage("DateFrom is required");
++
++        RuleFor(r => r.DateTo)
++            .NotEqual(default(DateTime))
++            .WithMessage("DateTo is required");
++
++        RuleFor(r => r)
++            .Must(r => r.DateTo.Date >= r.DateFrom.Date)
++            .WithMessage("DateTo must be greater than or equal to DateFrom")
++            .WithName("DateTo");
++
++        RuleFor(r => r.Page)
++            .GreaterThanOrEqualTo(1);
++
++        RuleFor(r => r.PageSize)
++            .InclusiveBetween(1, 100);
++    }
++}

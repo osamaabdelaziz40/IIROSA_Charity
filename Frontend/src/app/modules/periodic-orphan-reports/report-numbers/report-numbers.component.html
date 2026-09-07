@@ -1,0 +1,130 @@
+<app-page-header [title]="'periodicReports.reportNumbers.title' | translate"
+                 [subtitle]="'periodicReports.reportNumbers.subtitle' | translate">
+</app-page-header>
+
+<!-- Count tiles -->
+<div class="row mb-4" *ngIf="ranOnce && !loading">
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="display-6 fw-bold">{{ totalCount }}</div>
+        <div class="text-muted">{{ 'periodicReports.reportNumbers.countTile' | translate }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4" *ngIf="unnumberedCount > 0">
+    <div class="card text-center border-warning">
+      <div class="card-body">
+        <div class="display-6 fw-bold text-warning">{{ unnumberedCount }}</div>
+        <div class="text-muted">{{ 'periodicReports.reportNumbers.unnumberedTile' | translate }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Criteria -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="mb-0">{{ 'periodicReports.reportNumbers.criteria' | translate }}</h6>
+    <button type="button" class="btn btn-outline-primary btn-sm" (click)="exportData()" [disabled]="loading">
+      <i class="bi bi-file-earmark-excel me-1"></i>{{ 'orphanReports.generate.export' | translate }}
+    </button>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <!-- الجمعية — HQ only (charity callers are server-pinned) -->
+      <div class="col-md-3" *ngIf="isHeadOffice">
+        <label class="form-label" for="charityId">{{ 'orphanReports.generate.charity' | translate }}</label>
+        <select id="charityId" class="form-select" [(ngModel)]="charityId" name="charityId">
+          <option value="">{{ 'common.all' | translate }}</option>
+          <option *ngFor="let charity of charities; trackBy: trackByCharityId"
+                  [ngValue]="charity.id">{{ charity.name }}</option>
+        </select>
+      </div>
+
+      <!-- من تاريخ / إلى تاريخ — the window is the criterion -->
+      <div class="col-md-2">
+        <label class="form-label" for="dateFrom">{{ 'orphanReports.generate.dateFrom' | translate }} *</label>
+        <input type="date" class="form-control" id="dateFrom" name="dateFrom" [(ngModel)]="dateFrom">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="dateTo">{{ 'orphanReports.generate.dateTo' | translate }} *</label>
+        <input type="date" class="form-control" id="dateTo" name="dateTo" [(ngModel)]="dateTo">
+      </div>
+
+      <div class="col-md-12 text-end">
+        <button type="button" class="btn btn-primary" (click)="run()" [disabled]="loading">
+          <i class="bi bi-play-fill me-1"></i>{{ 'orphanReports.generate.run' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Numbers grid -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="mb-0">{{ 'periodicReports.reportNumbers.results' | translate }}</h6>
+    <small class="text-muted" *ngIf="!loading && totalCount > rows.length">
+      {{ 'orphanReports.generate.capped' | translate:{ shown: rows.length, total: totalCount } }}
+    </small>
+  </div>
+  <div class="card-body">
+    <app-loading *ngIf="loading" message="{{ 'common.loading' | translate }}"></app-loading>
+
+    <ng-container *ngIf="!loading">
+      <app-empty-state *ngIf="ranOnce && rows.length === 0"
+                       [title]="'periodicReports.reportNumbers.emptyTitle' | translate"
+                       [description]="'periodicReports.reportNumbers.emptyMessage' | translate">
+      </app-empty-state>
+
+      <div class="table-responsive" *ngIf="rows.length > 0">
+        <table class="table table-hover table-sm align-middle">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>{{ 'periodicReports.reportNumbers.columns.reportNo' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.orphanCode' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.orphanName' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.reportDate' | translate }}</th>
+              <th>{{ 'periodicReports.reportNumbers.columns.addedOn' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.status' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of pagedRows; let i = index; trackBy: trackByReportId">
+              <td>{{ serial(i) }}</td>
+              <!-- A null ReportNo (legacy row) lists under a — bucket -->
+              <td class="fw-bold">{{ row.reportNo || '—' }}</td>
+              <td>{{ row.orphanCode || '—' }}</td>
+              <td>{{ row.orphanName || '—' }}</td>
+              <td>{{ row.reportDate ? (row.reportDate | date:'yyyy-MM-dd') : '—' }}</td>
+              <td>{{ row.createdOn | date:'yyyy-MM-dd' }}</td>
+              <td>
+                <span class="badge"
+                      [ngClass]="row.reviewStatus.toLowerCase() === 'approved' ? 'bg-success' : row.reviewStatus.toLowerCase() === 'rejected' ? 'bg-danger' : 'bg-warning text-dark'">
+                  {{ 'periodicReports.status.' + (row.reviewStatus || 'pending').toLowerCase() | translate }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <nav *ngIf="rows.length > pageSize" aria-label="pagination">
+        <ul class="pagination pagination-sm justify-content-center mb-0">
+          <li class="page-item" [class.disabled]="currentPage === 1">
+            <a class="page-link" href="#" (click)="onPageChange(currentPage - 1); false">&laquo;</a>
+          </li>
+          <li class="page-item" *ngFor="let page of [].constructor(totalPages); let i = index; trackBy: trackByPageIndex"
+              [class.active]="currentPage === i + 1">
+            <a class="page-link" href="#" (click)="onPageChange(i + 1); false">{{ i + 1 }}</a>
+          </li>
+          <li class="page-item" [class.disabled]="currentPage === totalPages">
+            <a class="page-link" href="#" (click)="onPageChange(currentPage + 1); false">&raquo;</a>
+          </li>
+        </ul>
+      </nav>
+    </ng-container>
+  </div>
+</div>

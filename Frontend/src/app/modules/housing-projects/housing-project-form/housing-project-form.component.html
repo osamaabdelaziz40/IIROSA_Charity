@@ -1,428 +1,557 @@
-<app-breadcrumb [items]="breadcrumbsWithAction"></app-breadcrumb>
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
 
 <app-page-header
-  [title]="isEditMode ? 'housingProjects.editProject' : 'housingProjects.addProject'"
+  [title]="(editMode ? 'housingProjects.editFamily' : 'housingProjects.addFamily') | translate"
+  [subtitle]="'housingProjects.subtitle' | translate"
+  [icon]="'fe fe-home'"
   [actions]="pageActions">
 </app-page-header>
 
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-12">
-      <div class="card shadow" *ngIf="!loading">
-        <div class="card-body">
-          <form [formGroup]="housingProjectForm" (ngSubmit)="onSubmit()">
-            <!-- Basic Information Section -->
-            <h5 class="mb-3">{{ 'housingProjects.basicInformation' | translate }}</h5>
+<!-- UC-HOU-04 edit mode — aggregate load in flight -->
+<div class="card mb-3" *ngIf="loading">
+  <div class="card-body text-center">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">{{ 'common.loading' | translate }}</span>
+    </div>
+  </div>
+</div>
 
-            <div class="row">
-              <div class="col-md-6">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="projectName"
-                  [label]="'housingProjects.projectName'"
-                  [required]="true"
-                  [placeholder]="'housingProjects.projectNamePlaceholder' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-6">
-                <app-drop-down
-                  [fg]="housingProjectForm"
-                  fcn="projectType"
-                  [label]="'housingProjects.projectType'"
-                  [initialData]="projectTypeOptions"
-                  [required]="true">
-                </app-drop-down>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="col-md-12">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="projectDescription"
-                  [label]="'housingProjects.projectDescription'"
-                  [required]="true"
-                  type="textarea"
-                  [rows]="3"
-                  [placeholder]="'housingProjects.projectDescriptionPlaceholder' | translate">
-                </app-input-text>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="startDate"
-                  [label]="'housingProjects.startDate'"
-                  [required]="true"
-                  type="date-picker">
-                </app-input-text>
-              </div>
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="expectedEndDate"
-                  [label]="'housingProjects.expectedEndDate'"
-                  [required]="true"
-                  type="date-picker">
-                </app-input-text>
-              </div>
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="actualEndDate"
-                  [label]="'housingProjects.actualEndDate'"
-                  [required]="false"
-                  type="date-picker">
-                </app-input-text>
-              </div>
-            </div>
-
-            <!-- Location Section -->
-            <h5 class="mb-3 mt-4">{{ 'housingProjects.location' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-4">
-                <app-drop-down
-                  [fg]="housingProjectForm"
-                  fcn="countryId"
-                  [label]="'housingProjects.country'"
-                  [initialData]="allCountries"
-                  [required]="true"
-                  (onDropDownChanged)="onCountryDropDownChanged($event)">
-                </app-drop-down>
-              </div>
-              <div class="col-md-4">
-                <app-drop-down
-                  [fg]="housingProjectForm"
-                  fcn="regionId"
-                  [label]="'housingProjects.region'"
-                  [initialData]="filteredRegions"
-                  [required]="true"
-                  [disabled]="!housingProjectForm.get('countryId')?.value"
-                  (onDropDownChanged)="onRegionDropDownChanged($event)">
-                </app-drop-down>
-              </div>
-              <div class="col-md-4">
-                <app-drop-down
-                  [fg]="housingProjectForm"
-                  fcn="centerId"
-                  [label]="'housingProjects.center'"
-                  [initialData]="filteredCenters"
-                  [required]="true"
-                  [disabled]="!housingProjectForm.get('regionId')?.value">
-                </app-drop-down>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="col-md-6">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="address"
-                  [label]="'housingProjects.address'"
-                  [required]="true"
-                  type="textarea"
-                  [rows]="2"
-                  [placeholder]="'housingProjects.addressPlaceholder' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-3">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="village"
-                  [label]="'housingProjects.village'"
-                  [required]="true"
-                  [placeholder]="'housingProjects.villagePlaceholder' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-3">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="gpsCoordinates"
-                  [label]="'housingProjects.gpsCoordinates'"
-                  [required]="true"
-                  [placeholder]="'housingProjects.gpsCoordinatesPlaceholder' | translate">
-                </app-input-text>
-              </div>
-            </div>
-
-            <!-- Specifications Section -->
-            <h5 class="mb-3 mt-4">{{ 'housingProjects.specifications' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-3">
-                <app-drop-down
-                  [fg]="housingProjectForm"
-                  fcn="housingType"
-                  [label]="'housingProjects.housingType'"
-                  [initialData]="housingTypeOptions"
-                  [required]="true">
-                </app-drop-down>
-              </div>
-              <div class="col-md-3">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="numberOfUnits"
-                  [label]="'housingProjects.numberOfUnits'"
-                  [required]="true"
-                  type="number"
-                  [min]="1"
-                  [placeholder]="'housingProjects.numberOfUnitsPlaceholder' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-3">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="areaPerUnit"
-                  [label]="'housingProjects.areaPerUnit'"
-                  [required]="true"
-                  type="number"
-                  [min]="0.01"
-                  [step]="0.01"
-                  [placeholder]="'housingProjects.areaPerUnitPlaceholder' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-3">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="totalArea"
-                  [label]="'housingProjects.totalArea'"
-                  [required]="true"
-                  type="number"
-                  [min]="0.01"
-                  [step]="0.01"
-                  [placeholder]="'housingProjects.totalAreaPlaceholder' | translate">
-                </app-input-text>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="floorsPerUnit"
-                  [label]="'housingProjects.floorsPerUnit'"
-                  [required]="true"
-                  type="number"
-                  [min]="1"
-                  [placeholder]="'housingProjects.floorsPerUnitPlaceholder' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="roomsPerUnit"
-                  [label]="'housingProjects.roomsPerUnit'"
-                  [required]="true"
-                  type="number"
-                  [min]="1"
-                  [placeholder]="'housingProjects.roomsPerUnitPlaceholder' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="constructionMaterial"
-                  [label]="'housingProjects.constructionMaterial'"
-                  [required]="true"
-                  [placeholder]="'housingProjects.constructionMaterialPlaceholder' | translate">
-                </app-input-text>
-              </div>
-            </div>
-
-            <!-- Financial Information Section -->
-            <h5 class="mb-3 mt-4">{{ 'housingProjects.financialInformation' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="totalBudget"
-                  [label]="'housingProjects.totalBudget'"
-                  [required]="true"
-                  type="number"
-                  [min]="0.01"
-                  [step]="0.01"
-                  [placeholder]="'housingProjects.totalBudgetPlaceholder' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-2">
-                <app-drop-down
-                  [fg]="housingProjectForm"
-                  fcn="budgetCurrency"
-                  [label]="'housingProjects.budgetCurrency'"
-                  [initialData]="currencyOptions"
-                  [required]="true">
-                </app-drop-down>
-              </div>
-              <div class="col-md-6">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="donorName"
-                  [label]="'housingProjects.donorName'"
-                  [required]="true"
-                  [placeholder]="'housingProjects.donorNamePlaceholder' | translate">
-                </app-input-text>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="fundingSource"
-                  [label]="'housingProjects.fundingSource'"
-                  [required]="true"
-                  [placeholder]="'housingProjects.fundingSourcePlaceholder' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="contractorName"
-                  [label]="'housingProjects.contractorName'"
-                  [required]="true"
-                  [placeholder]="'housingProjects.contractorNamePlaceholder' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="supervisorName"
-                  [label]="'housingProjects.supervisorName'"
-                  [required]="true"
-                  [placeholder]="'housingProjects.supervisorNamePlaceholder' | translate">
-                </app-input-text>
-              </div>
-            </div>
-
-            <!-- Beneficiary Assignment Section -->
-            <h5 class="mb-3 mt-4">{{ 'housingProjects.beneficiaryAssignment' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-6">
-                <app-drop-down
-                  [fg]="housingProjectForm"
-                  fcn="assignedCharityId"
-                  [label]="'housingProjects.assignedCharity'"
-                  [initialData]="charityOptions"
-                  [required]="true"
-                  (onDropDownChanged)="onCharityDropDownChanged($event)"
-                  [helpText]="'housingProjects.charityFilterNote' | translate">
-                </app-drop-down>
-              </div>
-              <div class="col-md-6">
-                <app-drop-down
-                  [fg]="housingProjectForm"
-                  fcn="assignedFamilyId"
-                  [label]="'housingProjects.assignedFamily'"
-                  [initialData]="filteredFamilies"
-                  [required]="true"
-                  [disabled]="!housingProjectForm.get('assignedCharityId')?.value"
-                  [helpText]="!housingProjectForm.get('assignedCharityId')?.value ? ('housingProjects.selectCharityFirst' | translate) : ''">
-                </app-drop-down>
-              </div>
-            </div>
-
-            <!-- Status Section -->
-            <h5 class="mb-3 mt-4">{{ 'housingProjects.status' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-4">
-                <app-drop-down
-                  [fg]="housingProjectForm"
-                  fcn="projectStatus"
-                  [label]="'housingProjects.projectStatus'"
-                  [initialData]="projectStatusOptions"
-                  [required]="true">
-                </app-drop-down>
-              </div>
-              <div class="col-md-4">
-                <div class="form-group">
-                  <label for="completionPercentage" class="form-label">
-                    {{ 'housingProjects.completionPercentage' | translate }}
-                    <span class="text-danger">*</span>
-                  </label>
-                  <div class="d-flex align-items-center">
-                    <input
-                      type="range"
-                      class="form-control-range mr-3"
-                      id="completionPercentageRange"
-                      formControlName="completionPercentage"
-                      min="0"
-                      max="100"
-                      step="1"
-                      style="flex: 1;">
-                    <input
-                      type="number"
-                      class="form-control ml-2"
-                      style="width: 80px;"
-                      id="completionPercentage"
-                      formControlName="completionPercentage"
-                      min="0"
-                      max="100"
-                      [placeholder]="'0'">
-                    <span class="ml-2">%</span>
-                  </div>
-                  <div
-                    class="invalid-feedback d-block"
-                    *ngIf="hasError('completionPercentage', 'min') || hasError('completionPercentage', 'max')">
-                    {{ 'validation.completionPercentageRange' | translate }}
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <app-drop-down
-                  [fg]="housingProjectForm"
-                  fcn="currentStage"
-                  [label]="'housingProjects.currentStage'"
-                  [initialData]="projectStageOptions"
-                  [required]="true">
-                </app-drop-down>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="col-md-12">
-                <app-input-text
-                  [fg]="housingProjectForm"
-                  fcn="notes"
-                  [label]="'housingProjects.notes'"
-                  [required]="true"
-                  type="textarea"
-                  [rows]="3"
-                  [placeholder]="'housingProjects.notesPlaceholder' | translate">
-                </app-input-text>
-              </div>
-            </div>
-
-            <!-- Form Actions -->
-            <div class="mt-4">
-              <div class="form-group">
-                <button type="submit" class="btn btn-primary" [disabled]="saving">
-                  <i class="fe fe-save mr-1" *ngIf="!saving"></i>
-                  <span class="spinner-border spinner-border-sm mr-1" *ngIf="saving"></span>
-                  {{ (isEditMode ? ('common.save' | translate) : ('common.create' | translate)) }}
-                </button>
-                <button type="button" class="btn btn-secondary ml-2" (click)="onCancel()" [disabled]="saving">
-                  <i class="fe fe-x mr-1"></i>
-                  {{ 'common.cancel' | translate }}
-                </button>
-              </div>
-            </div>
-          </form>
+<!-- ==================== بيانات الأسرة (§11.S.2) ==================== -->
+<form [formGroup]="familyForm">
+  <div class="card mb-3">
+    <div class="card-header">
+      <h4 class="mb-0">
+        {{ 'housingProjects.form.sections.family' | translate }}
+        <!-- UC-HOU-04: ownership + register code are locked on the update path -->
+        <span class="text-muted small fw-normal ms-2" *ngIf="editMode">
+          {{ 'housingProjects.form.ownershipLocked' | translate }}
+        </span>
+      </h4>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <!-- الجمعية — HQ only; a Charity caller is pinned server-side -->
+        <div class="col-md-4" *ngIf="isHQ">
+          <app-drop-down [fg]="familyForm" fcn="charityId"
+                         [label]="'housingProjects.form.charity'"
+                         [initialData]="charities"
+                         [required]="true">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-input-text [fg]="familyForm" fcn="code"
+                          [label]="'housingProjects.form.familyCode'"
+                          [placeholder]="'housingProjects.form.familyCodePlaceholder' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-input-text [fg]="familyForm" fcn="cityVillage"
+                          [label]="'housingProjects.form.cityVillage'"
+                          [required]="true">
+          </app-input-text>
         </div>
       </div>
 
-      <!-- Loading State -->
-      <div *ngIf="loading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      <div class="row">
+        <div class="col-md-4">
+          <!-- المنطقة — repopulates المركز on change -->
+          <app-drop-down [fg]="familyForm" fcn="regionId"
+                         [label]="'housingProjects.form.region'"
+                         [initialData]="regions"
+                         [required]="true"
+                         (onDropDownChanged)="onRegionChanged()">
+          </app-drop-down>
         </div>
-        <p class="mt-3 text-muted">{{ 'common.loading' | translate }}...</p>
+        <div class="col-md-4">
+          <app-drop-down [fg]="familyForm" fcn="centerId"
+                         [label]="'housingProjects.form.center'"
+                         [initialData]="centers"
+                         [required]="true">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-input-text [fg]="familyForm" fcn="nearBy"
+                          [label]="'housingProjects.form.nearBy'">
+          </app-input-text>
+        </div>
       </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <app-input-text [fg]="familyForm" fcn="street"
+                          [label]="'housingProjects.form.street'">
+          </app-input-text>
+        </div>
+        <div class="col-md-8">
+          <app-input-text [fg]="familyForm" fcn="address"
+                          [label]="'housingProjects.form.address'"
+                          [required]="true">
+          </app-input-text>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- رقم العماره → رقم الشقه cascade (UC-HOU-05) -->
+        <div class="col-md-4">
+          <app-drop-down [fg]="familyForm" fcn="housingBuildingId"
+                         [label]="'housingProjects.form.building'"
+                         [initialData]="buildings"
+                         [required]="true"
+                         (onDropDownChanged)="onBuildingChanged()">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down [fg]="familyForm" fcn="housingFlatId"
+                         [label]="'housingProjects.form.flat'"
+                         [initialData]="flats"
+                         [required]="true">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-input-text [fg]="familyForm" fcn="rentAmount" type="number"
+                          [label]="'housingProjects.form.rentAmount'"
+                          [required]="true">
+          </app-input-text>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <app-drop-down [fg]="familyForm" fcn="incomeTypeId"
+                         [label]="'housingProjects.form.incomeType'"
+                         [initialData]="incomeTypes"
+                         [required]="true">
+          </app-drop-down>
+        </div>
+        <div class="col-md-8">
+          <app-input-text [fg]="familyForm" fcn="notes"
+                          [label]="'housingProjects.form.notes'">
+          </app-input-text>
+        </div>
+      </div>
+
+      <!-- Read-only computed displays (§11.S.2) -->
+      <div class="row">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">{{ 'housingProjects.form.computed.childrenCount' | translate }}</label>
+            <input class="form-control" readonly [value]="childrenCount">
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">{{ 'housingProjects.form.computed.totalIncome' | translate }}</label>
+            <input class="form-control" readonly [value]="totalIncome">
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">{{ 'housingProjects.form.computed.perMemberShare' | translate }}</label>
+            <input class="form-control" readonly [value]="perMemberShare">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<!-- Phones grid — client-side rows; the default row feeds بيانات الإتصال -->
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h4 class="mb-0">{{ 'housingProjects.form.sections.phones' | translate }}</h4>
+    <button type="button" class="btn btn-sm btn-outline-primary" (click)="addPhoneRow()">
+      <i class="fe fe-plus"></i> {{ 'housingProjects.form.phones.add' | translate }}
+    </button>
+  </div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-bordered align-middle">
+        <thead>
+          <tr>
+            <th>{{ 'housingProjects.form.phones.number' | translate }}</th>
+            <th>{{ 'housingProjects.form.phones.belongsTo' | translate }}</th>
+            <th class="text-center">{{ 'housingProjects.form.phones.isDefault' | translate }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of phoneRows; let i = index; trackBy: trackByPhoneIndex"
+              [formGroup]="row">
+            <td>
+              <input class="form-control" formControlName="number" maxlength="20">
+            </td>
+            <td>
+              <select class="form-select" formControlName="belongsTo">
+                <option value="">{{ 'validation.selectAnOption' | translate }}</option>
+                <option *ngFor="let option of phoneBelongsToOptions; trackBy: trackByStaticValue"
+                        [value]="option.value">
+                  {{ option.labelKey | translate }}
+                </option>
+              </select>
+            </td>
+            <td class="text-center">
+              <input type="checkbox" formControlName="isDefault"
+                     (change)="onDefaultPhoneChanged(i, $any($event.target).checked)">
+            </td>
+            <td class="text-center">
+              <button type="button" class="btn btn-sm btn-outline-danger" (click)="removePhoneRow(i)">
+                <i class="fe fe-trash-2"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== اضافة معيل (§11.S.2) ==================== -->
+<form [formGroup]="guardianForm">
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">{{ 'housingProjects.form.sections.guardian' | translate }}</h4>
+      <span class="badge bg-success" *ngIf="guardianSaved">
+        <i class="fe fe-check"></i> {{ 'housingProjects.form.guardian.saved' | translate }}
+      </span>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-4">
+          <app-drop-down [fg]="guardianForm" fcn="reasonOfRelationId"
+                         [label]="'housingProjects.form.guardian.reason'"
+                         [initialData]="reasonsOfRelation"
+                         [required]="true">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down [fg]="guardianForm" fcn="relationId"
+                         [label]="'housingProjects.form.guardian.relationType'"
+                         [initialData]="relations"
+                         [required]="true">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">
+              {{ 'housingProjects.form.guardian.mainRelation' | translate }} <span class="text-danger">*</span>
+            </label>
+            <select class="form-select" formControlName="mainRelation"
+                    [class.is-invalid]="isFieldInvalid(guardianForm, 'mainRelation')">
+              <option value="">{{ 'validation.selectAnOption' | translate }}</option>
+              <option *ngFor="let option of mainRelationOptions; trackBy: trackByStaticValue"
+                      [value]="option.value">
+                {{ option.labelKey | translate }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-3">
+          <app-input-text [fg]="guardianForm" fcn="firstName"
+                          [label]="'housingProjects.form.guardian.firstName'" [required]="true">
+          </app-input-text>
+        </div>
+        <div class="col-md-3">
+          <app-input-text [fg]="guardianForm" fcn="secondName"
+                          [label]="'housingProjects.form.guardian.secondName'" [required]="true">
+          </app-input-text>
+        </div>
+        <div class="col-md-3">
+          <app-input-text [fg]="guardianForm" fcn="thirdName"
+                          [label]="'housingProjects.form.guardian.thirdName'" [required]="true">
+          </app-input-text>
+        </div>
+        <div class="col-md-3">
+          <app-input-text [fg]="guardianForm" fcn="fourthName"
+                          [label]="'housingProjects.form.guardian.fourthName'" [required]="true">
+          </app-input-text>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <app-input-text [fg]="guardianForm" fcn="familyName"
+                          [label]="'housingProjects.form.guardian.familyName'">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down [fg]="guardianForm" fcn="nationalityCountryId"
+                         [label]="'housingProjects.form.guardian.nationality'"
+                         [initialData]="countries"
+                         [required]="true">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-input-text [fg]="guardianForm" fcn="dateOfBirth" type="date"
+                          [label]="'housingProjects.form.guardian.birthDate'" [required]="true">
+          </app-input-text>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <app-input-text [fg]="guardianForm" fcn="nationalId"
+                          [label]="'housingProjects.form.guardian.nationalId'" [required]="true">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-input-text [fg]="guardianForm" fcn="job"
+                          [label]="'housingProjects.form.guardian.job'" [required]="true">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-input-text [fg]="guardianForm" fcn="phone"
+                          [label]="'housingProjects.form.guardian.phone'" [required]="true">
+          </app-input-text>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <app-input-text [fg]="guardianForm" fcn="monthlyIncome" type="number"
+                          [label]="'housingProjects.form.guardian.monthlyIncome'">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down [fg]="guardianForm" fcn="educationLevelId"
+                         [label]="'housingProjects.form.guardian.educationLevel'"
+                         [initialData]="educationLevels"
+                         [required]="true">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down [fg]="guardianForm" fcn="socialStatusId"
+                         [label]="'housingProjects.form.guardian.socialStatus'"
+                         [initialData]="socialStatuses"
+                         [required]="true">
+          </app-drop-down>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <app-drop-down [fg]="guardianForm" fcn="healthStatusId"
+                         [label]="'housingProjects.form.guardian.healthStatus'"
+                         [initialData]="healthStatuses"
+                         [required]="true">
+          </app-drop-down>
+        </div>
+        <div class="col-md-8">
+          <div class="form-group">
+            <label class="form-label d-block">{{ 'housingProjects.form.guardian.flags' | translate }}</label>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" formControlName="widowSponsorship" id="widowSponsorship">
+              <label class="form-check-label" for="widowSponsorship">{{ 'housingProjects.form.guardian.widowSponsorship' | translate }}</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" formControlName="anotherSponsor" id="anotherSponsor">
+              <label class="form-check-label" for="anotherSponsor">{{ 'housingProjects.form.guardian.anotherSponsor' | translate }}</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" formControlName="motherIsMar" id="motherIsMar">
+              <label class="form-check-label" for="motherIsMar">{{ 'housingProjects.form.guardian.motherIsMar' | translate }}</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" formControlName="isCaring" id="isCaring">
+              <label class="form-check-label" for="isCaring">{{ 'housingProjects.form.guardian.isCaring' | translate }}</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end">
+        <button type="button" class="btn btn-primary" (click)="confirmGuardian()">
+          <i class="fe fe-check"></i> {{ 'housingProjects.form.guardian.confirm' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<!-- ==================== اضافة ابن (§11.S.2) ==================== -->
+<form [formGroup]="childForm">
+  <div class="card mb-3">
+    <div class="card-header">
+      <h4 class="mb-0">{{ 'housingProjects.form.sections.child' | translate }}</h4>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-4">
+          <app-input-text [fg]="childForm" fcn="dateOfBirth" type="date"
+                          [label]="'housingProjects.form.child.birthDate'" [required]="true">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">
+              {{ 'housingProjects.form.child.nationalId' | translate }} <span class="text-danger">*</span>
+            </label>
+            <input class="form-control" formControlName="nationalId" maxlength="14"
+                   [class.is-invalid]="isFieldInvalid(childForm, 'nationalId')">
+            <div class="invalid-feedback" *ngIf="isFieldInvalid(childForm, 'nationalId')">
+              {{ getFieldError(childForm, 'nationalId', 'housingProjects.form.child.nationalId') }}
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <app-input-text [fg]="childForm" fcn="fullName"
+                          [label]="'housingProjects.form.child.fullName'" [required]="true">
+          </app-input-text>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">
+              {{ 'housingProjects.form.child.gender' | translate }} <span class="text-danger">*</span>
+            </label>
+            <select class="form-select" formControlName="gender"
+                    [class.is-invalid]="isFieldInvalid(childForm, 'gender')">
+              <option value="">{{ 'validation.selectAnOption' | translate }}</option>
+              <option *ngFor="let option of genderOptions; trackBy: trackByStaticValue"
+                      [value]="option.value">
+                {{ option.labelKey | translate }}
+              </option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down [fg]="childForm" fcn="healthStatusId"
+                         [label]="'housingProjects.form.child.healthStatus'"
+                         [initialData]="healthStatuses"
+                         [required]="true">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down [fg]="childForm" fcn="socialStatusId"
+                         [label]="'housingProjects.form.child.socialStatus'"
+                         [initialData]="socialStatuses"
+                         [required]="true">
+          </app-drop-down>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <app-drop-down [fg]="childForm" fcn="educationLevelId"
+                         [label]="'housingProjects.form.child.educationStage'"
+                         [initialData]="educationLevels"
+                         [required]="true">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-input-text [fg]="childForm" fcn="gradeClass"
+                          [label]="'housingProjects.form.child.gradeClass'" [required]="true">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-input-text [fg]="childForm" fcn="profession"
+                          [label]="'housingProjects.form.child.profession'" [required]="true">
+          </app-input-text>
+        </div>
+      </div>
+
+      <!-- «حاصل على مؤهل دراسى» — review D3 (2026-08-24): spec-mandatory §11.S.2 child field,
+           reuses the EducationLevel catalogue (same lookup the المرحلة الدراسية select uses). -->
+      <div class="row">
+        <div class="col-md-4">
+          <app-drop-down [fg]="childForm" fcn="educationalQualificationId"
+                         [label]="'housingProjects.form.child.educationalQualification'"
+                         [initialData]="educationLevels"
+                         [required]="true">
+          </app-drop-down>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <app-input-text [fg]="childForm" fcn="departmentName"
+                          [label]="'housingProjects.form.child.department'" [required]="true">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-input-text [fg]="childForm" fcn="facultyName"
+                          [label]="'housingProjects.form.child.faculty'" [required]="true">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-input-text [fg]="childForm" fcn="schoolName"
+                          [label]="'housingProjects.form.child.school'" [required]="true">
+          </app-input-text>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-8">
+          <app-input-text [fg]="childForm" fcn="notes"
+                          [label]="'housingProjects.form.child.notes'">
+          </app-input-text>
+        </div>
+        <div class="col-md-4 d-flex align-items-end justify-content-end">
+          <button type="button" class="btn btn-outline-secondary me-2" *ngIf="editingChildIndex >= 0"
+                  (click)="cancelChildEdit()">
+            {{ 'common.cancel' | translate }}
+          </button>
+          <button type="button" class="btn btn-primary" (click)="addChild()">
+            <i class="fe fe-plus"></i>
+            {{ (editingChildIndex >= 0
+                ? 'housingProjects.form.child.update'
+                : 'housingProjects.form.child.add') | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<!-- Captured children — كل الابناء rows -->
+<div class="card mb-3" *ngIf="children.length > 0">
+  <div class="card-header">
+    <h4 class="mb-0">{{ 'housingProjects.form.sections.childrenTable' | translate }}</h4>
+  </div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-bordered align-middle">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>{{ 'housingProjects.form.childrenTable.name' | translate }}</th>
+            <th>{{ 'housingProjects.form.childrenTable.birthDate' | translate }}</th>
+            <th>{{ 'housingProjects.form.childrenTable.nationalId' | translate }}</th>
+            <th>{{ 'housingProjects.form.childrenTable.gender' | translate }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let child of children; let i = index; trackBy: trackByChildIndex">
+            <td>{{ i + 1 }}</td>
+            <td>{{ child.fullName }}</td>
+            <td>{{ child.dateOfBirth }}</td>
+            <td>{{ child.nationalId }}</td>
+            <td>{{ child.gender }}</td>
+            <td class="text-center">
+              <button type="button" class="btn btn-sm btn-outline-primary me-1" (click)="editChild(i)">
+                <i class="fe fe-edit-2"></i>
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeChild(i)">
+                <i class="fe fe-trash-2"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Save bar (§11.S.2 حفظ) -->
+<div class="card mb-3" *ngIf="saving">
+  <div class="card-body text-center">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">{{ 'common.loading' | translate }}</span>
     </div>
   </div>
 </div>

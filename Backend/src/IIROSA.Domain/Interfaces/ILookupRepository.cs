@@ -56,6 +56,15 @@ public interface IMissionTypeRepository : ILookupRepository<MissionType>
     Task<MissionType?> GetByTypeCodeAsync(string typeCode);
 }
 
+public interface IMissionInterviewTypeRepository : ILookupRepository<MissionInterviewType>
+{
+}
+
+public interface IMissionTimeTypeRepository : ILookupRepository<MissionTimeType>
+{
+    Task<MissionTimeType?> GetByTimeTypeCodeAsync(string timeTypeCode);
+}
+
 public interface IProjectTypeRepository : ILookupRepository<ProjectType>
 {
     Task<ProjectType?> GetByTypeCodeAsync(string typeCode);
@@ -70,4 +79,64 @@ public interface IBankRepository : ILookupRepository<Bank>
 public interface INGOTypeRepository : ILookupRepository<NGOType>
 {
     Task<NGOType?> GetByTypeCodeAsync(string typeCode);
+}
+
+public interface IOutgoingCategoryRepository : ILookupRepository<OutgoingCategory>
+{
+    // Outgoing letter categories (epic 16, UC-COR-14) — GetActiveAsync covers the dropdown
+}
+
+public interface IEducationLevelRepository : ILookupRepository<EducationLevel>
+{
+    // Orphan reference data (UC-ORP-11) — GetActiveAsync covers the orphan-form dropdown
+}
+
+public interface IHealthStatusRepository : ILookupRepository<HealthStatus>
+{
+    // Orphan reference data (UC-ORP-11) — GetActiveAsync covers the orphan-form dropdown
+}
+
+public interface IRefuseReasonRepository : ILookupRepository<RefuseReason>
+{
+    // Periodic report refusal catalogue (epic 9, UC-ORR-08) — GetActiveAsync covers the refusal drop-down
+}
+
+// Refugee register lookups (epic 7, UC-REF-03) — GetActiveAsync covers the refugee-form dropdowns
+
+public interface IHouseOwnershipRepository : ILookupRepository<HouseOwnership>
+{
+}
+
+public interface IHouseStatusRepository : ILookupRepository<HouseStatus>
+{
+}
+
+public interface IIncomeTypeRepository : ILookupRepository<IncomeType>
+{
+}
+
+public interface ISocialStatusRepository : ILookupRepository<SocialStatus>
+{
+}
+
+public interface IRelationRepository : ILookupRepository<Relation>
+{
+}
+
+public interface IReasonOfRelRepository : ILookupRepository<ReasonOfRel>
+{
+}
+
+/// <summary>نوع السكن — shared catalogue (§12.S.2 refugee form / legacy Family.HousingTypeId)</summary>
+public interface IHousingTypeRepository : ILookupRepository<HousingType>
+{
+}
+
+/// <summary>Guardian marital status — الحالة الاجتماعية للعائل (UC-SYS-05, epic 19)</summary>
+public interface IMaritalStatusRepository : ILookupRepository<MaritalStatus>
+{
+}
+/// <summary>Guardian job / profession — المهنة (UC-SYS-09, epic 19)</summary>
+public interface IJobRepository : ILookupRepository<Job>
+{
 }

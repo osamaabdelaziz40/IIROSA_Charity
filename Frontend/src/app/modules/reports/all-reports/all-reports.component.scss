@@ -1,0 +1,34 @@
+// All Reports hub — TinyDash contacts-grid layout.
+// RTL-first: the trailing "go" chevron points left (forward in RTL) and flips right
+// when the body runs LTR (TinyDash drops the .rtl class).
+
+a.card {
+  color: inherit;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: none;
+
+    .report-card-go {
+      opacity: 1;
+    }
+  }
+}
+
+.report-card-go {
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+/* LTR (English) — forward points right */
+body:not(.rtl) .report-card-go {
+  transform: scaleX(-1);
+}
+
+.empty-state {
+  padding: 3rem 1rem;
+
+  i {
+    opacity: 0.5;
+  }
+}

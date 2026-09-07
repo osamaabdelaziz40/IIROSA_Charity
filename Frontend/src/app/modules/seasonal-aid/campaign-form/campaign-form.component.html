@@ -18,7 +18,7 @@
               <div class="col-md-6">
                 <app-input-text
                   [fg]="campaignForm"
-                  fcn="campaignName"
+                  fcn="name"
                   [label]="'seasonalAid.campaignName'"
                   [placeholder]="'seasonalAid.campaignNamePlaceholder' | translate">
                 </app-input-text>
@@ -111,26 +111,28 @@
               <div class="col-md-4">
                 <app-drop-down
                   [fg]="campaignForm"
-                  fcn="country"
+                  fcn="countryId"
                   [label]="'seasonalAid.country'"
-                  [initialData]="countryOptions">
+                  [initialData]="countryOptions"
+                  (onDropDownChanged)="onCountryChange($event)">
                 </app-drop-down>
               </div>
               <div class="col-md-4">
-                <app-input-text
+                <app-drop-down
                   [fg]="campaignForm"
-                  fcn="regions"
-                  [label]="'seasonalAid.regions'"
-                  [placeholder]="'seasonalAid.regionsPlaceholder' | translate">
-                </app-input-text>
+                  fcn="regionId"
+                  [label]="'seasonalAid.region'"
+                  [initialData]="regionOptions"
+                  (onDropDownChanged)="onRegionChange($event)">
+                </app-drop-down>
               </div>
               <div class="col-md-4">
-                <app-input-text
+                <app-drop-down
                   [fg]="campaignForm"
-                  fcn="centers"
-                  [label]="'seasonalAid.centers'"
-                  [placeholder]="'seasonalAid.centersPlaceholder' | translate">
-                </app-input-text>
+                  fcn="centerId"
+                  [label]="'seasonalAid.center'"
+                  [initialData]="centerOptions">
+                </app-drop-down>
               </div>
             </div>
 
@@ -141,7 +143,7 @@
               <div class="col-md-6">
                 <app-drop-down
                   [fg]="campaignForm"
-                  fcn="assignedCharityId"
+                  fcn="charityId"
                   [label]="'seasonalAid.assignedCharity'"
                   [initialData]="charityOptions">
                 </app-drop-down>
@@ -173,20 +175,22 @@
               <div class="col-md-2">
                 <app-input-text
                   [fg]="campaignForm"
-                  fcn="ageRangeFrom"
+                  fcn="minChildrenAge"
                   [label]="'seasonalAid.ageRangeFrom'"
                   type="number"
                   [min]="0"
+                  [max]="18"
                   [placeholder]="'seasonalAid.ageRangeFromPlaceholder' | translate">
                 </app-input-text>
               </div>
               <div class="col-md-2">
                 <app-input-text
                   [fg]="campaignForm"
-                  fcn="ageRangeTo"
+                  fcn="maxChildrenAge"
                   [label]="'seasonalAid.ageRangeTo'"
                   type="number"
                   [min]="0"
+                  [max]="18"
                   [placeholder]="'seasonalAid.ageRangeToPlaceholder' | translate">
                 </app-input-text>
               </div>
@@ -201,14 +205,6 @@
                   <input type="checkbox" class="custom-control-input" id="isActive" formControlName="isActive">
                   <label class="custom-control-label" for="isActive">
                     {{ 'seasonalAid.isActive' | translate }}
-                  </label>
-                </div>
-              </div>
-              <div class="col-md-6" *ngIf="isEditMode">
-                <div class="custom-control custom-checkbox">
-                  <input type="checkbox" class="custom-control-input" id="isClosed" formControlName="isClosed">
-                  <label class="custom-control-label" for="isClosed">
-                    {{ 'seasonalAid.isClosed' | translate }}
                   </label>
                 </div>
               </div>

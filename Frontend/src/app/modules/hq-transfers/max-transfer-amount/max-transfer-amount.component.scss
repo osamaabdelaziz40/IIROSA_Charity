@@ -1,0 +1,6 @@
+.max-transfer-amount-page {
+  .input-group {
+    // keep the per-row feedback text under the input group, not beside it
+    flex-wrap: wrap;
+  }
+}

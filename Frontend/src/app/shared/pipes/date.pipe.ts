@@ -8,7 +8,7 @@ import { DatePipe } from '@angular/common';
 export class AppDatePipe implements PipeTransform {
   private datePipe = new DatePipe('en-US');
 
-  transform(value: Date | string, format: string = 'mediumDate'): string {
+  transform(value: Date | string | null | undefined, format: string = 'mediumDate'): string {
     if (!value) return '';
     return this.datePipe.transform(value, format) || '';
   }

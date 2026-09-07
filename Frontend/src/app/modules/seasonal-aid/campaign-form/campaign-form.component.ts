@@ -1,18 +1,19 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 import { SeasonalAidService } from '../services/seasonal-aid.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { TranslateService } from '@ngx-translate/core';
+import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
+import { CharityService } from '../../charities/services/charity.service';
 import {
-  SeasonalCampaign,
-  CampaignType,
-  Currency,
-  FamilyType
+  SeasonalAidCampaign,
+  CreateSeasonalAidCampaignRequest,
+  UpdateSeasonalAidCampaignRequest
 } from '../models/seasonal-aid.model';
+import { LookupBase } from '../../../shared/models/lookup.base.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
 import { SharedModule } from '../../../shared/shared.module';
@@ -20,12 +21,11 @@ import { SharedModule } from '../../../shared/shared.module';
 @Component({
   selector: 'app-campaign-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TranslateModule, PageHeaderComponent, BreadcrumbComponent, SharedModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslateModule, PageHeaderComponent, BreadcrumbComponent, SharedModule],
   templateUrl: './campaign-form.component.html',
   styleUrls: ['./campaign-form.component.scss']
 })
 export class CampaignFormComponent implements OnInit {
-  // Breadcrumb items
   breadcrumbs: BreadcrumbItem[] = [
     { label: 'common.home', url: '/dashboard' },
     { label: 'seasonalAid.title', url: '/seasonal-aid' }
@@ -37,80 +37,57 @@ export class CampaignFormComponent implements OnInit {
       { label: this.isEditMode ? 'seasonalAid.editCampaign' : 'seasonalAid.createCampaign' }
     ];
   }
+
   campaignForm: FormGroup;
-  isEditMode: boolean = false;
+  isEditMode = false;
   campaignId: string | null = null;
-  loading: boolean = false;
-  saving: boolean = false;
+  loading = false;
+  saving = false;
 
-  campaignTypes = Object.values(CampaignType);
-  currencies = Object.values(Currency);
-  familyTypes = Object.values(FamilyType);
+  // Lookup dropdown data (LookupBase format for the shared drop-down component)
+  countryOptions: LookupBase[] = [];
+  regionOptions: LookupBase[] = [];
+  centerOptions: LookupBase[] = [];
+  charityOptions: LookupBase[] = [];
 
-  countries: string[] = ['Egypt', 'Saudi Arabia', 'United Arab Emirates', 'Qatar', 'Kuwait'];
-  charities: { id: string; name: string }[] = [];
+  campaignTypeOptions: LookupBase[] = [
+    { id: 'Ramadan', name: 'seasonalAid.campaignTypes.Ramadan' },
+    { id: 'EidAlFitr', name: 'seasonalAid.campaignTypes.EidAlFitr' },
+    { id: 'EidAlAdha', name: 'seasonalAid.campaignTypes.EidAlAdha' },
+    { id: 'Winter', name: 'seasonalAid.campaignTypes.Winter' },
+    { id: 'SchoolSupplies', name: 'seasonalAid.campaignTypes.SchoolSupplies' },
+    { id: 'Other', name: 'seasonalAid.campaignTypes.Other' }
+  ];
+
+  currencyOptions: LookupBase[] = [
+    { id: 'EGP', name: 'EGP' },
+    { id: 'SAR', name: 'SAR' },
+    { id: 'USD', name: 'USD' }
+  ];
+
+  familyTypeOptions: LookupBase[] = [
+    { id: 'All', name: 'seasonalAid.familyTypes.All' },
+    { id: 'Orphan Families', name: 'seasonalAid.familyTypes.OrphanFamilies' },
+    { id: 'Needy Families', name: 'seasonalAid.familyTypes.NeedyFamilies' }
+  ];
 
   // Page actions for header
   pageActions = [
     {
       label: 'common.cancel',
       type: 'secondary',
-      icon: 'x',
+      icon: 'fe fe-x',
       click: () => this.onCancel()
     }
   ];
-
-  // Dropdown options getters
-  get campaignTypeOptions() {
-    return this.campaignTypes.map(type => ({
-      id: type,
-      name: this.getCampaignTypeLabel(type)
-    }));
-  }
-
-  get currencyOptions() {
-    return this.currencies.map(currency => ({
-      id: currency,
-      name: currency
-    }));
-  }
-
-  get familyTypeOptions() {
-    return this.familyTypes.map(type => ({
-      id: type,
-      name: this.getFamilyTypeLabel(type)
-    }));
-  }
-
-  get countryOptions() {
-    return this.countries.map(country => ({
-      id: country,
-      name: country
-    }));
-  }
-
-  get charityOptions() {
-    return this.charities.map(charity => ({
-      id: charity.id,
-      name: charity.name
-    }));
-  }
-
-  getCampaignTypeLabel(type: CampaignType): string {
-    const key = `seasonalAid.campaignTypes.${type}`;
-    return this.translate.instant(key);
-  }
-
-  getFamilyTypeLabel(type: FamilyType): string {
-    const key = `seasonalAid.familyTypes.${type}`;
-    return this.translate.instant(key);
-  }
 
   constructor(
     private fb: FormBuilder,
     private router: Router,
     private route: ActivatedRoute,
     private seasonalAidService: SeasonalAidService,
+    private lookupManagementService: LookupManagementService,
+    private charityService: CharityService,
     private notification: NotificationService,
     private translate: TranslateService
   ) {
@@ -118,6 +95,9 @@ export class CampaignFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadCountries();
+    this.loadCharities();
+
     this.route.params.subscribe(params => {
       if (params['id']) {
         this.isEditMode = true;
@@ -129,64 +109,140 @@ export class CampaignFormComponent implements OnInit {
 
   createForm(): FormGroup {
     return this.fb.group({
-      campaignName: ['', [Validators.required, Validators.maxLength(200)]],
-      campaignType: [CampaignType.Ramadan, Validators.required],
-      description: ['', [Validators.required, Validators.maxLength(1000)]],
+      name: ['', [Validators.required, Validators.maxLength(200)]],
+      campaignType: ['Ramadan', Validators.required],
+      description: ['', Validators.maxLength(2000)],
       startDate: ['', Validators.required],
       endDate: ['', Validators.required],
-      totalBudget: [0, [Validators.required, Validators.min(0)]],
-      budgetCurrency: [Currency.EGP, Validators.required],
-      perFamilyAllocation: [0, [Validators.required, Validators.min(0)]],
-      country: ['', Validators.required],
-      regions: ['', Validators.required],
-      centers: ['', Validators.required],
-      assignedCharityId: ['', Validators.required],
-      maximumFamilies: [null, [Validators.required, Validators.min(1)]],
-      familyType: [FamilyType.All, Validators.required],
-      ageRangeFrom: [null, [Validators.required, Validators.min(0)]],
-      ageRangeTo: [null, [Validators.required, Validators.min(0)]],
-      isActive: [true], // Boolean field, not required
-      isClosed: [false] // Boolean field, not required
+      totalBudget: [null, [Validators.required, Validators.min(0.01)]],
+      budgetCurrency: ['EGP', [Validators.required, Validators.maxLength(3)]],
+      perFamilyAllocation: [null, [Validators.required, Validators.min(0.01)]],
+      countryId: [null],
+      regionId: [null],
+      centerId: [null],
+      charityId: [''],
+      maximumFamilies: [null, Validators.min(1)],
+      familyType: ['All'],
+      minChildrenAge: [null, [Validators.min(0), Validators.max(18)]],
+      maxChildrenAge: [null, [Validators.min(0), Validators.max(18)]],
+      isActive: [true]
     });
   }
 
   loadCampaign(id: string): void {
     this.loading = true;
     this.seasonalAidService.getCampaignById(id).subscribe({
-      next: (campaign) => {
+      next: campaign => {
         this.patchForm(campaign);
         this.loading = false;
       },
-      error: (error: any) => {
-        console.error('Error loading campaign:', error);
-        this.notification.error(`Failed to load campaign: ${error.message || 'Unknown error'}`);
+      error: () => {
+        this.notification.error(this.translate.instant('seasonalAid.campaignLoadFailed'));
         this.loading = false;
         this.router.navigate(['/seasonal-aid']);
       }
     });
   }
 
-  patchForm(campaign: SeasonalCampaign): void {
+  patchForm(campaign: SeasonalAidCampaign): void {
     this.campaignForm.patchValue({
-      campaignName: campaign.campaignName,
+      name: campaign.name,
       campaignType: campaign.campaignType,
       description: campaign.description,
-      startDate: new Date(campaign.startDate),
-      endDate: new Date(campaign.endDate),
+      startDate: this.toDateInput(campaign.startDate),
+      endDate: this.toDateInput(campaign.endDate),
       totalBudget: campaign.totalBudget,
       budgetCurrency: campaign.budgetCurrency,
       perFamilyAllocation: campaign.perFamilyAllocation,
-      country: campaign.country,
-      regions: (campaign.regions && campaign.regions.length > 0) ? campaign.regions.join(', ') : '',
-      centers: (campaign.centers && campaign.centers.length > 0) ? campaign.centers.join(', ') : '',
-      assignedCharityId: campaign.assignedCharityId || '',
+      countryId: campaign.countryId,
+      regionId: campaign.regionId,
+      centerId: campaign.centerId,
+      charityId: campaign.charityId,
       maximumFamilies: campaign.maximumFamilies,
-      familyType: campaign.familyType || FamilyType.All,
-      ageRangeFrom: campaign.ageRangeFrom,
-      ageRangeTo: campaign.ageRangeTo,
-      isActive: campaign.isActive,
-      isClosed: campaign.isClosed
+      familyType: campaign.familyType,
+      minChildrenAge: campaign.minChildrenAge,
+      maxChildrenAge: campaign.maxChildrenAge,
+      isActive: campaign.isActive
     });
+
+    // Cascade: country → regions, region → centers (edit mode loads with values set)
+    if (campaign.countryId) {
+      this.loadRegions(campaign.countryId);
+    }
+    if (campaign.regionId) {
+      this.loadCenters(campaign.regionId);
+    }
+  }
+
+  /** ISO yyyy-MM-dd for date inputs. */
+  private toDateInput(value: string): string {
+    if (!value) return '';
+    return new Date(value).toISOString().slice(0, 10);
+  }
+
+  private loadCountries(): void {
+    this.lookupManagementService.getCountries({ page: 1, pageSize: 1000, isActive: true }).subscribe({
+      next: response => {
+        this.countryOptions = (response.items || []).map(c => ({
+          id: c.id,
+          name: c.nameAr || c.name
+        }));
+      },
+      error: () => (this.countryOptions = [])
+    });
+  }
+
+  private loadRegions(countryId: number): void {
+    this.lookupManagementService.getRegionsByCountry(countryId).subscribe({
+      next: regions => {
+        this.regionOptions = (regions || []).map(r => ({
+          id: r.id,
+          name: r.nameAr || r.name
+        }));
+      },
+      error: () => (this.regionOptions = [])
+    });
+  }
+
+  private loadCenters(regionId: number): void {
+    this.lookupManagementService.getCentersByRegion(regionId).subscribe({
+      next: centers => {
+        this.centerOptions = (centers || []).map(c => ({
+          id: c.id,
+          name: c.nameAr || c.name
+        }));
+      },
+      error: () => (this.centerOptions = [])
+    });
+  }
+
+  private loadCharities(): void {
+    this.charityService.getCharities({ pageNumber: 1, pageSize: 1000, isActive: true }).subscribe({
+      next: response => {
+        this.charityOptions = (response.items || []).map(c => ({
+          id: c.id,
+          name: c.name
+        }));
+      },
+      error: () => (this.charityOptions = [])
+    });
+  }
+
+  onCountryChange(countryId: number): void {
+    this.campaignForm.patchValue({ regionId: null, centerId: null });
+    this.regionOptions = [];
+    this.centerOptions = [];
+    if (countryId) {
+      this.loadRegions(countryId);
+    }
+  }
+
+  onRegionChange(regionId: number): void {
+    this.campaignForm.patchValue({ centerId: null });
+    this.centerOptions = [];
+    if (regionId) {
+      this.loadCenters(regionId);
+    }
   }
 
   onSubmit(): void {
@@ -199,29 +255,29 @@ export class CampaignFormComponent implements OnInit {
     this.saving = true;
     const formValue = this.campaignForm.value;
 
-    // Convert comma-separated regions/centers to arrays
-    const regions = formValue.regions
-      ? formValue.regions.split(',').map((r: string) => r.trim()).filter((r: string) => r)
-      : [];
-
-    const centers = formValue.centers
-      ? formValue.centers.split(',').map((c: string) => c.trim()).filter((c: string) => c)
-      : [];
-
-    const campaign: SeasonalCampaign = {
-      ...formValue,
-      regions,
-      centers,
-      id: this.isEditMode && this.campaignId ? this.campaignId : '',
-      createdDate: this.isEditMode ? new Date() : new Date(),
-      createdBy: 'Current User',
-      modifiedDate: this.isEditMode ? new Date() : undefined,
-      modifiedBy: this.isEditMode ? 'Current User' : undefined
+    const request: CreateSeasonalAidCampaignRequest = {
+      name: formValue.name,
+      campaignType: formValue.campaignType,
+      description: formValue.description || null,
+      startDate: formValue.startDate,
+      endDate: formValue.endDate,
+      totalBudget: formValue.totalBudget,
+      budgetCurrency: formValue.budgetCurrency,
+      perFamilyAllocation: formValue.perFamilyAllocation,
+      countryId: formValue.countryId || null,
+      regionId: formValue.regionId || null,
+      centerId: formValue.centerId || null,
+      charityId: formValue.charityId || null,
+      maximumFamilies: formValue.maximumFamilies || null,
+      familyType: formValue.familyType || null,
+      minChildrenAge: formValue.minChildrenAge ?? null,
+      maxChildrenAge: formValue.maxChildrenAge ?? null,
+      isActive: !!formValue.isActive
     };
 
-    const operation = this.isEditMode
-      ? this.seasonalAidService.updateCampaign(this.campaignId!, campaign)
-      : this.seasonalAidService.createCampaign(campaign);
+    const operation = this.isEditMode && this.campaignId
+      ? this.seasonalAidService.updateCampaign(this.campaignId, { ...request, id: this.campaignId } as UpdateSeasonalAidCampaignRequest)
+      : this.seasonalAidService.createCampaign(request);
 
     operation.subscribe({
       next: () => {
@@ -233,10 +289,11 @@ export class CampaignFormComponent implements OnInit {
         this.saving = false;
         this.router.navigate(['/seasonal-aid']);
       },
-      error: (error: any) => {
-        console.error('Error saving campaign:', error);
+      error: () => {
         this.notification.error(
-          `Failed to save campaign: ${error.message || 'Unknown error'}`
+          this.isEditMode
+            ? this.translate.instant('seasonalAid.campaignUpdateFailed')
+            : this.translate.instant('seasonalAid.campaignCreateFailed')
         );
         this.saving = false;
       }
@@ -250,7 +307,6 @@ export class CampaignFormComponent implements OnInit {
   private markFormGroupTouched(formGroup: FormGroup): void {
     Object.values(formGroup.controls).forEach(control => {
       control.markAsTouched();
-
       if (control instanceof FormGroup) {
         this.markFormGroupTouched(control);
       }
@@ -260,28 +316,5 @@ export class CampaignFormComponent implements OnInit {
   isFieldInvalid(fieldName: string): boolean {
     const field = this.campaignForm.get(fieldName);
     return field ? field.invalid && (field.dirty || field.touched) : false;
-  }
-
-  getErrorMessage(fieldName: string): string {
-    const field = this.campaignForm.get(fieldName);
-    if (!field || !field.errors) return '';
-
-    if (field.errors['required']) {
-      return `${fieldName} is required`;
-    }
-    if (field.errors['minlength']) {
-      return `Minimum length is ${field.errors['minlength'].requiredLength}`;
-    }
-    if (field.errors['maxlength']) {
-      return `Maximum length is ${field.errors['maxlength'].requiredLength}`;
-    }
-    if (field.errors['min']) {
-      return `Minimum value is ${field.errors['min'].min}`;
-    }
-    if (field.errors['email']) {
-      return 'Invalid email format';
-    }
-
-    return 'Invalid field';
   }
 }

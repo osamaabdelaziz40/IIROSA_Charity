@@ -34,8 +34,9 @@ namespace IIROSA.Api.Controllers
         [Authorize(Policy = "ManagementOnly")]
         public async Task<ActionResult<EmployeePagedResult<EmployeeListDto>>> GetEmployees(
             [FromQuery] string? search = null,
-            [FromQuery] string? department = null,
+            [FromQuery] int? departmentId = null,
             [FromQuery] string? position = null,
+            [FromQuery] string? role = null,
             [FromQuery] bool? isActive = null,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20)
@@ -45,8 +46,9 @@ namespace IIROSA.Api.Controllers
                 var filter = new EmployeeFilterDto
                 {
                     SearchText = search,
-                    Department = department,
+                    DepartmentId = departmentId,
                     Position = position,
+                    Role = role,
                     IsActive = isActive,
                     Page = page,
                     PageSize = pageSize
@@ -59,6 +61,31 @@ namespace IIROSA.Api.Controllers
             {
                 _logger.LogError(ex, "Error occurred while retrieving employees");
                 return StatusCode(500, new { message = "An error occurred while retrieving employees" });
+            }
+        }
+
+        /// <summary>
+        /// Check login-name availability (UC-EMP-02: Verify employee username availability).
+        /// In this stack the identity UserName IS the email, so this probes the same two
+        /// stores the create/update uniqueness rules enforce against. excludeEmployeeId
+        /// spares an employee's own account when editing.
+        /// </summary>
+        [HttpGet("check-username")]
+        [Authorize(Policy = "ManagementOnly")]
+        public async Task<ActionResult<EmployeeUserNameAvailabilityDto>> CheckUserName(
+            [FromQuery] string? userName,
+            [FromQuery] Guid? excludeEmployeeId = null)
+        {
+            try
+            {
+                var name = (userName ?? string.Empty).Trim();
+                var isAvailable = await _employeeService.IsUserNameAvailableAsync(name, excludeEmployeeId);
+                return Ok(new EmployeeUserNameAvailabilityDto { UserName = name, IsAvailable = isAvailable });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while checking username availability for {UserName}", userName);
+                return StatusCode(500, new { message = "An error occurred while checking username availability" });
             }
         }
 
@@ -121,9 +148,15 @@ namespace IIROSA.Api.Controllers
                 var employee = await _employeeService.UpdateEmployeeAsync(id, model);
                 return Ok(employee);
             }
-            catch (InvalidOperationException ex)
+            catch (KeyNotFoundException ex)
             {
                 return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Validation conflicts (duplicate email/code, rejected values) are 400s —
+                // the same exception family the create action maps to BadRequest
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -281,8 +314,9 @@ namespace IIROSA.Api.Controllers
         [Authorize(Policy = "ManagementOnly")]
         public async Task<IActionResult> ExportEmployees(
             [FromQuery] string? search = null,
-            [FromQuery] string? department = null,
+            [FromQuery] int? departmentId = null,
             [FromQuery] string? position = null,
+            [FromQuery] string? role = null,
             [FromQuery] bool? isActive = null)
         {
             try
@@ -290,8 +324,9 @@ namespace IIROSA.Api.Controllers
                 var filter = new EmployeeFilterDto
                 {
                     SearchText = search,
-                    Department = department,
+                    DepartmentId = departmentId,
                     Position = position,
+                    Role = role,
                     IsActive = isActive,
                     Page = 1,
                     PageSize = 10000 // Export all matching records

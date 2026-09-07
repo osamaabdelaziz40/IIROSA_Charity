@@ -1,0 +1,82 @@
+<app-report-viewer titleKey="reports.familyOrphansByDate.title"
+                   subtitleKey="reports.familyOrphansByDate.subtitle"
+                   [previewProducer]="previewDocument"
+                   [exportRequest]="buildExportRequest"
+                   [loading]="loading"
+                   [hasRun]="hasRun"
+                   [currentPage]="currentPage"
+                   [pageSize]="pageSize"
+                   [totalCount]="totalCount"
+                   (search)="search()"
+                   (pageChange)="onPageChange($event)">
+
+  <!-- ==================== §23.U.39 filter panel — charity (HQ) + the mandatory as-at date ==================== -->
+  <div report-filters>
+    <form [formGroup]="filterForm" (ngSubmit)="search()" class="row g-3 align-items-end">
+      <!-- HQ only — a charity caller is scoped server-side regardless -->
+      <div class="col-lg-3 col-md-4" *ngIf="isHQ">
+        <app-drop-down [fg]="filterForm" fcn="charityId"
+                       [label]="'reports.familyOrphansByDate.filterCharity'"
+                       [placeholder]="'reports.familyOrphansByDate.filterCharity'"
+                       [initialData]="charityOptions">
+        </app-drop-down>
+      </div>
+
+      <div class="col-lg-2 col-md-3">
+        <label class="form-label">{{ 'reports.familyOrphansByDate.filterDate' | translate }}</label>
+        <input type="date" class="form-control" formControlName="date"
+               [class.is-invalid]="hasServerError('date')" />
+        <div class="invalid-feedback" *ngIf="hasServerError('date')">
+          {{ serverError('date') }}
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- ==================== طباعة — the grouped list via the epic's browser-print pipeline ==================== -->
+  <div class="d-flex justify-content-end mb-2">
+    <button type="button" class="btn btn-sm btn-outline-secondary"
+            (click)="printSheetCommand()" [disabled]="printing || loading">
+      <i class="fe fe-printer me-1" *ngIf="!printing; else printSpin"></i>
+      <ng-template #printSpin><span class="spinner-border spinner-border-sm me-1"></span></ng-template>
+      {{ 'reports.familyOrphansByDate.print' | translate }}
+    </button>
+  </div>
+
+  <!-- ==================== grouped grid — collapsible family cards, orphans nested ==================== -->
+  <div report-grid *ngIf="families.length > 0">
+    <div class="card mb-2" *ngFor="let family of families; let fi = index; trackBy: trackByFamily">
+      <div class="card-header d-flex align-items-center gap-2 family-group-header"
+           (click)="toggleGroup(fi, family)">
+        <i class="fe" [class.fe-chevron-down]="!isCollapsed(fi, family)"
+           [class.fe-chevron-left]="isCollapsed(fi, family)"></i>
+        <span class="fw-bold">{{ family.familyCode }}</span>
+        <span>{{ family.headOfFamily }}</span>
+        <span class="text-muted">· {{ regionCenter(family) || '—' }}</span>
+        <span class="ms-auto badge bg-secondary">
+          {{ 'reports.familyOrphansByDate.colOrphansCount' | translate }}: {{ family.orphansCount }}
+        </span>
+      </div>
+      <div class="card-body p-0 table-responsive" *ngIf="!isCollapsed(fi, family)">
+        <table class="table table-hover table-striped align-middle mb-0">
+          <thead>
+            <tr>
+              <th>{{ 'reports.familyOrphansByDate.colOrphanCode' | translate }}</th>
+              <th>{{ 'reports.familyOrphansByDate.colOrphanName' | translate }}</th>
+              <th>{{ 'reports.familyOrphansByDate.colBirthDate' | translate }}</th>
+              <th>{{ 'reports.familyOrphansByDate.colAge' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let orphan of family.orphans; trackBy: trackByOrphan">
+              <td>{{ orphan.code }}</td>
+              <td>{{ orphan.fullName }}</td>
+              <td>{{ orphan.dateOfBirth | date:'yyyy-MM-dd' }}</td>
+              <td>{{ orphan.age != null ? orphan.age : '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</app-report-viewer>

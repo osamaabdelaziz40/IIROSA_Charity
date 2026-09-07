@@ -30,6 +30,43 @@ public class OrphanPaymentItemConfiguration : IEntityTypeConfiguration<OrphanPay
         builder.Property(x => x.Notes)
             .HasMaxLength(500);
 
+        // §15.1 row ledger — whole-epic column set (EP-10)
+        builder.Property(x => x.Amount)
+            .HasColumnType("decimal(18,2)");
+
+        builder.Property(x => x.IsStopped)
+            .IsRequired();
+
+        builder.Property(x => x.StoppedOn)
+            .IsRequired(false);
+
+        builder.Property(x => x.IsPrinted)
+            .IsRequired();
+
+        builder.Property(x => x.PrintedOn)
+            .IsRequired(false);
+
+        builder.Property(x => x.IsGotIt)
+            .IsRequired();
+
+        builder.Property(x => x.ReceivedOn)
+            .IsRequired(false);
+
+        builder.Property(x => x.ChiqueNum)
+            .HasMaxLength(50);
+
+        builder.Property(x => x.Printdate)
+            .IsRequired(false);
+
+        builder.Property(x => x.BenificiaryName)
+            .HasMaxLength(200);
+
+        builder.Property(x => x.TransferNo)
+            .HasMaxLength(100);
+
+        builder.Property(x => x.ExchangeStatus)
+            .IsRequired(false);
+
         // Indexes
         builder.HasIndex(x => x.OrphanPaymentId);
         builder.HasIndex(x => x.OrphanId);

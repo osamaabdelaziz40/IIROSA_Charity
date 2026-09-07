@@ -20,6 +20,12 @@ public class PeriodicOrphanReportDto
     public Guid? CharityId { get; set; }
     public string? CharityName { get; set; }
 
+    /// <summary>UC-HOU-06 discriminator — "Child" or "Parent" (a guardian report linked by HousingFamilyId).</summary>
+    public string? ChildOrParent { get; set; }
+
+    /// <summary>The housing family link (§11.S.4) — null on regular (epic-9) reports.</summary>
+    public Guid? HousingFamilyId { get; set; }
+
     #endregion
 
     #region Religious & Behavioral Tracking
@@ -133,6 +139,7 @@ public class PeriodicOrphanReportDto
     public string? RefuseReason { get; set; }
     public int? RefuseReasonId { get; set; }
     public string? RefuseReasonName { get; set; }
+    public string? ReviewComments { get; set; }
     public int? MessageId { get; set; }
 
     /// <summary>

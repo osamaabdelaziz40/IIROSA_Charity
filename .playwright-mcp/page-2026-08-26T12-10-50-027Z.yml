@@ -1,0 +1,434 @@
+- generic [ref=e1]:
+  - generic [ref=e7]:
+    - button "العربية " [ref=e10] [cursor=pointer]
+    - generic [ref=e12]:
+      - link [ref=e13] [cursor=pointer]:
+        - /url: "#"
+      - heading "تسجيل الدخول" [level=1] [ref=e19]
+      - generic [ref=e20]:
+        - generic [ref=e21]: عنوان البريد الإلكتروني
+        - textbox "عنوان البريد الإلكتروني" [active] [ref=e22]: Admin@IIROSA.com
+      - generic [ref=e23]:
+        - generic [ref=e24]: كلمة المرور
+        - textbox "كلمة المرور" [ref=e25]: P@ssw0rd@2022
+      - generic [ref=e27]:
+        - checkbox "البقاء متصلاً" [ref=e28]
+        - text: البقاء متصلاً
+      - button "دعني أدخل" [ref=e29] [cursor=pointer]
+      - paragraph [ref=e30]: © 2025 IIROSA
+  - iframe [ref=e31]:
+    - generic [ref=f1e2]:
+      - generic [ref=f1e3]: "Compiled with problems:"
+      - button "Dismiss" [ref=f1e4] [cursor=pointer]: ×
+      - generic [ref=f1e5]:
+        - generic [ref=f1e6]:
+          - generic [ref=f1e7]: ERROR
+          - generic [ref=f1e8]:
+            - text: src/app/modules/dashboard/dashboard.component.html:8:34 - error
+            - generic [ref=f1e9]:
+              - text: "TS2339:"
+              - generic [ref=f1e10]: Property 'isHQ' does not exist on type 'DashboardComponent'. 8 <div class="col-auto" *ngIf="isHQ"> ~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e11]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e12]:
+          - generic [ref=f1e13]: ERROR
+          - generic [ref=f1e14]:
+            - text: src/app/modules/dashboard/dashboard.component.html:9:47 - error
+            - generic [ref=f1e15]:
+              - text: "TS2339:"
+              - generic [ref=f1e16]: Property 'charitiesLoading' does not exist on type 'DashboardComponent'. 9 <select class="form-select" [disabled]="charitiesLoading" (change)="onCharityChange($event)"> ~~~~~~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e17]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e18]:
+          - generic [ref=f1e19]: ERROR
+          - generic [ref=f1e20]:
+            - text: src/app/modules/dashboard/dashboard.component.html:9:75 - error
+            - generic [ref=f1e21]:
+              - text: "TS2339:"
+              - generic [ref=f1e22]: Property 'onCharityChange' does not exist on type 'DashboardComponent'. 9 <select class="form-select" [disabled]="charitiesLoading" (change)="onCharityChange($event)"> ~~~~~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e23]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e24]:
+          - generic [ref=f1e25]: ERROR
+          - generic [ref=f1e26]:
+            - text: src/app/modules/dashboard/dashboard.component.html:10:39 - error
+            - generic [ref=f1e27]:
+              - text: "TS2339:"
+              - generic [ref=f1e28]: "Property 'selectedCharityId' does not exist on type 'DashboardComponent'. 10 <option value=\"\" [selected]=\"!selectedCharityId\">{{ 'dashboard.allCharities' | translate }}</option> ~~~~~~~~~~~~~~~~~"
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e29]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e30]:
+          - generic [ref=f1e31]: ERROR
+          - generic [ref=f1e32]:
+            - text: src/app/modules/dashboard/dashboard.component.html:11:34 - error
+            - generic [ref=f1e33]:
+              - text: "TS2339:"
+              - generic [ref=f1e34]: "Property 'charityOptions' does not exist on type 'DashboardComponent'. 11 <option *ngFor=\"let c of charityOptions; trackBy: trackByCharityId\" ~~~~~~~~~~~~~~"
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e35]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e36]:
+          - generic [ref=f1e37]: ERROR
+          - generic [ref=f1e38]:
+            - text: src/app/modules/dashboard/dashboard.component.html:11:59 - error
+            - generic [ref=f1e39]:
+              - text: "TS2339:"
+              - generic [ref=f1e40]: "Property 'trackByCharityId' does not exist on type 'DashboardComponent'. 11 <option *ngFor=\"let c of charityOptions; trackBy: trackByCharityId\" ~~~~~~~~~~~~~~~~"
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e41]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e42]:
+          - generic [ref=f1e43]: ERROR
+          - generic [ref=f1e44]:
+            - text: src/app/modules/dashboard/dashboard.component.html:12:53 - error
+            - generic [ref=f1e45]:
+              - text: "TS2339:"
+              - generic [ref=f1e46]: "Property 'selectedCharityId' does not exist on type 'DashboardComponent'. 12 [value]=\"c.id\" [selected]=\"c.id === selectedCharityId\">{{ c.name }}</option> ~~~~~~~~~~~~~~~~~"
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e47]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e48]:
+          - generic [ref=f1e49]: ERROR
+          - generic [ref=f1e50]:
+            - text: src/app/modules/dashboard/dashboard.component.html:15:35 - error
+            - generic [ref=f1e51]:
+              - text: "TS2339:"
+              - generic [ref=f1e52]: Property 'isHQ' does not exist on type 'DashboardComponent'. 15 <div class="col-auto" *ngIf="!isHQ && summary?.charityName"> ~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e53]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e54]:
+          - generic [ref=f1e55]: ERROR
+          - generic [ref=f1e56]:
+            - text: src/app/modules/dashboard/dashboard.component.html:15:43 - error
+            - generic [ref=f1e57]:
+              - text: "TS2339:"
+              - generic [ref=f1e58]: Property 'summary' does not exist on type 'DashboardComponent'. 15 <div class="col-auto" *ngIf="!isHQ && summary?.charityName"> ~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e59]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e60]:
+          - generic [ref=f1e61]: ERROR
+          - generic [ref=f1e62]:
+            - text: src/app/modules/dashboard/dashboard.component.html:16:48 - error
+            - generic [ref=f1e63]:
+              - text: "TS2339:"
+              - generic [ref=f1e64]: "Property 'summary' does not exist on type 'DashboardComponent'. 16 <span class=\"badge badge-primary p-2\">{{ summary?.charityName }}</span> ~~~~~~~"
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e65]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e66]:
+          - generic [ref=f1e67]: ERROR
+          - generic [ref=f1e68]:
+            - text: src/app/modules/dashboard/dashboard.component.html:22:26 - error
+            - generic [ref=f1e69]:
+              - text: "TS2339:"
+              - generic [ref=f1e70]: Property 'summaryFailed' does not exist on type 'DashboardComponent'. 22 <div class="card" *ngIf="summaryFailed"> ~~~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e71]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e72]:
+          - generic [ref=f1e73]: ERROR
+          - generic [ref=f1e74]:
+            - text: src/app/modules/dashboard/dashboard.component.html:26:61 - error
+            - generic [ref=f1e75]:
+              - text: "TS2339:"
+              - generic [ref=f1e76]: Property 'retry' does not exist on type 'DashboardComponent'. 26 <button class="btn btn-sm btn-outline-primary" (click)="retry()"> ~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e77]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e78]:
+          - generic [ref=f1e79]: ERROR
+          - generic [ref=f1e80]:
+            - text: src/app/modules/dashboard/dashboard.component.html:33:26 - error
+            - generic [ref=f1e81]:
+              - text: "TS2339:"
+              - generic [ref=f1e82]: Property 'summaryFailed' does not exist on type 'DashboardComponent'. 33 <div class="row" *ngIf="!summaryFailed"> ~~~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e83]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e84]:
+          - generic [ref=f1e85]: ERROR
+          - generic [ref=f1e86]:
+            - text: src/app/modules/dashboard/dashboard.component.html:34:25 - error
+            - generic [ref=f1e87]:
+              - text: "TS2339:"
+              - generic [ref=f1e88]: Property 'summaryLoading' does not exist on type 'DashboardComponent'. 34 <ng-container *ngIf="!summaryLoading; else statSkeleton"> ~~~~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e89]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e90]:
+          - generic [ref=f1e91]: ERROR
+          - generic [ref=f1e92]:
+            - text: src/app/modules/dashboard/dashboard.component.html:35:43 - error
+            - generic [ref=f1e93]:
+              - text: "TS2339:"
+              - generic [ref=f1e94]: Property 'summary' does not exist on type 'DashboardComponent'. 35 <div class="col-12" [class.col-sm-6]="summary?.charitiesCount != null" [class.col-xl-4]="summary?.charitiesCount != null"> ~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e95]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e96]:
+          - generic [ref=f1e97]: ERROR
+          - generic [ref=f1e98]:
+            - text: src/app/modules/dashboard/dashboard.component.html:35:94 - error
+            - generic [ref=f1e99]:
+              - text: "TS2339:"
+              - generic [ref=f1e100]: Property 'summary' does not exist on type 'DashboardComponent'. 35 <div class="col-12" [class.col-sm-6]="summary?.charitiesCount != null" [class.col-xl-4]="summary?.charitiesCount != null"> ~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e101]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e102]:
+          - generic [ref=f1e103]: ERROR
+          - generic [ref=f1e104]:
+            - text: src/app/modules/dashboard/dashboard.component.html:41:40 - error
+            - generic [ref=f1e105]:
+              - text: "TS2339:"
+              - generic [ref=f1e106]: "Property 'summary' does not exist on type 'DashboardComponent'. 41 <span class=\"h2 mb-0\">{{ summary?.familiesCount ?? 0 }}</span> ~~~~~~~"
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e107]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e108]:
+          - generic [ref=f1e109]: ERROR
+          - generic [ref=f1e110]:
+            - text: src/app/modules/dashboard/dashboard.component.html:50:43 - error
+            - generic [ref=f1e111]:
+              - text: "TS2339:"
+              - generic [ref=f1e112]: Property 'summary' does not exist on type 'DashboardComponent'. 50 <div class="col-12" [class.col-sm-6]="summary?.charitiesCount != null" [class.col-xl-4]="summary?.charitiesCount != null"> ~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e113]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e114]:
+          - generic [ref=f1e115]: ERROR
+          - generic [ref=f1e116]:
+            - text: src/app/modules/dashboard/dashboard.component.html:50:94 - error
+            - generic [ref=f1e117]:
+              - text: "TS2339:"
+              - generic [ref=f1e118]: Property 'summary' does not exist on type 'DashboardComponent'. 50 <div class="col-12" [class.col-sm-6]="summary?.charitiesCount != null" [class.col-xl-4]="summary?.charitiesCount != null"> ~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e119]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e120]:
+          - generic [ref=f1e121]: ERROR
+          - generic [ref=f1e122]:
+            - text: src/app/modules/dashboard/dashboard.component.html:56:40 - error
+            - generic [ref=f1e123]:
+              - text: "TS2339:"
+              - generic [ref=f1e124]: "Property 'summary' does not exist on type 'DashboardComponent'. 56 <span class=\"h2 mb-0\">{{ summary?.orphansCount ?? 0 }}</span> ~~~~~~~"
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e125]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e126]:
+          - generic [ref=f1e127]: ERROR
+          - generic [ref=f1e128]:
+            - text: src/app/modules/dashboard/dashboard.component.html:66:41 - error
+            - generic [ref=f1e129]:
+              - text: "TS2339:"
+              - generic [ref=f1e130]: Property 'summary' does not exist on type 'DashboardComponent'. 66 <div class="col-12 col-xl-4" *ngIf="summary?.charitiesCount != null"> ~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e131]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e132]:
+          - generic [ref=f1e133]: ERROR
+          - generic [ref=f1e134]:
+            - text: src/app/modules/dashboard/dashboard.component.html:72:40 - error
+            - generic [ref=f1e135]:
+              - text: "TS2339:"
+              - generic [ref=f1e136]: "Property 'summary' does not exist on type 'DashboardComponent'. 72 <span class=\"h2 mb-0\">{{ summary?.charitiesCount }}</span> ~~~~~~~"
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e137]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e138]:
+          - generic [ref=f1e139]: ERROR
+          - generic [ref=f1e140]:
+            - text: src/app/modules/dashboard/dashboard.component.html:99:56 - error
+            - generic [ref=f1e141]:
+              - text: "TS2339:"
+              - generic [ref=f1e142]: Property 'exporting' does not exist on type 'DashboardComponent'. 99 <button class="btn btn-sm btn-primary" [disabled]="exporting || gridLoading || orphans.length === 0" (click)="exportToExcel()"> ~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e143]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e144]:
+          - generic [ref=f1e145]: ERROR
+          - generic [ref=f1e146]:
+            - text: src/app/modules/dashboard/dashboard.component.html:99:69 - error
+            - generic [ref=f1e147]:
+              - text: "TS2339:"
+              - generic [ref=f1e148]: Property 'gridLoading' does not exist on type 'DashboardComponent'. 99 <button class="btn btn-sm btn-primary" [disabled]="exporting || gridLoading || orphans.length === 0" (click)="exportToExcel()"> ~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e149]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e150]:
+          - generic [ref=f1e151]: ERROR
+          - generic [ref=f1e152]:
+            - text: src/app/modules/dashboard/dashboard.component.html:99:84 - error
+            - generic [ref=f1e153]:
+              - text: "TS2339:"
+              - generic [ref=f1e154]: Property 'orphans' does not exist on type 'DashboardComponent'. 99 <button class="btn btn-sm btn-primary" [disabled]="exporting || gridLoading || orphans.length === 0" (click)="exportToExcel()"> ~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e155]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e156]:
+          - generic [ref=f1e157]: ERROR
+          - generic [ref=f1e158]:
+            - text: src/app/modules/dashboard/dashboard.component.html:99:115 - error
+            - generic [ref=f1e159]:
+              - text: "TS2339:"
+              - generic [ref=f1e160]: Property 'exportToExcel' does not exist on type 'DashboardComponent'. 99 <button class="btn btn-sm btn-primary" [disabled]="exporting || gridLoading || orphans.length === 0" (click)="exportToExcel()"> ~~~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e161]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e162]:
+          - generic [ref=f1e163]: ERROR
+          - generic [ref=f1e164]:
+            - text: src/app/modules/dashboard/dashboard.component.html:105:17 - error
+            - generic [ref=f1e165]:
+              - text: "TS2339:"
+              - generic [ref=f1e166]: Property 'gridLoading' does not exist on type 'DashboardComponent'. 105 <div *ngIf="gridLoading" class="text-center py-5"> ~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e167]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e168]:
+          - generic [ref=f1e169]: ERROR
+          - generic [ref=f1e170]:
+            - text: src/app/modules/dashboard/dashboard.component.html:111:18 - error
+            - generic [ref=f1e171]:
+              - text: "TS2339:"
+              - generic [ref=f1e172]: Property 'gridLoading' does not exist on type 'DashboardComponent'. 111 <div *ngIf="!gridLoading" class="table-responsive"> ~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e173]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e174]:
+          - generic [ref=f1e175]: ERROR
+          - generic [ref=f1e176]:
+            - text: src/app/modules/dashboard/dashboard.component.html:125:37 - error
+            - generic [ref=f1e177]:
+              - text: "TS2339:"
+              - generic [ref=f1e178]: "Property 'orphans' does not exist on type 'DashboardComponent'. 125 <tr *ngFor=\"let orphan of orphans; let i = index; trackBy: trackByOrphanId\"> ~~~~~~~"
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e179]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e180]:
+          - generic [ref=f1e181]: ERROR
+          - generic [ref=f1e182]:
+            - text: src/app/modules/dashboard/dashboard.component.html:125:70 - error
+            - generic [ref=f1e183]:
+              - text: "TS2339:"
+              - generic [ref=f1e184]: "Property 'trackByOrphanId' does not exist on type 'DashboardComponent'. 125 <tr *ngFor=\"let orphan of orphans; let i = index; trackBy: trackByOrphanId\"> ~~~~~~~~~~~~~~~"
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e185]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e186]:
+          - generic [ref=f1e187]: ERROR
+          - generic [ref=f1e188]:
+            - text: src/app/modules/dashboard/dashboard.component.html:126:21 - error
+            - generic [ref=f1e189]:
+              - text: "TS2339:"
+              - generic [ref=f1e190]: "Property 'currentPage' does not exist on type 'DashboardComponent'. 126 <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td> ~~~~~~~~~~~"
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e191]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e192]:
+          - generic [ref=f1e193]: ERROR
+          - generic [ref=f1e194]:
+            - text: src/app/modules/dashboard/dashboard.component.html:126:40 - error
+            - generic [ref=f1e195]:
+              - text: "TS2339:"
+              - generic [ref=f1e196]: "Property 'pageSize' does not exist on type 'DashboardComponent'. 126 <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td> ~~~~~~~~"
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e197]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e198]:
+          - generic [ref=f1e199]: ERROR
+          - generic [ref=f1e200]:
+            - text: src/app/modules/dashboard/dashboard.component.html:138:22 - error
+            - generic [ref=f1e201]:
+              - text: "TS2339:"
+              - generic [ref=f1e202]: Property 'orphans' does not exist on type 'DashboardComponent'. 138 <tr *ngIf="orphans.length === 0"> ~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e203]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e204]:
+          - generic [ref=f1e205]: ERROR
+          - generic [ref=f1e206]:
+            - text: src/app/modules/dashboard/dashboard.component.html:151:5 - error
+            - generic [ref=f1e207]:
+              - text: "NG8001:"
+              - generic [ref=f1e208]: "'app-pagination' is not a known element: 1. If 'app-pagination' is an Angular component, then verify that it is included in the '@Component.imports' of this component. 2. If 'app-pagination' is a Web Component then add 'CUSTOM_ELEMENTS_SCHEMA' to the '@Component.schemas' of this component to suppress this message. 151 <app-pagination ~~~~~~~~~~~~~~~"
+              - generic [ref=f1e209]: 152 [currentPage]="currentPage" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+              - text: ...
+              - generic [ref=f1e210]: 154 [totalCount]="orphanTotalCount" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+              - generic [ref=f1e211]: "155 (pageChange)=\"onPageChange($event)\"> ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ src/app/modules/dashboard/dashboard.component.ts:11:16 11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Error occurs in the template of component DashboardComponent."
+        - generic [ref=f1e212]:
+          - generic [ref=f1e213]: ERROR
+          - generic [ref=f1e214]:
+            - text: src/app/modules/dashboard/dashboard.component.html:152:7 - error
+            - generic [ref=f1e215]:
+              - text: "NG8002:"
+              - generic [ref=f1e216]: Can't bind to 'currentPage' since it isn't a known property of 'app-pagination'. 1. If 'app-pagination' is an Angular component and it has 'currentPage' input, then verify that it is included in the '@Component.imports' of this component. 2. If 'app-pagination' is a Web Component then add 'CUSTOM_ELEMENTS_SCHEMA' to the '@Component.schemas' of this component to suppress this message. 3. To allow any property add 'NO_ERRORS_SCHEMA' to the '@Component.schemas' of this component. 152 [currentPage]="currentPage" ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e217]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e218]:
+          - generic [ref=f1e219]: ERROR
+          - generic [ref=f1e220]:
+            - text: src/app/modules/dashboard/dashboard.component.html:152:22 - error
+            - generic [ref=f1e221]:
+              - text: "TS2339:"
+              - generic [ref=f1e222]: Property 'currentPage' does not exist on type 'DashboardComponent'. 152 [currentPage]="currentPage" ~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e223]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e224]:
+          - generic [ref=f1e225]: ERROR
+          - generic [ref=f1e226]:
+            - text: src/app/modules/dashboard/dashboard.component.html:153:7 - error
+            - generic [ref=f1e227]:
+              - text: "NG8002:"
+              - generic [ref=f1e228]: Can't bind to 'pageSize' since it isn't a known property of 'app-pagination'. 1. If 'app-pagination' is an Angular component and it has 'pageSize' input, then verify that it is included in the '@Component.imports' of this component. 2. If 'app-pagination' is a Web Component then add 'CUSTOM_ELEMENTS_SCHEMA' to the '@Component.schemas' of this component to suppress this message. 3. To allow any property add 'NO_ERRORS_SCHEMA' to the '@Component.schemas' of this component. 153 [pageSize]="pageSize" ~~~~~~~~~~~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e229]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e230]:
+          - generic [ref=f1e231]: ERROR
+          - generic [ref=f1e232]:
+            - text: src/app/modules/dashboard/dashboard.component.html:153:19 - error
+            - generic [ref=f1e233]:
+              - text: "TS2339:"
+              - generic [ref=f1e234]: Property 'pageSize' does not exist on type 'DashboardComponent'. 153 [pageSize]="pageSize" ~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e235]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e236]:
+          - generic [ref=f1e237]: ERROR
+          - generic [ref=f1e238]:
+            - text: src/app/modules/dashboard/dashboard.component.html:154:7 - error
+            - generic [ref=f1e239]:
+              - text: "NG8002:"
+              - generic [ref=f1e240]: Can't bind to 'totalCount' since it isn't a known property of 'app-pagination'. 1. If 'app-pagination' is an Angular component and it has 'totalCount' input, then verify that it is included in the '@Component.imports' of this component. 2. If 'app-pagination' is a Web Component then add 'CUSTOM_ELEMENTS_SCHEMA' to the '@Component.schemas' of this component to suppress this message. 3. To allow any property add 'NO_ERRORS_SCHEMA' to the '@Component.schemas' of this component. 154 [totalCount]="orphanTotalCount" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e241]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e242]:
+          - generic [ref=f1e243]: ERROR
+          - generic [ref=f1e244]:
+            - text: src/app/modules/dashboard/dashboard.component.html:154:21 - error
+            - generic [ref=f1e245]:
+              - text: "TS2339:"
+              - generic [ref=f1e246]: Property 'orphanTotalCount' does not exist on type 'DashboardComponent'. 154 [totalCount]="orphanTotalCount" ~~~~~~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e247]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.
+        - generic [ref=f1e248]:
+          - generic [ref=f1e249]: ERROR
+          - generic [ref=f1e250]:
+            - text: src/app/modules/dashboard/dashboard.component.html:155:21 - error
+            - generic [ref=f1e251]:
+              - text: "TS2339:"
+              - generic [ref=f1e252]: Property 'onPageChange' does not exist on type 'DashboardComponent'. 155 (pageChange)="onPageChange($event)"> ~~~~~~~~~~~~
+              - text: src/app/modules/dashboard/dashboard.component.ts:11:16
+              - generic [ref=f1e253]: "11 templateUrl: './dashboard.component.html', ~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+              - text: Error occurs in the template of component DashboardComponent.

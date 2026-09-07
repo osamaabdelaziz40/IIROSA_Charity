@@ -1,279 +1,201 @@
-<div class="mission-list-page">
-  <app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
 
-  <app-page-header
-    [title]="'missions.title' | translate"
-    [subtitle]="showMyMissionsOnly ? ('missions.myMissionsDescription' | translate) : ('missions.allMissionsDescription' | translate)"
-    [icon]="'fe fe-activity'"
-    [actions]="pageActions">
-  </app-page-header>
+<app-page-header
+  [title]="'missions.title' | translate"
+  [subtitle]="'missions.allMissionsDescription' | translate"
+  [icon]="'fe fe-activity'"
+  [actions]="pageActions">
+</app-page-header>
 
-  <!-- Status Dashboard -->
-  <div class="status-dashboard mb-4" *ngIf="!showMyMissionsOnly">
-    <div class="row">
-      <div class="col-md-3">
-        <div class="status-card pending">
-          <div class="status-icon">
-            <i class="fe fe-clock"></i>
-          </div>
-          <div class="status-info">
-            <h3>{{ statusCounts.pending }}</h3>
-            <p>{{ 'missions.pending' | translate }}</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="status-card progress">
-          <div class="status-icon">
-            <i class="fe fe-activity"></i>
-          </div>
-          <div class="status-info">
-            <h3>{{ statusCounts.inProgress }}</h3>
-            <p>{{ 'missions.inProgress' | translate }}</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="status-card completed">
-          <div class="status-icon">
-            <i class="fe fe-check-circle"></i>
-          </div>
-          <div class="status-info">
-            <h3>{{ statusCounts.completed }}</h3>
-            <p>{{ 'missions.completed' | translate }}</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="status-card overdue">
-          <div class="status-icon">
-            <i class="fe fe-alert-circle"></i>
-          </div>
-          <div class="status-info">
-            <h3>{{ statusCounts.overdue }}</h3>
-            <p>{{ 'missions.overdue' | translate }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-body">
-      <!-- Filters -->
+<!-- §20.S.1 filters: الجمعية + المسند إليه + الهدف + من تاريخ / الي تاريخ + بحث -->
+<div class="card shadow mb-4">
+  <div class="card-body">
+    <form [formGroup]="filterForm">
       <div class="row mb-3">
+        <!-- Charity -->
+        <div class="col-md-3">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="charityId"
+            [label]="'missions.charity'"
+            [initialData]="charityOptions"
+            [hasDefaultValue]="true">
+          </app-drop-down>
+        </div>
+
+        <!-- Assigned User -->
+        <div class="col-md-3">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="assignedToUserId"
+            [label]="'missions.assignedTo'"
+            [initialData]="userOptions"
+            [hasDefaultValue]="true">
+          </app-drop-down>
+        </div>
+
+        <!-- Mission Target (title) free-text search -->
+        <div class="col-md-6">
+          <div class="form-group">
+            <label>{{ 'missions.missionTarget' | translate }}</label>
+            <input type="text" class="form-control" formControlName="search"
+                   [placeholder]="'missions.searchPlaceholder' | translate" />
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- Date From -->
         <div class="col-md-3">
           <div class="form-group">
-            <label>{{ 'common.search' | translate }}</label>
-            <div class="input-group">
-              <input type="text"
-                     class="form-control"
-                     [placeholder]="'missions.searchPlaceholder' | translate"
-                     [(ngModel)]="search">
-              <div class="input-group-append">
-                <button class="btn btn-primary" type="button" (click)="onSearch()">
-                  <i class="fe fe-search"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-md-2">
-          <div class="form-group">
-            <label>{{ 'missions.allStatus' | translate }}</label>
-            <select class="form-control" [(ngModel)]="selectedStatus" (change)="applyFilters()">
-              <option value="">{{ 'common.all' | translate }}</option>
-              <option value="pending">{{ 'missions.pending' | translate }}</option>
-              <option value="completed">{{ 'missions.completed' | translate }}</option>
-              <option value="overdue">{{ 'missions.overdue' | translate }}</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="col-md-2">
-          <div class="form-group">
             <label>{{ 'missions.dateFrom' | translate }}</label>
-            <input type="date"
-                   class="form-control"
-                   [(ngModel)]="dateFrom"
-                   (change)="applyFilters()">
+            <input type="date" class="form-control" formControlName="dateFrom" />
           </div>
         </div>
 
-        <div class="col-md-2">
+        <!-- Date To -->
+        <div class="col-md-3">
           <div class="form-group">
             <label>{{ 'missions.dateTo' | translate }}</label>
-            <input type="date"
-                   class="form-control"
-                   [(ngModel)]="dateTo"
-                   (change)="applyFilters()">
+            <input type="date" class="form-control" formControlName="dateTo" />
           </div>
         </div>
-      </div>
 
-      <div class="row mb-3" *ngIf="search || selectedStatus || dateFrom || dateTo">
-        <div class="col-12">
-          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+        <div class="col-md-6 align-self-end">
+          <button class="btn btn-primary mb-3" type="button" (click)="onSearch()">
+            <i class="fe fe-search mr-1"></i>
+            {{ 'common.search' | translate }}
+          </button>
+          <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary mb-3 ml-2" type="button" (click)="clearFilters()">
             <i class="fe fe-x mr-1"></i>
-            {{ 'missions.clearFilters' | translate }}
+            {{ 'common.clearFilters' | translate }}
           </button>
         </div>
       </div>
+    </form>
+  </div>
+</div>
 
-      <!-- Loading State -->
-      <div *ngIf="loading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="sr-only">{{ 'common.loading' | translate }}</span>
-        </div>
+<div class="card shadow mb-4">
+  <div class="card-body">
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
       </div>
-
-      <!-- Missions Table -->
-      <div *ngIf="!loading" class="table-responsive">
-        <table class="table table-hover table-striped">
-          <thead>
-            <tr>
-              <th (click)="onSort('missionTarget')" [class.sorted]="sortColumn === 'missionTarget'">
-                {{ 'missions.missionTarget' | translate }}
-                <i *ngIf="sortColumn === 'missionTarget'"
-                   [class]="'fe fe-chevron-' + (sortDirection === 'asc' ? 'up' : 'down')">
-                </i>
-              </th>
-              <th (click)="onSort('missionType')" [class.sorted]="sortColumn === 'missionType'">
-                {{ 'missions.missionType' | translate }}
-                <i *ngIf="sortColumn === 'missionType'"
-                   [class]="'fe fe-chevron-' + (sortDirection === 'asc' ? 'up' : 'down')">
-                </i>
-              </th>
-              <th (click)="onSort('missionDate')" [class.sorted]="sortColumn === 'missionDate'">
-                {{ 'missions.missionDate' | translate }}
-                <i *ngIf="sortColumn === 'missionDate'"
-                   [class]="'fe fe-chevron-' + (sortDirection === 'asc' ? 'up' : 'down')">
-                </i>
-              </th>
-              <th (click)="onSort('region')" [class.sorted]="sortColumn === 'region'">
-                {{ 'missions.region' | translate }}
-                <i *ngIf="sortColumn === 'region'"
-                   [class]="'fe fe-chevron-' + (sortDirection === 'asc' ? 'up' : 'down')">
-                </i>
-              </th>
-              <th (click)="onSort('center')" [class.sorted]="sortColumn === 'center'">
-                {{ 'missions.center' | translate }}
-                <i *ngIf="sortColumn === 'center'"
-                   [class]="'fe fe-chevron-' + (sortDirection === 'asc' ? 'up' : 'down')">
-                </i>
-              </th>
-              <th (click)="onSort('assignedTo')" [class.sorted]="sortColumn === 'assignedTo'">
-                {{ 'missions.assignedTo' | translate }}
-                <i *ngIf="sortColumn === 'assignedTo'"
-                   [class]="'fe fe-chevron-' + (sortDirection === 'asc' ? 'up' : 'down')">
-                </i>
-              </th>
-              <th (click)="onSort('isMissionCompleted')" [class.sorted]="sortColumn === 'isMissionCompleted'">
-                {{ 'missions.isMissionCompleted' | translate }}
-                <i *ngIf="sortColumn === 'isMissionCompleted'"
-                   [class]="'fe fe-chevron-' + (sortDirection === 'asc' ? 'up' : 'down')">
-                </i>
-              </th>
-              <th>{{ 'common.actions' | translate }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let mission of missions"
-                (click)="viewMission(mission.id)"
-                [class.completed]="mission.isMissionCompleted"
-                [class.overdue]="isOverdue(mission)">
-
-              <td>
-                <strong>{{ mission.missionTarget }}</strong>
-                <small class="d-block text-muted" *ngIf="mission.missionDetails">
-                  {{ mission.missionDetails | slice:0:50 }}{{ mission.missionDetails.length > 50 ? '...' : '' }}
-                </small>
-              </td>
-
-              <td>
-                <span class="badge badge-light">{{ mission.missionTypeName }}</span>
-              </td>
-
-              <td>
-                {{ mission.missionDate | date:'mediumDate' }}
-              </td>
-
-              <td>
-                {{ mission.regionName || '-' }}
-              </td>
-
-              <td>
-                {{ mission.centerName || '-' }}
-              </td>
-
-              <td>
-                {{ mission.assignedToName || '-' }}
-              </td>
-
-              <td>
-                <span [class]="'badge ' + getStatusClass(mission)">
-                  {{ getStatusText(mission) }}
-                </span>
-              </td>
-
-              <td (click)="$event.stopPropagation()">
-                <div class="btn-group">
-                  <button type="button" class="btn btn-sm btn-light"
-                          (click)="viewMission(mission.id)"
-                          [title]="'missions.viewMissionDetails' | translate">
-                    <i class="fe fe-eye"></i>
-                  </button>
-                  <button type="button" class="btn btn-sm btn-light"
-                          (click)="editMission(mission.id)"
-                          [disabled]="mission.isMissionCompleted"
-                          [title]="'missions.editThisMission' | translate">
-                    <i class="fe fe-edit"></i>
-                  </button>
-                  <div class="dropdown">
-                    <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown">
-                      <i class="fe fe-more-vertical"></i>
-                    </button>
-                    <div class="dropdown-menu dropdown-menu-right">
-                      <a class="dropdown-item"
-                         href="javascript:void(0)"
-                         (click)="markAsCompleted(mission)"
-                         *ngIf="!mission.isMissionCompleted">
-                        <i class="fe fe-check mr-2"></i>
-                        {{ 'missions.markAsCompleted' | translate }}
-                      </a>
-                      <a class="dropdown-item text-danger"
-                         href="javascript:void(0)"
-                         (click)="deleteMission(mission.id)">
-                        <i class="fe fe-trash mr-2"></i>
-                        {{ 'missions.deleteMission' | translate }}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </td>
-            </tr>
-
-            <!-- Empty State -->
-            <tr *ngIf="missions.length === 0">
-              <td colspan="8" class="text-center py-5">
-                <div class="empty-state">
-                  <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
-                  <p class="text-muted">{{ 'missions.noMissionsFound' | translate }}</p>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination -->
-      <app-pagination
-        [currentPage]="currentPage"
-        [pageSize]="pageSize"
-        [totalCount]="totalCount"
-        (pageChange)="onPageChange($event)">
-      </app-pagination>
     </div>
+
+    <!-- §20.S.1 grid: 13 columns in spec order -->
+    <div *ngIf="!loading" class="table-responsive">
+      <table class="table table-hover table-striped">
+        <thead>
+          <tr>
+            <th>{{ 'missions.serial' | translate }}</th>
+            <th>{{ 'missions.missionType' | translate }}</th>
+            <th>{{ 'missions.entityName' | translate }}</th>
+            <th>{{ 'missions.assignedTo' | translate }}</th>
+            <th>{{ 'missions.missionTarget' | translate }}</th>
+            <th>{{ 'missions.details' | translate }}</th>
+            <th>{{ 'missions.missionDate' | translate }}</th>
+            <th>{{ 'missions.region' | translate }}</th>
+            <th>{{ 'missions.village' | translate }}</th>
+            <th>{{ 'missions.missionLocation' | translate }}</th>
+            <th>{{ 'missions.isMissionCompleted' | translate }}</th>
+            <th>{{ 'missions.result' | translate }}</th>
+            <th>{{ 'common.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let mission of missions; let i = index; trackBy: trackMission">
+            <!-- رقم المأموريه — continuous across pages -->
+            <td>{{ serial(i) }}</td>
+            <!-- نوع المأموريه -->
+            <td><span class="badge badge-light">{{ mission.missionType || '-' }}</span></td>
+            <!-- الجهه -->
+            <td>{{ mission.entityName || '-' }}</td>
+            <!-- اسم القائم -->
+            <td>{{ mission.assignedTo || '-' }}</td>
+            <!-- الهدف -->
+            <td><strong>{{ mission.missionTarget }}</strong></td>
+            <!-- التفاصيل -->
+            <td class="text-truncate" style="max-width: 220px;" [title]="mission.details || ''">
+              {{ mission.details || '-' }}
+            </td>
+            <!-- التاريخ -->
+            <td>{{ mission.missionDate | date:'mediumDate' }}</td>
+            <!-- المحافظه -->
+            <td>{{ mission.region || '-' }}</td>
+            <!-- الحي -->
+            <td>{{ mission.village || '-' }}</td>
+            <!-- الموقع -->
+            <td>{{ mission.missionLocation || '-' }}</td>
+            <!-- حاله المأموريه -->
+            <td>
+              <span [class]="mission.isMissionCompleted ? 'badge badge-success' : 'badge badge-warning'">
+                {{ (mission.isMissionCompleted ? 'missions.completed' : 'missions.pending') | translate }}
+              </span>
+            </td>
+            <!-- النتيجه -->
+            <td class="text-truncate" style="max-width: 200px;" [title]="mission.missionCompletedTxt || ''">
+              {{ mission.missionCompletedTxt || '-' }}
+            </td>
+            <!-- الاجراءات -->
+            <td>
+              <div class="btn-group">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light"
+                  [title]="'missions.viewMissionDetails' | translate"
+                  (click)="viewMission(mission.id)">
+                  <i class="fe fe-eye"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light"
+                  [title]="'missions.editThisMission' | translate"
+                  [disabled]="mission.isMissionCompleted"
+                  (click)="editMission(mission.id)">
+                  <i class="fe fe-edit"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light"
+                  [title]="'missions.registerResult' | translate"
+                  *ngIf="!mission.isMissionCompleted"
+                  (click)="registerResult(mission.id)">
+                  <i class="fe fe-check-circle"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light text-danger"
+                  [title]="'missions.deleteMission' | translate"
+                  *ngIf="canDelete"
+                  (click)="deleteMission(mission.id)">
+                  <i class="fe fe-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="missions.length === 0">
+            <td colspan="13" class="text-center py-5">
+              <div class="empty-state">
+                <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+                <p class="text-muted">{{ 'missions.noMissionsFound' | translate }}</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <app-pagination
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
   </div>
 </div>

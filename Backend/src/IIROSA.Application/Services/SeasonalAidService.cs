@@ -4,6 +4,7 @@ using IIROSA.Domain.Entities;
 using IIROSA.Application.Interfaces;
 using IIROSA.Application.DTOs.SeasonalAid;
 using AutoMapper;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
 namespace IIROSA.Application.Services;
@@ -18,24 +19,202 @@ public class SeasonalAidService : ISeasonalAidService
     private readonly ISeasonalAidBeneficiaryRepository _beneficiaryRepository;
     private readonly ISeasonalAidDistributionRepository _distributionRepository;
     private readonly IFamilyRepository _familyRepository;
+    private readonly ICharityRepository _charityRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<SeasonalAidService> _logger;
+    private readonly ICurrentUserService _currentUser;
+
+    private readonly IValidator<CreateSeasonalAidCampaignDto> _createCampaignValidator;
+    private readonly IValidator<UpdateSeasonalAidCampaignDto> _updateCampaignValidator;
+    private readonly IValidator<CreateSeasonalAidBeneficiaryDto> _registerBeneficiariesValidator;
+    private readonly IValidator<UpdateSeasonalAidBeneficiariesDto> _updateBeneficiariesValidator;
+    private readonly IValidator<CreateSeasonalAidDistributionDto> _distributionValidator;
+    private readonly IValidator<SetFamilyReceivedFlagDto> _setReceivedFlagValidator;
 
     public SeasonalAidService(
         ISeasonalAidCampaignRepository campaignRepository,
         ISeasonalAidBeneficiaryRepository beneficiaryRepository,
         ISeasonalAidDistributionRepository distributionRepository,
         IFamilyRepository familyRepository,
+        ICharityRepository charityRepository,
         IUnitOfWork unitOfWork,
-        ILogger<SeasonalAidService> logger)
+        ILogger<SeasonalAidService> logger,
+        ICurrentUserService currentUser,
+        IValidator<CreateSeasonalAidCampaignDto> createCampaignValidator,
+        IValidator<UpdateSeasonalAidCampaignDto> updateCampaignValidator,
+        IValidator<CreateSeasonalAidBeneficiaryDto> registerBeneficiariesValidator,
+        IValidator<UpdateSeasonalAidBeneficiariesDto> updateBeneficiariesValidator,
+        IValidator<CreateSeasonalAidDistributionDto> distributionValidator,
+        IValidator<SetFamilyReceivedFlagDto> setReceivedFlagValidator)
     {
         _campaignRepository = campaignRepository;
         _beneficiaryRepository = beneficiaryRepository;
         _distributionRepository = distributionRepository;
         _familyRepository = familyRepository;
+        _charityRepository = charityRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _currentUser = currentUser;
+        _createCampaignValidator = createCampaignValidator;
+        _updateCampaignValidator = updateCampaignValidator;
+        _registerBeneficiariesValidator = registerBeneficiariesValidator;
+        _updateBeneficiariesValidator = updateBeneficiariesValidator;
+        _distributionValidator = distributionValidator;
+        _setReceivedFlagValidator = setReceivedFlagValidator;
     }
+
+    #region Caller scoping
+
+    /// <summary>
+    /// Copies the filter and pins it to the caller's tenancy: a charity user sees only their own
+    /// campaigns whatever they ask for; a head-office user keeps any explicit charity id but is
+    /// pinned to their own country when the token carries one. An unauthenticated or unscopeable
+    /// caller gets a filter that matches nothing.
+    /// </summary>
+    private SeasonalAidCampaignFilterDto ApplyCallerScope(SeasonalAidCampaignFilterDto filter)
+    {
+        var scoped = new SeasonalAidCampaignFilterDto
+        {
+            SearchTerm = filter.SearchTerm,
+            CampaignType = filter.CampaignType,
+            IsActive = filter.IsActive,
+            IsClosed = filter.IsClosed,
+            CountryId = filter.CountryId,
+            RegionId = filter.RegionId,
+            CenterId = filter.CenterId,
+            CharityId = filter.CharityId,
+            StartDateFrom = filter.StartDateFrom,
+            StartDateTo = filter.StartDateTo,
+            EndDateFrom = filter.EndDateFrom,
+            EndDateTo = filter.EndDateTo,
+            PageNumber = filter.PageNumber,
+            PageSize = filter.PageSize,
+            SortBy = filter.SortBy,
+            SortDescending = filter.SortDescending
+        };
+
+        if (!_currentUser.IsAuthenticated)
+        {
+            return DenyAll(scoped, "request is not authenticated");
+        }
+
+        var callerCharityId = _currentUser.CharityId;
+        if (callerCharityId.HasValue)
+        {
+            if (filter.CharityId.HasValue && filter.CharityId != callerCharityId)
+            {
+                _logger.LogWarning(
+                    "User {UserId} of charity {CallerCharityId} asked for charity {RequestedCharityId}; scope forced to their own charity",
+                    _currentUser.UserId, callerCharityId, filter.CharityId);
+            }
+
+            scoped.CharityId = callerCharityId;
+            return scoped;
+        }
+
+        if (!_currentUser.IsHeadOffice)
+        {
+            return DenyAll(scoped, "caller has no charity claim and holds no head-office role");
+        }
+
+        if (_currentUser.CountryId.HasValue)
+        {
+            if (scoped.CountryId.HasValue && scoped.CountryId != _currentUser.CountryId)
+            {
+                _logger.LogWarning(
+                    "User {UserId} of country {CallerCountryId} asked for country {RequestedCountryId}; scope forced to their own country",
+                    _currentUser.UserId, _currentUser.CountryId, scoped.CountryId);
+            }
+
+            scoped.CountryId = _currentUser.CountryId;
+        }
+
+        return scoped;
+    }
+
+    private SeasonalAidCampaignFilterDto DenyAll(SeasonalAidCampaignFilterDto filter, string reason)
+    {
+        _logger.LogWarning("Seasonal aid query denied for user {UserId}: {Reason}", _currentUser.UserId, reason);
+        filter.CharityId = Guid.Empty;
+        return filter;
+    }
+
+    /// <summary>
+    /// True when the campaign belongs to the caller's tenancy: their charity for a charity-bound
+    /// caller, their country (when the token carries one) for a head-office caller.
+    /// </summary>
+    private bool IsCampaignVisibleToCaller(SeasonalAidCampaign campaign)
+    {
+        if (!_currentUser.IsAuthenticated)
+        {
+            return false;
+        }
+
+        if (_currentUser.CharityId.HasValue)
+        {
+            return campaign.CharityId == _currentUser.CharityId;
+        }
+
+        if (!_currentUser.IsHeadOffice)
+        {
+            return false;
+        }
+
+        if (_currentUser.CountryId.HasValue)
+        {
+            return !campaign.CountryId.HasValue || campaign.CountryId == _currentUser.CountryId;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Throws <see cref="KeyNotFoundException"/> when the campaign is outside the caller's
+    /// tenancy — out-of-scope records read as absent so their existence is not leaked.
+    /// </summary>
+    private void EnsureCampaignScope(SeasonalAidCampaign campaign, string operation)
+    {
+        if (IsCampaignVisibleToCaller(campaign))
+        {
+            return;
+        }
+
+        _logger.LogWarning(
+            "Seasonal aid {Operation} on campaign {CampaignId} denied for user {UserId}: outside caller scope",
+            operation, campaign.Id, _currentUser.UserId);
+        throw new KeyNotFoundException($"Campaign with ID '{campaign.Id}' not found");
+    }
+
+    /// <summary>
+    /// The charity a campaign's families must belong to: the campaign's own charity when HQ
+    /// assigned one, otherwise the charity-bound caller's own charity.
+    /// </summary>
+    private Guid? ResolveCampaignFamilyCharityId(SeasonalAidCampaign campaign)
+    {
+        return campaign.CharityId ?? _currentUser.CharityId;
+    }
+
+    /// <summary>
+    /// Names of the charities behind the families on a page — families carry their charity on
+    /// <c>FK_CharityId</c>, which has no navigation property, so the names are resolved by id.
+    /// </summary>
+    private async Task<Dictionary<Guid, string>> GetCharityNamesAsync(IEnumerable<Guid?> charityIds)
+    {
+        var names = new Dictionary<Guid, string>();
+
+        foreach (var id in charityIds.Where(id => id.HasValue).Select(id => id.Value).Distinct())
+        {
+            var charity = await _charityRepository.GetByIdAsync(id);
+            if (charity != null)
+            {
+                names[id] = charity.Name;
+            }
+        }
+
+        return names;
+    }
+
+    #endregion
 
     #region UC-9.1: Create Seasonal Aid Campaign
 
@@ -43,27 +222,41 @@ public class SeasonalAidService : ISeasonalAidService
     {
         _logger.LogInformation("Creating new seasonal aid campaign: {Name}", dto.Name);
 
+        _createCampaignValidator.ValidateAndThrow(dto);
+
         // Validate uniqueness
         if (!await IsCampaignNameUniqueAsync(dto.Name))
         {
             throw new InvalidOperationException($"Campaign with name '{dto.Name}' already exists");
         }
 
-        // Validate date range
-        if (dto.EndDate < dto.StartDate)
+        // Tenancy: a charity-bound caller owns whatever they create; a head-office caller keeps
+        // the charity they named. The country is defaulted from the caller's claim and pinned
+        // to it when the token carries one.
+        Guid? charityId = dto.CharityId;
+        if (_currentUser.CharityId.HasValue)
         {
-            throw new ArgumentException("End date must be greater than or equal to start date");
+            if (dto.CharityId.HasValue && dto.CharityId != _currentUser.CharityId)
+            {
+                _logger.LogWarning(
+                    "User {UserId} of charity {CallerCharityId} tried to create a campaign for charity {RequestedCharityId}; owner forced to their own charity",
+                    _currentUser.UserId, _currentUser.CharityId, dto.CharityId);
+            }
+
+            charityId = _currentUser.CharityId;
         }
 
-        // Validate budget
-        if (dto.TotalBudget <= 0)
+        int? countryId = dto.CountryId;
+        if (_currentUser.CountryId.HasValue)
         {
-            throw new ArgumentException("Total budget must be greater than zero");
-        }
+            if (dto.CountryId.HasValue && dto.CountryId != _currentUser.CountryId)
+            {
+                _logger.LogWarning(
+                    "User {UserId} of country {CallerCountryId} tried to create a campaign in country {RequestedCountryId}; country pinned to their own",
+                    _currentUser.UserId, _currentUser.CountryId, dto.CountryId);
+            }
 
-        if (dto.PerFamilyAllocation <= 0)
-        {
-            throw new ArgumentException("Per-family allocation must be greater than zero");
+            countryId = _currentUser.CountryId;
         }
 
         var campaign = new SeasonalAidCampaign
@@ -77,10 +270,10 @@ public class SeasonalAidService : ISeasonalAidService
             TotalBudget = dto.TotalBudget,
             BudgetCurrency = dto.BudgetCurrency,
             PerFamilyAllocation = dto.PerFamilyAllocation,
-            CountryId = dto.CountryId,
+            CountryId = countryId,
             RegionId = dto.RegionId,
             CenterId = dto.CenterId,
-            CharityId = dto.CharityId,
+            CharityId = charityId,
             MaximumFamilies = dto.MaximumFamilies,
             FamilyType = dto.FamilyType,
             MinChildrenAge = dto.MinChildrenAge,
@@ -94,7 +287,7 @@ public class SeasonalAidService : ISeasonalAidService
 
         _logger.LogInformation("Campaign created successfully with ID: {Id}", campaign.Id);
 
-        return await GetCampaignByIdAsync(campaign.Id);
+        return (await GetCampaignByIdAsync(campaign.Id))!;
     }
 
     #endregion
@@ -177,12 +370,9 @@ public class SeasonalAidService : ISeasonalAidService
     {
         _logger.LogInformation("Registering beneficiaries for campaign: {CampaignId}", dto.CampaignId);
 
-        var campaign = await _campaignRepository.GetByIdAsync(dto.CampaignId);
+        _registerBeneficiariesValidator.ValidateAndThrow(dto);
 
-        if (campaign == null)
-        {
-            throw new KeyNotFoundException($"Campaign with ID '{dto.CampaignId}' not found");
-        }
+        var campaign = await GetScopedCampaignAsync(dto.CampaignId, "register beneficiaries");
 
         if (!campaign.IsActive)
         {
@@ -211,6 +401,7 @@ public class SeasonalAidService : ISeasonalAidService
         int registeredCount = 0;
         decimal totalAllocation = 0;
         var beneficiaries = new List<SeasonalAidBeneficiary>();
+        var familyCharityId = ResolveCampaignFamilyCharityId(campaign);
 
         foreach (var familyId in dto.FamilyIds)
         {
@@ -226,6 +417,13 @@ public class SeasonalAidService : ISeasonalAidService
             {
                 _logger.LogWarning("Family {FamilyId} not found", familyId);
                 continue;
+            }
+
+            // BR-24: only families owned by the campaign's charity may be registered for it
+            if (familyCharityId.HasValue && family.FK_CharityId != familyCharityId)
+            {
+                throw new InvalidOperationException(
+                    $"Family '{family.Code}' does not belong to the charity this campaign is scoped to");
             }
 
             var beneficiary = new SeasonalAidBeneficiary
@@ -259,23 +457,223 @@ public class SeasonalAidService : ISeasonalAidService
         return (registeredCount, totalAllocation, budgetImpact);
     }
 
+    /// <summary>
+    /// UC-PRJ-07 full sync of a campaign's family registrations. <paramref name="dto"/> carries
+    /// the desired final set; families are added and removed as a single diff, validated
+    /// all-or-nothing (BR-23 duplicate registration, BR-24 charity ownership, HQ quota) and
+    /// persisted in one save.
+    /// </summary>
+    public async Task<UpdateBeneficiariesResultDto> UpdateCampaignBeneficiariesAsync(
+        Guid campaignId, UpdateSeasonalAidBeneficiariesDto dto)
+    {
+        _logger.LogInformation("Syncing beneficiaries for campaign: {CampaignId}", campaignId);
+
+        _updateBeneficiariesValidator.ValidateAndThrow(dto);
+
+        var campaign = await GetScopedCampaignAsync(campaignId, "update beneficiaries");
+
+        if (!campaign.IsActive)
+        {
+            throw new InvalidOperationException("Cannot update beneficiaries for an inactive campaign");
+        }
+
+        if (campaign.IsClosed)
+        {
+            throw new InvalidOperationException("Cannot update beneficiaries for a closed campaign");
+        }
+
+        // Desired final set — duplicates in the payload collapse silently.
+        var desiredFamilyIds = dto.FamilyIds.Distinct().ToList();
+
+        var existing = (await _beneficiaryRepository.GetByCampaignAsync(campaignId)).ToList();
+        var existingByFamilyId = existing.ToDictionary(b => b.FamilyId);
+
+        var adds = desiredFamilyIds.Where(id => !existingByFamilyId.ContainsKey(id)).ToList();
+        var removeFamilyIds = existingByFamilyId.Keys.Where(id => !desiredFamilyIds.Contains(id)).ToList();
+
+        // Quota (A1): the resulting registration count may not exceed the HQ-defined maximum.
+        if (campaign.MaximumFamilies.HasValue &&
+            existing.Count + adds.Count - removeFamilyIds.Count > campaign.MaximumFamilies.Value)
+        {
+            throw new InvalidOperationException(
+                $"The selection would exceed the maximum families limit ({campaign.MaximumFamilies})");
+        }
+
+        // Removals: a registration that has already been distributed is a closed delivery
+        // record and may not be silently dropped from the project (BR-25).
+        foreach (var familyId in removeFamilyIds)
+        {
+            var beneficiary = existingByFamilyId[familyId];
+            if (beneficiary.IsDistributed)
+            {
+                throw new InvalidOperationException(
+                    "A family that has already received its assistance cannot be deselected; it must stay on the project");
+            }
+        }
+
+        var familyCharityId = ResolveCampaignFamilyCharityId(campaign);
+        var allocationAmount = dto.AllocationAmount ?? campaign.PerFamilyAllocation;
+        var currency = dto.Currency ?? campaign.BudgetCurrency;
+
+        // Additions: BR-24 — only families owned by the campaign's charity.
+        var beneficiariesToAdd = new List<SeasonalAidBeneficiary>();
+        foreach (var familyId in adds)
+        {
+            var family = await _familyRepository.GetByIdAsync(familyId);
+            if (family == null)
+            {
+                throw new KeyNotFoundException($"Family with ID '{familyId}' not found");
+            }
+
+            if (familyCharityId.HasValue && family.FK_CharityId != familyCharityId)
+            {
+                throw new InvalidOperationException(
+                    $"Family '{family.Code}' does not belong to the charity this campaign is scoped to");
+            }
+
+            beneficiariesToAdd.Add(new SeasonalAidBeneficiary
+            {
+                Id = Guid.NewGuid(),
+                CampaignId = campaignId,
+                FamilyId = familyId,
+                AllocationAmount = allocationAmount,
+                Currency = currency,
+                IsRegistered = true,
+                RegistrationDate = DateTime.UtcNow,
+                RegistrationNotes = dto.Notes
+            });
+        }
+
+        if (beneficiariesToAdd.Any())
+        {
+            await _beneficiaryRepository.AddRangeAsync(beneficiariesToAdd);
+        }
+
+        foreach (var familyId in removeFamilyIds)
+        {
+            var beneficiary = existingByFamilyId[familyId];
+            // Soft delete: the row keeps its history and stops matching the filtered unique
+            // index, so the family can be re-registered in a later campaign rotation.
+            beneficiary.IsRegistered = false;
+            beneficiary.IsDeleted = true;
+            _beneficiaryRepository.Update(beneficiary);
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Beneficiaries synced for campaign {CampaignId}: {Added} added, {Removed} removed, {Total} registered",
+            campaignId, beneficiariesToAdd.Count, removeFamilyIds.Count, existing.Count + adds.Count - removeFamilyIds.Count);
+
+        return new UpdateBeneficiariesResultDto
+        {
+            AddedCount = beneficiariesToAdd.Count,
+            RemovedCount = removeFamilyIds.Count,
+            TotalRegistered = existing.Count + adds.Count - removeFamilyIds.Count,
+            MaximumFamilies = campaign.MaximumFamilies
+        };
+    }
+
+    /// <summary>
+    /// UC-PRJ-08: flags the project-family registration of <paramref name="familyId"/> in the
+    /// given campaign as delivered (or clears the flag when no distribution record backs it).
+    /// </summary>
+    public async Task SetFamilyReceivedFlagAsync(Guid familyId, SetFamilyReceivedFlagDto dto)
+    {
+        _setReceivedFlagValidator.ValidateAndThrow(dto);
+
+        var family = await _familyRepository.GetByIdAsync(familyId);
+        if (family == null)
+        {
+            throw new KeyNotFoundException($"Family with ID '{familyId}' not found");
+        }
+
+        // A charity user may only confirm delivery for their own families.
+        if (_currentUser.CharityId.HasValue && family.FK_CharityId != _currentUser.CharityId)
+        {
+            _logger.LogWarning(
+                "User {UserId} of charity {CallerCharityId} tried to set the received flag of family {FamilyId} belonging to another charity",
+                _currentUser.UserId, _currentUser.CharityId, familyId);
+            throw new KeyNotFoundException($"Family with ID '{familyId}' not found");
+        }
+
+        var beneficiary = await _beneficiaryRepository.GetByCampaignAndFamilyAsync(dto.CampaignId, familyId);
+        if (beneficiary == null)
+        {
+            throw new KeyNotFoundException(
+                $"Family with ID '{familyId}' is not registered for campaign '{dto.CampaignId}'");
+        }
+
+        var campaign = await _campaignRepository.GetByIdAsync(beneficiary.CampaignId);
+        if (campaign == null || campaign.IsClosed)
+        {
+            throw new InvalidOperationException("Cannot change the delivery state of a closed campaign");
+        }
+
+        if (dto.IsReceived)
+        {
+            // Idempotent: confirming an already-delivered registration keeps its original date.
+            beneficiary.IsDistributed = true;
+            beneficiary.DistributionDate ??= DateTime.UtcNow;
+        }
+        else
+        {
+            var distributions = await _distributionRepository.GetByBeneficiaryAsync(beneficiary.Id);
+            if (distributions.Any())
+            {
+                throw new InvalidOperationException(
+                    "Delivery cannot be withdrawn once a distribution record exists; remove the distribution record first");
+            }
+
+            beneficiary.IsDistributed = false;
+            beneficiary.DistributionDate = null;
+        }
+
+        _beneficiaryRepository.Update(beneficiary);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Received flag of family {FamilyId} in campaign {CampaignId} set to {IsReceived}",
+            familyId, dto.CampaignId, dto.IsReceived);
+    }
+
+    /// <summary>
+    /// Loads a campaign and fails with 404 semantics when it does not exist or sits outside the
+    /// caller's tenancy.
+    /// </summary>
+    private async Task<SeasonalAidCampaign> GetScopedCampaignAsync(Guid campaignId, string operation)
+    {
+        var campaign = await _campaignRepository.GetByIdAsync(campaignId);
+        if (campaign == null)
+        {
+            throw new KeyNotFoundException($"Campaign with ID '{campaignId}' not found");
+        }
+
+        EnsureCampaignScope(campaign, operation);
+        return campaign;
+    }
+
     public async Task<(IEnumerable<SeasonalAidBeneficiaryDto> Items, int TotalCount)> GetEligibleFamiliesAsync(EligibleFamiliesFilterDto filter)
     {
         _logger.LogInformation("Getting eligible families for campaign: {CampaignId}", filter.CampaignId);
 
-        var campaign = await _campaignRepository.GetByIdAsync(filter.CampaignId);
-        if (campaign == null)
+        var campaign = await GetScopedCampaignAsync(filter.CampaignId, "list eligible families");
+
+        // The charity whose families are in scope: the campaign's own charity, else the
+        // charity-bound caller's. A charity user cannot widen this by passing a filter value.
+        var scopedCharityId = ResolveCampaignFamilyCharityId(campaign);
+        if (scopedCharityId.HasValue)
         {
-            throw new KeyNotFoundException($"Campaign with ID '{filter.CampaignId}' not found");
+            filter.CharityId = scopedCharityId;
         }
 
         // Build query for eligible families
         var familiesQuery = _familyRepository.IncludeNavigationProperties();
 
-        // Apply geographic filters
+        // Families carry their charity on FK_CharityId (the column the family module writes).
         if (filter.CharityId.HasValue)
         {
-            familiesQuery = familiesQuery.Where(f => f.CharityId == filter.CharityId.Value);
+            familiesQuery = familiesQuery.Where(f => f.FK_CharityId == filter.CharityId.Value);
         }
 
         if (filter.RegionId.HasValue)
@@ -288,18 +686,16 @@ public class SeasonalAidService : ISeasonalAidService
             familiesQuery = familiesQuery.Where(f => f.CityId == filter.CenterId.Value);
         }
 
-        // Apply family type filter
-        if (!string.IsNullOrEmpty(filter.FamilyType))
-        {
-            // This would need to be implemented based on your family classification logic
-            // For now, we'll skip this filter
-        }
+        // Exclude families already registered for this campaign — the remaining set is the
+        // rotation pool UC-PRJ-10 reports on.
+        var registeredFamilyIds = (await _beneficiaryRepository.GetByCampaignAsync(filter.CampaignId))
+            .Select(b => b.FamilyId)
+            .ToList();
 
-        // Apply age range filter for children
-        if (filter.MinChildrenAge.HasValue || filter.MaxChildrenAge.HasValue)
+        if (registeredFamilyIds.Any())
         {
-            // This would need to query the Orphans table to check ages
-            // For now, we'll skip this filter
+            var registered = registeredFamilyIds;
+            familiesQuery = familiesQuery.Where(f => !registered.Contains(f.Id));
         }
 
         // Apply search filter
@@ -320,6 +716,9 @@ public class SeasonalAidService : ISeasonalAidService
             .Take(filter.PageSize)
             .ToListAsync();
 
+        // Resolve charity names by id: FK_CharityId has no navigation property.
+        var charityNames = await GetCharityNamesAsync(families.Select(f => f.FK_CharityId));
+
         // Convert to DTOs
         var beneficiaryDtos = families.Select(f => new SeasonalAidBeneficiaryDto
         {
@@ -330,7 +729,9 @@ public class SeasonalAidService : ISeasonalAidService
             FamilyAddress = f.Address,
             OrphansCount = f.OrphansCount,
             FamilyMembersCount = f.FamilyMembersCount,
-            CharityName = f.Charity?.Name,
+            CharityName = f.FK_CharityId.HasValue && charityNames.TryGetValue(f.FK_CharityId.Value, out var charityName)
+                ? charityName
+                : null,
             RegionName = f.City?.Name,
             CenterName = f.City?.Name,
             AllocationAmount = campaign.PerFamilyAllocation,
@@ -359,7 +760,11 @@ public class SeasonalAidService : ISeasonalAidService
             throw new InvalidOperationException("Cannot remove a beneficiary that has already received distribution");
         }
 
-        _beneficiaryRepository.Delete(beneficiary);
+        // Soft delete: the row keeps its history and frees the (CampaignId, FamilyId) slot for
+        // a later campaign rotation.
+        beneficiary.IsRegistered = false;
+        beneficiary.IsDeleted = true;
+        _beneficiaryRepository.Update(beneficiary);
         await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Beneficiary removed successfully: {BeneficiaryId}", beneficiaryId);
@@ -373,6 +778,8 @@ public class SeasonalAidService : ISeasonalAidService
     {
         _logger.LogInformation("Recording distribution for beneficiary: {BeneficiaryId}", dto.BeneficiaryId);
 
+        _distributionValidator.ValidateAndThrow(dto);
+
         var beneficiary = await _beneficiaryRepository.GetByIdAsync(dto.BeneficiaryId);
 
         if (beneficiary == null)
@@ -380,7 +787,15 @@ public class SeasonalAidService : ISeasonalAidService
             throw new KeyNotFoundException($"Beneficiary with ID '{dto.BeneficiaryId}' not found");
         }
 
-        if (beneficiary.Campaign.IsClosed)
+        // GetByIdAsync does not load navigations; fetch the campaign by its key rather than
+        // dereferencing beneficiary.Campaign (which is null without lazy loading).
+        var campaign = await _campaignRepository.GetByIdAsync(beneficiary.CampaignId);
+        if (campaign == null || !IsCampaignVisibleToCaller(campaign))
+        {
+            throw new KeyNotFoundException($"Beneficiary with ID '{dto.BeneficiaryId}' not found");
+        }
+
+        if (campaign.IsClosed)
         {
             throw new InvalidOperationException("Cannot record distribution for a closed campaign");
         }
@@ -414,7 +829,8 @@ public class SeasonalAidService : ISeasonalAidService
 
         _logger.LogInformation("Distribution recorded successfully for beneficiary: {BeneficiaryId}", dto.BeneficiaryId);
 
-        return MapToDistributionDto(distribution, beneficiary);
+        var family = await _familyRepository.GetByIdAsync(beneficiary.FamilyId);
+        return MapToDistributionDto(distribution, beneficiary, campaign.Name, family?.Code);
     }
 
     public async Task RecordDistributionsAsync(List<CreateSeasonalAidDistributionDto> distributions)
@@ -437,15 +853,26 @@ public class SeasonalAidService : ISeasonalAidService
     {
         _logger.LogInformation("Getting campaigns with filter: {@Filter}", filter);
 
-        var (campaigns, totalCount) = await _campaignRepository.GetFilteredAsync(
-            filter.SearchTerm,
-            filter.CampaignType,
-            filter.IsActive,
-            filter.IsClosed,
-            filter.CountryId,
-            filter.RegionId,
-            filter.CenterId,
-            filter.CharityId);
+        // Tenancy first: the caller's scope decides which campaigns exist for them, whatever
+        // the request asked for. Named arguments throughout — the signature is all-optional.
+        var scoped = ApplyCallerScope(filter);
+        var (campaigns, totalCount) = await _campaignRepository.GetFilteredPaginatedAsync(
+            searchTerm: scoped.SearchTerm,
+            campaignType: scoped.CampaignType,
+            isActive: scoped.IsActive,
+            isClosed: scoped.IsClosed,
+            countryId: scoped.CountryId,
+            regionId: scoped.RegionId,
+            centerId: scoped.CenterId,
+            charityId: scoped.CharityId,
+            startDateFrom: scoped.StartDateFrom,
+            startDateTo: scoped.StartDateTo,
+            endDateFrom: scoped.EndDateFrom,
+            endDateTo: scoped.EndDateTo,
+            pageNumber: scoped.PageNumber,
+            pageSize: scoped.PageSize,
+            sortBy: scoped.SortBy,
+            sortDescending: scoped.SortDescending);
 
         var campaignDtos = campaigns.Select(c => new SeasonalAidCampaignListDto
         {
@@ -474,6 +901,16 @@ public class SeasonalAidService : ISeasonalAidService
         _logger.LogInformation("Getting active campaigns");
 
         var campaigns = await _campaignRepository.GetActiveCampaignsAsync();
+
+        // A charity-bound caller only sees their own campaigns.
+        if (_currentUser.CharityId.HasValue)
+        {
+            campaigns = campaigns.Where(c => c.CharityId == _currentUser.CharityId);
+        }
+        else if (_currentUser.IsAuthenticated && _currentUser.IsHeadOffice && _currentUser.CountryId.HasValue)
+        {
+            campaigns = campaigns.Where(c => !c.CountryId.HasValue || c.CountryId == _currentUser.CountryId);
+        }
 
         return campaigns.Select(c => new SeasonalAidCampaignListDto
         {
@@ -504,14 +941,34 @@ public class SeasonalAidService : ISeasonalAidService
     {
         _logger.LogInformation("Getting beneficiaries for campaign: {CampaignId}", campaignId);
 
-        var (beneficiaries, totalCount) = await _beneficiaryRepository.GetByCampaignFilteredAsync(
-            campaignId,
-            filter.IsDistributed,
-            filter.CharityId,
-            filter.RegionId,
-            filter.CenterId);
+        await GetScopedCampaignAsync(campaignId, "list beneficiaries");
 
-        var beneficiaryDtos = beneficiaries.Select(b => new SeasonalAidBeneficiaryDto
+        // A charity-bound caller reads registrations of their own families only.
+        if (_currentUser.CharityId.HasValue)
+        {
+            filter.CharityId = _currentUser.CharityId;
+        }
+
+        var (beneficiaries, totalCount) = await _beneficiaryRepository.GetByCampaignFilteredPaginatedAsync(
+            campaignId,
+            searchTerm: filter.SearchTerm,
+            isDistributed: filter.IsDistributed,
+            charityId: filter.CharityId,
+            regionId: filter.RegionId,
+            centerId: filter.CenterId,
+            registrationDateFrom: filter.RegistrationDateFrom,
+            registrationDateTo: filter.RegistrationDateTo,
+            distributionDateFrom: filter.DistributionDateFrom,
+            distributionDateTo: filter.DistributionDateTo,
+            pageNumber: filter.PageNumber,
+            pageSize: filter.PageSize,
+            sortBy: filter.SortBy,
+            sortDescending: filter.SortDescending);
+
+        var beneficiariesList = beneficiaries.ToList();
+        var charityNames = await GetCharityNamesAsync(beneficiariesList.Select(b => b.Family?.FK_CharityId));
+
+        var beneficiaryDtos = beneficiariesList.Select(b => new SeasonalAidBeneficiaryDto
         {
             Id = b.Id,
             CampaignId = b.CampaignId,
@@ -520,7 +977,9 @@ public class SeasonalAidService : ISeasonalAidService
             FamilyAddress = b.Family?.Address,
             OrphansCount = b.Family?.OrphansCount ?? 0,
             FamilyMembersCount = b.Family?.FamilyMembersCount ?? 0,
-            CharityName = b.Family?.Charity?.Name,
+            CharityName = b.Family?.FK_CharityId.HasValue == true && charityNames.TryGetValue(b.Family.FK_CharityId.Value, out var charityName)
+                ? charityName
+                : null,
             RegionName = b.Family?.City?.Name,
             CenterName = b.Family?.City?.Name,
             AllocationAmount = b.AllocationAmount,
@@ -550,20 +1009,38 @@ public class SeasonalAidService : ISeasonalAidService
             return null;
         }
 
-        var latestDistribution = beneficiary.Distributions.OrderByDescending(d => d.DistributionDate).FirstOrDefault();
+        // GetByIdAsync does not load navigations; scope-check via the owning campaign and,
+        // for a charity-bound caller, the family's own charity.
+        var campaign = await _campaignRepository.GetByIdAsync(beneficiary.CampaignId);
+        if (campaign == null || !IsCampaignVisibleToCaller(campaign))
+        {
+            return null;
+        }
+
+        var family = await _familyRepository.GetByIdAsync(beneficiary.FamilyId);
+        if (_currentUser.CharityId.HasValue && family?.FK_CharityId != _currentUser.CharityId)
+        {
+            return null;
+        }
+
+        var distributions = await _distributionRepository.GetByBeneficiaryAsync(beneficiary.Id);
+        var latestDistribution = distributions.OrderByDescending(d => d.DistributionDate).FirstOrDefault();
+        var charityNames = await GetCharityNamesAsync(new[] { family?.FK_CharityId });
 
         return new SeasonalAidBeneficiaryDto
         {
             Id = beneficiary.Id,
             CampaignId = beneficiary.CampaignId,
             FamilyId = beneficiary.FamilyId,
-            FamilyCode = beneficiary.Family?.Code ?? string.Empty,
-            FamilyAddress = beneficiary.Family?.Address,
-            OrphansCount = beneficiary.Family?.OrphansCount ?? 0,
-            FamilyMembersCount = beneficiary.Family?.FamilyMembersCount ?? 0,
-            CharityName = beneficiary.Family?.Charity?.Name,
-            RegionName = beneficiary.Family?.City?.Name,
-            CenterName = beneficiary.Family?.City?.Name,
+            FamilyCode = family?.Code ?? string.Empty,
+            FamilyAddress = family?.Address,
+            OrphansCount = family?.OrphansCount ?? 0,
+            FamilyMembersCount = family?.FamilyMembersCount ?? 0,
+            CharityName = family?.FK_CharityId.HasValue == true && charityNames.TryGetValue(family.FK_CharityId.Value, out var charityName)
+                ? charityName
+                : null,
+            RegionName = family?.City?.Name,
+            CenterName = family?.City?.Name,
             AllocationAmount = beneficiary.AllocationAmount,
             Currency = beneficiary.Currency,
             IsRegistered = beneficiary.IsRegistered,
@@ -571,7 +1048,7 @@ public class SeasonalAidService : ISeasonalAidService
             RegistrationNotes = beneficiary.RegistrationNotes,
             IsDistributed = beneficiary.IsDistributed,
             DistributionDate = beneficiary.DistributionDate,
-            DistributedAmount = beneficiary.Distributions.Sum(d => d.AmountDistributed),
+            DistributedAmount = distributions.Sum(d => d.AmountDistributed),
             ReceivedBy = latestDistribution?.ReceivedBy,
             Notes = latestDistribution?.Notes,
             CreatedOn = beneficiary.CreatedOn
@@ -586,15 +1063,27 @@ public class SeasonalAidService : ISeasonalAidService
     {
         _logger.LogInformation("Updating campaign: {Id}", dto.Id);
 
-        var campaign = await _campaignRepository.GetByIdAsync(dto.Id);
-        if (campaign == null)
-        {
-            throw new KeyNotFoundException($"Campaign with ID '{dto.Id}' not found");
-        }
+        _updateCampaignValidator.ValidateAndThrow(dto);
+
+        var campaign = await GetScopedCampaignAsync(dto.Id, "update");
 
         if (campaign.IsClosed)
         {
             throw new InvalidOperationException("Cannot modify a closed campaign");
+        }
+
+        // Tenancy is preserved on update: a charity-bound caller keeps their own charity and
+        // the country follows the caller's claim exactly as on create.
+        Guid? charityId = dto.CharityId ?? campaign.CharityId;
+        if (_currentUser.CharityId.HasValue)
+        {
+            charityId = _currentUser.CharityId;
+        }
+
+        int? countryId = dto.CountryId ?? campaign.CountryId;
+        if (_currentUser.CountryId.HasValue)
+        {
+            countryId = _currentUser.CountryId;
         }
 
         // Validate uniqueness
@@ -618,10 +1107,10 @@ public class SeasonalAidService : ISeasonalAidService
         campaign.TotalBudget = dto.TotalBudget;
         campaign.BudgetCurrency = dto.BudgetCurrency;
         campaign.PerFamilyAllocation = dto.PerFamilyAllocation;
-        campaign.CountryId = dto.CountryId;
+        campaign.CountryId = countryId;
         campaign.RegionId = dto.RegionId;
         campaign.CenterId = dto.CenterId;
-        campaign.CharityId = dto.CharityId;
+        campaign.CharityId = charityId;
         campaign.MaximumFamilies = dto.MaximumFamilies;
         campaign.FamilyType = dto.FamilyType;
         campaign.MinChildrenAge = dto.MinChildrenAge;
@@ -644,12 +1133,7 @@ public class SeasonalAidService : ISeasonalAidService
     {
         _logger.LogInformation("Closing campaign: {CampaignId}", dto.CampaignId);
 
-        var campaign = await _campaignRepository.GetByIdAsync(dto.CampaignId);
-
-        if (campaign == null)
-        {
-            throw new KeyNotFoundException($"Campaign with ID '{dto.CampaignId}' not found");
-        }
+        var campaign = await GetScopedCampaignAsync(dto.CampaignId, "close");
 
         if (campaign.IsClosed)
         {
@@ -670,11 +1154,7 @@ public class SeasonalAidService : ISeasonalAidService
     {
         _logger.LogInformation("Reopening campaign: {CampaignId}", campaignId);
 
-        var campaign = await _campaignRepository.GetByIdAsync(campaignId);
-        if (campaign == null)
-        {
-            throw new KeyNotFoundException($"Campaign with ID '{campaignId}' not found");
-        }
+        var campaign = await GetScopedCampaignAsync(campaignId, "reopen");
 
         if (!campaign.IsClosed)
         {
@@ -699,14 +1179,11 @@ public class SeasonalAidService : ISeasonalAidService
     {
         _logger.LogInformation("Generating report for campaign: {CampaignId}", campaignId);
 
-        var campaign = await _campaignRepository.GetByIdAsync(campaignId);
-
-        if (campaign == null)
-        {
-            throw new KeyNotFoundException($"Campaign with ID '{campaignId}' not found");
-        }
+        var campaign = await GetScopedCampaignAsync(campaignId, "generate report");
 
         var beneficiaries = await _beneficiaryRepository.GetByCampaignWithDistributionsAsync(campaignId);
+        var beneficiariesList = beneficiaries.ToList();
+        var charityNames = await GetCharityNamesAsync(beneficiariesList.Select(b => b.Family?.FK_CharityId));
 
         var report = new SeasonalAidCampaignReportDto
         {
@@ -721,11 +1198,17 @@ public class SeasonalAidService : ISeasonalAidService
             AllocatedBudget = campaign.AllocatedBudget,
             DistributedBudget = campaign.DistributedBudget,
             RemainingBudget = campaign.TotalBudget - campaign.AllocatedBudget,
-            TotalBeneficiaries = beneficiaries.Count(),
-            DistributedBeneficiaries = beneficiaries.Count(b => b.IsDistributed),
-            PendingBeneficiaries = beneficiaries.Count(b => !b.IsDistributed),
+            TotalBeneficiaries = beneficiariesList.Count,
+            DistributedBeneficiaries = beneficiariesList.Count(b => b.IsDistributed),
+            PendingBeneficiaries = beneficiariesList.Count(b => !b.IsDistributed),
             BeneficiariesByRegion = (await _campaignRepository.GetBeneficiariesByRegionAsync(campaignId)),
-            BeneficiariesByCharity = (await _campaignRepository.GetBeneficiariesByCharityAsync(campaignId)),
+            // Grouped here rather than in the repository: the repository groups by the
+            // Family.Charity navigation, which is bound to a legacy column that stays null.
+            BeneficiariesByCharity = beneficiariesList
+                .GroupBy(b => b.Family?.FK_CharityId.HasValue == true && charityNames.TryGetValue(b.Family.FK_CharityId.Value, out var charityName)
+                    ? charityName
+                    : "Unknown")
+                .ToDictionary(g => g.Key, g => g.Count()),
             IsActive = campaign.IsActive,
             IsClosed = campaign.IsClosed,
             ClosedDate = campaign.ClosedDate,
@@ -734,12 +1217,14 @@ public class SeasonalAidService : ISeasonalAidService
         };
 
         // Build distribution details
-        report.DistributionDetails = beneficiaries.Select(b => new BeneficiaryDistributionDetail
+        report.DistributionDetails = beneficiariesList.Select(b => new BeneficiaryDistributionDetail
         {
             BeneficiaryId = b.Id,
             FamilyCode = b.Family?.Code ?? string.Empty,
             FamilyAddress = b.Family?.Address,
-            CharityName = b.Family?.Charity?.Name,
+            CharityName = b.Family?.FK_CharityId.HasValue == true && charityNames.TryGetValue(b.Family.FK_CharityId.Value, out var charityName)
+                ? charityName
+                : null,
             RegionName = b.Family?.City?.Name,
             AllocationAmount = b.AllocationAmount,
             DistributedAmount = b.Distributions.Sum(d => d.AmountDistributed),
@@ -750,19 +1235,19 @@ public class SeasonalAidService : ISeasonalAidService
         }).ToList();
 
         // Calculate impact metrics
-        report.TotalFamiliesServed = beneficiaries.Count();
-        report.TotalOrphansServed = beneficiaries.Sum(b => b.Family?.OrphansCount ?? 0);
-        report.EstimatedIndividualsServed = beneficiaries.Sum(b => b.Family?.FamilyMembersCount ?? 0);
+        report.TotalFamiliesServed = beneficiariesList.Count;
+        report.TotalOrphansServed = beneficiariesList.Sum(b => b.Family?.OrphansCount ?? 0);
+        report.EstimatedIndividualsServed = beneficiariesList.Sum(b => b.Family?.FamilyMembersCount ?? 0);
 
         // Build geographic coverage
-        report.CoveredCountries = beneficiaries
+        report.CoveredCountries = beneficiariesList
             .Where(b => b.Family?.City?.CountryId != null)
             .Select(b => b.Family?.City?.Country?.Name)
             .Distinct()
             .Where(n => !string.IsNullOrEmpty(n))
             .ToList()!;
 
-        report.CoveredRegions = beneficiaries
+        report.CoveredRegions = beneficiariesList
             .Where(b => b.Family?.CityId != null)
             .Select(b => b.Family?.City?.Name)
             .Distinct()
@@ -804,11 +1289,7 @@ public class SeasonalAidService : ISeasonalAidService
     {
         _logger.LogInformation("Assigning campaign {CampaignId} to charity {CharityId}", campaignId, charityId);
 
-        var campaign = await _campaignRepository.GetByIdAsync(campaignId);
-        if (campaign == null)
-        {
-            throw new KeyNotFoundException($"Campaign with ID '{campaignId}' not found");
-        }
+        var campaign = await GetScopedCampaignAsync(campaignId, "assign charity");
 
         if (campaign.IsClosed)
         {
@@ -831,7 +1312,7 @@ public class SeasonalAidService : ISeasonalAidService
     {
         var campaign = await _campaignRepository.GetByIdAsync(id);
 
-        if (campaign == null)
+        if (campaign == null || !IsCampaignVisibleToCaller(campaign))
         {
             return null;
         }
@@ -890,23 +1371,24 @@ public class SeasonalAidService : ISeasonalAidService
     {
         _logger.LogInformation("Deleting campaign: {Id}", id);
 
-        var campaign = await _campaignRepository.GetByIdAsync(id);
-        if (campaign == null)
-        {
-            throw new KeyNotFoundException($"Campaign with ID '{id}' not found");
-        }
+        var campaign = await GetScopedCampaignAsync(id, "delete");
 
         if (campaign.IsClosed)
         {
             throw new InvalidOperationException("Cannot delete a closed campaign");
         }
 
-        if (campaign.RegisteredBeneficiariesCount > 0)
+        // Counted from the store: the entity's calculated counters read an unloaded
+        // navigation here and would always report zero.
+        if (await _beneficiaryRepository.GetTotalBeneficiariesAsync(id) > 0)
         {
             throw new InvalidOperationException("Cannot delete a campaign with registered beneficiaries");
         }
 
-        _campaignRepository.Delete(campaign);
+        // Soft delete per the platform rule — the row stays, every read filters it out.
+        campaign.IsActive = false;
+        campaign.IsDeleted = true;
+        _campaignRepository.Update(campaign);
         await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Campaign deleted successfully: {Id}", id);
@@ -956,14 +1438,16 @@ public class SeasonalAidService : ISeasonalAidService
         };
     }
 
-    private SeasonalAidDistributionDto MapToDistributionDto(SeasonalAidDistribution distribution, SeasonalAidBeneficiary beneficiary)
+    private SeasonalAidDistributionDto MapToDistributionDto(
+        SeasonalAidDistribution distribution, SeasonalAidBeneficiary beneficiary,
+        string campaignName, string? familyCode)
     {
         return new SeasonalAidDistributionDto
         {
             Id = distribution.Id,
             BeneficiaryId = distribution.BeneficiaryId,
-            FamilyCode = beneficiary.Family?.Code ?? string.Empty,
-            CampaignName = beneficiary.Campaign?.Name ?? string.Empty,
+            FamilyCode = familyCode ?? string.Empty,
+            CampaignName = campaignName,
             IsDistributed = distribution.IsDistributed,
             DistributionDate = distribution.DistributionDate,
             AmountDistributed = distribution.AmountDistributed,

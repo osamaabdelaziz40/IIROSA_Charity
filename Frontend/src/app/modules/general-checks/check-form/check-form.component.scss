@@ -1,0 +1,102 @@
+// Type-ahead suggestions under the beneficiary name input
+.beneficiary-suggestions {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  z-index: 1000;
+  max-height: 260px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  .list-group-item {
+    cursor: pointer;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+  }
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+// ---------------------------------------------------------------------------
+// Print overlay — UC-CHQ-10 طباعة / طباعة مصري (client-side, per epic-12 precedent)
+// ---------------------------------------------------------------------------
+.print-area {
+  display: none;
+}
+
+// The Egyptian cheque leaf: a standard ~180×90 mm stationery. Bank offsets are
+// millimetres from the top-right (RTL), mapped straight onto CSS mm units.
+.cheque-leaf {
+  position: relative;
+  width: 180mm;
+  height: 90mm;
+  direction: rtl;
+
+  .cheque-field {
+    position: absolute;
+    font-size: 12pt;
+    white-space: nowrap;
+  }
+
+  .cheque-date {
+    font-size: 11pt;
+  }
+
+  .cheque-amount {
+    font-weight: bold;
+  }
+
+  .cheque-words {
+    font-size: 11pt;
+    max-width: 150mm;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// Default print layout — a formatted cheque card when no stationery offsets apply.
+.cheque-card {
+  width: 180mm;
+  padding: 10mm;
+  border: 1px solid #000;
+
+  .cheque-card-line {
+    margin-bottom: 4mm;
+    font-size: 12pt;
+  }
+
+  .cheque-card-amount {
+    font-size: 14pt;
+    font-weight: bold;
+    text-align: left;
+  }
+
+  .cheque-card-words {
+    font-size: 13pt;
+  }
+}
+
+@media print {
+  // Hide the whole app; only the cheque face reaches the paper.
+  body * {
+    visibility: hidden;
+  }
+
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+  }
+}

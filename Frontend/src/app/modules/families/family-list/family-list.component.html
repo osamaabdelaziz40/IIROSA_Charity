@@ -7,7 +7,7 @@
   [actions]="pageActions">
 </app-page-header>
 
-<div class="card">
+<div class="card shadow mb-4">
   <div class="card-body">
     <!-- Filters -->
     <form [formGroup]="filterForm">
@@ -85,16 +85,24 @@
         </div>
       </div>
 
-      <div class="row mb-3" *ngIf="hasActiveFilters()">
+      <div class="row">
         <div class="col-12">
-          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+          <button class="btn btn-primary" type="button" (click)="onSearch()">
+            <i class="fe fe-search mr-1"></i>
+            {{ 'common.search' | translate }}
+          </button>
+          <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary ml-2" type="button" (click)="clearFilters()">
             <i class="fe fe-x mr-1"></i>
             {{ 'common.clearFilters' | translate }}
           </button>
         </div>
       </div>
     </form>
+  </div>
+</div>
 
+<div class="card shadow mb-4">
+  <div class="card-body">
     <!-- Loading State -->
     <div *ngIf="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status">
@@ -164,6 +172,10 @@
                       <i class="fe fe-user mr-2"></i>
                       {{ 'families.manageOrphans' | translate }}
                     </a>
+                    <a class="dropdown-item" href="javascript:void(0)" *ngIf="canTransfer" (click)="openTransferModal(family)">
+                      <i class="fe fe-corner-up-right mr-2"></i>
+                      {{ 'families.transfer' | translate }}
+                    </a>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item text-danger" href="javascript:void(0)" (click)="deleteFamily(family)">
                       <i class="fe fe-trash mr-2"></i>
@@ -195,5 +207,47 @@
       [totalCount]="totalCount"
       (pageChange)="onPageChange($event)">
     </app-pagination>
+  </div>
+</div>
+
+<!-- Transfer family to another charity (UC-FAM-06 نقل الأسرة لجمعية أخرى) -->
+<div class="modal-backdrop" *ngIf="showTransferModal"></div>
+<div class="modal-dialog" *ngIf="showTransferModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">{{ 'families.transferTitle' | translate }}</h5>
+      <button type="button" class="close" (click)="closeTransferModal()">
+        <span>&times;</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info" *ngIf="transferTarget">
+        <strong>{{ transferTarget.code || '-' }}</strong><br>
+        {{ 'families.transferCurrentCharity' | translate }}: {{ transferTarget.charityName || '-' }}
+      </div>
+      <form [formGroup]="transferForm" (ngSubmit)="submitTransfer()">
+        <div class="mb-3">
+          <label class="form-label">{{ 'families.transferTargetCharity' | translate }} <span class="text-danger">*</span></label>
+          <select class="form-select" formControlName="newCharityId" [disabled]="charitiesLoading">
+            <option value="">{{ charitiesLoading ? ('families.transferLoadingCharities' | translate) : ('families.transferSelectCharity' | translate) }}</option>
+            <option *ngFor="let c of charityOptions; trackBy: trackByCharityId" [value]="c.id">{{ c.name }}</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{{ 'families.transferReason' | translate }}</label>
+          <textarea class="form-control" formControlName="reason" rows="3"
+                    [placeholder]="'families.transferReasonPlaceholder' | translate"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeTransferModal()">
+        {{ 'common.cancel' | translate }}
+      </button>
+      <button type="button" class="btn btn-primary" [disabled]="transferring" (click)="submitTransfer()">
+        <i class="fe fe-check mr-1"></i>
+        {{ 'families.transferConfirmButton' | translate }}
+      </button>
+    </div>
   </div>
 </div>

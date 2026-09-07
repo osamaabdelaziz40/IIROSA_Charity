@@ -243,6 +243,10 @@ export class InputTextComponent implements OnInit, OnDestroy, OnChanges {
     if (field.errors['required']) {
       return this.translate.instant('validation.required');
     }
+    // Raised by the UC-SYS-11 country-rule validator (pattern/length) on NID inputs.
+    if (field.errors['nationalIdInvalid']) {
+      return this.translate.instant('validation.nationalIdInvalid');
+    }
     if (field.errors['email']) {
       return this.translate.instant('validation.email');
     }

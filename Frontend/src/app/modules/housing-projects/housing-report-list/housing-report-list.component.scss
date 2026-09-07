@@ -1,0 +1,31 @@
+/**
+ * Housing Report List (UC-HOU-06 · §11.S.3) + UC-HOU-07 beneficiary resolve.
+ * Summary strip + grid affordances. RTL-first — the layout flows with the document.
+ */
+
+.beneficiary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--app-border-color, rgba(120, 130, 150, 0.25));
+  border-radius: 0.375rem;
+  background: var(--app-chip-bg, rgba(120, 130, 150, 0.08));
+
+  .strip-label {
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+
+  .strip-name {
+    font-weight: 600;
+  }
+
+  .strip-item {
+    font-size: 0.8rem;
+    opacity: 0.85;
+    white-space: nowrap;
+  }
+}

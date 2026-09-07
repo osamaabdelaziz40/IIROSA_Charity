@@ -1,0 +1,145 @@
+<app-page-header [title]="'families.followUp.title' | translate"
+                 [subtitle]="'families.followUp.subtitle' | translate"></app-page-header>
+
+<div class="container-fluid family-follow-up-report">
+  <!-- Filter bar: report date (everyone) + charity (HQ only) + run -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="form-row align-items-end">
+        <div class="col-md-3">
+          <label class="form-label">{{ 'families.followUp.dateFilter' | translate }}</label>
+          <input type="date" class="form-control" [(ngModel)]="reportDate"
+                 [ngModelOptions]="{ standalone: true }" />
+        </div>
+        <div class="col-md-3" *ngIf="isHQ">
+          <label class="form-label">{{ 'families.followUp.charityFilter' | translate }}</label>
+          <select class="form-control" [(ngModel)]="charityFilter" (change)="onCharityChange()"
+                  [ngModelOptions]="{ standalone: true }">
+            <option *ngFor="let option of charityOptions; trackBy: trackByOption"
+                    [ngValue]="option.id">
+              {{ option.name }}
+            </option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <button class="btn btn-primary" (click)="run()" [disabled]="loading">
+            <span class="spinner-border spinner-border-sm me-1" *ngIf="loading"></span>
+            {{ 'families.followUp.run' | translate }}
+          </button>
+          <button class="btn btn-success ms-2" (click)="exportToExcel()"
+                  [disabled]="exporting || rows.length === 0">
+            <span class="spinner-border spinner-border-sm me-1" *ngIf="exporting"></span>
+            <i class="fe fe-download" *ngIf="!exporting"></i>
+            {{ 'common.exportToExcel' | translate }}
+          </button>
+          <!-- UC-FAM-14: the tracking sheet printed (browser print-to-PDF) -->
+          <button class="btn btn-outline-secondary ms-2" (click)="printTrackingSheet()"
+                  [disabled]="printing || !reportDate"
+                  [title]="'reports.print.printTracking' | translate">
+            <span class="spinner-border spinner-border-sm me-1" *ngIf="printing"></span>
+            <i class="fe fe-printer" *ngIf="!printing"></i>
+            {{ 'common.print' | translate }}
+          </button>
+        </div>
+      </div>
+
+      <!-- UC-RPT-37 (§23.S.10's deferred command): طباعة الاستبانة من تاريخ محدد — variant
+           selector, family dropdown for أسرة محددة, charity scope + date from the bar above -->
+      <div class="form-row align-items-end mt-2">
+        <div class="col-md-3">
+          <label class="form-label">{{ 'reports.guardianIdentification.variantLabel' | translate }}</label>
+          <select class="form-select" [(ngModel)]="idVariant"
+                  [ngModelOptions]="{ standalone: true }"
+                  (ngModelChange)="onIdVariantChange()">
+            <option value="AllGuardians">{{ 'reports.guardianIdentification.variantAllGuardians' | translate }}</option>
+            <option value="WidowsOnly">{{ 'reports.guardianIdentification.variantWidowsOnly' | translate }}</option>
+            <option value="SingleFamily">{{ 'reports.guardianIdentification.variantSingleFamily' | translate }}</option>
+          </select>
+        </div>
+        <div class="col-md-3" *ngIf="idVariant === 'SingleFamily'">
+          <label class="form-label">{{ 'reports.guardianIdentification.family' | translate }}</label>
+          <select class="form-select" [(ngModel)]="familyFilter" [ngModelOptions]="{ standalone: true }">
+            <option value="">{{ 'reports.guardianIdentification.pickFamily' | translate }}</option>
+            <option *ngFor="let family of familyOptions; trackBy: trackByOption"
+                    [value]="family.id">{{ family.name }}</option>
+          </select>
+        </div>
+        <div class="col-md-6 d-flex gap-2">
+          <!-- §23.U.40 عرض — the shared preview modal before print -->
+          <button class="btn btn-outline-info" (click)="previewIdentificationSheet()"
+                  [disabled]="printing">
+            {{ 'reports.preview.display' | translate }}
+          </button>
+          <button class="btn btn-outline-primary" (click)="printIdentificationSheet()"
+                  [disabled]="printing">
+            <span class="spinner-border spinner-border-sm me-1" *ngIf="printing"></span>
+            <i class="fe fe-users" *ngIf="!printing"></i>
+            {{ 'reports.guardianIdentification.print' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity grid: code · head · charity · kind · changed by · changed on · orphans touched -->
+  <div class="card">
+    <div class="card-header">
+      <h5 class="card-title mb-0">{{ 'families.followUp.gridTitle' | translate }}</h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="text-center py-5" *ngIf="loading">
+        <div class="spinner-border text-primary" role="status"></div>
+      </div>
+
+      <!-- Pre-run hint (the report is on demand) -->
+      <div class="text-center text-muted py-5" *ngIf="!loading && !hasRun">
+        {{ 'families.followUp.runHint' | translate }}
+      </div>
+
+      <div class="table-responsive" *ngIf="!loading && hasRun">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>{{ 'families.followUp.colCode' | translate }}</th>
+              <th>{{ 'families.followUp.colHead' | translate }}</th>
+              <th>{{ 'families.followUp.colCharity' | translate }}</th>
+              <th>{{ 'families.followUp.colKind' | translate }}</th>
+              <th>{{ 'families.followUp.colChangedBy' | translate }}</th>
+              <th>{{ 'families.followUp.colChangedOn' | translate }}</th>
+              <th>{{ 'families.followUp.colOrphansTouched' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow">
+              <td>{{ i + 1 }}</td>
+              <td>{{ row.code }}</td>
+              <td>{{ row.headOfFamily || '-' }}</td>
+              <td>{{ row.charityName || '-' }}</td>
+              <td>
+                <span class="badge" [class.bg-success]="isCreated(row)" [class.bg-warning]="!isCreated(row)">
+                  {{ (isCreated(row) ? 'families.followUp.kindCreated' : 'families.followUp.kindUpdated') | translate }}
+                </span>
+              </td>
+              <td>{{ row.changedBy || '-' }}</td>
+              <td>{{ row.changedOn | date: 'medium' }}</td>
+              <td>{{ row.orphansTouched }}</td>
+            </tr>
+            <tr *ngIf="rows.length === 0">
+              <td colspan="8" class="text-center text-muted py-4">
+                {{ 'families.followUp.noActivity' | translate }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer" *ngIf="!loading && hasRun && totalCount > 0">
+      <app-pagination [currentPage]="currentPage" [pageSize]="pageSize" [totalCount]="totalCount"
+                      (pageChange)="onPageChange($event)"></app-pagination>
+    </div>
+  </div>
+</div>
+
+<!-- §23.U.40 — the shared preview modal (hosted directly: this screen predates the 18-1 shell) -->
+<app-report-preview #identificationPreview></app-report-preview>

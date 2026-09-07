@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using IIROSA.Application.DTOs.TechnicalSupport;
+using IIROSA.Application.DTOs.LookupManagement;
 using IIROSA.Application.Interfaces;
 using IIROSA.Domain.Entities.TechnicalSupport;
 using IIROSA.Domain.Interfaces;
 using AutoMapper;
+using FluentValidation;
 
 namespace IIROSA.Application.Services;
 
@@ -16,28 +18,36 @@ public class SupportTicketService : ISupportTicketService
 {
     private readonly ISupportTicketRepository _ticketRepository;
     private readonly ITicketResponseRepository _responseRepository;
+    private readonly ISupportTicketLookupRepository _lookupRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly ILogger<SupportTicketService> _logger;
+    private readonly IValidator<UpdateSupportTicketDto> _updateValidator;
 
     public SupportTicketService(
         ISupportTicketRepository ticketRepository,
         ITicketResponseRepository responseRepository,
+        ISupportTicketLookupRepository lookupRepository,
         IUnitOfWork unitOfWork,
         IMapper mapper,
-        ILogger<SupportTicketService> logger)
+        ILogger<SupportTicketService> logger,
+        IValidator<UpdateSupportTicketDto> updateValidator)
     {
         _ticketRepository = ticketRepository;
         _responseRepository = responseRepository;
+        _lookupRepository = lookupRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _logger = logger;
+        _updateValidator = updateValidator;
     }
 
     // UC-13.1: Create Support Ticket
     public async Task<SupportTicketDto> CreateTicketAsync(CreateSupportTicketDto dto, string userId)
     {
         _logger.LogInformation("Creating support ticket for user {UserId}", userId);
+
+        await ValidateLookupsAsync(dto.CategoryId, dto.PriorityId, 1);
 
         var ticket = new SupportTicket
         {
@@ -85,20 +95,63 @@ public class SupportTicketService : ISupportTicketService
         return await GetTicketWithDetailsAsync(ticket.Id);
     }
 
+    // UC-CST-04: Update Support Ticket (Admin/Super Admin only)
+    public async Task<SupportTicketDto> UpdateTicketAsync(UpdateSupportTicketDto dto, string userId)
+    {
+        _logger.LogInformation("Updating ticket {TicketId} by user {UserId}", dto.Id, userId);
+
+        await _updateValidator.ValidateAndThrowAsync(dto);
+        await ValidateLookupsAsync(dto.CategoryId, dto.PriorityId, dto.StatusId);
+
+        var ticket = await _ticketRepository.GetByIdAsync(dto.Id);
+        if (ticket == null)
+            throw new KeyNotFoundException($"Ticket with ID {dto.Id} not found");
+
+        ticket.Title = dto.Title;
+        ticket.Message = dto.Message;
+        ticket.CategoryId = dto.CategoryId;
+        ticket.PriorityId = dto.PriorityId;
+        // Optional on the wire — null leaves the status unchanged (the edit form has no
+        // status control; a stale snapshot used to revert concurrent status changes).
+        if (dto.StatusId.HasValue)
+            ticket.StatusId = dto.StatusId.Value;
+
+        _ticketRepository.Update(ticket);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("Ticket {TicketId} updated successfully", dto.Id);
+
+        return await GetTicketWithDetailsAsync(ticket.Id);
+    }
+
+    // Ticket form lookups (categories, priorities, statuses)
+    public async Task<TicketLookupsDto> GetTicketLookupsAsync()
+    {
+        var categories = await _lookupRepository.GetCategoriesAsync();
+        var priorities = await _lookupRepository.GetPrioritiesAsync();
+        var statuses = await _lookupRepository.GetStatusesAsync();
+
+        return new TicketLookupsDto
+        {
+            Categories = _mapper.Map<IEnumerable<LookupDto>>(categories),
+            Priorities = _mapper.Map<IEnumerable<LookupDto>>(priorities),
+            Statuses = _mapper.Map<IEnumerable<LookupDto>>(statuses)
+        };
+    }
+
     // UC-13.3: View My Tickets
     public async Task<(IEnumerable<SupportTicketListDto> Items, int TotalCount)> GetMyTicketsAsync(string userId, SupportTicketFilterDto filter)
     {
         _logger.LogInformation("Getting tickets for user {UserId}", userId);
 
+        // SearchTerm/sort pass through; createdByUserId is forced server-side so a caller
+        // cannot read others' tickets.
         var (tickets, totalCount) = await _ticketRepository.GetAllTicketsPagedAsync(
-            filter.PageNumber,
-            filter.PageSize,
-            filter.CategoryId,
-            filter.PriorityId,
-            filter.StatusId,
-            userId, // createdByUserId
-            filter.StartDate,
-            filter.EndDate);
+            filter.PageNumber, filter.PageSize,
+            categoryId: filter.CategoryId, priorityId: filter.PriorityId, statusId: filter.StatusId,
+            createdByUserId: userId,
+            startDate: filter.StartDate, endDate: filter.EndDate,
+            searchTerm: filter.SearchTerm, sortBy: filter.SortBy, sortDirection: filter.SortDirection);
 
         var ticketDtos = _mapper.Map<IEnumerable<SupportTicketListDto>>(tickets);
 
@@ -110,15 +163,15 @@ public class SupportTicketService : ISupportTicketService
     {
         _logger.LogInformation("Getting all tickets (admin view)");
 
+        // AssignedTo binds to its own parameter — the old call passed it into the
+        // createdByUserId slot, filtering creators instead of assignees.
         var (tickets, totalCount) = await _ticketRepository.GetAllTicketsPagedAsync(
-            filter.PageNumber,
-            filter.PageSize,
-            filter.CategoryId,
-            filter.PriorityId,
-            filter.StatusId,
-            filter.AssignedTo,
-            filter.StartDate,
-            filter.EndDate);
+            filter.PageNumber, filter.PageSize,
+            categoryId: filter.CategoryId, priorityId: filter.PriorityId, statusId: filter.StatusId,
+            assignedTo: filter.AssignedTo,
+            startDate: filter.StartDate, endDate: filter.EndDate,
+            isSolved: filter.IsSolved,
+            searchTerm: filter.SearchTerm, sortBy: filter.SortBy, sortDirection: filter.SortDirection);
 
         var ticketDtos = _mapper.Map<IEnumerable<SupportTicketListDto>>(tickets);
 
@@ -241,13 +294,18 @@ public class SupportTicketService : ISupportTicketService
     }
 
     // UC-13.8: View Ticket Details
-    public async Task<SupportTicketDetailDto> GetTicketDetailsAsync(Guid ticketId, string userId)
+    public async Task<SupportTicketDetailDto> GetTicketDetailsAsync(Guid ticketId, string userId, bool isAdmin = false)
     {
         _logger.LogInformation("Getting details for ticket {TicketId}", ticketId);
 
-        var hasAccess = await _ticketRepository.HasUserAccessAsync(ticketId, userId);
-        if (!hasAccess)
-            throw new UnauthorizedAccessException("You do not have permission to view this ticket");
+        // Admins may view any ticket — previously the controller admitted them past its own
+        // check and this creator-only re-check then threw, 403-ing the whole admin flow.
+        if (!isAdmin)
+        {
+            var hasAccess = await _ticketRepository.HasUserAccessAsync(ticketId, userId);
+            if (!hasAccess)
+                throw new UnauthorizedAccessException("You do not have permission to view this ticket");
+        }
 
         var ticket = await _ticketRepository.IncludeAllNavigationProperties()
             .FirstOrDefaultAsync(t => t.Id == ticketId);
@@ -258,9 +316,14 @@ public class SupportTicketService : ISupportTicketService
         var responses = await _responseRepository.GetByTicketIdAsync(ticketId);
 
         var ticketDetail = _mapper.Map<SupportTicketDetailDto>(ticket);
-        ticketDetail.Responses = _mapper.Map<IEnumerable<TicketResponseDto>>(responses);
-        ticketDetail.PublicResponses = ticketDetail.Responses.Where(r => !r.IsInternalNote);
-        ticketDetail.InternalNotes = ticketDetail.Responses.Where(r => r.IsInternalNote);
+        var responseDtos = _mapper.Map<IEnumerable<TicketResponseDto>>(responses);
+        ticketDetail.PublicResponses = responseDtos.Where(r => !r.IsInternalNote).ToList();
+        // Internal notes must never reach a non-admin caller (the ticket creator) — the
+        // frontend only hides them visually, so the payload itself is filtered.
+        ticketDetail.Responses = isAdmin ? responseDtos.ToList() : ticketDetail.PublicResponses.ToList();
+        ticketDetail.InternalNotes = isAdmin
+            ? responseDtos.Where(r => r.IsInternalNote).ToList()
+            : new List<TicketResponseDto>();
 
         return ticketDetail;
     }
@@ -271,14 +334,12 @@ public class SupportTicketService : ISupportTicketService
         _logger.LogInformation("Searching tickets with filter: {@Filter}", filter);
 
         var (tickets, totalCount) = await _ticketRepository.GetAllTicketsPagedAsync(
-            filter.PageNumber,
-            filter.PageSize,
-            filter.CategoryId,
-            filter.PriorityId,
-            filter.StatusId,
-            filter.AssignedTo,
-            filter.StartDate,
-            filter.EndDate);
+            filter.PageNumber, filter.PageSize,
+            categoryId: filter.CategoryId, priorityId: filter.PriorityId, statusId: filter.StatusId,
+            assignedTo: filter.AssignedTo,
+            startDate: filter.StartDate, endDate: filter.EndDate,
+            isSolved: filter.IsSolved,
+            searchTerm: filter.SearchTerm, sortBy: filter.SortBy, sortDirection: filter.SortDirection);
 
         var ticketDtos = _mapper.Map<IEnumerable<SupportTicketListDto>>(tickets);
 
@@ -336,11 +397,13 @@ public class SupportTicketService : ISupportTicketService
             .Count(t => (t.ResolvedOn!.Value - t.CreatedOn).TotalHours <= slaHours);
         report.TicketsBreachedSLA = solvedTickets.Count() - report.TicketsResolvedWithinSLA;
 
-        // Get status counts
-        report.OpenTickets = await _ticketRepository.GetTicketsByStatusCountAsync(1); // Assuming 1 = Open
-        report.InProgressTickets = await _ticketRepository.GetTicketsByStatusCountAsync(2); // Assuming 2 = In Progress
-        report.ResolvedTickets = await _ticketRepository.GetTicketsByStatusCountAsync(3); // Assuming 3 = Resolved
-        report.ClosedTickets = await _ticketRepository.GetTicketsByStatusCountAsync(4); // Assuming 4 = Closed
+        // Status tiles are period-scoped — the previous global GetTicketsByStatusCountAsync calls
+        // ignored the date range and could contradict the period's own totalTickets.
+        // Seed ids: 1 = Open, 2 = In Progress, 3 = Resolved, 4 = Closed.
+        report.OpenTickets = tickets.Count(t => t.StatusId == 1);
+        report.InProgressTickets = tickets.Count(t => t.StatusId == 2);
+        report.ResolvedTickets = tickets.Count(t => t.StatusId == 3);
+        report.ClosedTickets = tickets.Count(t => t.StatusId == 4);
 
         return report;
     }
@@ -363,7 +426,7 @@ public class SupportTicketService : ISupportTicketService
         return await _ticketRepository.HasUserAccessAsync(ticketId, userId);
     }
 
-    public async Task DeleteTicketAsync(Guid id)
+    public async Task DeleteTicketAsync(Guid id, string deletedBy)
     {
         _logger.LogInformation("Deleting ticket {TicketId}", id);
 
@@ -371,7 +434,12 @@ public class SupportTicketService : ISupportTicketService
         if (ticket == null)
             throw new KeyNotFoundException($"Ticket with ID {id} not found");
 
-        _ticketRepository.Delete(ticket);
+        // Soft delete per platform rule — a hard delete destroyed the ticket and cascaded
+        // its response history.
+        ticket.IsDeleted = true;
+        ticket.DeletedOn = DateTime.UtcNow;
+        ticket.DeletedBy = deletedBy;
+        _ticketRepository.Update(ticket);
         await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Ticket deleted successfully");
@@ -394,7 +462,8 @@ public class SupportTicketService : ISupportTicketService
 
     public async Task<int> GetMyTicketsCountAsync(string userId)
     {
-        return (await _ticketRepository.GetByUserIdAsync(string.Empty)).Count();
+        // Was querying CreatedByUserId == string.Empty — permanently 0.
+        return (await _ticketRepository.GetByUserIdAsync(userId)).Count();
     }
 
     public async Task<int> GetAllTicketsCountAsync()
@@ -405,6 +474,23 @@ public class SupportTicketService : ISupportTicketService
     public async Task<int> GetUnsolvedTicketsCountAsync()
     {
         return await _ticketRepository.GetUnsolvedTicketsCountAsync();
+    }
+
+    // FK guards — lookup ids are Restrict; a missing id must surface as a 400 field error,
+    // not a 500 leaking the SQL constraint message.
+    private async Task ValidateLookupsAsync(int categoryId, int priorityId, int? statusId)
+    {
+        var failures = new List<FluentValidation.Results.ValidationFailure>();
+
+        if (!await _lookupRepository.CategoryExistsAsync(categoryId))
+            failures.Add(new("CategoryId", $"Category {categoryId} does not exist"));
+        if (!await _lookupRepository.PriorityExistsAsync(priorityId))
+            failures.Add(new("PriorityId", $"Priority {priorityId} does not exist"));
+        if (statusId.HasValue && !await _lookupRepository.StatusExistsAsync(statusId.Value))
+            failures.Add(new("StatusId", $"Status {statusId} does not exist"));
+
+        if (failures.Count > 0)
+            throw new ValidationException(failures);
     }
 
     // Private helper method to get ticket with full details

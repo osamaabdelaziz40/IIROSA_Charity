@@ -1,0 +1,3001 @@
+diff --git a/Frontend/src/app/modules/families/families-routing.module.ts b/Frontend/src/app/modules/families/families-routing.module.ts
+index 1661eed..d7886e3 100644
+--- a/Frontend/src/app/modules/families/families-routing.module.ts
++++ b/Frontend/src/app/modules/families/families-routing.module.ts
+@@ -7,6 +7,13 @@ import { PermissionGuard } from '../../core/guards/permission.guard';
+ import { FamilyListComponent } from './family-list/family-list.component';
+ import { FamilyDetailComponent } from './family-detail/family-detail.component';
+ import { FamilyFormComponent } from './family-form/family-form.component';
++import { FamilyMembersComponent } from './family-members/family-members.component';
++import { ProviderRequestListComponent } from './provider-request-list/provider-request-list.component';
++import { RefugeeFamilyListComponent } from './refugee-family-list/refugee-family-list.component';
++import { RefugeeFamilyFormComponent } from './refugee-family-form/refugee-family-form.component';
++import { RefugeeFamilyDetailComponent } from './refugee-family-detail/refugee-family-detail.component';
++import { OrphanCodingComponent } from './orphan-coding/orphan-coding.component';
++import { OrphanCodingWorklistComponent } from './orphan-coding-worklist/orphan-coding-worklist.component';
+ 
+ const routes: Routes = [
+   {
+@@ -27,6 +34,76 @@ const routes: Routes = [
+       permission: 'Families.Create'
+     }
+   },
++  // Refugee register (UC-REF / epic 7) — child routes of `families`, same FamiliesController.
++  // Route-order landmine: `refugees*` MUST stay ABOVE `':id'` or the router matches it as an id.
++  {
++    path: 'refugees/create',
++    component: RefugeeFamilyFormComponent,
++    canActivate: [AuthGuard, PermissionGuard],
++    data: {
++      title: 'families.refugeeFormTitle',
++      permission: 'Families.Create'
++    }
++  },
++  // UC-REF-04 — the §12.S.2 view/edit screens. `:id/edit` MUST stay above `refugees/:id` and
++  // both above `':id'` (same ordering landmine as above).
++  {
++    path: 'refugees/:id/edit',
++    component: RefugeeFamilyFormComponent,
++    canActivate: [AuthGuard, PermissionGuard],
++    data: {
++      title: 'families.refugeeEditTitle',
++      permission: 'Families.Edit'
++    }
++  },
++  {
++    path: 'refugees/:id',
++    component: RefugeeFamilyDetailComponent,
++    canActivate: [AuthGuard, PermissionGuard],
++    data: {
++      title: 'families.refugeeDetailTitle',
++      permission: 'Families.View'
++    }
++  },
++  {
++    path: 'refugees',
++    component: RefugeeFamilyListComponent,
++    canActivate: [AuthGuard, PermissionGuard],
++    data: {
++      title: 'families.refugeeTitle',
++      permission: 'Families.View'
++    }
++  },
++  // Orphan coding (UC-ORP / epic 8) — the literal segments `orphans/coding*` MUST also stay
++  // ABOVE `':id'` for the same reason.
++  {
++    path: 'orphans/coding/worklist',
++    component: OrphanCodingWorklistComponent,
++    canActivate: [AuthGuard, PermissionGuard],
++    data: {
++      title: 'orphanCoding.worklistTitle',
++      permission: 'OrphanCoding.View'
++    }
++  },
++  {
++    path: 'orphans/coding',
++    component: OrphanCodingComponent,
++    canActivate: [AuthGuard, PermissionGuard],
++    data: {
++      title: 'orphanCoding.title',
++      permission: 'OrphanCoding.View'
++    }
++  },
++  // Guardian-change review queue (UC-FAM-09) — literal segment, also above ':id'.
++  {
++    path: 'provider-requests',
++    component: ProviderRequestListComponent,
++    canActivate: [AuthGuard, PermissionGuard],
++    data: {
++      title: 'families.providerRequests.title',
++      permission: 'Families.ProviderRequests'
++    }
++  },
+   {
+     path: ':id',
+     component: FamilyDetailComponent,
+@@ -43,6 +120,16 @@ const routes: Routes = [
+       title: 'families.editFamily',
+       permission: 'Families.Edit'
+     }
++  },
++  // Members screen (UC-FAM-07 نقل يتيم بين الأسر, §10.S.3) — orphan/guardian move commands.
++  {
++    path: ':id/members',
++    component: FamilyMembersComponent,
++    canActivate: [AuthGuard, PermissionGuard],
++    data: {
++      title: 'families.members.title',
++      permission: 'Families.Members'
++    }
+   }
+ ];
+ 
+diff --git a/Frontend/src/app/modules/families/models/family.model.ts b/Frontend/src/app/modules/families/models/family.model.ts
+index 64ffd6e..02b7f2d 100644
+--- a/Frontend/src/app/modules/families/models/family.model.ts
++++ b/Frontend/src/app/modules/families/models/family.model.ts
+@@ -40,6 +40,31 @@ export interface FamilyDto {
+   createdBy?: string;
+   modifiedBy?: string;
+ 
++  // Refugee register household fields (epic 7, §12.S.2) — wire names, resolved names included
++  familyType?: string;
++  cityVillage?: string;
++  districtArea?: string;
++  phoneNumber?: string;
++  countryId?: number;
++  countryName?: string;
++  regionId?: number;
++  regionName?: string;
++  centerId?: number;
++  centerName?: string;
++  nearBy?: string;
++  street?: string;
++  rentAmount?: number;
++  houseOwnershipId?: number;
++  houseOwnershipName?: string;
++  houseStatusId?: number;
++  houseStatusName?: string;
++  /** نوع السكن — shared catalogue id + resolved name (GET /api/Families/{id}, UC-REF-04) */
++  housingTypeId?: number;
++  housingTypeName?: string;
++  incomeTypeId?: number;
++  incomeTypeName?: string;
++  perMemberShare?: number;
++
+   // Related entities
+   father?: FatherDto;
+   mother?: MotherDto;
+@@ -64,11 +89,30 @@ export interface CreateFamilyDto {
+   providerType?: string;
+   registrationDate?: string;
+   notes?: string;
+-  father: CreateFatherDto; // Mandatory
+-  mother: CreateMotherDto; // Mandatory
++  /** Mandatory for the Regular register (service-enforced); a refugee family has neither */
++  father?: CreateFatherDto;
++  /** Mandatory for the Regular register (service-enforced); a refugee family has neither */
++  mother?: CreateMotherDto;
+   provider?: CreateProviderDto;
+   relatives?: CreateRelativeDto[]; // Optional
+   orphans?: CreateOrphanDto[];
++  // Refugee register household fields (epic 7, §12.S.2) — string on the wire, absent ⇒ Regular
++  familyType?: string;
++  cityVillage?: string;
++  districtArea?: string;
++  phoneNumber?: string;
++  countryId?: number;
++  regionId?: number;
++  centerId?: number;
++  nearBy?: string;
++  street?: string;
++  rentAmount?: number;
++  houseOwnershipId?: number;
++  houseStatusId?: number;
++  housingTypeId?: number;
++  incomeTypeId?: number;
++  /** إسم الأسرة — derived from the provider's name on the refugee register (§12.S.2) */
++  headOfFamily?: string;
+ }
+ 
+ export interface UpdateFamilyDto {
+@@ -82,11 +126,45 @@ export interface UpdateFamilyDto {
+   housingType?: string;
+   providerType?: string;
+   notes?: string;
++  // Refugee register household fields (epic 7, §12.S.2)
++  cityVillage?: string;
++  districtArea?: string;
++  phoneNumber?: string;
++  regionId?: number;
++  centerId?: number;
++  nearBy?: string;
++  street?: string;
++  rentAmount?: number;
++  houseOwnershipId?: number;
++  houseStatusId?: number;
++  housingTypeId?: number;
++  incomeTypeId?: number;
++}
++
++// List-item shape actually returned by GET /api/Families (FamilyListDto on the wire)
++export interface FamilyListItemDto {
++  id: string;
++  code: string;
++  address: string;
++  cityVillage?: string;
++  fatherName?: string;
++  motherName?: string;
++  orphansCount: number;
++  relativesCount: number;
++  providerType?: string;
++  registrationDate: string;
++  isActive: boolean;
++  familyType?: string;
++  phoneNumber?: string;
++  charityName?: string;
+ }
+ 
+ export interface FamilySearchRequest {
+   searchTerm?: string;
+   charityId?: string;
++  familyType?: string;
++  /** UC-HOU-02 typed search selector: father | mother | student | nationalId | code | phone */
++  searchType?: string;
+   orphanCountMin?: number;
+   orphanCountMax?: number;
+   providerType?: string;
+@@ -107,6 +185,57 @@ export interface FamilyPagedResult {
+   totalPages: number;
+ }
+ 
++// ==================== Guardian Change Request Models (UC-FAM-09/10) ====================
++
++/** Review-queue workflow status — mirrors GuardianChangeRequestStatus (Domain enum). */
++export const GUARDIAN_REQUEST_STATUS = {
++  Pending: 1,
++  Approved: 2,
++  Rejected: 3
++} as const;
++
++/** One §10.S.4 review-queue row — old/new guardian snapshots travel with the row. */
++export interface GuardianChangeRequestRow {
++  id: string;
++  charityName?: string;
++  familyId: string;
++  familyCode?: string;
++  orphanCode?: string;
++  orphanName?: string;
++  motherName?: string;
++  oldGuardianName?: string;
++  oldGuardianNationalId?: string;
++  newGuardianName: string;
++  newGuardianNationalId: string;
++  relationship: string;
++  reason: string;
++  requestedByName: string;
++  createdOn: string;
++  status: number;
++  decidedBy?: string | null;
++  decidedOn?: string | null;
++  rejectionReason?: string | null;
++}
++
++export interface GuardianChangeRequestPagedResult {
++  items: GuardianChangeRequestRow[];
++  totalCount: number;
++}
++
++/** Raise payload — the proposed new guardian snapshot plus the reason. */
++export interface CreateGuardianChangeRequest {
++  newGuardianName: string;
++  newGuardianNationalId: string;
++  relationship: string;
++  reason: string;
++}
++
++/** UC-FAM-10 decision payload — a refusal is not accepted without a reason. */
++export interface DecideGuardianChangeRequest {
++  isApproved: boolean;
++  rejectionReason?: string;
++}
++
+ // ==================== Father Models ====================
+ 
+ export interface FatherDto {
+@@ -230,6 +359,8 @@ export interface ProviderDto {
+   familyId: string;
+   fullName: string;
+   relationship?: string;
++  /** نوعها — free-text relation (wire name; resolved against the Relation catalogue on edit) */
++  relationshipToFamily?: string;
+   nationalId?: string;
+   passportNumber?: string;
+   phone?: string;
+@@ -237,6 +368,15 @@ export interface ProviderDto {
+   job?: string;
+   monthlyIncome?: number;
+   notes?: string;
++  // Refugee register extensions (epic 7, §12.S.2 اضافة معيل)
++  dateOfBirth?: string;
++  nationalityCountryId?: number;
++  isAlive?: boolean;
++  deathDate?: string;
++  /** Closed set: طبيعية / مرض / حادث (static list on the form, not a lookup) */
++  deathReason?: string;
++  reasonOfRelationId?: number;
++  reasonOfRelationName?: string;
+   createdOn: string;
+   modifiedOn?: string;
+ }
+@@ -252,6 +392,15 @@ export interface CreateProviderDto {
+   job?: string;
+   monthlyIncome?: number;
+   notes?: string;
++  // Refugee register extensions (epic 7, §12.S.2 اضافة معيل)
++  /** نوعها — Relation catalogue label; travels as the free-text relation on the wire */
++  relationshipToFamily?: string;
++  dateOfBirth?: string;
++  nationalityCountryId?: number;
++  isAlive?: boolean;
++  deathDate?: string;
++  deathReason?: string;
++  reasonOfRelationId?: number;
+ }
+ 
+ export interface UpdateProviderDto {
+@@ -264,6 +413,14 @@ export interface UpdateProviderDto {
+   job?: string;
+   monthlyIncome?: number;
+   notes?: string;
++  // Refugee register extensions (epic 7, §12.S.2 اضافة معيل — edit mode, UC-REF-04)
++  relationshipToFamily?: string;
++  dateOfBirth?: string;
++  nationalityCountryId?: number;
++  isAlive?: boolean;
++  deathDate?: string;
++  deathReason?: string;
++  reasonOfRelationId?: number;
+ }
+ 
+ // ==================== Relative Models ====================
+@@ -348,6 +505,10 @@ export interface RelativeListDto {
+   isLivingWithFamily: boolean;
+   phone?: string;
+   isActive: boolean;
++  // Refugee register extensions (epic 7, UC-REF-04) — reload staged مرافق rows without
++  // losing the NID / free-text صلة القرابة
++  nationalId?: string;
++  notes?: string;
+ }
+ 
+ // ==================== Orphan Models ====================
+@@ -356,6 +517,7 @@ export interface OrphanDto {
+   id: string;
+   familyId: string;
+   charityId: string;
++  code?: string;
+   fullName: string;
+   gender: string;
+   dateOfBirth: string;
+@@ -382,6 +544,9 @@ export interface OrphanDto {
+   age?: number;
+   sponsorId?: string;
+   sponsorName?: string;
++  // Refugee register extension (epic 7, §12.S.2 اضافة ابن)
++  socialStatusId?: number;
++  socialStatusName?: string;
+   isActive: boolean;
+   createdOn: string;
+   modifiedOn?: string;
+@@ -414,12 +579,16 @@ export interface CreateOrphanDto {
+   hobbies?: string;
+   skills?: string;
+   notes?: string;
++  // Refugee register extension (epic 7, §12.S.2 اضافة ابن)
++  socialStatusId?: number;
+ }
+ 
+ export interface UpdateOrphanDto {
+   fullName: string;
+   gender: string;
+   dateOfBirth: string;
++  // Refugee register extension (epic 7, §12.S.2 اضافة ابن)
++  socialStatusId?: number;
+   placeOfBirth?: string;
+   nationalId?: string;
+   passportNumber?: string;
+@@ -502,3 +671,131 @@ export interface FamilyAuditLog {
+   performedOn: Date;
+   ipAddress?: string;
+ }
++
++// ==================== Orphan Register & Coding (Epic 8, UC-ORP-*) ====================
++
++/** Filter for the shared GET /api/Families/orphans read (UC-ORP-02/03/07). */
++export interface OrphanCodingSearchRequest {
++  search?: string;
++  charityId?: string;
++  /** "Pending" = uncoded (empty code) — the coding worklist, HQ only; "Coded" = has a code. */
++  codingStatus?: string;
++  sortBy?: string;
++  sortDescending?: boolean;
++  pageNumber?: number;
++  pageSize?: number;
++}
++
++/** Row of the orphan search / coding worklist (§13.S.1 / §13.S.2 judgement data). */
++export interface OrphanLookupDto {
++  orphanId: string;
++  fullName: string;
++  code?: string | null;
++  fatherName?: string | null;
++  motherName?: string | null;
++  charityName?: string | null;
++  charityId?: string | null;
++  familyId?: string | null;
++  familyCode?: string | null;
++  dateOfBirth?: string | null;
++  age?: number | null;
++  gender?: string | null;
++  nationalId?: string | null;
++  phone?: string | null;
++  sponsorshipStatus?: string | null;
++  educationLevelName?: string | null;
++  healthStatusName?: string | null;
++}
++
++export interface OrphanLookupPagedResult {
++  items: OrphanLookupDto[];
++  totalCount: number;
++  page?: number;
++}
++
++/** UC-ORP-01 — check whether an orphan may be added. */
++export interface OrphanEligibilityCheckRequest {
++  nationalId?: string;
++  /** P3 — the family being opened; checked to exist, be active and sit in scope. */
++  familyId?: string;
++  charityId?: string;
++}
++
++export interface OrphanEligibilityDto {
++  canBeAdded: boolean;
++  field?: string | null;
++  /** P16 — machine key; the label resolves to orphanCoding.reasons.<reasonCode>. */
++  reasonCode?: string | null;
++  existingOrphanName?: string | null;
++}
++
++/** UC-ORP-05 — verify a sponsorship code is not already used (BR-07). */
++export interface OrphanCodeCheckRequest {
++  code: string;
++  charityId?: string;
++  excludeOrphanId?: string;
++}
++
++export interface OrphanCodeCheckDto {
++  isAvailable: boolean;
++  existingOrphanName?: string | null;
++  existingCharityName?: string | null;
++}
++
++/** UC-ORP-06 — assign a sponsorship code. */
++export interface AssignOrphanCodeRequest {
++  orphanId: string;
++  code: string;
++}
++
++/** UC-ORP-10 — check a phone number is not duplicated. */
++export interface PhoneCheckRequest {
++  number: string;
++  type?: string;
++  charityId?: string;
++}
++
++export interface PhoneCheckDto {
++  isDuplicate: boolean;
++  /** P16 — the holder as structured data; the translated label is composed client-side. */
++  holderFamilyCode?: string | null;
++  holderName?: string | null;
++  /** family | father | mother | provider | orphan — i18n key suffix. */
++  holderType?: string | null;
++}
++
++/** UC-ORP-10 — per-holder duplicate-phone state on the family form (edit mode only). */
++export interface PhoneCheckState {
++  status: 'idle' | 'checking' | 'available' | 'duplicate';
++  /** P6 — the number this state describes; a verdict for any other number is stale. */
++  checkedNumber?: string;
++  /** P16 — translated label naming the existing holder, composed when the verdict arrived. */
++  holderLabel?: string | null;
++}
++
++/** UC-ORP-11 — batch-number reference row (رقم الحصة). */
++export interface BatchNumberDto {
++  batchNo: string;
++  latestGroupDate?: string | null;
++}
++
++// ==================== Family Follow-Up Report (Epic 5, UC-FAM-11) ====================
++
++/** One UC-FAM-11 row — a family file created or updated on the report date. */
++export interface FamilyFollowUpRow {
++  familyId: string;
++  code: string;
++  headOfFamily: string;
++  charityName?: string | null;
++  /** "Created" | "Updated" — creation wins over a same-day update */
++  changeKind: string;
++  changedBy?: string | null;
++  changedOn: string;
++  /** How many of the family's orphans were created/updated the same day */
++  orphansTouched: number;
++}
++
++export interface FamilyFollowUpPagedResult {
++  items: FamilyFollowUpRow[];
++  totalCount: number;
++}
+diff --git a/Frontend/src/app/modules/families/services/family.service.ts b/Frontend/src/app/modules/families/services/family.service.ts
+index 9cf42df..de13b08 100644
+--- a/Frontend/src/app/modules/families/services/family.service.ts
++++ b/Frontend/src/app/modules/families/services/family.service.ts
+@@ -27,6 +27,20 @@ import {
+   UpdateOrphanDto,
+   OrphanSearchRequest,
+   OrphanPagedResult,
++  OrphanCodingSearchRequest,
++  OrphanLookupDto,
++  OrphanLookupPagedResult,
++  OrphanEligibilityCheckRequest,
++  OrphanEligibilityDto,
++  OrphanCodeCheckRequest,
++  OrphanCodeCheckDto,
++  AssignOrphanCodeRequest,
++  PhoneCheckRequest,
++  PhoneCheckDto,
++  GuardianChangeRequestPagedResult,
++  CreateGuardianChangeRequest,
++  DecideGuardianChangeRequest,
++  FamilyFollowUpPagedResult,
+   FamilyAttachmentDto,
+   CreateFamilyAttachmentDto,
+   FamilyAuditLog,
+@@ -156,6 +170,95 @@ export class FamilyService {
+     );
+   }
+ 
++  // ==================== CHARITY TRANSFER (UC-FAM-06) ====================
++
++  transferFamily(id: string, dto: { newCharityId: string; reason?: string }): Observable<void> {
++    return this.http.put<void>(`${this.apiUrl}/${id}/charity`, dto, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  // ==================== MEMBER CONTROL (UC-FAM-07/08) ====================
++
++  /** Move an orphan (memberType 1) or guardian (memberType 2) between families. */
++  controlMember(familyId: string, memberId: string, dto: {
++    memberType: number;
++    action: number;
++    targetFamilyCode?: string;
++    justification?: string;
++  }): Observable<void> {
++    return this.http.post<void>(`${this.apiUrl}/${familyId}/members/${memberId}/control`, dto, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /**
++   * UC-FAM-13 حذف كفالة العائل — remove the family's guardian sponsorship link.
++   * HQ-only server-side; the التعليق travels as a query parameter (DELETE body).
++   */
++  removeProviderSponsorLink(familyId: string, comment?: string): Observable<void> {
++    return this.http.delete<void>(`${this.apiUrl}/${familyId}/provider/sponsor`, {
++      headers: this.getHeaders(),
++      params: this.buildHttpParams({ comment })
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  // ==================== GUARDIAN CHANGE REQUESTS (UC-FAM-09/10) ====================
++
++  /** The review queue — pending by default; a Charity-role caller is scoped server-side. */
++  getProviderRequests(filter: {
++    status?: number;
++    charityId?: string;
++    pageNumber?: number;
++    pageSize?: number;
++  }): Observable<GuardianChangeRequestPagedResult> {
++    return this.http.get<GuardianChangeRequestPagedResult>(`${this.apiUrl}/provider-requests`, {
++      headers: this.getHeaders(),
++      params: this.buildHttpParams(filter)
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /** Raise a guardian-change request for a family (the charity-side producer of the queue). */
++  raiseGuardianChangeRequest(familyId: string, dto: CreateGuardianChangeRequest): Observable<void> {
++    return this.http.post<void>(`${this.apiUrl}/${familyId}/provider-requests`, dto, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /** Record the head-office decision on a request (UC-FAM-10 اعتماد تعديل العائل). */
++  decideProviderRequest(requestId: string, dto: DecideGuardianChangeRequest): Observable<void> {
++    return this.http.post<void>(`${this.apiUrl}/provider-requests/${requestId}/approve`, dto, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /** UC-FAM-11 follow-up report — one day of family-file activity, scoped server-side. */
++  getFollowUp(filter: {
++    date: string;
++    charityId?: string;
++    pageNumber?: number;
++    pageSize?: number;
++  }): Observable<FamilyFollowUpPagedResult> {
++    return this.http.get<FamilyFollowUpPagedResult>(`${this.apiUrl}/follow-up`, {
++      headers: this.getHeaders(),
++      params: this.buildHttpParams(filter)
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
+   // ==================== FATHER MANAGEMENT ====================
+ 
+   getFather(familyId: string): Observable<FatherDto> {
+@@ -428,6 +531,57 @@ export class FamilyService {
+     );
+   }
+ 
++  // ==================== ORPHAN REGISTER & CODING (Epic 8, UC-ORP-*) ====================
++
++  /** UC-ORP-02/03/07 — shared orphan read: search by name or code, or the coding worklist. */
++  searchOrphansCoding(request: OrphanCodingSearchRequest): Observable<OrphanLookupPagedResult> {
++    return this.http.get<OrphanLookupPagedResult>(`${this.apiUrl}/orphans`, {
++      headers: this.getHeaders(),
++      params: this.buildHttpParams(request)
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /** UC-ORP-01 — may an orphan with this national ID be added? */
++  checkOrphanCanBeAdded(request: OrphanEligibilityCheckRequest): Observable<OrphanEligibilityDto> {
++    return this.http.get<OrphanEligibilityDto>(`${this.apiUrl}/orphans/check-national-id`, {
++      headers: this.getHeaders(),
++      params: this.buildHttpParams(request)
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /** UC-ORP-05 — verify a sponsorship code is not already used (BR-07). */
++  checkOrphanCode(request: OrphanCodeCheckRequest): Observable<OrphanCodeCheckDto> {
++    return this.http.get<OrphanCodeCheckDto>(`${this.apiUrl}/orphans/check-code`, {
++      headers: this.getHeaders(),
++      params: this.buildHttpParams(request)
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /** UC-ORP-06 — assign a sponsorship code to an orphan (SaveCode). */
++  assignOrphanCode(request: AssignOrphanCodeRequest): Observable<OrphanDto> {
++    return this.http.post<OrphanDto>(`${this.apiUrl}/orphans/${request.orphanId}/code`, request, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /** UC-ORP-10 — check a phone number is not duplicated across the family's scope. */
++  checkPhoneDuplicate(familyId: string, request: PhoneCheckRequest): Observable<PhoneCheckDto> {
++    return this.http.get<PhoneCheckDto>(`${this.apiUrl}/${familyId}/provider/check-phone`, {
++      headers: this.getHeaders(),
++      params: this.buildHttpParams(request)
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
+   // ==================== ERROR HANDLING ====================
+ 
+   private handleError(error: any): Observable<never> {
+diff --git a/Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.html b/Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.html
+new file mode 100644
+index 0000000..ee2f896
+--- /dev/null
++++ b/Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.html
+@@ -0,0 +1,230 @@
++<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
++
++<app-page-header
++  [title]="'families.refugeeDetailTitle' | translate"
++  [subtitle]="family?.code || ('families.refugeeDetailSubtitle' | translate)"
++  [icon]="'fe fe-home'">
++</app-page-header>
++
++<div class="text-center py-5" *ngIf="loading">
++  <div class="spinner-border text-primary" role="status"></div>
++</div>
++
++<ng-container *ngIf="!loading && family">
++  <!-- §12.S.2 — بيانات الأسرة (read-only) -->
++  <div class="card mb-4">
++    <div class="card-header">
++      <h5 class="mb-0">{{ 'families.refugeeSectionFamily' | translate }}</h5>
++    </div>
++    <div class="card-body">
++      <dl class="row detail-grid mb-0">
++        <dt class="col-md-3">{{ 'families.refugeeFamilyCode' | translate }}</dt>
++        <dd class="col-md-3">{{ family.code || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeHeadOfFamily' | translate }}</dt>
++        <dd class="col-md-3">{{ provider?.fullName || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeRegion' | translate }}</dt>
++        <dd class="col-md-3">{{ family.regionName || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeCenter' | translate }}</dt>
++        <dd class="col-md-3">{{ family.centerName || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeCityVillage' | translate }}</dt>
++        <dd class="col-md-3">{{ family.cityVillage || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeNearBy' | translate }}</dt>
++        <dd class="col-md-3">{{ family.nearBy || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeStreet' | translate }}</dt>
++        <dd class="col-md-3">{{ family.street || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeAddress' | translate }}</dt>
++        <dd class="col-md-3">{{ family.address || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeePhone' | translate }}</dt>
++        <dd class="col-md-3">{{ family.phoneNumber || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeHouseOwnership' | translate }}</dt>
++        <dd class="col-md-3">{{ family.houseOwnershipName || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeHouseStatus' | translate }}</dt>
++        <dd class="col-md-3">{{ family.houseStatusName || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeHousingType' | translate }}</dt>
++        <dd class="col-md-3">{{ family.housingTypeName || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeIncomeType' | translate }}</dt>
++        <dd class="col-md-3">{{ family.incomeTypeName || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeRentAmount' | translate }}</dt>
++        <dd class="col-md-3">{{ family.rentAmount ?? '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeNotes' | translate }}</dt>
++        <dd class="col-md-9">{{ family.notes || '—' }}</dd>
++      </dl>
++    </div>
++  </div>
++
++  <!-- §12.S.2 — بيانات المعيل (read-only) -->
++  <div class="card mb-4" *ngIf="provider">
++    <div class="card-header">
++      <h5 class="mb-0">{{ 'families.refugeeSectionProvider' | translate }}</h5>
++    </div>
++    <div class="card-body">
++      <dl class="row detail-grid mb-0">
++        <dt class="col-md-3">{{ 'families.refugeeProviderName' | translate }}</dt>
++        <dd class="col-md-3">{{ provider.fullName || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeProviderNationalId' | translate }}</dt>
++        <dd class="col-md-3">{{ provider.nationalId || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeProviderDOB' | translate }}</dt>
++        <dd class="col-md-3">{{ provider.dateOfBirth?.slice(0, 10) || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeProviderNationality' | translate }}</dt>
++        <dd class="col-md-3">{{ provider.nationalityCountryId || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeProviderRelation' | translate }}</dt>
++        <dd class="col-md-3">{{ provider.relationshipToFamily || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeProviderReasonOfRelation' | translate }}</dt>
++        <dd class="col-md-3">{{ provider.reasonOfRelationName || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeePhone' | translate }}</dt>
++        <dd class="col-md-3">{{ provider.phone || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeProviderJob' | translate }}</dt>
++        <dd class="col-md-3">{{ provider.job || '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeProviderMonthlyIncome' | translate }}</dt>
++        <dd class="col-md-3">{{ provider.monthlyIncome ?? '—' }}</dd>
++
++        <dt class="col-md-3">{{ 'families.refugeeProviderIsAlive' | translate }}</dt>
++        <dd class="col-md-3">
++          {{ (provider.isAlive !== false ? 'common.yes' : 'common.no') | translate }}
++        </dd>
++
++        <ng-container *ngIf="provider.isAlive === false">
++          <dt class="col-md-3">{{ 'families.refugeeProviderDeathDate' | translate }}</dt>
++          <dd class="col-md-3">{{ provider.deathDate?.slice(0, 10) || '—' }}</dd>
++
++          <dt class="col-md-3">{{ 'families.refugeeProviderDeathReason' | translate }}</dt>
++          <dd class="col-md-3">{{ provider.deathReason || '—' }}</dd>
++        </ng-container>
++      </dl>
++    </div>
++  </div>
++
++  <!-- §12.S.2 — الابناء -->
++  <div class="card mb-4">
++    <div class="card-header">
++      <h5 class="mb-0">{{ 'families.refugeeSectionChildren' | translate }}</h5>
++    </div>
++    <div class="card-body">
++      <div class="table-responsive" *ngIf="orphans.length; else noChildren">
++        <table class="table table-hover mb-0">
++          <thead>
++            <tr>
++              <th>{{ 'families.refugeeChildName' | translate }}</th>
++              <th>{{ 'families.refugeeChildDOB' | translate }}</th>
++              <th>{{ 'families.refugeeChildGender' | translate }}</th>
++              <th>{{ 'families.refugeeChildNationalId' | translate }}</th>
++              <th>{{ 'families.refugeeChildSocialStatus' | translate }}</th>
++            </tr>
++          </thead>
++          <tbody>
++            <tr *ngFor="let child of orphans; trackBy: trackById">
++              <td>{{ child.fullName }}</td>
++              <td>{{ child.dateOfBirth?.slice(0, 10) }}</td>
++              <td>{{ child.gender }}</td>
++              <td>{{ child.nationalId || '—' }}</td>
++              <td>{{ child.socialStatusName || '—' }}</td>
++            </tr>
++          </tbody>
++        </table>
++      </div>
++      <ng-template #noChildren>
++        <p class="text-muted mb-0">{{ 'families.refugeeNoChildrenStaged' | translate }}</p>
++      </ng-template>
++    </div>
++  </div>
++
++  <!-- §12.S.2 — المرافقون -->
++  <div class="card mb-4">
++    <div class="card-header">
++      <h5 class="mb-0">{{ 'families.refugeeSectionCompanions' | translate }}</h5>
++    </div>
++    <div class="card-body">
++      <div class="table-responsive" *ngIf="relatives.length; else noCompanions">
++        <table class="table table-hover mb-0">
++          <thead>
++            <tr>
++              <th>{{ 'families.refugeeCompanionName' | translate }}</th>
++              <th>{{ 'families.refugeeCompanionNationalId' | translate }}</th>
++              <th>{{ 'families.refugeeCompanionDOB' | translate }}</th>
++              <th>{{ 'families.refugeeCompanionGender' | translate }}</th>
++              <th>{{ 'families.refugeeCompanionRelationship' | translate }}</th>
++            </tr>
++          </thead>
++          <tbody>
++            <tr *ngFor="let companion of relatives; trackBy: trackById">
++              <td>{{ companion.fullName }}</td>
++              <td>{{ companion.nationalId || '—' }}</td>
++              <td>{{ companion.dateOfBirth?.slice(0, 10) }}</td>
++              <td>{{ companion.gender }}</td>
++              <td>{{ companion.notes || '—' }}</td>
++            </tr>
++          </tbody>
++        </table>
++      </div>
++      <ng-template #noCompanions>
++        <p class="text-muted mb-0">{{ 'families.refugeeNoCompanionsStaged' | translate }}</p>
++      </ng-template>
++    </div>
++  </div>
++
++  <!-- §12.S.2 — شبكة الشيكات — wired but empty: no family-filtered payment read exists yet
++       (OrphanPaymentsController has none); data belongs to epic 10. Gap recorded in 7-4 notes. -->
++  <div class="card mb-4">
++    <div class="card-header">
++      <h5 class="mb-0">{{ 'families.refugeeChequeSection' | translate }}</h5>
++    </div>
++    <div class="card-body">
++      <div class="table-responsive">
++        <table class="table table-hover mb-0">
++          <thead>
++            <tr>
++              <th>{{ 'families.refugeeChequeBatch' | translate }}</th>
++              <th>{{ 'families.refugeeChequeNumber' | translate }}</th>
++              <th>{{ 'families.refugeeChequeDate' | translate }}</th>
++              <th>{{ 'families.refugeeChequeAmount' | translate }}</th>
++              <th>{{ 'families.refugeeChequeDelivered' | translate }}</th>
++              <th>{{ 'families.refugeeChequeReceiver' | translate }}</th>
++            </tr>
++          </thead>
++          <tbody>
++            <tr>
++              <td colspan="6" class="text-muted text-center">
++                {{ 'families.refugeeChequeEmpty' | translate }}
++              </td>
++            </tr>
++          </tbody>
++        </table>
++      </div>
++    </div>
++  </div>
++
++  <!-- Actions -->
++  <div class="card">
++    <div class="card-body d-flex justify-content-end">
++      <button type="button" class="btn btn-secondary ml-2 mr-2" (click)="back()">
++        {{ 'common.back' | translate }}
++      </button>
++      <button type="button" class="btn btn-primary" *ngIf="canEdit" (click)="edit()">
++        <i class="fe fe-edit mr-1"></i>
++        {{ 'families.refugeeEditMembers' | translate }}
++      </button>
++    </div>
++  </div>
++</ng-container>
+diff --git a/Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.scss b/Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.scss
+new file mode 100644
+index 0000000..4d2f1dc
+--- /dev/null
++++ b/Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.scss
+@@ -0,0 +1,5 @@
++/* UC-REF-04 read-only §12.S.2 render — description grids lean on Bootstrap's dl.row;
++   only the field label emphasis is local. */
++.detail-grid dt {
++  font-weight: 600;
++}
+diff --git a/Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.spec.ts b/Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.spec.ts
+new file mode 100644
+index 0000000..1c1c832
+--- /dev/null
++++ b/Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.spec.ts
+@@ -0,0 +1,125 @@
++import { ComponentFixture, TestBed } from '@angular/core/testing';
++import { ActivatedRoute, Router } from '@angular/router';
++import { of, throwError } from 'rxjs';
++import { TranslateModule } from '@ngx-translate/core';
++
++import { RefugeeFamilyDetailComponent } from './refugee-family-detail.component';
++import { FamilyService } from '../services/family.service';
++import { AuthService } from '../../../core/services/auth.service';
++import { NotificationService } from '../../../core/services/notification.service';
++
++describe('RefugeeFamilyDetailComponent', () => {
++  let component: RefugeeFamilyDetailComponent;
++  let fixture: ComponentFixture<RefugeeFamilyDetailComponent>;
++  let familyServiceSpy: jasmine.SpyObj<FamilyService>;
++  let authSpy: jasmine.SpyObj<AuthService>;
++  let routerSpy: jasmine.SpyObj<Router>;
++
++  const family: any = {
++    id: 'f-1',
++    code: 'REF-001',
++    address: 'خيطان',
++    cityVillage: 'الخزندارية',
++    regionName: 'دمشق',
++    centerName: 'المزة',
++    houseOwnershipName: 'إيجار',
++    houseStatusName: 'جيدة',
++    housingTypeName: 'شقة',
++    incomeTypeName: 'عمل',
++    rentAmount: 150
++  };
++  const provider: any = { id: 'p-1', fullName: 'سعاد محمد', isAlive: true };
++  const orphans: any[] = [{ id: 'o-1', fullName: 'طفل لاجئ', gender: 'ذكر', dateOfBirth: '2016-04-01T00:00:00Z' }];
++  const relatives: any[] = [{ id: 'r-1', fullName: 'مرافق لاجئ', gender: 'أنثى', dateOfBirth: '1990-02-02T00:00:00Z', notes: 'خالة' }];
++
++  beforeEach(async () => {
++    familyServiceSpy = jasmine.createSpyObj<FamilyService>('FamilyService',
++      ['getFamily', 'getProvider', 'getFamilyOrphans', 'getRelatives']);
++    authSpy = jasmine.createSpyObj<AuthService>('AuthService', ['hasPermission']);
++    routerSpy = jasmine.createSpyObj<Router>('Router', ['navigate']);
++    const notificationSpy = jasmine.createSpyObj<NotificationService>('NotificationService',
++      ['error', 'success', 'warning']);
++
++    await TestBed.configureTestingModule({
++      imports: [RefugeeFamilyDetailComponent, TranslateModule.forRoot()],
++      providers: [
++        { provide: FamilyService, useValue: familyServiceSpy },
++        { provide: AuthService, useValue: authSpy },
++        { provide: Router, useValue: routerSpy },
++        { provide: NotificationService, useValue: notificationSpy },
++        {
++          provide: ActivatedRoute,
++          useValue: { snapshot: { paramMap: { get: (key: string) => (key === 'id' ? 'f-1' : null) } } }
++        }
++      ]
++    }).overrideComponent(RefugeeFamilyDetailComponent, { set: { changeDetection: 0 } })
++      .compileComponents();
++
++    fixture = TestBed.createComponent(RefugeeFamilyDetailComponent);
++    component = fixture.componentInstance;
++  });
++
++  const emitSuccessfulLoad(): void {
++    familyServiceSpy.getFamily.and.returnValue(of(family));
++    familyServiceSpy.getProvider.and.returnValue(of(provider));
++    familyServiceSpy.getFamilyOrphans.and.returnValue(of(orphans));
++    familyServiceSpy.getRelatives.and.returnValue(of(relatives));
++    authSpy.hasPermission.and.returnValue(true);
++  }
++
++  it('should create', () => {
++    emitSuccessfulLoad();
++    fixture.detectChanges();
++    expect(component).toBeTruthy();
++  });
++
++  it('loads household, provider, orphans and relatives together (UC-REF-04 read)', () => {
++    emitSuccessfulLoad();
++    fixture.detectChanges();
++    expect(familyServiceSpy.getFamily).toHaveBeenCalledWith('f-1');
++    expect(familyServiceSpy.getProvider).toHaveBeenCalledWith('f-1');
++    expect(familyServiceSpy.getFamilyOrphans).toHaveBeenCalledWith('f-1');
++    expect(familyServiceSpy.getRelatives).toHaveBeenCalledWith('f-1');
++    expect(component.family?.code).toBe('REF-001');
++    expect(component.provider?.fullName).toBe('سعاد محمد');
++    expect(component.orphans.length).toBe(1);
++    expect(component.relatives.length).toBe(1);
++    expect(component.loading).toBeFalse();
++  });
++
++  it('renders the cheque-grid section wired-but-empty (epic-10 gap)', () => {
++    emitSuccessfulLoad();
++    fixture.detectChanges();
++    const el = fixture.nativeElement as HTMLElement;
++    expect(el.textContent).toContain('families.refugeeChequeEmpty');
++    expect(el.querySelectorAll('table').length).toBeGreaterThanOrEqual(3);
++  });
++
++  it('shows تعديل اعضاء الاسرة only with Families.Edit', () => {
++    emitSuccessfulLoad();
++    fixture.detectChanges();
++    expect(component.canEdit).toBeTrue();
++
++    authSpy.hasPermission.and.returnValue(false);
++    component.ngOnInit();
++    expect(component.canEdit).toBeFalse();
++  });
++
++  it('edit() navigates to refugees/:id/edit', () => {
++    emitSuccessfulLoad();
++    fixture.detectChanges();
++    component.edit();
++    expect(routerSpy.navigate).toHaveBeenCalledWith(['/families/refugees', 'f-1', 'edit']);
++  });
++
++  it('a failed load surfaces an error and stops the spinner', () => {
++    familyServiceSpy.getFamily.and.returnValue(throwError(() => new Error('403')));
++    familyServiceSpy.getProvider.and.returnValue(of(provider));
++    familyServiceSpy.getFamilyOrphans.and.returnValue(of([]));
++    familyServiceSpy.getRelatives.and.returnValue(of([]));
++    authSpy.hasPermission.and.returnValue(false);
++    fixture.detectChanges();
++    expect(component.loading).toBeFalse();
++    expect(component.family).toBeUndefined();
++  });
++});
+diff --git a/Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.ts b/Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.ts
+new file mode 100644
+index 0000000..b852b8d
+--- /dev/null
++++ b/Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.ts
+@@ -0,0 +1,114 @@
++import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, TrackByFunction } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { ActivatedRoute, Router } from '@angular/router';
++import { Subject, forkJoin } from 'rxjs';
++import { takeUntil } from 'rxjs/operators';
++import { TranslateModule, TranslateService } from '@ngx-translate/core';
++import { FamilyService } from '../services/family.service';
++import { AuthService } from '../../../core/services/auth.service';
++import { NotificationService } from '../../../core/services/notification.service';
++import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
++import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
++import { SharedModule } from '../../../shared/shared.module';
++import { FamilyDto, OrphanDto, ProviderDto, RelativeListDto } from '../models/family.model';
++
++/**
++ * UC-REF-04 (7-4) — عرض أسرة لاجئة: the read-only view mode of §12.S.2. Loads the
++ * household (GET /api/Families/{id}) plus the per-member reads (provider / orphans /
++ * relatives) and renders the cheque-grid section wired-but-empty — no family-filtered
++ * payment read exists yet (data belongs to epic 10; gap recorded in the story notes).
++ */
++@Component({
++  selector: 'app-refugee-family-detail',
++  standalone: true,
++  changeDetection: ChangeDetectionStrategy.OnPush,
++  imports: [
++    CommonModule,
++    PageHeaderComponent,
++    BreadcrumbComponent,
++    TranslateModule,
++    SharedModule
++  ],
++  templateUrl: './refugee-family-detail.component.html',
++  styleUrls: ['./refugee-family-detail.component.scss']
++})
++export class RefugeeFamilyDetailComponent implements OnInit, OnDestroy {
++  private destroy$ = new Subject<void>();
++
++  family?: FamilyDto;
++  provider?: ProviderDto;
++  orphans: OrphanDto[] = [];
++  relatives: RelativeListDto[] = [];
++
++  loading = true;
++  familyId = '';
++
++  /** تعديل اعضاء الاسرة — shown only to callers the server would accept */
++  canEdit = false;
++
++  breadcrumbs: BreadcrumbItem[] = [
++    { label: 'common.home', url: '/dashboard' },
++    { label: 'families.refugeeTitle', url: '/families/refugees' },
++    { label: 'families.refugeeDetailTitle' }
++  ];
++
++  // Untyped so one helper serves both the orphan and companion rows without narrowing the
++  // *ngFor item to their union (which would drop OrphanDto-only fields like socialStatusName)
++  trackById: TrackByFunction<any> = (_: number, item: any) => item.id;
++
++  constructor(
++    private route: ActivatedRoute,
++    private router: Router,
++    private familyService: FamilyService,
++    private auth: AuthService,
++    private notification: NotificationService,
++    private translate: TranslateService,
++    private cdr: ChangeDetectorRef
++  ) {}
++
++  ngOnInit(): void {
++    this.familyId = this.route.snapshot.paramMap.get('id') || '';
++    this.canEdit = this.auth.hasPermission('Families.Edit');
++    if (!this.familyId) {
++      this.router.navigate(['/families/refugees']);
++      return;
++    }
++
++    forkJoin({
++      family: this.familyService.getFamily(this.familyId),
++      provider: this.familyService.getProvider(this.familyId),
++      orphans: this.familyService.getFamilyOrphans(this.familyId),
++      relatives: this.familyService.getRelatives(this.familyId)
++    })
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({
++        next: result => {
++          this.family = result.family;
++          this.provider = result.provider;
++          this.orphans = result.orphans || [];
++          this.relatives = result.relatives || [];
++          this.loading = false;
++          this.cdr.markForCheck();
++        },
++        error: () => {
++          this.loading = false;
++          this.notification.error(this.translate.instant('families.refugeeDetailLoadFailed'));
++          this.cdr.markForCheck();
++        }
++      });
++  }
++
++  ngOnDestroy(): void {
++    this.destroy$.next();
++    this.destroy$.complete();
++  }
++
++  /** تعديل اعضاء الاسرة — the §12.S.2 edit screen carries the same :id */
++  edit(): void {
++    this.router.navigate(['/families/refugees', this.familyId, 'edit']);
++  }
++
++  back(): void {
++    this.router.navigate(['/families/refugees']);
++  }
++}
+diff --git a/Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.html b/Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.html
+new file mode 100644
+index 0000000..241c82d
+--- /dev/null
++++ b/Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.html
+@@ -0,0 +1,436 @@
++<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
++
++<app-page-header
++  [title]="formTitleKey | translate"
++  [subtitle]="formSubtitleKey | translate"
++  [icon]="'fe fe-home'">
++</app-page-header>
++
++<!-- §12.S.2 — بيانات الأسرة -->
++<div class="card mb-4">
++  <div class="card-header">
++    <h5 class="mb-0">{{ 'families.refugeeSectionFamily' | translate }}</h5>
++  </div>
++  <div class="card-body">
++    <form [formGroup]="familyForm">
++      <div class="row">
++        <!-- الجمعية + الكود — create-time only (HQ-only charity selector, immutable code) -->
++        <div class="col-md-4" *ngIf="isHQ && !editMode">
++          <app-drop-down
++            [fg]="familyForm"
++            fcn="charityId"
++            [label]="'families.refugeeCharity'"
++            [initialData]="charityOptions">
++          </app-drop-down>
++        </div>
++
++        <div class="col-md-4" *ngIf="!editMode">
++          <app-input-text
++            [fg]="familyForm"
++            fcn="code"
++            [label]="'families.refugeeFamilyCode'"
++            [placeholder]="'families.refugeeFamilyCode' | translate">
++          </app-input-text>
++        </div>
++
++        <div class="col-md-4">
++          <app-drop-down
++            [fg]="familyForm"
++            fcn="regionId"
++            [label]="'families.refugeeRegion'"
++            [initialData]="regionOptions">
++          </app-drop-down>
++        </div>
++
++        <div class="col-md-4">
++          <app-drop-down
++            [fg]="familyForm"
++            fcn="centerId"
++            [label]="'families.refugeeCenter'"
++            [initialData]="centerOptions">
++          </app-drop-down>
++        </div>
++
++        <div class="col-md-4">
++          <app-input-text
++            [fg]="familyForm"
++            fcn="cityVillage"
++            [label]="'families.refugeeCityVillage'">
++          </app-input-text>
++        </div>
++
++        <div class="col-md-4">
++          <app-input-text
++            [fg]="familyForm"
++            fcn="nearBy"
++            [label]="'families.refugeeNearBy'">
++          </app-input-text>
++        </div>
++
++        <div class="col-md-4">
++          <app-input-text
++            [fg]="familyForm"
++            fcn="street"
++            [label]="'families.refugeeStreet'">
++          </app-input-text>
++        </div>
++
++        <div class="col-md-4">
++          <app-input-text
++            [fg]="familyForm"
++            fcn="address"
++            [label]="'families.refugeeAddress'">
++          </app-input-text>
++        </div>
++
++        <div class="col-md-4">
++          <app-input-text
++            [fg]="familyForm"
++            fcn="phoneNumber"
++            [label]="'families.refugeePhone'">
++          </app-input-text>
++        </div>
++
++        <div class="col-md-4">
++          <app-drop-down
++            [fg]="familyForm"
++            fcn="houseOwnershipId"
++            [label]="'families.refugeeHouseOwnership'"
++            [initialData]="houseOwnershipOptions">
++          </app-drop-down>
++        </div>
++
++        <div class="col-md-4">
++          <app-drop-down
++            [fg]="familyForm"
++            fcn="houseStatusId"
++            [label]="'families.refugeeHouseStatus'"
++            [initialData]="houseStatusOptions">
++          </app-drop-down>
++        </div>
++
++        <div class="col-md-4">
++          <app-drop-down
++            [fg]="familyForm"
++            fcn="housingTypeId"
++            [label]="'families.refugeeHousingType'"
++            [initialData]="housingTypeOptions">
++          </app-drop-down>
++        </div>
++
++        <div class="col-md-4">
++          <app-drop-down
++            [fg]="familyForm"
++            fcn="incomeTypeId"
++            [label]="'families.refugeeIncomeType'"
++            [initialData]="incomeTypeOptions">
++          </app-drop-down>
++        </div>
++
++        <!-- قيمة الإيجار — §12.S.2-mandatory unconditionally (server enforces it flat) -->
++        <div class="col-md-4">
++          <app-input-text
++            [fg]="familyForm"
++            fcn="rentAmount"
++            type="number"
++            [min]="0.01"
++            [step]="0.01"
++            [label]="'families.refugeeRentAmount'">
++          </app-input-text>
++        </div>
++
++        <div class="col-md-12">
++          <app-input-text
++            [fg]="familyForm"
++            fcn="notes"
++            type="textarea"
++            [rows]="2"
++            [label]="'families.refugeeNotes'">
++          </app-input-text>
++        </div>
++      </div>
++    </form>
++  </div>
++</div>
++
++<!-- §12.S.2 — اضافة معيل -->
++<div class="card mb-4">
++  <div class="card-header">
++    <h5 class="mb-0">{{ 'families.refugeeSectionProvider' | translate }}</h5>
++  </div>
++  <div class="card-body">
++    <form [formGroup]="providerForm">
++      <div class="row">
++        <div class="col-md-4">
++          <app-input-text
++            [fg]="providerForm"
++            fcn="fullName"
++            [label]="'families.refugeeProviderName'">
++          </app-input-text>
++        </div>
++
++        <div class="col-md-4">
++          <app-input-text
++            [fg]="providerForm"
++            fcn="nationalId"
++            [label]="'families.refugeeProviderNationalId'">
++          </app-input-text>
++        </div>
++
++        <div class="col-md-4">
++          <app-input-text
++            [fg]="providerForm"
++            fcn="dateOfBirth"
++            type="date"
++            [label]="'families.refugeeProviderDOB'">
++          </app-input-text>
++        </div>
++
++        <div class="col-md-4">
++          <app-drop-down
++            [fg]="providerForm"
++            fcn="nationalityCountryId"
++            [label]="'families.refugeeProviderNationality'"
++            [initialData]="countryOptions">
++          </app-drop-down>
++        </div>
++
++        <div class="col-md-4">
++          <app-drop-down
++            [fg]="providerForm"
++            fcn="relationshipToFamily"
++            [label]="'families.refugeeProviderRelation'"
++            [initialData]="relationOptions">
++          </app-drop-down>
++        </div>
++
++        <div class="col-md-4">
++          <app-drop-down
++            [fg]="providerForm"
++            fcn="reasonOfRelationId"
++            [label]="'families.refugeeProviderReasonOfRelation'"
++            [initialData]="reasonOfRelationOptions">
++          </app-drop-down>
++        </div>
++
++        <div class="col-md-4">
++          <app-input-text
++            [fg]="providerForm"
++            fcn="phone"
++            [label]="'families.refugeePhone'">
++          </app-input-text>
++        </div>
++
++        <div class="col-md-4">
++          <app-input-text
++            [fg]="providerForm"
++            fcn="job"
++            [label]="'families.refugeeProviderJob'">
++          </app-input-text>
++        </div>
++
++        <div class="col-md-4">
++          <app-input-text
++            [fg]="providerForm"
++            fcn="monthlyIncome"
++            type="number"
++            [min]="0"
++            [step]="0.01"
++            [label]="'families.refugeeProviderMonthlyIncome'">
++          </app-input-text>
++        </div>
++
++        <div class="col-md-12">
++          <div class="form-check mb-3">
++            <input class="form-check-input" type="checkbox" id="providerIsAlive" formControlName="isAlive">
++            <label class="form-check-label" for="providerIsAlive">
++              {{ 'families.refugeeProviderIsAlive' | translate }}
++            </label>
++          </div>
++        </div>
++
++        <!-- وفاة المعيل — death fields appear only when the provider is dead -->
++        <ng-container *ngIf="!providerIsAlive">
++          <div class="col-md-6">
++            <app-input-text
++              [fg]="providerForm"
++              fcn="deathDate"
++              type="date"
++              [label]="'families.refugeeProviderDeathDate'">
++            </app-input-text>
++          </div>
++
++          <div class="col-md-6">
++            <app-drop-down
++              [fg]="providerForm"
++              fcn="deathReason"
++              [label]="'families.refugeeProviderDeathReason'"
++              [initialData]="deathReasonOptions">
++            </app-drop-down>
++          </div>
++        </ng-container>
++      </div>
++    </form>
++  </div>
++</div>
++
++<!-- §12.S.2 — اضافة ابن (staged rows, submitted with the family) -->
++<div class="card mb-4">
++  <div class="card-header d-flex justify-content-between align-items-center">
++    <h5 class="mb-0">{{ 'families.refugeeSectionChildren' | translate }}</h5>
++    <button type="button" class="btn btn-sm btn-primary" (click)="addChildRow()">
++      <i class="fe fe-plus mr-1"></i>
++      {{ 'families.refugeeAddChild' | translate }}
++    </button>
++  </div>
++  <div class="card-body">
++    <form [formGroup]="familyForm">
++      <div formArrayName="orphans">
++        <div class="row align-items-end stage-row" *ngFor="let _ of childrenForm.controls; let i = index; trackBy: trackByIndex">
++          <div class="col-md-3" [formGroupName]="i">
++            <app-input-text
++              [fg]="childGroup(i)"
++              fcn="fullName"
++              [label]="'families.refugeeChildName'">
++            </app-input-text>
++          </div>
++
++          <div class="col-md-2" [formGroupName]="i">
++            <app-input-text
++              [fg]="childGroup(i)"
++              fcn="dateOfBirth"
++              type="date"
++              [label]="'families.refugeeChildDOB'">
++            </app-input-text>
++          </div>
++
++          <div class="col-md-2" [formGroupName]="i">
++            <app-drop-down
++              [fg]="childGroup(i)"
++              fcn="gender"
++              [label]="'families.refugeeChildGender'"
++              [initialData]="genderOptions">
++            </app-drop-down>
++          </div>
++
++          <div class="col-md-2" [formGroupName]="i">
++            <app-input-text
++              [fg]="childGroup(i)"
++              fcn="nationalId"
++              [label]="'families.refugeeChildNationalId'">
++            </app-input-text>
++          </div>
++
++          <div class="col-md-2" [formGroupName]="i">
++            <app-drop-down
++              [fg]="childGroup(i)"
++              fcn="socialStatusId"
++              [label]="'families.refugeeChildSocialStatus'"
++              [initialData]="socialStatusOptions">
++            </app-drop-down>
++          </div>
++
++          <div class="col-md-1">
++            <button type="button" class="btn btn-sm btn-danger"
++                    [title]="'common.delete' | translate"
++                    (click)="removeChildRow(i)">
++              <i class="fe fe-trash-2"></i>
++            </button>
++          </div>
++        </div>
++
++        <p class="text-muted mb-0" *ngIf="childrenForm.length === 0">
++          {{ 'families.refugeeNoChildrenStaged' | translate }}
++        </p>
++      </div>
++    </form>
++  </div>
++</div>
++
++<!-- §12.S.2 — اضافة مرافق (staged rows, submitted with the family) -->
++<div class="card mb-4">
++  <div class="card-header d-flex justify-content-between align-items-center">
++    <h5 class="mb-0">{{ 'families.refugeeSectionCompanions' | translate }}</h5>
++    <button type="button" class="btn btn-sm btn-primary" (click)="addCompanionRow()">
++      <i class="fe fe-plus mr-1"></i>
++      {{ 'families.refugeeAddCompanion' | translate }}
++    </button>
++  </div>
++  <div class="card-body">
++    <form [formGroup]="familyForm">
++      <div formArrayName="relatives">
++        <div class="row align-items-end stage-row" *ngFor="let _ of companionsForm.controls; let i = index; trackBy: trackByIndex">
++          <div class="col-md-3" [formGroupName]="i">
++            <app-input-text
++              [fg]="companionGroup(i)"
++              fcn="fullName"
++              [label]="'families.refugeeCompanionName'">
++            </app-input-text>
++          </div>
++
++          <div class="col-md-2" [formGroupName]="i">
++            <app-input-text
++              [fg]="companionGroup(i)"
++              fcn="nationalId"
++              [label]="'families.refugeeCompanionNationalId'">
++            </app-input-text>
++          </div>
++
++          <div class="col-md-2" [formGroupName]="i">
++            <app-input-text
++              [fg]="companionGroup(i)"
++              fcn="dateOfBirth"
++              type="date"
++              [label]="'families.refugeeCompanionDOB'">
++            </app-input-text>
++          </div>
++
++          <div class="col-md-2" [formGroupName]="i">
++            <app-drop-down
++              [fg]="companionGroup(i)"
++              fcn="gender"
++              [label]="'families.refugeeCompanionGender'"
++              [initialData]="genderOptions">
++            </app-drop-down>
++          </div>
++
++          <div class="col-md-1">
++            <button type="button" class="btn btn-sm btn-danger"
++                    [title]="'common.delete' | translate"
++                    (click)="removeCompanionRow(i)">
++              <i class="fe fe-trash-2"></i>
++            </button>
++          </div>
++
++          <!-- صلة القرابة بالأسرة — free text, stored as the relative's notes on the wire.
++               Companion social status has no wire home (Relative has no such column) — gap
++               recorded in the 7-4 story notes, so no dead control is rendered. -->
++          <div class="col-md-11 mt-2" [formGroupName]="i">
++            <app-input-text
++              [fg]="companionGroup(i)"
++              fcn="relationship"
++              [label]="'families.refugeeCompanionRelationship'">
++            </app-input-text>
++          </div>
++        </div>
++
++        <p class="text-muted mb-0" *ngIf="companionsForm.length === 0">
++          {{ 'families.refugeeNoCompanionsStaged' | translate }}
++        </p>
++      </div>
++    </form>
++  </div>
++</div>
++
++<!-- Actions -->
++<div class="card">
++  <div class="card-body d-flex justify-content-end">
++    <button type="button" class="btn btn-secondary ml-2 mr-2" (click)="cancel()">
++      {{ 'common.cancel' | translate }}
++    </button>
++    <button type="button" class="btn btn-primary" [disabled]="saving" (click)="save()">
++      <i class="fe fe-save mr-1"></i>
++      {{ 'common.save' | translate }}
++    </button>
++  </div>
++</div>
+diff --git a/Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.scss b/Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.scss
+new file mode 100644
+index 0000000..fbad80f
+--- /dev/null
++++ b/Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.scss
+@@ -0,0 +1,17 @@
++/* UC-REF-03 (7-3) — staged اضافة ابن / اضافة مرافق rows */
++
++.stage-row {
++  padding-bottom: 0.75rem;
++  margin-bottom: 0.75rem;
++  border-bottom: 1px dashed var(--border-color, #e3e7ed);
++
++  &:last-of-type {
++    border-bottom: none;
++    margin-bottom: 0;
++  }
++}
++
++/* RTL-first: keep the delete affordance pinned to the row's trailing edge */
++:host-context([dir="rtl"]) .stage-row .btn-danger {
++  margin-right: auto;
++}
+diff --git a/Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.spec.ts b/Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.spec.ts
+new file mode 100644
+index 0000000..70f624c
+--- /dev/null
++++ b/Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.spec.ts
+@@ -0,0 +1,152 @@
++import { ComponentFixture, TestBed } from '@angular/core/testing';
++import { HttpClientTestingModule } from '@angular/common/http/testing';
++import { RouterTestingModule } from '@angular/router/testing';
++import { ActivatedRoute } from '@angular/router';
++import { of } from 'rxjs';
++import { TranslateModule } from '@ngx-translate/core';
++
++import { RefugeeFamilyFormComponent } from './refugee-family-form.component';
++import { FamilyService } from '../services/family.service';
++import { NotificationService } from '../../../core/services/notification.service';
++
++describe('RefugeeFamilyFormComponent', () => {
++  let component: RefugeeFamilyFormComponent;
++  let fixture: ComponentFixture<RefugeeFamilyFormComponent>;
++  let familyService: FamilyService;
++  let notification: NotificationService;
++  // ActivatedRoute stub — set to a family id to mount the component in edit mode (UC-REF-04)
++  let routeId: string | null = null;
++
++  beforeEach(async () => {
++    routeId = null;
++    await TestBed.configureTestingModule({
++      imports: [
++        RefugeeFamilyFormComponent,
++        HttpClientTestingModule,
++        RouterTestingModule,
++        TranslateModule.forRoot()
++      ],
++      providers: [
++        NotificationService,
++        {
++          provide: ActivatedRoute,
++          useValue: { snapshot: { paramMap: { get: (_key: string) => routeId } } }
++        }
++      ]
++    }).compileComponents();
++
++    fixture = TestBed.createComponent(RefugeeFamilyFormComponent);
++    component = fixture.componentInstance;
++    familyService = TestBed.inject(FamilyService);
++    notification = TestBed.inject(NotificationService);
++    fixture.detectChanges();
++  });
++
++  it('should create', () => {
++    expect(component).toBeTruthy();
++  });
++
++  it('starts with empty اضافة ابن / اضافة مرافق staging arrays on the family form', () => {
++    expect(component.childrenForm.length).toBe(0);
++    expect(component.companionsForm.length).toBe(0);
++    // The template binds formArrayName="orphans"/"relatives" — the arrays must live on familyForm
++    expect(component.familyForm.get('orphans')).toBe(component.childrenForm);
++    expect(component.familyForm.get('relatives')).toBe(component.companionsForm);
++  });
++
++  it('adds and removes child rows', () => {
++    component.addChildRow();
++    component.addChildRow();
++    expect(component.childrenForm.length).toBe(2);
++
++    component.removeChildRow(0);
++    expect(component.childrenForm.length).toBe(1);
++    expect(component.childGroup(0).get('gender')!.value).toBe('ذكر');
++  });
++
++  it('collects the server-mandatory gender and dateOfBirth on companion rows', () => {
++    // CreateRelativeDto is [Required] on both — the row must stage them, not the payload fake them
++    component.addCompanionRow();
++    const row = component.companionGroup(0);
++    expect(row.get('gender')!.value).toBe('ذكر');
++    expect(row.get('gender')!.validator).toBeTruthy();
++    expect(row.get('dateOfBirth')!.validator).toBeTruthy();
++
++    component.removeCompanionRow(0);
++    expect(component.companionsForm.length).toBe(0);
++  });
++
++  it('clears the centre and reloads its options when the region changes', () => {
++    component.familyForm.get('centerId')!.setValue(7);
++    spyOn(component, 'loadCenters');
++
++    component.familyForm.get('regionId')!.setValue(3);
++
++    expect(component.familyForm.get('centerId')!.value).toBeNull();
++    expect(component.loadCenters).toHaveBeenCalledWith(3);
++  });
++
++  it('refuses to submit while mandatory §12.S.2 fields are missing', () => {
++    const warningSpy = spyOn(notification, 'warning');
++    const createSpy = spyOn(familyService, 'createFamily');
++
++    component.save();
++
++    expect(warningSpy).toHaveBeenCalled();
++    expect(createSpy).not.toHaveBeenCalled();
++    expect(component.saving).toBeFalse();
++  });
++
++  it('does not schedule member deletes in create mode (rows carry no id)', () => {
++    component.addChildRow();
++    component.addCompanionRow();
++    component.removeChildRow(0);
++    component.removeCompanionRow(0);
++    expect(component.deletedOrphanIds.length).toBe(0);
++    expect(component.deletedRelativeIds.length).toBe(0);
++  });
++
++  it('mounts in edit mode on :id, loads the members, and tracks staged removals (UC-REF-04)', () => {
++    routeId = 'f-1';
++    spyOn(familyService, 'getFamily').and.returnValue(of({
++      id: 'f-1', regionId: 3, centerId: 9, address: 'خيطان', cityVillage: 'الخزندارية'
++    } as any));
++    spyOn(familyService, 'getProvider').and.returnValue(of({
++      id: 'p-1', fullName: 'سعاد محمد', relationshipToFamily: 'أم', isAlive: true
++    } as any));
++    spyOn(familyService, 'getFamilyOrphans').and.returnValue(of([
++      { id: 'o-1', fullName: 'طفل لاجئ', gender: 'ذكر', dateOfBirth: '2016-04-01T00:00:00Z', socialStatusId: 2 } as any
++    ]));
++    spyOn(familyService, 'getRelatives').and.returnValue(of([
++      { id: 'r-1', fullName: 'مرافق لاجئ', gender: 'أنثى', dateOfBirth: '1990-02-02T00:00:00Z', notes: 'خالة' } as any
++    ]));
++
++    const editFixture = TestBed.createComponent(RefugeeFamilyFormComponent);
++    const editComponent = editFixture.componentInstance;
++    editFixture.detectChanges();
++
++    expect(editComponent.editMode).toBeTrue();
++    expect(editComponent.familyId).toBe('f-1');
++    expect(editComponent.formTitleKey).toBe('families.refugeeEditTitle');
++
++    // Household + members loaded from the per-member GET endpoints
++    expect(familyService.getFamily).toHaveBeenCalledWith('f-1');
++    expect(familyService.getProvider).toHaveBeenCalledWith('f-1');
++    expect(familyService.getFamilyOrphans).toHaveBeenCalledWith('f-1');
++    expect(familyService.getRelatives).toHaveBeenCalledWith('f-1');
++    expect(editComponent.familyForm.get('address')!.value).toBe('خيطان');
++    expect(editComponent.childrenForm.length).toBe(1);
++    expect(editComponent.childGroup(0).get('id')!.value).toBe('o-1');
++    expect(editComponent.companionsForm.length).toBe(1);
++    expect(editComponent.companionGroup(0).get('relationship')!.value).toBe('خالة');
++
++    // The region patch is silent — the cascade must not have wiped the loaded centre
++    expect(editComponent.familyForm.get('centerId')!.value).toBe(9);
++
++    // Staged removals in edit mode queue server-side deletes, not just row removals
++    editComponent.removeChildRow(0);
++    editComponent.removeCompanionRow(0);
++    expect(editComponent.deletedOrphanIds).toEqual(['o-1']);
++    expect(editComponent.deletedRelativeIds).toEqual(['r-1']);
++  });
++});
+diff --git a/Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.ts b/Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.ts
+new file mode 100644
+index 0000000..d9ab94b
+--- /dev/null
++++ b/Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.ts
+@@ -0,0 +1,747 @@
++import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
++import { ActivatedRoute, Router } from '@angular/router';
++import { Subject, Subscription, Observable, forkJoin, of } from 'rxjs';
++import { switchMap, takeUntil } from 'rxjs/operators';
++import { TranslateModule, TranslateService, LangChangeEvent } from '@ngx-translate/core';
++import { FamilyService } from '../services/family.service';
++import { CharityService } from '../../charities/services/charity.service';
++import { AuthService } from '../../../core/services/auth.service';
++import { NotificationService } from '../../../core/services/notification.service';
++import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
++import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
++import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
++import { SharedModule } from '../../../shared/shared.module';
++import {
++  CreateFamilyDto, UpdateFamilyDto, UpdateProviderDto, UpdateOrphanDto, UpdateRelativeDto
++} from '../models/family.model';
++
++interface DropdownOption {
++  id: number | string;
++  name: string;
++}
++
++/**
++ * UC-REF-03 (7-3) — تسجيل أسرة لاجئة. One superset POST /api/Families with
++ * familyType: 'Refugee' (§12.S.2): household fields + معيل + staged اضافة ابن / اضافة مرافق
++ * rows submitted in a single payload — the server rejects duplicates and mandatory
++ * flags before anything is persisted.
++ *
++ * UC-REF-04 (7-4) — the same screen doubles as the edit form on /families/refugees/:id/edit:
++ * household PUT + provider PUT + per-member orphan/relative create/update/delete, with the
++ * server re-validating the §12.S.2 mandatory flags on the effective post-copy state.
++ */
++@Component({
++  selector: 'app-refugee-family-form',
++  standalone: true,
++  changeDetection: ChangeDetectionStrategy.OnPush,
++  imports: [
++    CommonModule,
++    ReactiveFormsModule,
++    PageHeaderComponent,
++    BreadcrumbComponent,
++    TranslateModule,
++    SharedModule
++  ],
++  templateUrl: './refugee-family-form.component.html',
++  styleUrls: ['./refugee-family-form.component.scss']
++})
++export class RefugeeFamilyFormComponent implements OnInit, OnDestroy {
++  private destroy$ = new Subject<void>();
++  private langChangeSubscription?: Subscription;
++
++  familyForm!: FormGroup;
++  providerForm!: FormGroup;
++  childrenForm!: FormArray;
++  companionsForm!: FormArray;
++
++  saving = false;
++
++  /** UC-REF-04 edit mode — set when the route carries :id (refugees/:id/edit) */
++  editMode = false;
++  familyId?: string;
++
++  /** Members removed in edit mode — deleted server-side on save */
++  deletedOrphanIds: string[] = [];
++  deletedRelativeIds: string[] = [];
++
++  /** Title/subtitle i18n keys switch between create and edit (UC-REF-04) */
++  formTitleKey = 'families.refugeeFormTitle';
++  formSubtitleKey = 'families.refugeeFormSubtitle';
++
++  /** Mirrors providerForm.isAlive so the death fields' *ngIf survives OnPush */
++  providerIsAlive = true;
++
++  /** الجمعية selector is an HQ-only control; a Charity caller is pinned server-side */
++  isHQ = false;
++
++  /**
++   * GET returns the provider's نوعها as its NAME; the form selects by catalogue id. When the
++   * provider loads before the Relation catalogue does, the name waits here and resolves in the
++   * catalogue's subscribe (catalogue race).
++   */
++  private pendingRelationName?: string;
++
++  charityOptions: DropdownOption[] = [];
++  regionOptions: DropdownOption[] = [];
++  centerOptions: DropdownOption[] = [];
++  countryOptions: DropdownOption[] = [];
++  houseOwnershipOptions: DropdownOption[] = [];
++  houseStatusOptions: DropdownOption[] = [];
++  housingTypeOptions: DropdownOption[] = [];
++  incomeTypeOptions: DropdownOption[] = [];
++  socialStatusOptions: DropdownOption[] = [];
++  relationOptions: DropdownOption[] = [];
++  reasonOfRelationOptions: DropdownOption[] = [];
++
++  genderOptions: DropdownOption[] = [];
++  deathReasonOptions: DropdownOption[] = [];
++
++  breadcrumbs: BreadcrumbItem[] = [
++    { label: 'common.home', url: '/dashboard' },
++    { label: 'families.refugeeTitle', url: '/families/refugees' },
++    { label: 'families.refugeeFormTitle' }
++  ];
++
++  constructor(
++    private fb: FormBuilder,
++    private router: Router,
++    private route: ActivatedRoute,
++    private familyService: FamilyService,
++    private charityService: CharityService,
++    private auth: AuthService,
++    private lookupService: LookupManagementService,
++    private notification: NotificationService,
++    private translate: TranslateService,
++    private cdr: ChangeDetectorRef
++  ) {}
++
++  ngOnInit(): void {
++    this.isHQ = this.auth.hasAnyRole(['SuperAdmin', 'Admin']);
++
++    // UC-REF-04: refugees/:id/edit reuses this screen in edit mode
++    const routeId = this.route.snapshot.paramMap.get('id');
++    if (routeId) {
++      this.editMode = true;
++      this.familyId = routeId;
++      this.formTitleKey = 'families.refugeeEditTitle';
++      this.formSubtitleKey = 'families.refugeeEditSubtitle';
++      this.breadcrumbs = [
++        { label: 'common.home', url: '/dashboard' },
++        { label: 'families.refugeeTitle', url: '/families/refugees' },
++        { label: 'families.refugeeEditTitle' }
++      ];
++    }
++
++    this.familyForm = this.fb.group({
++      // الجمعية + الكود are create-time only — hidden and unvalidated in edit mode
++      charityId: [null, this.isHQ && !this.editMode ? Validators.required : []],
++      code: [''],
++      regionId: [null, Validators.required],
++      centerId: [null, Validators.required],
++      cityVillage: ['', Validators.required],
++      nearBy: [''],
++      street: [''],
++      address: ['', Validators.required],
++      phoneNumber: [''],
++      houseOwnershipId: [null, Validators.required],
++      houseStatusId: [null, Validators.required],
++      housingTypeId: [null, Validators.required],
++      incomeTypeId: [null, Validators.required],
++      // قيمة الإيجار is §12.S.2-mandatory unconditionally (server enforces it flat);
++      // the legacy ASP form hid it for non-rented ownership — this form keeps it visible.
++      rentAmount: [null, [Validators.required, Validators.min(0.01)]],
++      notes: [''],
++      // Staged اضافة ابن / اضافة مرافق rows ride the family form so the template's
++      // formArrayName="orphans"/"relatives" binds and save() reads .value off one tree
++      orphans: this.fb.array([]),
++      relatives: this.fb.array([])
++    });
++
++    this.providerForm = this.fb.group({
++      fullName: ['', [Validators.required, Validators.minLength(5)]],
++      nationalId: ['', Validators.required],
++      dateOfBirth: ['', Validators.required],
++      nationalityCountryId: [null, Validators.required],
++      relationshipToFamily: [null, Validators.required],
++      reasonOfRelationId: [null, Validators.required],
++      phone: [''],
++      job: [''],
++      monthlyIncome: [null],
++      isAlive: [true],
++      deathDate: [''],
++      deathReason: ['']
++    });
++
++    this.childrenForm = this.familyForm.get('orphans') as FormArray;
++    this.companionsForm = this.familyForm.get('relatives') as FormArray;
++
++    this.initializeStaticOptions();
++    this.langChangeSubscription = this.translate.onLangChange.subscribe(() => {
++      this.initializeStaticOptions();
++      this.cdr.markForCheck();
++    });
++
++    // المنطقة → المركز cascade — changing the region empties the center choice
++    this.familyForm.get('regionId')!.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(regionId => {
++      this.familyForm.get('centerId')!.setValue(null);
++      this.loadCenters(regionId);
++    });
++
++    this.providerForm.get('isAlive')!.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(alive => {
++      this.providerIsAlive = alive;
++      this.cdr.markForCheck();
++    });
++
++    this.loadCatalogues();
++
++    if (this.editMode && this.familyId) {
++      this.loadExisting(this.familyId);
++    }
++  }
++
++  /** Row accessors for the shared [fg]-bound inputs inside FormArray rows */
++  childGroup(index: number): FormGroup {
++    return this.childrenForm.at(index) as FormGroup;
++  }
++
++  companionGroup(index: number): FormGroup {
++    return this.companionsForm.at(index) as FormGroup;
++  }
++
++  ngOnDestroy(): void {
++    this.destroy$.next();
++    this.destroy$.complete();
++    if (this.langChangeSubscription) {
++      this.langChangeSubscription.unsubscribe();
++    }
++  }
++
++  /** Static closed sets rebuilt on language change — never per CD cycle */
++  private initializeStaticOptions(): void {
++    this.genderOptions = [
++      { id: 'ذكر', name: this.translate.instant('families.refugeeGenderMale') },
++      { id: 'انثى', name: this.translate.instant('families.refugeeGenderFemale') }
++    ];
++    this.deathReasonOptions = [
++      { id: 'طبيعية', name: this.translate.instant('families.refugeeDeathNatural') },
++      { id: 'مرض', name: this.translate.instant('families.refugeeDeathIllness') },
++      { id: 'حادث', name: this.translate.instant('families.refugeeDeathAccident') }
++    ];
++  }
++
++  private toOptions(list: any[]): DropdownOption[] {
++    return (list || []).map(item => ({
++      id: item.id,
++      name: item.nameAr || item.name || item.nameEn || String(item.id)
++    }));
++  }
++
++  private loadCatalogues(): void {
++    if (this.isHQ) {
++      this.charityService.getCharities({ pageNumber: 1, pageSize: 1000, isActive: true })
++        .pipe(takeUntil(this.destroy$))
++        .subscribe({
++          next: result => {
++            this.charityOptions = this.toOptions(result.items || []);
++            this.cdr.markForCheck();
++          },
++          error: () => this.charityOptions = []
++        });
++    }
++
++    this.lookupService.getCountries({ page: 1, pageSize: 1000, isActive: true })
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({
++        next: result => {
++          this.countryOptions = this.toOptions(result.items || []);
++          this.cdr.markForCheck();
++        },
++        error: () => this.countryOptions = []
++      });
++
++    this.lookupService.getRegions({ page: 1, pageSize: 1000, isActive: true })
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({
++        next: result => {
++          this.regionOptions = this.toOptions(result.items || []);
++          this.cdr.markForCheck();
++        },
++        error: () => this.regionOptions = []
++      });
++
++    this.lookupService.getHouseOwnerships()
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({ next: r => { this.houseOwnershipOptions = this.toOptions(r); this.cdr.markForCheck(); }, error: () => this.houseOwnershipOptions = [] });
++
++    this.lookupService.getHouseStatuses()
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({ next: r => { this.houseStatusOptions = this.toOptions(r); this.cdr.markForCheck(); }, error: () => this.houseStatusOptions = [] });
++
++    // نوع السكن — shared catalogue (GET housing-types via the paged lookup surface)
++    this.lookupService.getHousingTypes()
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({ next: r => { this.housingTypeOptions = this.toOptions(r); this.cdr.markForCheck(); }, error: () => this.housingTypeOptions = [] });
++
++    this.lookupService.getIncomeTypes()
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({ next: r => { this.incomeTypeOptions = this.toOptions(r); this.cdr.markForCheck(); }, error: () => this.incomeTypeOptions = [] });
++
++    this.lookupService.getSocialStatuses()
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({ next: r => { this.socialStatusOptions = this.toOptions(r); this.cdr.markForCheck(); }, error: () => this.socialStatusOptions = [] });
++
++    this.lookupService.getRelations()
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({
++        next: r => {
++          this.relationOptions = this.toOptions(r);
++          // Catalogue race: a provider that loaded before this list gets its نوعها resolved now
++          if (this.pendingRelationName) {
++            this.resolveRelationByName(this.pendingRelationName);
++          }
++          this.cdr.markForCheck();
++        },
++        error: () => this.relationOptions = []
++      });
++
++    this.lookupService.getReasonsOfRelation()
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({ next: r => { this.reasonOfRelationOptions = this.toOptions(r); this.cdr.markForCheck(); }, error: () => this.reasonOfRelationOptions = [] });
++  }
++
++  private loadCenters(regionId: number | null): void {
++    this.centerOptions = [];
++    if (!regionId) {
++      this.cdr.markForCheck();
++      return;
++    }
++    this.lookupService.getCentersByRegion(regionId)
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({
++        next: result => {
++          this.centerOptions = this.toOptions(result);
++          this.cdr.markForCheck();
++        },
++        error: () => {
++          this.centerOptions = [];
++          this.cdr.markForCheck();
++        }
++      });
++  }
++
++  // ==================== UC-REF-04: edit mode load ====================
++
++  /** yyyy-MM-dd for type="date" inputs — API sends full ISO timestamps */
++  private toDateString(value?: string | null): string | undefined {
++    return value ? value.slice(0, 10) : undefined;
++  }
++
++  /** Provider نوعها travels as its NAME; the control holds a Relation catalogue id */
++  private resolveRelationByName(name: string): void {
++    const match = this.relationOptions.find(o => o.name === name);
++    if (match) {
++      this.providerForm.get('relationshipToFamily')!.setValue(match.id, { emitEvent: false });
++      this.pendingRelationName = undefined;
++    } else {
++      this.pendingRelationName = name;
++    }
++  }
++
++  private loadExisting(familyId: string): void {
++    this.familyService.getFamily(familyId)
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({
++        next: family => {
++          // regionId patched silent — the cascade subscription must not wipe centerId
++          this.familyForm.patchValue({
++            cityVillage: family.cityVillage,
++            nearBy: family.nearBy,
++            street: family.street,
++            address: family.address,
++            phoneNumber: family.phoneNumber,
++            regionId: family.regionId,
++            centerId: family.centerId,
++            houseOwnershipId: family.houseOwnershipId,
++            houseStatusId: family.houseStatusId,
++            housingTypeId: family.housingTypeId,
++            incomeTypeId: family.incomeTypeId,
++            rentAmount: family.rentAmount,
++            notes: family.notes
++          }, { emitEvent: false });
++          if (family.regionId) {
++            this.loadCenters(family.regionId);
++          }
++          this.cdr.markForCheck();
++        },
++        error: () => this.notification.error(this.translate.instant('families.refugeeFormSaveFailed'))
++      });
++
++    this.familyService.getProvider(familyId)
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({
++        next: provider => {
++          this.providerForm.patchValue({
++            fullName: provider.fullName,
++            nationalId: provider.nationalId,
++            dateOfBirth: this.toDateString(provider.dateOfBirth),
++            nationalityCountryId: provider.nationalityCountryId,
++            reasonOfRelationId: provider.reasonOfRelationId,
++            phone: provider.phone,
++            job: provider.job,
++            monthlyIncome: provider.monthlyIncome,
++            isAlive: provider.isAlive ?? true,
++            deathDate: this.toDateString(provider.deathDate),
++            deathReason: provider.deathReason
++          }, { emitEvent: false });
++          if (provider.isAlive === false) {
++            this.providerIsAlive = false;
++          }
++          if (provider.relationshipToFamily) {
++            this.resolveRelationByName(provider.relationshipToFamily);
++          }
++          this.cdr.markForCheck();
++        },
++        error: () => this.notification.error(this.translate.instant('families.refugeeFormSaveFailed'))
++      });
++
++    this.familyService.getFamilyOrphans(familyId)
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({
++        next: orphans => {
++          orphans.forEach(o => {
++            this.childrenForm.push(this.fb.group({
++              id: [o.id],
++              fullName: [o.fullName, Validators.required],
++              dateOfBirth: [this.toDateString(o.dateOfBirth), Validators.required],
++              gender: [o.gender || 'ذكر', Validators.required],
++              nationalId: [o.nationalId || '', [Validators.maxLength(14)]],
++              socialStatusId: [o.socialStatusId, Validators.required]
++            }));
++          });
++          this.cdr.markForCheck();
++        },
++        error: () => this.notification.error(this.translate.instant('families.refugeeFormSaveFailed'))
++      });
++
++    this.familyService.getRelatives(familyId)
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({
++        next: relatives => {
++          relatives.forEach(r => {
++            this.companionsForm.push(this.fb.group({
++              id: [r.id],
++              fullName: [r.fullName, Validators.required],
++              nationalId: [r.nationalId || ''],
++              dateOfBirth: [this.toDateString(r.dateOfBirth), Validators.required],
++              gender: [r.gender || 'ذكر', Validators.required],
++              // صلة القرابة lives in the relative's notes on the wire
++              relationship: [r.notes || '', Validators.required]
++            }));
++          });
++          this.cdr.markForCheck();
++        },
++        error: () => this.notification.error(this.translate.instant('families.refugeeFormSaveFailed'))
++      });
++  }
++
++  // ==================== اضافة ابن (children staging) ====================
++
++  addChildRow(): void {
++    this.childrenForm.push(this.fb.group({
++      // id is set only in edit mode (UC-REF-04) — null means "create on save"
++      id: [null],
++      fullName: ['', Validators.required],
++      dateOfBirth: ['', Validators.required],
++      gender: ['ذكر', Validators.required],
++      nationalId: ['', [Validators.maxLength(14)]],
++      socialStatusId: [null, Validators.required]
++    }));
++    this.cdr.markForCheck();
++  }
++
++  removeChildRow(index: number): void {
++    const rowId = this.childrenForm.at(index).get('id')?.value;
++    if (this.editMode && rowId) {
++      this.deletedOrphanIds.push(rowId);
++    }
++    this.childrenForm.removeAt(index);
++    this.cdr.markForCheck();
++  }
++
++  trackByIndex = (_: number): number => _;
++
++  // ==================== اضافة مرافق (companions staging) ====================
++
++  addCompanionRow(): void {
++    this.companionsForm.push(this.fb.group({
++      // id is set only in edit mode (UC-REF-04) — null means "create on save"
++      id: [null],
++      fullName: ['', Validators.required],
++      nationalId: [''],
++      // Server contract (CreateRelativeDto) demands both — the shared legacy DTO
++      // is [Required] on Gender and DateOfBirth, so the row collects them.
++      dateOfBirth: ['', Validators.required],
++      gender: ['ذكر', Validators.required],
++      relationship: ['', Validators.required]
++    }));
++    this.cdr.markForCheck();
++  }
++
++  removeCompanionRow(index: number): void {
++    const rowId = this.companionsForm.at(index).get('id')?.value;
++    if (this.editMode && rowId) {
++      this.deletedRelativeIds.push(rowId);
++    }
++    this.companionsForm.removeAt(index);
++    this.cdr.markForCheck();
++  }
++
++  // ==================== submit ====================
++
++  save(): void {
++    this.familyForm.markAllAsTouched();
++    this.providerForm.markAllAsTouched();
++    if (this.familyForm.invalid || this.providerForm.invalid || this.childrenForm.invalid || this.companionsForm.invalid) {
++      this.notification.warning(this.translate.instant('families.refugeeFormIncomplete'));
++      return;
++    }
++
++    // UC-REF-04: the edit flow saves through the per-member endpoints instead
++    // of the single-payload create
++    if (this.editMode && this.familyId) {
++      this.saveEdit();
++      return;
++    }
++
++    const family = this.familyForm.value;
++    const provider = this.providerForm.value;
++
++    const payload: CreateFamilyDto = {
++      familyType: 'Refugee',
++      charityId: this.isHQ ? family.charityId : undefined,
++      code: family.code || undefined,
++      headOfFamily: provider.fullName,
++      address: family.address,
++      cityVillage: family.cityVillage,
++      nearBy: family.nearBy || undefined,
++      street: family.street || undefined,
++      phoneNumber: family.phoneNumber || undefined,
++      regionId: family.regionId,
++      centerId: family.centerId,
++      rentAmount: family.rentAmount,
++      houseOwnershipId: family.houseOwnershipId,
++      houseStatusId: family.houseStatusId,
++      housingTypeId: family.housingTypeId,
++      incomeTypeId: family.incomeTypeId,
++      notes: family.notes || undefined,
++      provider: {
++        fullName: provider.fullName,
++        nationalId: provider.nationalId,
++        phone: provider.phone || undefined,
++        job: provider.job || undefined,
++        monthlyIncome: provider.monthlyIncome ?? undefined,
++        dateOfBirth: provider.dateOfBirth,
++        nationalityCountryId: provider.nationalityCountryId,
++        // نوعها (Relation catalogue) travels as the free-text relation on the wire
++        relationshipToFamily: this.optionName(this.relationOptions, provider.relationshipToFamily),
++        reasonOfRelationId: provider.reasonOfRelationId,
++        isAlive: provider.isAlive,
++        deathDate: !provider.isAlive ? (provider.deathDate || undefined) : undefined,
++        deathReason: !provider.isAlive ? (provider.deathReason || undefined) : undefined
++      },
++      orphans: this.childrenForm.controls.map(row => {
++        const child = row.value;
++        return {
++          fullName: child.fullName,
++          dateOfBirth: child.dateOfBirth,
++          gender: child.gender,
++          nationalId: child.nationalId || undefined,
++          socialStatusId: child.socialStatusId
++        };
++      }),
++      relatives: this.companionsForm.controls.map(row => {
++        const companion = row.value;
++        return {
++          fullName: companion.fullName,
++          relationshipType: 'accompany',
++          gender: companion.gender,
++          dateOfBirth: companion.dateOfBirth,
++          nationalId: companion.nationalId || undefined,
++          notes: companion.relationship,
++          isAlive: true,
++          isLivingWithFamily: true
++        };
++      })
++    };
++
++    this.saving = true;
++    this.familyService.createFamily(payload).subscribe({
++      next: () => {
++        this.saving = false;
++        this.notification.success(this.translate.instant('families.refugeeFormSaved'));
++        this.router.navigate(['/families/refugees']);
++      },
++      error: (error: any) => {
++        this.saving = false;
++        this.cdr.markForCheck();
++        // Surface the server's field-level refusals (§12.S.2 flags / duplicate معيل)
++        const fieldErrors = this.extractFieldErrors(error);
++        if (fieldErrors.length) {
++          this.notification.error(fieldErrors.join(' — '));
++        } else {
++          this.notification.error(error?.message || this.translate.instant('families.refugeeFormSaveFailed'));
++        }
++      }
++    });
++  }
++
++  /**
++   * UC-REF-04 edit save: family PUT → provider PUT → per-member orphan/relative
++   * create/update/delete. The server re-validates the §12.S.2 mandatory flags on the
++   * family's effective post-copy state and the duplicate-معيل rule on the provider's
++   * new national id (excluding itself).
++   */
++  private saveEdit(): void {
++    const family = this.familyForm.value;
++    const provider = this.providerForm.value;
++
++    const familyPayload: UpdateFamilyDto = {
++      address: family.address,
++      cityVillage: family.cityVillage,
++      nearBy: family.nearBy || undefined,
++      street: family.street || undefined,
++      phoneNumber: family.phoneNumber || undefined,
++      regionId: family.regionId,
++      centerId: family.centerId,
++      rentAmount: family.rentAmount,
++      houseOwnershipId: family.houseOwnershipId,
++      houseStatusId: family.houseStatusId,
++      housingTypeId: family.housingTypeId,
++      incomeTypeId: family.incomeTypeId,
++      notes: family.notes || undefined
++    };
++
++    const providerPayload: UpdateProviderDto = {
++      fullName: provider.fullName,
++      nationalId: provider.nationalId,
++      phone: provider.phone || undefined,
++      job: provider.job || undefined,
++      monthlyIncome: provider.monthlyIncome ?? undefined,
++      dateOfBirth: provider.dateOfBirth,
++      nationalityCountryId: provider.nationalityCountryId,
++      // نوعها (Relation catalogue) travels as the free-text relation on the wire
++      relationshipToFamily: this.optionName(this.relationOptions, provider.relationshipToFamily),
++      reasonOfRelationId: provider.reasonOfRelationId,
++      isAlive: provider.isAlive,
++      deathDate: !provider.isAlive ? (provider.deathDate || undefined) : undefined,
++      deathReason: !provider.isAlive ? (provider.deathReason || undefined) : undefined
++    };
++
++    this.saving = true;
++    this.familyService.updateFamily(this.familyId!, familyPayload).pipe(
++      switchMap(() => this.familyService.updateProvider(this.familyId!, providerPayload)),
++      switchMap(() => {
++        const ops: Observable<any>[] = [];
++
++        this.childrenForm.controls.forEach(row => {
++          const child = row.value;
++          if (child.id) {
++            const orphanPayload: UpdateOrphanDto = {
++              fullName: child.fullName,
++              dateOfBirth: child.dateOfBirth,
++              gender: child.gender,
++              nationalId: child.nationalId || undefined,
++              socialStatusId: child.socialStatusId
++            };
++            ops.push(this.familyService.updateOrphan(child.id, orphanPayload));
++          } else {
++            ops.push(this.familyService.createOrphan({
++              familyId: this.familyId,
++              fullName: child.fullName,
++              dateOfBirth: child.dateOfBirth,
++              gender: child.gender,
++              nationalId: child.nationalId || undefined,
++              socialStatusId: child.socialStatusId
++            }));
++          }
++        });
++
++        this.companionsForm.controls.forEach(row => {
++          const companion = row.value;
++          if (companion.id) {
++            const relativePayload: UpdateRelativeDto = {
++              id: companion.id,
++              fullName: companion.fullName,
++              relationshipType: 'accompany',
++              gender: companion.gender,
++              dateOfBirth: companion.dateOfBirth,
++              nationalId: companion.nationalId || undefined,
++              notes: companion.relationship,
++              isAlive: true,
++              isLivingWithFamily: true
++            };
++            ops.push(this.familyService.updateRelative(companion.id, relativePayload));
++          } else {
++            ops.push(this.familyService.createRelative(this.familyId!, {
++              fullName: companion.fullName,
++              relationshipType: 'accompany',
++              gender: companion.gender,
++              dateOfBirth: companion.dateOfBirth,
++              nationalId: companion.nationalId || undefined,
++              notes: companion.relationship,
++              isAlive: true,
++              isLivingWithFamily: true
++            }));
++          }
++        });
++
++        this.deletedOrphanIds.forEach(id => ops.push(this.familyService.deleteOrphan(id)));
++        this.deletedRelativeIds.forEach(id => ops.push(this.familyService.deleteRelative(this.familyId!, id)));
++
++        return ops.length ? forkJoin(ops) : of([]);
++      }),
++      takeUntil(this.destroy$)
++    ).subscribe({
++      next: () => {
++        this.saving = false;
++        this.notification.success(this.translate.instant('families.refugeeFormSaved'));
++        this.router.navigate(['/families/refugees']);
++      },
++      error: (error: any) => {
++        this.saving = false;
++        this.cdr.markForCheck();
++        // Surface the server's field-level refusals (§12.S.2 flags / duplicate معيل)
++        const fieldErrors = this.extractFieldErrors(error);
++        if (fieldErrors.length) {
++          this.notification.error(fieldErrors.join(' — '));
++        } else {
++          this.notification.error(error?.message || this.translate.instant('families.refugeeFormSaveFailed'));
++        }
++      }
++    });
++  }
++
++  private extractFieldErrors(error: any): string[] {
++    const items = error?.modelStateErrors || error?.error?.modelStateErrors;
++    if (Array.isArray(items)) {
++      return items.map((e: any) => e?.value || e?.message || '').filter(Boolean);
++    }
++    if (error?.message && typeof error.message === 'string' && /[؀-ۿ]/.test(error.message)) {
++      return [error.message];
++    }
++    return [];
++  }
++
++  private optionName(options: DropdownOption[], id: number | string | null): string | undefined {
++    if (id === null || id === undefined) {
++      return undefined;
++    }
++    return options.find(o => o.id === id)?.name;
++  }
++
++  cancel(): void {
++    this.router.navigate(['/families/refugees']);
++  }
++}
+diff --git a/Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.html b/Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.html
+new file mode 100644
+index 0000000..d6916c0
+--- /dev/null
++++ b/Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.html
+@@ -0,0 +1,133 @@
++<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
++
++<app-page-header
++  [title]="'families.refugeeTitle' | translate"
++  [subtitle]="'families.refugeeSubtitle' | translate"
++  [icon]="'fe fe-users'">
++</app-page-header>
++
++<div class="card">
++  <div class="card-body">
++    <!-- Filters (§12.S.1): الجمعية + search box + البحث عن طريق -->
++    <form [formGroup]="filterForm">
++      <div class="row mb-3">
++        <!-- الجمعية — HQ only; Charity callers are pinned server-side -->
++        <div class="col-md-3" *ngIf="isHQ">
++          <app-drop-down
++            [fg]="filterForm"
++            fcn="charityId"
++            [label]="'families.refugeeCharity'"
++            [initialData]="charityOptions"
++            [hasDefaultValue]="true"
++            (onDropDownChanged)="onCharityChange()">
++          </app-drop-down>
++        </div>
++
++        <!-- Search box — debounced 400ms -->
++        <div class="col-md-3">
++          <app-input-text
++            [fg]="filterForm"
++            fcn="searchValue"
++            [label]="'common.search'"
++            [placeholder]="'families.refugeeSearchPlaceholder' | translate">
++          </app-input-text>
++        </div>
++
++        <!-- البحث عن طريق -->
++        <div class="col-md-3">
++          <app-drop-down
++            [fg]="filterForm"
++            fcn="searchType"
++            [label]="'families.refugeeSearchType'"
++            [initialData]="searchTypeOptions"
++            [hasDefaultValue]="true"
++            (onDropDownChanged)="onSearchTypeChange()">
++          </app-drop-down>
++        </div>
++
++        <div class="col-md-3 d-flex align-items-end">
++          <button type="button" class="btn btn-primary"
++                  [title]="'families.refugeeSearch' | translate"
++                  (click)="onSearch()">
++            <i class="fe fe-search mr-1"></i>
++            {{ 'families.refugeeSearch' | translate }}
++          </button>
++        </div>
++      </div>
++    </form>
++
++    <!-- Toolbar: تسجيل أسرة لاجئة (UC-REF-03) — the endpoint authorises again server-side -->
++    <div class="d-flex justify-content-end mb-3" *ngIf="canCreate">
++      <a class="btn btn-primary" routerLink="/families/refugees/create">
++        <i class="fe fe-plus mr-1"></i>
++        {{ 'families.refugeeAddFamily' | translate }}
++      </a>
++    </div>
++
++    <!-- Loading State -->
++    <div *ngIf="loading" class="text-center py-5">
++      <div class="spinner-border text-primary" role="status">
++        <span class="sr-only">{{ 'common.loading' | translate }}</span>
++      </div>
++    </div>
++
++    <!-- Refugee Families Table (§12.S.1 column order) -->
++    <div *ngIf="!loading" class="table-responsive">
++      <table class="table table-hover table-striped">
++        <thead>
++          <tr>
++            <th>{{ 'families.refugeeSerial' | translate }}</th>
++            <th>{{ 'families.refugeeFatherName' | translate }}</th>
++            <th>{{ 'families.refugeeMotherName' | translate }}</th>
++            <th>{{ 'families.refugeeChildren' | translate }}</th>
++            <th>{{ 'families.refugeePhones' | translate }}</th>
++            <th>{{ 'families.refugeeFamilyCode' | translate }}</th>
++            <th>{{ 'families.refugeeCharity' | translate }}</th>
++            <th>{{ 'common.actions' | translate }}</th>
++          </tr>
++        </thead>
++        <tbody>
++          <tr *ngFor="let family of families; let i = index; trackBy: trackByFamilyId">
++            <td>{{ getSerial(i) }}</td>
++            <td>{{ family.fatherName || '-' }}</td>
++            <td>{{ family.motherName || '-' }}</td>
++            <td>
++              <span class="badge badge-pill badge-primary">{{ family.orphansCount || 0 }}</span>
++            </td>
++            <td>{{ family.phoneNumber || '-' }}</td>
++            <td><strong>{{ family.code || '-' }}</strong></td>
++            <td>{{ family.charityName || '-' }}</td>
++            <td>
++              <div class="btn-group">
++                <!-- UC-REF-04 — opens the §12.S.2 read-only screen -->
++                <button type="button" class="btn btn-sm btn-light"
++                        [title]="'common.view' | translate"
++                        (click)="viewRefugeeFamily(family.id)">
++                  <i class="fe fe-eye"></i>
++                </button>
++              </div>
++            </td>
++          </tr>
++
++          <!-- Empty State -->
++          <tr *ngIf="families.length === 0">
++            <td colspan="8" class="text-center py-5">
++              <div class="empty-state">
++                <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
++                <p class="text-muted">{{ 'families.refugeeNoFamilies' | translate }}</p>
++              </div>
++            </td>
++          </tr>
++        </tbody>
++      </table>
++    </div>
++
++    <!-- Pagination -->
++    <app-pagination
++      [currentPage]="currentPage"
++      [pageSize]="pageSize"
++      [totalCount]="totalCount"
++      (pageChange)="onPageChange($event)">
++    </app-pagination>
++  </div>
++</div>
+diff --git a/Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.scss b/Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.scss
+new file mode 100644
+index 0000000..e504662
+--- /dev/null
++++ b/Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.scss
+@@ -0,0 +1,4 @@
++.empty-state {
++  text-align: center;
++  padding: 1.5rem 0;
++}
+diff --git a/Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.spec.ts b/Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.spec.ts
+new file mode 100644
+index 0000000..ab5752a
+--- /dev/null
++++ b/Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.spec.ts
+@@ -0,0 +1,45 @@
++import { ComponentFixture, TestBed } from '@angular/core/testing';
++import { HttpClientTestingModule } from '@angular/common/http/testing';
++import { RouterTestingModule } from '@angular/router/testing';
++import { TranslateModule } from '@ngx-translate/core';
++
++import { RefugeeFamilyListComponent } from './refugee-family-list.component';
++import { NotificationService } from '../../../core/services/notification.service';
++
++describe('RefugeeFamilyListComponent', () => {
++  let component: RefugeeFamilyListComponent;
++  let fixture: ComponentFixture<RefugeeFamilyListComponent>;
++
++  beforeEach(async () => {
++    await TestBed.configureTestingModule({
++      imports: [
++        RefugeeFamilyListComponent,
++        HttpClientTestingModule,
++        RouterTestingModule,
++        TranslateModule.forRoot()
++      ],
++      providers: [NotificationService]
++    }).compileComponents();
++
++    fixture = TestBed.createComponent(RefugeeFamilyListComponent);
++    component = fixture.componentInstance;
++    fixture.detectChanges();
++  });
++
++  it('should create', () => {
++    expect(component).toBeTruthy();
++  });
++
++  it('offers the shared FamilyFilterDto search-type vocabulary in the selector', () => {
++    // 7-2: one switch server-side; the labels are §12.S.1's
++    const ids = component.searchTypeOptions.map(o => o.id);
++    expect(ids).toEqual(['all', 'father', 'mother', 'student', 'provider', 'nationalId', 'code', 'phone']);
++  });
++
++  it('always searches scoped to the Refugee discriminator', () => {
++    const spy = spyOn(component, 'loadRefugeeFamilies');
++    component.onSearch();
++    expect(component.currentPage).toBe(1);
++    expect(spy).toHaveBeenCalled();
++  });
++});
+diff --git a/Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.ts b/Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.ts
+new file mode 100644
+index 0000000..c01e269
+--- /dev/null
++++ b/Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.ts
+@@ -0,0 +1,223 @@
++import { ChangeDetectorRef, ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
++import { Router, RouterModule } from '@angular/router';
++import { Subject, Subscription } from 'rxjs';
++import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
++import { TranslateModule, TranslateService, LangChangeEvent } from '@ngx-translate/core';
++import { FamilyListItemDto, FamilySearchRequest } from '../models/family.model';
++import { FamilyService } from '../services/family.service';
++import { CharityService } from '../../charities/services/charity.service';
++import { AuthService } from '../../../core/services/auth.service';
++import { NotificationService } from '../../../core/services/notification.service';
++import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
++import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
++import { PaginationComponent } from '../../../shared/components';
++import { SharedModule } from '../../../shared/shared.module';
++import { DropDownComponent } from '../../../shared/components/drop-down/drop-down.component';
++
++@Component({
++  selector: 'app-refugee-family-list',
++  standalone: true,
++  changeDetection: ChangeDetectionStrategy.OnPush,
++  imports: [
++    CommonModule,
++    FormsModule,
++    ReactiveFormsModule,
++    PageHeaderComponent,
++    BreadcrumbComponent,
++    TranslateModule,
++    RouterModule,
++    PaginationComponent,
++    SharedModule,
++    DropDownComponent
++  ],
++  templateUrl: './refugee-family-list.component.html',
++  styleUrls: ['./refugee-family-list.component.scss']
++})
++export class RefugeeFamilyListComponent implements OnInit, OnDestroy {
++  private destroy$ = new Subject<void>();
++  private langChangeSubscription?: Subscription;
++
++  Math = Math;
++  families: FamilyListItemDto[] = [];
++  loading = false;
++  totalCount = 0;
++  currentPage = 1;
++  pageSize = 20;
++  totalPages = 0;
++
++  /** الجمعية selector is an HQ-only control; a Charity caller is pinned server-side */
++  isHQ = false;
++
++  /** Server also authorises POST /api/Families — this only hides the toolbar button (7-3) */
++  canCreate = false;
++
++  filterForm: FormGroup;
++
++  charityOptions: Array<{ id: string; name: string }> = [];
++  searchTypeOptions: Array<{ id: string; name: string }> = [];
++
++  breadcrumbs: BreadcrumbItem[] = [
++    { label: 'common.home', url: '/dashboard' },
++    { label: 'families.refugeeTitle' }
++  ];
++
++  constructor(
++    private fb: FormBuilder,
++    private familyService: FamilyService,
++    private charityService: CharityService,
++    private auth: AuthService,
++    private notification: NotificationService,
++    private translate: TranslateService,
++    private cdr: ChangeDetectorRef,
++    private router: Router
++  ) {
++    this.filterForm = this.fb.group({
++      charityId: ['all'],
++      searchValue: [''],
++      searchType: ['all']
++    });
++  }
++
++  ngOnInit(): void {
++    this.isHQ = this.auth.hasAnyRole(['SuperAdmin', 'Admin']);
++    this.canCreate = this.auth.hasPermission('Families.Create');
++
++    this.initializeSearchTypeOptions();
++
++    this.langChangeSubscription = this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
++      this.initializeSearchTypeOptions();
++      this.cdr.markForCheck();
++    });
++
++    // Debounced free-text search (seasonal-aid pattern): typing fires after 400ms of quiet,
++    // clearing the box reloads the unfiltered page.
++    this.filterForm.get('searchValue')!.valueChanges.pipe(
++      debounceTime(400),
++      distinctUntilChanged(),
++      takeUntil(this.destroy$)
++    ).subscribe(() => {
++      this.currentPage = 1;
++      this.loadRefugeeFamilies();
++    });
++
++    if (this.isHQ) {
++      this.loadCharityOptions();
++    }
++
++    this.loadRefugeeFamilies();
++  }
++
++  ngOnDestroy(): void {
++    this.destroy$.next();
++    this.destroy$.complete();
++    if (this.langChangeSubscription) {
++      this.langChangeSubscription.unsubscribe();
++    }
++  }
++
++  /**
++   * البحث عن طريق selector options — rebuilt only on language change, never per CD cycle.
++   * Values are the SHARED FamilyFilterDto.SearchType vocabulary (6-2 + 7-2, one switch
++   * server-side); labels are §12.S.1's (إسم اليتيم for `student`, كود اليتيم for `code`).
++   */
++  private initializeSearchTypeOptions(): void {
++    this.searchTypeOptions = [
++      { id: 'all', name: this.translate.instant('common.all') },
++      { id: 'father', name: this.translate.instant('families.refugeeSearchTypeFather') },
++      { id: 'mother', name: this.translate.instant('families.refugeeSearchTypeMother') },
++      { id: 'student', name: this.translate.instant('families.refugeeSearchTypeOrphan') },
++      { id: 'provider', name: this.translate.instant('families.refugeeSearchTypeProvider') },
++      { id: 'nationalId', name: this.translate.instant('families.refugeeSearchTypeNationalId') },
++      { id: 'code', name: this.translate.instant('families.refugeeSearchTypeOrphanCode') },
++      { id: 'phone', name: this.translate.instant('families.refugeeSearchTypePhone') }
++    ];
++  }
++
++  private loadCharityOptions(): void {
++    this.charityService.getCharities({ pageNumber: 1, pageSize: 500 }).subscribe({
++      next: (response) => {
++        this.charityOptions = [
++          { id: 'all', name: this.translate.instant('families.refugeeAllCharities') },
++          ...(response.items || []).map(c => ({ id: c.id, name: c.name }))
++        ];
++        this.cdr.markForCheck();
++      },
++      error: (error: any) => {
++        console.error('Error loading charities:', error);
++      }
++    });
++  }
++
++  loadRefugeeFamilies(): void {
++    this.loading = true;
++    const formValues = this.filterForm.value;
++
++    const searchRequest: FamilySearchRequest = {
++      familyType: 'Refugee',
++      pageNumber: this.currentPage,
++      pageSize: this.pageSize
++    };
++
++    if (this.isHQ && formValues.charityId && formValues.charityId !== 'all') {
++      searchRequest.charityId = formValues.charityId;
++    }
++
++    if (formValues.searchValue && formValues.searchValue.trim()) {
++      searchRequest.searchTerm = formValues.searchValue.trim();
++    }
++
++    if (formValues.searchType && formValues.searchType !== 'all') {
++      searchRequest.searchType = formValues.searchType;
++    }
++
++    this.familyService.getFamilies(searchRequest).subscribe({
++      next: (response) => {
++        this.families = (response.items as unknown as FamilyListItemDto[]) || [];
++        this.totalCount = response.totalCount || 0;
++        this.totalPages = Math.ceil(this.totalCount / this.pageSize);
++        this.loading = false;
++        this.cdr.markForCheck();
++      },
++      error: (error: any) => {
++        console.error('Error loading refugee families:', error);
++        this.notification.error(error.message || 'Failed to load refugee families');
++        this.loading = false;
++        this.cdr.markForCheck();
++      }
++    });
++  }
++
++  onCharityChange(): void {
++    this.currentPage = 1;
++    this.loadRefugeeFamilies();
++  }
++
++  /** بحث command — reload page 1 with whatever the controls hold */
++  onSearch(): void {
++    this.currentPage = 1;
++    this.loadRefugeeFamilies();
++  }
++
++  /** البحث عن طريق selector change — a different branch means a different query, page 1 */
++  onSearchTypeChange(): void {
++    this.currentPage = 1;
++    this.loadRefugeeFamilies();
++  }
++
++  onPageChange(page: number): void {
++    this.currentPage = page;
++    this.loadRefugeeFamilies();
++  }
++
++  getSerial(index: number): number {
++    return (this.currentPage - 1) * this.pageSize + index + 1;
++  }
++
++  trackByFamilyId = (_: number, family: FamilyListItemDto): string => family.id;
++
++  viewRefugeeFamily(id: string): void {
++    this.router.navigate(['/families/refugees', id]);
++  }
++}

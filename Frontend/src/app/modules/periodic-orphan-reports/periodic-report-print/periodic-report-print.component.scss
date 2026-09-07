@@ -1,0 +1,178 @@
+/**
+ * UC-ORR-17 — print-optimised official form. On screen it looks like a sheet of
+ * paper; on paper the chrome drops and the sheet fills the A4 page.
+ */
+
+.print-form {
+  background: #fff;
+  color: #000;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 12mm 10mm;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.form-header {
+  text-align: center;
+  border-bottom: 2px solid #000;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+
+  .form-title {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .form-meta {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 6px;
+    font-size: 12px;
+  }
+}
+
+.identity-table,
+.fields-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  td {
+    border: 1px solid #999;
+    padding: 4px 8px;
+    vertical-align: middle;
+
+    &.lbl {
+      background: #f1f1f1;
+      font-weight: 600;
+      white-space: nowrap;
+      width: 14%;
+    }
+
+    &.message {
+      font-style: italic;
+    }
+  }
+}
+
+.identity-table .photo-cell {
+  width: 30mm;
+
+  img {
+    width: 100%;
+    max-height: 35mm;
+    object-fit: contain;
+    display: block;
+  }
+
+  .no-photo {
+    display: block;
+    height: 30mm;
+    background: repeating-linear-gradient(45deg, #fafafa, #fafafa 6px, #f0f0f0 6px, #f0f0f0 12px);
+  }
+}
+
+.section {
+  margin-top: 10px;
+
+  .section-title {
+    font-weight: 700;
+    border-right: 4px solid #000;
+    padding-right: 8px;
+    margin-bottom: 4px;
+  }
+
+  &.emphasised .section-title {
+    border-right-width: 8px;
+    text-decoration: underline;
+  }
+}
+
+.documents-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  .document {
+    flex: 1 1 40%;
+    border: 1px solid #999;
+    padding: 6px;
+    margin: 0;
+    text-align: center;
+
+    figcaption {
+      font-weight: 600;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    img {
+      max-width: 100%;
+      max-height: 55mm;
+      object-fit: contain;
+    }
+
+    .doc-missing {
+      display: block;
+      padding: 18px 0;
+      color: #666;
+      font-size: 12px;
+    }
+  }
+}
+
+.form-footer {
+  margin-top: 14px;
+
+  .signatures {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 22mm;
+
+    span {
+      border-top: 1px solid #000;
+      padding-top: 4px;
+      width: 40%;
+      text-align: center;
+      font-size: 12px;
+    }
+  }
+
+  .meta-line {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 10px;
+    color: #444;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  .print-form {
+    max-width: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  // Keep section blocks intact across page breaks
+  .section,
+  .documents .document {
+    break-inside: avoid;
+  }
+}

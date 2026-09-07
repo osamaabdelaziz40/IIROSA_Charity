@@ -1,0 +1,506 @@
+- generic [ref=f6e5]:
+  - navigation [ref=f6e6]:
+    - button "" [ref=f6e7] [cursor=pointer]
+    - list [ref=f6e9]:
+      - listitem [ref=f6e10]:
+        - link "English " [ref=f6e11] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f6e12]: 
+          - text: English 
+      - listitem [ref=f6e13]:
+        - link "" [ref=f6e14] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f6e16]:
+        - link "" [ref=f6e17] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f6e20]:
+        - button [ref=f6e21] [cursor=pointer]:
+          - generic [ref=f6e22]:
+            - text: Welcome System Admin
+            - img "..." [ref=f6e23]
+          - text: 
+  - complementary [ref=f6e24]:
+    - generic [ref=f6e29]:
+      - text: 
+      - navigation [ref=f6e30]:
+        - link [ref=f6e32] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f6e33]
+        - paragraph [ref=f6e34]: Website Elements
+        - list [ref=f6e35]:
+          - listitem [ref=f6e36]:
+            - link " Home Page (current) " [ref=f6e37] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f6e38]: 
+              - generic [ref=f6e39]: Home Page
+              - generic [ref=f6e40]: (current)
+              - text: 
+            - list [ref=f6e41]:
+              - listitem [ref=f6e42]:
+                - link "Home" [ref=f6e43] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f6e44]:
+            - link " Users " [ref=f6e45] [cursor=pointer]:
+              - /url: "#user-management"
+              - generic [ref=f6e46]: 
+              - generic [ref=f6e47]: Users
+              - text: 
+          - listitem [ref=f6e48]:
+            - link " Employees " [ref=f6e49] [cursor=pointer]:
+              - /url: "#employees"
+              - generic [ref=f6e50]: 
+              - generic [ref=f6e51]: Employees
+              - text: 
+          - listitem [ref=f6e52]:
+            - link " NGOs " [ref=f6e53] [cursor=pointer]:
+              - /url: "#charities"
+              - generic [ref=f6e54]: 
+              - generic [ref=f6e55]: NGOs
+              - text: 
+          - listitem [ref=f6e56]:
+            - link " Office Projects " [ref=f6e57] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f6e58]: 
+              - generic [ref=f6e59]: Office Projects
+              - text: 
+          - listitem [ref=f6e60]:
+            - link " Housing Projects " [ref=f6e61] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f6e62]: 
+              - generic [ref=f6e63]: Housing Projects
+              - text: 
+          - listitem [ref=f6e64]:
+            - link " Seasonal Aid " [ref=f6e65] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f6e66]: 
+              - generic [ref=f6e67]: Seasonal Aid
+              - text: 
+          - listitem [ref=f6e68]:
+            - link " Incoming & Outgoing " [ref=f6e69] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f6e70]: 
+              - generic [ref=f6e71]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=f6e72]:
+            - link " Orphan Payments " [ref=f6e73] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f6e74]: 
+              - generic [ref=f6e75]: Orphan Payments
+              - text: 
+          - listitem [ref=f6e76]:
+            - link " Families " [ref=f6e77] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f6e78]: 
+              - generic [ref=f6e79]: Families
+              - text: 
+          - listitem [ref=f6e80]:
+            - link " Reports " [ref=f6e81] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f6e82]: 
+              - generic [ref=f6e83]: Reports
+              - text: 
+          - listitem [ref=f6e84]:
+            - link " General Cheques " [ref=f6e85] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f6e86]: 
+              - generic [ref=f6e87]: General Cheques
+              - text: 
+          - listitem [ref=f6e88]:
+            - link " Missions " [ref=f6e89] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f6e90]: 
+              - generic [ref=f6e91]: Missions
+              - text: 
+          - listitem [ref=f6e92]:
+            - link " Periodic Orphan Reports " [ref=f6e93] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f6e94]: 
+              - generic [ref=f6e95]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=f6e96]:
+            - link " Financial Transfers " [ref=f6e97] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f6e98]: 
+              - generic [ref=f6e99]: Financial Transfers
+              - text: 
+          - listitem [ref=f6e100]:
+            - link " Technical Support " [ref=f6e101] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f6e102]: 
+              - generic [ref=f6e103]: Technical Support
+              - text: 
+          - listitem [ref=f6e104]:
+            - link " Lookup Management " [ref=f6e105] [cursor=pointer]:
+              - /url: "#lookup-management"
+              - generic [ref=f6e106]: 
+              - generic [ref=f6e107]: Lookup Management
+              - text: 
+            - list [ref=f6e473]:
+              - listitem [ref=f6e474]:
+                - link "All Lookups" [ref=f6e475] [cursor=pointer]:
+                  - /url: "#/lookup-management"
+              - listitem [ref=f6e476]:
+                - link "Add Lookup" [ref=f6e477] [cursor=pointer]:
+                  - /url: "#/lookup-management/create"
+  - main [ref=f6e108]:
+    - generic [ref=f6e643]:
+      - generic [ref=f6e645]:
+        - generic [ref=f6e646]:
+          - heading "lookupManagement.regions.title" [level=3] [ref=f6e647]
+          - navigation "breadcrumb" [ref=f6e648]:
+            - list [ref=f6e649]:
+              - listitem [ref=f6e650]:
+                - link "Lookup Management" [ref=f6e651] [cursor=pointer]:
+                  - /url: "#/lookup-management"
+              - listitem [ref=f6e652]: / lookupManagement.regions.title
+        - button " Add Region" [ref=f6e654] [cursor=pointer]:
+          - generic [ref=f6e655]: 
+          - text: Add Region
+      - generic [ref=f6e658]:
+        - generic [ref=f6e661]:
+          - generic [ref=f6e663]:
+            - generic [ref=f6e664]: Search
+            - textbox "Search by name or code..." [ref=f6e665]
+          - generic [ref=f6e667]:
+            - generic [ref=f6e668]: Country
+            - combobox [ref=f6e669]:
+              - option "All"
+              - option "السعودية"
+              - option "كينيا"
+              - option "سيرلانكا"
+              - option "نيجيريا"
+              - option "تونس"
+              - option "المغرب"
+              - option "سوريا"
+              - option "لبنان"
+              - option "جيبوتي"
+              - option "الاردن"
+              - option "السنغال"
+              - option "السودان"
+              - option "ملاوي"
+              - option "باكستان"
+              - option "البوسنة والهرسك"
+              - option "الولايات المتحدة الأمريكية"
+              - option "اليمن"
+              - option "مصر"
+              - option "تشاد"
+              - option "موريتانيا"
+              - option "الصومال"
+              - option "بنجلاديش"
+              - option "فلسطين"
+              - option "تايلندا"
+              - option "اوغندا"
+          - generic [ref=f6e671]:
+            - generic [ref=f6e672]: Status
+            - combobox [ref=f6e673]:
+              - option "All"
+              - option "Active"
+              - option "Inactive"
+          - generic [ref=f6e677]:
+            - button " Search" [ref=f6e678] [cursor=pointer]:
+              - generic [ref=f6e679]: 
+              - text: Search
+            - button " Clear" [ref=f6e680] [cursor=pointer]:
+              - generic [ref=f6e681]: 
+              - text: Clear
+            - button " Export" [ref=f6e682] [cursor=pointer]:
+              - generic [ref=f6e683]: 
+              - text: Export
+        - generic [ref=f6e685]:
+          - table [ref=f6e687]:
+            - rowgroup [ref=f6e688]:
+              - row [ref=f6e689]:
+                - columnheader "Name" [ref=f6e690]
+                - columnheader "Region Code" [ref=f6e691]
+                - columnheader "Country" [ref=f6e692]
+                - columnheader "lookupManagement.fields.centerCount" [ref=f6e693]
+                - columnheader "Status" [ref=f6e694]
+                - columnheader "Actions" [ref=f6e695]
+            - rowgroup [ref=f6e696]:
+              - row [ref=f6e697]:
+                - cell "غير محدد غير محدد" [ref=f6e698]:
+                  - generic [ref=f6e699]:
+                    - generic [ref=f6e700]: غير محدد
+                    - text: غير محدد
+                - cell "NA" [ref=f6e701]
+                - cell "-" [ref=f6e702]
+                - cell "0" [ref=f6e704]
+                - cell "Active" [ref=f6e706]
+                - cell [ref=f6e708]:
+                  - generic [ref=f6e709]:
+                    - button "" [ref=f6e710] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e712]:
+                - cell "جنوب سيناء جنوب سيناء" [ref=f6e713]:
+                  - generic [ref=f6e714]:
+                    - generic [ref=f6e715]: جنوب سيناء
+                    - text: جنوب سيناء
+                - cell "SS" [ref=f6e716]
+                - cell "-" [ref=f6e717]
+                - cell "0" [ref=f6e719]
+                - cell "Active" [ref=f6e721]
+                - cell [ref=f6e723]:
+                  - generic [ref=f6e724]:
+                    - button "" [ref=f6e725] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e727]:
+                - cell "القليوبية القليوبية" [ref=f6e728]:
+                  - generic [ref=f6e729]:
+                    - generic [ref=f6e730]: القليوبية
+                    - text: القليوبية
+                - cell "QAL" [ref=f6e731]
+                - cell "-" [ref=f6e732]
+                - cell "0" [ref=f6e734]
+                - cell "Active" [ref=f6e736]
+                - cell [ref=f6e738]:
+                  - generic [ref=f6e739]:
+                    - button "" [ref=f6e740] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e742]:
+                - cell "سوهاج سوهاج" [ref=f6e743]:
+                  - generic [ref=f6e744]:
+                    - generic [ref=f6e745]: سوهاج
+                    - text: سوهاج
+                - cell "SU" [ref=f6e746]
+                - cell "-" [ref=f6e747]
+                - cell "0" [ref=f6e749]
+                - cell "Active" [ref=f6e751]
+                - cell [ref=f6e753]:
+                  - generic [ref=f6e754]:
+                    - button "" [ref=f6e755] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e757]:
+                - cell "مرسى مطروح مرسى مطروح" [ref=f6e758]:
+                  - generic [ref=f6e759]:
+                    - generic [ref=f6e760]: مرسى مطروح
+                    - text: مرسى مطروح
+                - cell "MAT" [ref=f6e761]
+                - cell "-" [ref=f6e762]
+                - cell "0" [ref=f6e764]
+                - cell "Active" [ref=f6e766]
+                - cell [ref=f6e768]:
+                  - generic [ref=f6e769]:
+                    - button "" [ref=f6e770] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e772]:
+                - cell "قنا قنا" [ref=f6e773]:
+                  - generic [ref=f6e774]:
+                    - generic [ref=f6e775]: قنا
+                    - text: قنا
+                - cell "QEN" [ref=f6e776]
+                - cell "-" [ref=f6e777]
+                - cell "0" [ref=f6e779]
+                - cell "Active" [ref=f6e781]
+                - cell [ref=f6e783]:
+                  - generic [ref=f6e784]:
+                    - button "" [ref=f6e785] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e787]:
+                - cell "الدقهلية الدقهلية" [ref=f6e788]:
+                  - generic [ref=f6e789]:
+                    - generic [ref=f6e790]: الدقهلية
+                    - text: الدقهلية
+                - cell "DAK" [ref=f6e791]
+                - cell "-" [ref=f6e792]
+                - cell "0" [ref=f6e794]
+                - cell "Active" [ref=f6e796]
+                - cell [ref=f6e798]:
+                  - generic [ref=f6e799]:
+                    - button "" [ref=f6e800] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e802]:
+                - cell "الإسماعيلية الإسماعيلية" [ref=f6e803]:
+                  - generic [ref=f6e804]:
+                    - generic [ref=f6e805]: الإسماعيلية
+                    - text: الإسماعيلية
+                - cell "ISM" [ref=f6e806]
+                - cell "-" [ref=f6e807]
+                - cell "0" [ref=f6e809]
+                - cell "Active" [ref=f6e811]
+                - cell [ref=f6e813]:
+                  - generic [ref=f6e814]:
+                    - button "" [ref=f6e815] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e817]:
+                - cell "كفر الشيخ كفر الشيخ" [ref=f6e818]:
+                  - generic [ref=f6e819]:
+                    - generic [ref=f6e820]: كفر الشيخ
+                    - text: كفر الشيخ
+                - cell "KSH" [ref=f6e821]
+                - cell "-" [ref=f6e822]
+                - cell "0" [ref=f6e824]
+                - cell "Active" [ref=f6e826]
+                - cell [ref=f6e828]:
+                  - generic [ref=f6e829]:
+                    - button "" [ref=f6e830] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e832]:
+                - cell "الفيوم الفيوم" [ref=f6e833]:
+                  - generic [ref=f6e834]:
+                    - generic [ref=f6e835]: الفيوم
+                    - text: الفيوم
+                - cell "FAY" [ref=f6e836]
+                - cell "-" [ref=f6e837]
+                - cell "0" [ref=f6e839]
+                - cell "Active" [ref=f6e841]
+                - cell [ref=f6e843]:
+                  - generic [ref=f6e844]:
+                    - button "" [ref=f6e845] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e847]:
+                - cell "المنيا المنيا" [ref=f6e848]:
+                  - generic [ref=f6e849]:
+                    - generic [ref=f6e850]: المنيا
+                    - text: المنيا
+                - cell "MEN" [ref=f6e851]
+                - cell "-" [ref=f6e852]
+                - cell "0" [ref=f6e854]
+                - cell "Active" [ref=f6e856]
+                - cell [ref=f6e858]:
+                  - generic [ref=f6e859]:
+                    - button "" [ref=f6e860] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e862]:
+                - cell "شمال سيناء شمال سيناء" [ref=f6e863]:
+                  - generic [ref=f6e864]:
+                    - generic [ref=f6e865]: شمال سيناء
+                    - text: شمال سيناء
+                - cell "NS" [ref=f6e866]
+                - cell "-" [ref=f6e867]
+                - cell "0" [ref=f6e869]
+                - cell "Active" [ref=f6e871]
+                - cell [ref=f6e873]:
+                  - generic [ref=f6e874]:
+                    - button "" [ref=f6e875] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e877]:
+                - cell "أسيوط أسيوط" [ref=f6e878]:
+                  - generic [ref=f6e879]:
+                    - generic [ref=f6e880]: أسيوط
+                    - text: أسيوط
+                - cell "ASI" [ref=f6e881]
+                - cell "-" [ref=f6e882]
+                - cell "0" [ref=f6e884]
+                - cell "Active" [ref=f6e886]
+                - cell [ref=f6e888]:
+                  - generic [ref=f6e889]:
+                    - button "" [ref=f6e890] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e892]:
+                - cell "الاسكندرية الاسكندرية" [ref=f6e893]:
+                  - generic [ref=f6e894]:
+                    - generic [ref=f6e895]: الاسكندرية
+                    - text: الاسكندرية
+                - cell "ALX" [ref=f6e896]
+                - cell "-" [ref=f6e897]
+                - cell "0" [ref=f6e899]
+                - cell "Active" [ref=f6e901]
+                - cell [ref=f6e903]:
+                  - generic [ref=f6e904]:
+                    - button "" [ref=f6e905] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e907]:
+                - cell "الأقصر الأقصر" [ref=f6e908]:
+                  - generic [ref=f6e909]:
+                    - generic [ref=f6e910]: الأقصر
+                    - text: الأقصر
+                - cell "LUX" [ref=f6e911]
+                - cell "-" [ref=f6e912]
+                - cell "0" [ref=f6e914]
+                - cell "Active" [ref=f6e916]
+                - cell [ref=f6e918]:
+                  - generic [ref=f6e919]:
+                    - button "" [ref=f6e920] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e922]:
+                - cell "أسوان أسوان" [ref=f6e923]:
+                  - generic [ref=f6e924]:
+                    - generic [ref=f6e925]: أسوان
+                    - text: أسوان
+                - cell "ASU" [ref=f6e926]
+                - cell "-" [ref=f6e927]
+                - cell "0" [ref=f6e929]
+                - cell "Active" [ref=f6e931]
+                - cell [ref=f6e933]:
+                  - generic [ref=f6e934]:
+                    - button "" [ref=f6e935] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e937]:
+                - cell "الوادي الجديد الوادي الجديد" [ref=f6e938]:
+                  - generic [ref=f6e939]:
+                    - generic [ref=f6e940]: الوادي الجديد
+                    - text: الوادي الجديد
+                - cell "NVA" [ref=f6e941]
+                - cell "-" [ref=f6e942]
+                - cell "0" [ref=f6e944]
+                - cell "Active" [ref=f6e946]
+                - cell [ref=f6e948]:
+                  - generic [ref=f6e949]:
+                    - button "" [ref=f6e950] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e952]:
+                - cell "الشرقية الشرقية" [ref=f6e953]:
+                  - generic [ref=f6e954]:
+                    - generic [ref=f6e955]: الشرقية
+                    - text: الشرقية
+                - cell "SHR" [ref=f6e956]
+                - cell "-" [ref=f6e957]
+                - cell "0" [ref=f6e959]
+                - cell "Active" [ref=f6e961]
+                - cell [ref=f6e963]:
+                  - generic [ref=f6e964]:
+                    - button "" [ref=f6e965] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e967]:
+                - cell "البحيرة البحيرة" [ref=f6e968]:
+                  - generic [ref=f6e969]:
+                    - generic [ref=f6e970]: البحيرة
+                    - text: البحيرة
+                - cell "BEH" [ref=f6e971]
+                - cell "-" [ref=f6e972]
+                - cell "0" [ref=f6e974]
+                - cell "Active" [ref=f6e976]
+                - cell [ref=f6e978]:
+                  - generic [ref=f6e979]:
+                    - button "" [ref=f6e980] [cursor=pointer]
+                    - text:    
+              - row [ref=f6e982]:
+                - cell "المنوفية المنوفية" [ref=f6e983]:
+                  - generic [ref=f6e984]:
+                    - generic [ref=f6e985]: المنوفية
+                    - text: المنوفية
+                - cell "MNF" [ref=f6e986]
+                - cell "-" [ref=f6e987]
+                - cell "0" [ref=f6e989]
+                - cell "Active" [ref=f6e991]
+                - cell [ref=f6e993]:
+                  - generic [ref=f6e994]:
+                    - button "" [ref=f6e995] [cursor=pointer]
+                    - text:    
+          - generic [ref=f6e997]:
+            - navigation [ref=f6e998]:
+              - list [ref=f6e999]:
+                - listitem [ref=f6e1000]:
+                  - link "":
+                    - /url: javascript:void(0)
+                - listitem [ref=f6e1001]:
+                  - link "":
+                    - /url: javascript:void(0)
+                - listitem [ref=f6e1002]:
+                  - link "1" [ref=f6e1003] [cursor=pointer]:
+                    - /url: javascript:void(0)
+                - listitem [ref=f6e1004]:
+                  - link "2" [ref=f6e1005] [cursor=pointer]:
+                    - /url: javascript:void(0)
+                - listitem [ref=f6e1006]:
+                  - link "" [ref=f6e1007] [cursor=pointer]:
+                    - /url: javascript:void(0)
+                - listitem [ref=f6e1009]:
+                  - link "" [ref=f6e1010] [cursor=pointer]:
+                    - /url: javascript:void(0)
+            - generic [ref=f6e1012]: Showing 1 to 20 of 28
+      - text:  
+  - contentinfo [ref=f6e466]:
+    - generic [ref=f6e468]:
+      - paragraph [ref=f6e470]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f6e472]: Version 1.0.0

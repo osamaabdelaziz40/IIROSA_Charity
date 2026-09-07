@@ -1,0 +1,44 @@
+[
+  {
+    "location": "Frontend/src/app/core/services/auth.service.ts:216-220",
+    "trigger_condition": "API returns 200 without token; else-branch clears data but observable completes",
+    "guard_snippet": "else { this.clearAuthData(); throw new Error('Login rejected: no token'); }",
+    "potential_consequence": "Login component navigates to /dashboard unauthenticated; silent failure loop"
+  },
+  {
+    "location": "Frontend/src/app/layouts/main-layout/main-layout.component.html:210",
+    "trigger_condition": "Charity-role user opens Office Development Projects menu",
+    "guard_snippet": "*ngIf=\"hasAnyRole(['Admin', 'SuperAdmin'])\"",
+    "potential_consequence": "Dead menu entry; PermissionGuard and controller [Authorize(Admin,SuperAdmin)] deny every click"
+  },
+  {
+    "location": "Frontend/src/app/layouts/main-layout/main-layout.component.html:483",
+    "trigger_condition": "Charity-role user opens Missions menu",
+    "guard_snippet": "*ngIf=\"hasAnyRole(['Admin', 'SuperAdmin'])\" // matches Missions.View map",
+    "potential_consequence": "Menu visible but Missions.View guard and server authorize reject Charity"
+  },
+  {
+    "location": "Frontend/src/app/layouts/main-layout/main-layout.component.html:333",
+    "trigger_condition": "Charity user opens Orphan Payments; list loads without orphanId",
+    "guard_snippet": "*ngIf=\"hasAnyRole(['SuperAdmin','Admin','Accountant','FinancialOfficer'])\" on list child",
+    "potential_consequence": "First screen load hits unconditional Charity 403 on GET /api/OrphanPayments"
+  },
+  {
+    "location": "Frontend/src/app/modules/lookup-management/services/lookup-management.service.ts:377-379",
+    "trigger_condition": "getHousingFlats called with null/undefined/NaN buildingId",
+    "guard_snippet": "if (buildingId == null || Number.isNaN(buildingId)) return throwError(() => new Error('buildingId required'));",
+    "potential_consequence": "buildingId.toString() throws synchronously, bypassing catchError; housing form breaks"
+  },
+  {
+    "location": "Frontend/src/assets/i18n/ar.json:675-677",
+    "trigger_condition": "Arabic user-form or role-assignment-dialog renders empty-roles state",
+    "guard_snippet": "retain \"noRolesAvailable\": \"لا توجد أدوار متاحة\" (en.json keeps it)",
+    "potential_consequence": "Raw key 'userManagement.noRolesAvailable' shown; Arabic-only gap"
+  },
+  {
+    "location": "Frontend/src/assets/i18n/ar.json:818",
+    "trigger_condition": "Missions form, detail, register pages or routing pageTitle render",
+    "guard_snippet": "retain \"missionDetails\" key in ar.json and en.json",
+    "potential_consequence": "Raw key 'missions.missionDetails' shown in three templates and route title, both languages"
+  }
+]

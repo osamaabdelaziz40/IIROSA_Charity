@@ -39,7 +39,6 @@ public class SeasonalAidCampaign : FullAuditedEntity
 
     // Status
     public bool IsActive { get; set; } = true;
-    public bool IsDeleted { get; set; } = true;
     public bool IsClosed { get; set; } = false;
     public DateTime? ClosedDate { get; set; }
     public string? ClosureNotes { get; set; }

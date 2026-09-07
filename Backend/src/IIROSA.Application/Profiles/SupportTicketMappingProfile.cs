@@ -40,6 +40,8 @@ public class SupportTicketMappingProfile : Profile
             .ForMember(dest => dest.CreatedByUserName, opt => opt.MapFrom(src => src.CreatedByUserId))
             .ForMember(dest => dest.CreatedByEmail, opt => opt.MapFrom(src => src.CreatedByUserId))
             .ForMember(dest => dest.AssignedToName, opt => opt.MapFrom(src => src.AssignedTo))
+            .ForMember(dest => dest.PriorityColor, opt => opt.MapFrom(src => src.Priority.ColorCode))
+            .ForMember(dest => dest.StatusColor, opt => opt.MapFrom(src => src.Status.ColorCode))
             .ForMember(dest => dest.Responses, opt => opt.MapFrom(src => src.Responses))
             .ForMember(dest => dest.PublicResponses, opt => opt.Ignore())
             .ForMember(dest => dest.InternalNotes, opt => opt.Ignore());

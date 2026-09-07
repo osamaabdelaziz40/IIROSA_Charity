@@ -1,0 +1,106 @@
+<app-report-viewer titleKey="reports.orphansMissingReports.title"
+                   subtitleKey="reports.orphansMissingReports.subtitle"
+                   [loading]="loading"
+                   [exporting]="exporting"
+                   [hasRun]="hasRun"
+                   [currentPage]="currentPage"
+                   [pageSize]="pageSize"
+                   [totalCount]="totalCount"
+                   (search)="search()"
+                   (export)="exportData()"
+                   (pageChange)="onPageChange($event)">
+
+  <!-- ==================== §23.S.14 filter panel (1 field) ==================== -->
+  <div report-filters>
+    <form [formGroup]="filterForm" (ngSubmit)="search()" class="row g-3 align-items-end">
+      <div class="col-lg-3 col-md-4" *ngIf="isHQ">
+        <app-drop-down [fg]="filterForm" fcn="charityId"
+                       [label]="'reports.orphansMissingReports.filterCharity'"
+                       [placeholder]="'reports.orphansMissingReports.filterCharity'"
+                       [initialData]="charityOptions">
+        </app-drop-down>
+      </div>
+    </form>
+  </div>
+
+  <!-- ==================== bespoke summary grid — الجمعيه · العدد ==================== -->
+  <div report-grid class="table-responsive">
+    <table class="table table-hover table-striped align-middle text-nowrap"
+           *ngIf="rows.length > 0">
+      <thead>
+        <tr>
+          <th>{{ 'reports.orphansMissingReports.colSerial' | translate }}</th>
+          <th>{{ 'reports.orphansMissingReports.colCharity' | translate }}</th>
+          <th>{{ 'reports.orphansMissingReports.colMissingCount' | translate }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow">
+          <td>{{ serial(i) }}</td>
+          <td>{{ row.charityName || '—' }}</td>
+          <td class="fw-bold">{{ row.missingCount }}</td>
+          <td>
+            <!-- ExtractDetails — a null-key group (بدون جمعية) has no charity to drill -->
+            <button class="btn btn-sm btn-outline-primary"
+                    (click)="drillDown(row)"
+                    [disabled]="!row.charityId || detailLoading">
+              <i class="fas fa-search ms-1"></i>
+              {{ 'reports.orphansMissingReports.drillDown' | translate }}
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ==================== ExtractDetails drill-down — one charity's chase list ==================== -->
+  <div report-grid *ngIf="selectedCharityId">
+    <div class="card mt-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>
+          <i class="fas fa-list-ul ms-1"></i>
+          {{ 'reports.orphansMissingReports.detailTitle' | translate }} — {{ selectedCharityName || '—' }}
+          <span class="spinner-border spinner-border-sm ms-2" *ngIf="detailLoading"></span>
+        </span>
+        <button type="button" class="btn-close" (click)="closeDetail()"
+                [attr.aria-label]="'reports.orphansMissingReports.closeDetail' | translate"></button>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover table-striped align-middle text-nowrap"
+                 *ngIf="detailRows.length > 0">
+            <thead>
+              <tr>
+                <th>{{ 'reports.orphansMissingReports.colSerial' | translate }}</th>
+                <th>{{ 'reports.orphansMissingReports.colOrphanCode' | translate }}</th>
+                <th>{{ 'reports.orphansMissingReports.colOrphanName' | translate }}</th>
+                <th>{{ 'reports.orphansMissingReports.colLastReportDate' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of detailRows; let i = index; trackBy: trackByDetailRow">
+                <td>{{ detailSerial(i) }}</td>
+                <td>{{ row.orphanCode }}</td>
+                <td>{{ row.orphanName }}</td>
+                <td>{{ row.lastReportDate ? (row.lastReportDate | date:'yyyy-MM-dd') : '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="text-center text-muted py-3"
+             *ngIf="!detailLoading && detailRows.length === 0">
+          {{ 'reports.emptyState' | translate }}
+        </div>
+
+        <app-pagination *ngIf="detailTotalCount > detailPageSize"
+                        [currentPage]="detailCurrentPage"
+                        [pageSize]="detailPageSize"
+                        [totalCount]="detailTotalCount"
+                        (pageChange)="onDetailPageChange($event)">
+        </app-pagination>
+      </div>
+    </div>
+  </div>
+</app-report-viewer>

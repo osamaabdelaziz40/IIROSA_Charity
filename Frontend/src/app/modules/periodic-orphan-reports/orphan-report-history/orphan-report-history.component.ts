@@ -20,16 +20,20 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 
-import { OrphanReportService } from '../../services/orphan-report.service';
-import { OrphanReportHistoryDto } from '../../models/periodic-orphan-report.model';
+import { OrphanReportService } from '../services/orphan-report.service';
+import { OrphanReportHistoryDto } from '../models/periodic-orphan-report.model';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 
+import { BreadcrumbComponent } from '../../../shared/components/breadcrumb/breadcrumb.component';
 @Component({
   selector: 'app-orphan-report-history',
   standalone: true,
   imports: [
+    BreadcrumbComponent,
+    EmptyStateComponent,
+
     CommonModule,
     FormsModule,
     TranslateModule,

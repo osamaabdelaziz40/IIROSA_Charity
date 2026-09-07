@@ -18,6 +18,15 @@ public interface ISeasonalAidBeneficiaryRepository : IRepository<SeasonalAidBene
     Task<(IEnumerable<SeasonalAidBeneficiary> Items, int TotalCount)> GetByCampaignFilteredAsync(
         Guid campaignId, bool? isDistributed = null, Guid? charityId = null,
         int? regionId = null, int? centerId = null);
+
+    // Paged variant with the full filter surface (search, dates, sorting) — primitives only,
+    // same rationale as ISeasonalAidCampaignRepository.GetFilteredPaginatedAsync.
+    Task<(IEnumerable<SeasonalAidBeneficiary> Items, int TotalCount)> GetByCampaignFilteredPaginatedAsync(
+        Guid campaignId, string? searchTerm = null, bool? isDistributed = null,
+        Guid? charityId = null, int? regionId = null, int? centerId = null,
+        DateTime? registrationDateFrom = null, DateTime? registrationDateTo = null,
+        DateTime? distributionDateFrom = null, DateTime? distributionDateTo = null,
+        int pageNumber = 1, int pageSize = 10, string? sortBy = null, bool sortDescending = false);
     Task<IEnumerable<SeasonalAidBeneficiary>> GetByCampaignWithDistributionsAsync(Guid campaignId);
     Task<IEnumerable<SeasonalAidBeneficiary>> GetDistributedBeneficiariesAsync(Guid campaignId);
     Task<IEnumerable<SeasonalAidBeneficiary>> GetPendingBeneficiariesAsync(Guid campaignId);

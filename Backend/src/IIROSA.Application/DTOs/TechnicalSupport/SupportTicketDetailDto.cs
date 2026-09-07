@@ -19,6 +19,10 @@ public class SupportTicketDetailDto
     public int StatusId { get; set; }
     public string StatusName { get; set; } = string.Empty;
 
+    // Badge colours (mirrors SupportTicketListDto)
+    public string? PriorityColor { get; set; }
+    public string? StatusColor { get; set; }
+
     // Resolution
     public bool IsSolved { get; set; }
     public string? ResolutionDescription { get; set; }

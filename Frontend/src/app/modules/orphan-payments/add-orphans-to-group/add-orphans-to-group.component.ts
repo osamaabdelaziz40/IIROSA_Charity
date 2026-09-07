@@ -13,11 +13,15 @@ import {
   GENDER_OPTIONS
 } from '../models/orphan-payment.model';
 import { OrphanPaymentService } from '../services/orphan-payment.service';
+import { CharityService } from '../../charities/services/charity.service';
+import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { PaginationComponent } from '../../../shared/components';
 
 @Component({
   selector: 'app-add-orphans-to-group',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, RouterModule],
+  imports: [CommonModule, FormsModule, TranslateModule, RouterModule, PaginationComponent],
   templateUrl: './add-orphans-to-group.component.html',
   styleUrls: ['./add-orphans-to-group.component.scss']
 })
@@ -28,6 +32,7 @@ export class AddOrphansToGroupComponent implements OnInit, OnDestroy {
   paymentGroupId: string | null = null;
   paymentGroup: OrphanPaymentDto | null = null;
   availableOrphans: OrphanForSelectionDto[] = [];
+  totalAvailable = 0;
   selectedOrphans = new Set<string>();
   loading = false;
   loadingOrphans = false;
@@ -48,17 +53,25 @@ export class AddOrphansToGroupComponent implements OnInit, OnDestroy {
   // Options
   sponsorshipStatusOptions = SPONSORSHIP_STATUS_OPTIONS;
   genderOptions = GENDER_OPTIONS;
-  availableCharities: { id: number; name: string }[] = [];
+  availableCharities: { id: string; name: string }[] = [];
   availableRegions: { id: number; name: string }[] = [];
   availableCenters: { id: number; name: string }[] = [];
 
   // UI State
   selectAll = false;
 
+  // Review P18: server-side paging of the available-orphans read — the previous hidden
+  // 200-row cap silently made orphans 201+ unenrollable.
+  availablePage = 1;
+  availablePageSize = 10;
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
     private orphanPaymentService: OrphanPaymentService,
+    private charityService: CharityService,
+    private lookupService: LookupManagementService,
+    private notificationService: NotificationService,
     private translate: TranslateService
   ) {}
 
@@ -84,21 +97,13 @@ export class AddOrphansToGroupComponent implements OnInit, OnDestroy {
     if (!this.paymentGroupId) return;
 
     this.loading = true;
-    this.orphanPaymentService.getOrphanPayment(this.paymentGroupId).subscribe({
+    this.orphanPaymentService.getOrphanPayment(this.paymentGroupId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
       next: (data) => {
         this.paymentGroup = data;
-
-        // Pre-fill filters from group settings
-        if (data.charityId) {
-          this.filter.charityId = data.charityId;
-        }
-        if (data.regionId) {
-          this.filter.regionId = data.regionId;
-        }
-        if (data.centerId) {
-          this.filter.centerId = data.centerId;
-        }
-
+        // 10-2 trim: no group-level filter pre-fill — the server never persisted the
+        // create form's charity/region/center pre-selection, so it could never echo back.
         this.loading = false;
       },
       error: () => {
@@ -112,48 +117,80 @@ export class AddOrphansToGroupComponent implements OnInit, OnDestroy {
     if (!this.paymentGroupId) return;
 
     this.loadingOrphans = true;
-    this.orphanPaymentService.getAvailableOrphans(this.paymentGroupId, this.filter).subscribe({
-      next: (data) => {
-        this.availableOrphans = data;
-        this.loadingOrphans = false;
-      },
-      error: () => {
-        this.loadingOrphans = false;
-      }
-    });
+    this.orphanPaymentService.getAvailableOrphans(this.paymentGroupId, {
+      ...this.filter,
+      pageNumber: this.availablePage,
+      pageSize: this.availablePageSize
+    })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.availableOrphans = data.items || [];
+          this.totalAvailable = data.totalCount || 0;
+          this.loadingOrphans = false;
+        },
+        error: () => {
+          this.loadingOrphans = false;
+        }
+      });
   }
 
+  /**
+   * Filter dropdowns load from the live verticals — charities from /api/Charities (the
+   * families-screen idiom), regions/centers from /api/LookupManagement — never from the
+   * removed /api/OrphanPayments/filter-options routes (they never existed server-side).
+   */
   private loadFilterOptions(): void {
-    this.orphanPaymentService.getAvailableCharities().subscribe(data => {
-      this.availableCharities = data;
-    });
+    this.charityService.getCharities({ pageNumber: 1, pageSize: 500 })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: response => {
+          this.availableCharities = (response.items || []).map(c => ({ id: c.id, name: c.name }));
+        }
+      });
 
-    this.orphanPaymentService.getAvailableRegions().subscribe(data => {
-      this.availableRegions = data;
-    });
+    this.lookupService.getRegions()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: result => {
+          this.availableRegions = (result.items || []).map(r => ({ id: r.id, name: r.nameAr || r.name }));
+        }
+      });
 
-    this.orphanPaymentService.getAvailableCenters().subscribe(data => {
-      this.availableCenters = data;
-    });
+    this.lookupService.getCenters()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: result => {
+          this.availableCenters = (result.items || []).map(c => ({ id: c.id, name: c.nameAr || c.name }));
+        }
+      });
   }
 
   // ==================== FILTERS ====================
 
   onSearch(): void {
+    this.availablePage = 1;
     this.loadAvailableOrphans();
   }
 
   onResetFilters(): void {
     this.filter = {
       searchTerm: '',
-      charityId: this.paymentGroup?.charityId,
-      regionId: this.paymentGroup?.regionId,
-      centerId: this.paymentGroup?.centerId,
+      charityId: undefined,
+      regionId: undefined,
+      centerId: undefined,
       sponsorshipStatus: 'All',
       ageFrom: undefined,
       ageTo: undefined,
       gender: 'All'
     };
+    this.availablePage = 1;
+    this.loadAvailableOrphans();
+  }
+
+  /** Review P18: the shared pager drives the server-side available-orphans read. */
+  onAvailablePageChange(page: number): void {
+    this.availablePage = page;
     this.loadAvailableOrphans();
   }
 
@@ -162,8 +199,8 @@ export class AddOrphansToGroupComponent implements OnInit, OnDestroy {
   onToggleSelectAll(): void {
     if (this.selectAll) {
       this.availableOrphans.forEach(orphan => {
-        if (!orphan.isAlreadyInGroup) {
-          this.selectedOrphans.add(orphan.orphanId);
+        if (!orphan.isInGroup) {
+          this.selectedOrphans.add(orphan.id);
         }
       });
     } else {
@@ -183,7 +220,7 @@ export class AddOrphansToGroupComponent implements OnInit, OnDestroy {
   }
 
   private updateSelectAllState(): void {
-    const availableCount = this.availableOrphans.filter(o => !o.isAlreadyInGroup).length;
+    const availableCount = this.availableOrphans.filter(o => !o.isInGroup).length;
     this.selectAll = this.selectedOrphans.size === availableCount && availableCount > 0;
   }
 
@@ -195,7 +232,8 @@ export class AddOrphansToGroupComponent implements OnInit, OnDestroy {
 
   onAddSelectedOrphans(): void {
     if (this.selectedOrphans.size === 0) {
-      alert(this.translate.instant('orphanPayments.selectAtLeastOneOrphan'));
+      // Review P22: module standard is NotificationService, not window.alert
+      this.notificationService.warning(this.translate.instant('orphanPayments.selectAtLeastOneOrphan'));
       return;
     }
 
@@ -205,17 +243,26 @@ export class AddOrphansToGroupComponent implements OnInit, OnDestroy {
     this.orphanPaymentService.addOrphansToGroup(
       this.paymentGroupId,
       { orphanIds: Array.from(this.selectedOrphans) }
-    ).subscribe({
-      next: () => {
-        this.adding = false;
-        this.selectedOrphans.clear();
-        this.selectAll = false;
-        this.loadAvailableOrphans();
-      },
-      error: () => {
-        this.adding = false;
-      }
-    });
+    )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.adding = false;
+          this.selectedOrphans.clear();
+          this.selectAll = false;
+          this.availablePage = 1;
+          this.loadAvailableOrphans();
+          // UC-5.3 alternative flow: already-in-group orphans are reported as skipped
+          // (review P22: NotificationService, not window.alert)
+          this.notificationService.success(this.translate.instant('orphanPayments.orphansAddedResult', {
+            added: result.addedCount,
+            skipped: result.skippedCount
+          }));
+        },
+        error: () => {
+          this.adding = false;
+        }
+      });
   }
 
   onCancel(): void {
@@ -233,30 +280,34 @@ export class AddOrphansToGroupComponent implements OnInit, OnDestroy {
   }
 
   getAvailableCount(): number {
-    return this.availableOrphans.filter(o => !o.isAlreadyInGroup).length;
+    return this.availableOrphans.filter(o => !o.isInGroup).length;
   }
 
   getAlreadyInGroupCount(): number {
-    return this.availableOrphans.filter(o => o.isAlreadyInGroup).length;
+    return this.availableOrphans.filter(o => o.isInGroup).length;
   }
 
   isOrphanDisabled(orphan: OrphanForSelectionDto): boolean {
-    return orphan.isAlreadyInGroup;
+    return orphan.isInGroup;
   }
 
   getDisabledReason(orphan: OrphanForSelectionDto): string {
-    if (orphan.isAlreadyInGroup) {
+    if (orphan.isInGroup) {
       return this.translate.instant('orphanPayments.alreadyInGroup');
     }
     return '';
   }
 
   trackOrphan(index: number, orphan: OrphanForSelectionDto): string {
-    return orphan.orphanId;
+    return orphan.id;
+  }
+
+  trackById(index: number, item: { id: string | number }): string | number {
+    return item.id;
   }
 
   // Get charity/region/center names
-  getCharityName(id: number): string {
+  getCharityName(id: string): string {
     const charity = this.availableCharities.find(c => c.id === id);
     return charity ? charity.name : '-';
   }

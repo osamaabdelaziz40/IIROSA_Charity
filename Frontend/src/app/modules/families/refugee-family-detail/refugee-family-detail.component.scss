@@ -1,0 +1,5 @@
+/* UC-REF-04 read-only §12.S.2 render — description grids lean on Bootstrap's dl.row;
+   only the field label emphasis is local. */
+.detail-grid dt {
+  font-weight: 600;
+}

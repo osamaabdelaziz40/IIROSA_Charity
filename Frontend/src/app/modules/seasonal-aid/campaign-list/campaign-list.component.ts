@@ -1,16 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { SeasonalAidService } from '../services/seasonal-aid.service';
 import {
-  SeasonalCampaign,
-  CampaignType,
-  CampaignFilter,
-  DistributionStatus
+  SeasonalAidCampaignListItem,
+  SeasonalAidCampaignFilter
 } from '../models/seasonal-aid.model';
 import { PaginationComponent, BreadcrumbComponent, BreadcrumbItem, PageHeaderComponent } from '../../../shared/components';
 import { SharedModule } from '../../../shared/shared.module';
@@ -22,7 +20,6 @@ import { DropDownComponent } from '../../../shared/components/drop-down/drop-dow
   imports: [
     CommonModule,
     RouterModule,
-    FormsModule,
     ReactiveFormsModule,
     TranslateModule,
     PaginationComponent,
@@ -34,7 +31,7 @@ import { DropDownComponent } from '../../../shared/components/drop-down/drop-dow
   templateUrl: './campaign-list.component.html',
   styleUrls: ['./campaign-list.component.scss']
 })
-export class CampaignListComponent implements OnInit {
+export class CampaignListComponent implements OnInit, OnDestroy {
   // Breadcrumb items
   breadcrumbs: BreadcrumbItem[] = [
     { label: 'common.home', url: '/dashboard' },
@@ -56,50 +53,35 @@ export class CampaignListComponent implements OnInit {
       click: () => this.exportToExcel()
     }
   ];
-  campaigns: SeasonalCampaign[] = [];
-  filteredCampaigns: SeasonalCampaign[] = [];
-  loading: boolean = false;
 
-  // Filter form with shared components
+  campaigns: SeasonalAidCampaignListItem[] = [];
+  loading = false;
+  totalCount = 0;
+  exporting = false;
+
   filterForm: FormGroup;
 
-  currentPage: number = 1;
-  pageSize: number = 10;
+  currentPage = 1;
+  pageSize = 10;
 
-  campaignTypes = Object.values(CampaignType);
-  distributionStatuses = Object.values(DistributionStatus);
-  Math = Math;
+  // Dropdown option lists must stay stable between rebuilds: app-drop-down
+  // destroys and re-initialises Select2 whenever the [initialData] reference
+  // changes, so a getter returning a fresh array on every change-detection
+  // pass creates an endless re-init loop that freezes the page. The labels are
+  // pre-translated (app-drop-down renders raw text, not keys), so the arrays
+  // are rebuilt only on actual language switches.
+  campaignTypeOptions: Array<{ id: string; name: string }> = [];
+  statusOptions: Array<{ id: string; name: string }> = [];
 
-  // Dropdown options
-  get campaignTypeOptions() {
-    return [
-      { id: '', name: 'common.all' },
-      ...this.campaignTypes.map(type => ({
-        id: type,
-        name: this.getCampaignTypeLabel(type)
-      }))
-    ];
-  }
-
-  get statusOptions() {
-    return [
-      { id: 'all', name: 'common.all' },
-      { id: 'active', name: 'seasonalAid.active' },
-      { id: 'closed', name: 'seasonalAid.closed' }
-    ];
-  }
-
-  getCampaignTypeLabel(type: CampaignType): string {
-    const key = `seasonalAid.campaignTypes.${type}`;
-    return key; // Will be translated in the template
-  }
+  /** Rebuilds translated option labels on language switch; torn down in ngOnDestroy. */
+  private langChangeSubscription?: Subscription;
 
   constructor(
     private fb: FormBuilder,
     private seasonalAidService: SeasonalAidService,
+    private translate: TranslateService,
     private router: Router
   ) {
-    // Initialize filter form
     this.filterForm = this.fb.group({
       searchValue: [''],
       campaignType: [''],
@@ -108,56 +90,101 @@ export class CampaignListComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.initializeCampaignTypeOptions();
+    this.initializeStatusOptions();
+
+    // The option labels are pre-translated (app-drop-down renders raw text), so a
+    // language switch needs a rebuild — the translate pipe can't refresh them.
+    this.langChangeSubscription = this.translate.onLangChange.subscribe(() => {
+      this.initializeCampaignTypeOptions();
+      this.initializeStatusOptions();
+    });
+
+    // The search box has no (input) handler in the template — drive reloads from
+    // the form control instead, debounced so each burst of keystrokes is one call.
+    this.filterForm.controls['searchValue'].valueChanges
+      .pipe(debounceTime(400), distinctUntilChanged())
+      .subscribe(() => this.onSearchChange());
+
     this.loadCampaigns();
+  }
+
+  ngOnDestroy(): void {
+    this.langChangeSubscription?.unsubscribe();
+  }
+
+  /** Campaign type options carry string ids — the '' sentinel means "no filter". */
+  private initializeCampaignTypeOptions(): void {
+    this.campaignTypeOptions = [
+      { id: '', name: this.translate.instant('common.all') },
+      { id: 'Ramadan', name: this.translate.instant('seasonalAid.campaignTypes.Ramadan') },
+      { id: 'EidAlFitr', name: this.translate.instant('seasonalAid.campaignTypes.EidAlFitr') },
+      { id: 'EidAlAdha', name: this.translate.instant('seasonalAid.campaignTypes.EidAlAdha') },
+      { id: 'Winter', name: this.translate.instant('seasonalAid.campaignTypes.Winter') },
+      { id: 'SchoolSupplies', name: this.translate.instant('seasonalAid.campaignTypes.SchoolSupplies') },
+      { id: 'Other', name: this.translate.instant('seasonalAid.campaignTypes.Other') }
+    ];
+  }
+
+  /** Status options carry string ids — the 'all' sentinel means "no filter". */
+  private initializeStatusOptions(): void {
+    this.statusOptions = [
+      { id: 'all', name: this.translate.instant('common.all') },
+      { id: 'active', name: this.translate.instant('seasonalAid.active') },
+      { id: 'inactive', name: this.translate.instant('seasonalAid.inactive') },
+      { id: 'closed', name: this.translate.instant('seasonalAid.closed') }
+    ];
   }
 
   loadCampaigns(): void {
     this.loading = true;
-    const formValues = this.filterForm.value;
 
-    // Build filter from form values
-    const filter: CampaignFilter = {};
-
-    if (formValues.status && formValues.status !== 'all') {
-      filter.status = formValues.status;
-    }
-    if (formValues.campaignType) {
-      filter.campaignType = formValues.campaignType;
-    }
-
-    this.seasonalAidService.getCampaigns(filter).subscribe({
-      next: (data) => {
-        this.campaigns = data || [];
-        this.applyFilters();
+    this.seasonalAidService.getCampaigns(this.buildFilter()).subscribe({
+      next: result => {
+        this.campaigns = result.items || [];
+        this.totalCount = result.totalCount || 0;
         this.loading = false;
       },
       error: () => {
         this.campaigns = [];
-        this.filteredCampaigns = [];
+        this.totalCount = 0;
         this.loading = false;
       }
     });
   }
 
-  applyFilters(): void {
-    let result = [...this.campaigns];
+  /** Server-side filtering — search/type run server-side on every keystroke change. */
+  private buildFilter(): SeasonalAidCampaignFilter {
     const formValues = this.filterForm.value;
+    const filter: SeasonalAidCampaignFilter = {
+      pageNumber: this.currentPage,
+      pageSize: this.pageSize,
+      sortDescending: false
+    };
 
     if (formValues.searchValue) {
-      const term = formValues.searchValue.toLowerCase();
-      result = result.filter(c =>
-        c.campaignName.toLowerCase().includes(term) ||
-        (c.description && c.description.toLowerCase().includes(term)) ||
-        (c.assignedCharityName && c.assignedCharityName.toLowerCase().includes(term))
-      );
+      filter.searchTerm = formValues.searchValue;
+    }
+    if (formValues.campaignType) {
+      filter.campaignType = formValues.campaignType;
+    }
+    if (formValues.status && formValues.status !== 'all') {
+      if (formValues.status === 'active') {
+        filter.isActive = true;
+        filter.isClosed = false;
+      } else if (formValues.status === 'inactive') {
+        filter.isActive = false;
+      } else if (formValues.status === 'closed') {
+        filter.isClosed = true;
+      }
     }
 
-    this.filteredCampaigns = result;
+    return filter;
   }
 
   onSearchChange(): void {
     this.currentPage = 1;
-    this.applyFilters();
+    this.loadCampaigns();
   }
 
   onFilterChange(): void {
@@ -166,105 +193,109 @@ export class CampaignListComponent implements OnInit {
   }
 
   clearFilters(): void {
-    this.filterForm.reset({
-      searchValue: '',
-      campaignType: '',
-      status: 'all'
-    });
+    // emitEvent: false — the explicit reload below covers it; letting the reset
+    // emit would re-trigger the debounced searchValue subscription too.
+    this.filterForm.reset({ searchValue: '', campaignType: '', status: 'all' }, { emitEvent: false });
     this.onFilterChange();
   }
 
-  // Check if any filters are active
   hasActiveFilters(): boolean {
     const formValues = this.filterForm.value;
-    return !!(
-      formValues.searchValue ||
-      formValues.campaignType ||
-      formValues.status !== 'all'
-    );
+    return !!(formValues.searchValue || formValues.campaignType || formValues.status !== 'all');
   }
 
   createCampaign(): void {
     this.router.navigate(['/seasonal-aid', 'create']);
   }
 
-  getStatusBadgeClass(campaign: SeasonalCampaign): string {
+  trackByCampaign(index: number, campaign: SeasonalAidCampaignListItem): string {
+    return campaign.id;
+  }
+
+  getStatusBadgeClass(campaign: SeasonalAidCampaignListItem): string {
     if (campaign.isClosed) return 'badge-secondary';
     if (campaign.isActive) return 'badge-success';
     return 'badge-warning';
   }
 
-  getStatusText(campaign: SeasonalCampaign): string {
-    if (campaign.isClosed) return 'Closed';
-    if (campaign.isActive) return 'Active';
-    return 'Inactive';
+  getStatusText(campaign: SeasonalAidCampaignListItem): string {
+    if (campaign.isClosed) return 'seasonalAid.closed';
+    if (campaign.isActive) return 'seasonalAid.active';
+    return 'seasonalAid.inactive';
   }
 
-  getCampaignTypeClass(type: CampaignType): string {
-    const classes: { [key in CampaignType]: string } = {
-      [CampaignType.Ramadan]: 'badge-primary',
-      [CampaignType.EidAlFitr]: 'badge-info',
-      [CampaignType.EidAlAdha]: 'badge-info',
-      [CampaignType.Winter]: 'badge-info',
-      [CampaignType.SchoolSupplies]: 'badge-warning',
-      [CampaignType.Other]: 'badge-light'
+  getCampaignTypeClass(type: string): string {
+    const classes: Record<string, string> = {
+      Ramadan: 'badge-primary',
+      EidAlFitr: 'badge-info',
+      EidAlAdha: 'badge-info',
+      Winter: 'badge-info',
+      SchoolSupplies: 'badge-warning',
+      Other: 'badge-light'
     };
     return classes[type] || 'badge-light';
   }
 
-  getBudgetUtilizationClass(campaign: SeasonalCampaign): string {
-    const stats = this.calculateBudgetUtilization(campaign);
-    if (stats >= 90) return 'text-danger';
-    if (stats >= 70) return 'text-warning';
+  getBudgetUtilization(campaign: SeasonalAidCampaignListItem): number {
+    if (!campaign.totalBudget) return 0;
+    return (campaign.distributedBudget / campaign.totalBudget) * 100;
+  }
+
+  getBudgetUtilizationClass(campaign: SeasonalAidCampaignListItem): string {
+    const utilization = this.getBudgetUtilization(campaign);
+    if (utilization >= 90) return 'text-danger';
+    if (utilization >= 70) return 'text-warning';
     return 'text-success';
   }
 
-  calculateBudgetUtilization(campaign: SeasonalCampaign): number {
-    if (!campaign.totalBudget || campaign.totalBudget === 0) return 0;
-    return (campaign.perFamilyAllocation / campaign.totalBudget) * 100;
-  }
-
+  /**
+   * ExcelJS client-side export of the current page — there is no server-side campaigns
+   * export endpoint, and the backend report exports are NotImplemented.
+   */
   exportToExcel(): void {
-    const formValues = this.filterForm.value;
+    if (this.exporting) return;
+    this.exporting = true;
 
-    // Build filter from form values
-    const filter: CampaignFilter = {};
+    import('exceljs').then(({ default: ExcelJS }) => {
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('Campaigns');
+      sheet.addRow(['#', 'Name', 'Type', 'Start', 'End', 'Budget', 'Currency',
+        'Allocated', 'Distributed', 'Registered', 'Distributed Beneficiaries',
+        'Charity', 'Status']);
+      this.campaigns.forEach((c, i) => sheet.addRow([
+        i + 1, c.name, c.campaignType,
+        new Date(c.startDate).toLocaleDateString(),
+        new Date(c.endDate).toLocaleDateString(),
+        c.totalBudget, c.budgetCurrency, c.allocatedBudget, c.distributedBudget,
+        c.registeredBeneficiariesCount, c.distributedBeneficiariesCount,
+        c.charityName ?? '', this.getStatusText(c)
+      ]));
 
-    if (formValues.status && formValues.status !== 'all') {
-      filter.status = formValues.status;
-    }
-    if (formValues.campaignType) {
-      filter.campaignType = formValues.campaignType;
-    }
-
-    this.seasonalAidService.exportCampaignsList(filter).subscribe(blob => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `campaigns_${new Date().toISOString()}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    });
-  }
-
-  get paginatedCampaigns(): SeasonalCampaign[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    return this.filteredCampaigns.slice(start, end);
-  }
-
-  get totalPages(): number {
-    return Math.ceil(this.filteredCampaigns.length / this.pageSize);
+      workbook.xlsx.writeBuffer().then(buffer => {
+        const blob = new Blob([buffer], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `campaigns_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        this.exporting = false;
+      });
+    }).catch(() => (this.exporting = false));
   }
 
   onPageChange(page: number): void {
     this.currentPage = page;
+    this.loadCampaigns();
   }
 
   onPageSizeChange(size: number): void {
     this.pageSize = size;
     this.currentPage = 1;
+    this.loadCampaigns();
   }
 }

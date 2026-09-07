@@ -24,7 +24,8 @@ import {
   LookupTableSummaryDto,
   BulkExportDto,
   BulkImportDto,
-  BulkImportResultDto
+  BulkImportResultDto,
+  LookupDto
 } from '../models/lookup.model';
 
 @Injectable({
@@ -352,6 +353,140 @@ export class LookupManagementService {
     }).pipe(
       catchError(this.handleError)
     );
+  }
+
+  // ==================== HOUSING CATALOGUE (UC-HOU-05) ====================
+
+  /**
+   * Housing buildings (UC-HOU-05) — active-only catalogue feeding the §11.S.2
+   * رقم العماره drop-down on the housing family form. Organisation-owned rows
+   * (HQ catalogue, no per-charity scoping).
+   */
+  getHousingBuildings(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/housing-buildings`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Flats of one building (UC-HOU-05) — the §11.S.2 رقم الشقه drop-down, repopulated
+   * on building change. `buildingId` is required by the endpoint (400 when absent).
+   */
+  getHousingFlats(buildingId: number): Observable<LookupDto[]> {
+    // UC-SYS-06 hygiene guard: a non-numeric/undefined id must fail through the
+    // observable (catchError sees it), not as a synchronous NaN.toString() throw.
+    if (!buildingId || !Number.isFinite(buildingId)) {
+      return throwError(() => ({ message: 'buildingId is required', status: 400 }));
+    }
+    let params = new HttpParams().set('buildingId', buildingId.toString());
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/housing-flats`, {
+      headers: this.getHeaders(),
+      params
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // ==================== §11.S.2 FORM CATALOGUE (UC-HOU-03) ====================
+  // Read-only getters feeding the housing-family register form drop-downs. The endpoints
+  // (added for the epic-7 refugee form) return the bare active-item list — not the paged
+  // CRUD surface above — so these mirror the getHousingBuildings shape: Observable<LookupDto[]>.
+
+  /** المؤهل الدراسى — GET education-levels */
+  getEducationLevels(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/education-levels`, {
+      headers: this.getHeaders()
+    }).pipe(catchError(this.handleError));
+  }
+
+  /** الحالة الصحية — GET health-statuses */
+  getHealthStatuses(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/health-statuses`, {
+      headers: this.getHeaders()
+    }).pipe(catchError(this.handleError));
+  }
+
+  /** نوع الدخل — GET income-types */
+  getIncomeTypes(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/income-types`, {
+      headers: this.getHeaders()
+    }).pipe(catchError(this.handleError));
+  }
+
+  /** الحالة الاجتماعية — GET social-statuses */
+  getSocialStatuses(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/social-statuses`, {
+      headers: this.getHeaders()
+    }).pipe(catchError(this.handleError));
+  }
+
+  /** نوع العلاقة — GET relations */
+  getRelations(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/relations`, {
+      headers: this.getHeaders()
+    }).pipe(catchError(this.handleError));
+  }
+
+  /** سبب العلاقة — GET reasons-of-relation */
+  getReasonsOfRelation(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/reasons-of-relation`, {
+      headers: this.getHeaders()
+    }).pipe(catchError(this.handleError));
+  }
+
+  // ==================== §12.S.2 REFUGEE FORM CATALOGUE (UC-REF-03) ====================
+  // Same bare active-item list shape as the §11.S.2 getters above.
+
+  /** ملكية السكن — GET house-ownerships */
+  getHouseOwnerships(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/house-ownerships`, {
+      headers: this.getHeaders()
+    }).pipe(catchError(this.handleError));
+  }
+
+  /** حالة محتويات السكن — GET house-statuses */
+  getHouseStatuses(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/house-statuses`, {
+      headers: this.getHeaders()
+    }).pipe(catchError(this.handleError));
+  }
+
+  /** نوع السكن — shared catalogue (§12.S.2 refugee form) */
+  getHousingTypes(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/housing-types`, {
+      headers: this.getHeaders()
+    }).pipe(catchError(this.handleError));
+  }
+
+  // ==================== PERIODIC-REPORT REVIEW (UC-ORR-08 / UC-SYS-06) ====================
+  // The mandatory refusal catalogue consumed by the 9-7/9-8 review flow — a Refused
+  // decision requires one of these reasons (enforced server-side by the 9-8 validator).
+
+  /** أسباب رفض التقرير الدوري — GET refuse-reasons (UC-SYS-06 refusal catalogue) */
+  getRefuseReasons(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/refuse-reasons`, {
+      headers: this.getHeaders()
+    }).pipe(catchError(this.handleError));
+  }
+
+  // ==================== GUARDIAN REFERENCE DATA (UC-SYS-05) ====================
+  // Feeds the guardian (provider/parent) sections of the family forms — same bare
+  // active-item list shape as the catalogue getters above.
+
+  /** الحالة الاجتماعية للعائل — GET marital-statuses */
+  getMaritalStatuses(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/marital-statuses`, {
+      headers: this.getHeaders()
+    }).pipe(catchError(this.handleError));
+  }
+
+  /** مهنة العائل — GET jobs (UC-SYS-09 guardian job catalogue) */
+  getJobs(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/jobs`, {
+      headers: this.getHeaders()
+    }).pipe(catchError(this.handleError));
   }
 
   // ==================== ERROR HANDLING ====================

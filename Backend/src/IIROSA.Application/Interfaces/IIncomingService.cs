@@ -3,36 +3,22 @@ using IIROSA.Application.DTOs.IncomingOutgoing;
 namespace IIROSA.Application.Interfaces;
 
 /// <summary>
-/// Incoming Letter Service Interface
-/// Implements use cases UC-12.1, UC-12.3, UC-12.4, UC-12.5, UC-12.6, UC-12.7, UC-12.8, UC-12.9, UC-12.10, UC-12.12, UC-12.13
+/// Incoming Letter Service Interface (epic 16, UC-COR-01…09)
 /// </summary>
 public interface IIncomingService
 {
-    // CRUD Operations
-    Task<IncomingDto> GetByIdAsync(Guid id);
-    Task<(IEnumerable<IncomingListDto> Items, int TotalCount)> GetPagedAsync(IncomingFilterDto filter);
+    Task<IncomingDto?> GetByIdAsync(Guid id);
+    Task<(IEnumerable<IncomingListDto> Items, int TotalCount, int Page)> GetPagedAsync(IncomingFilterDto filter);
     Task<IncomingDto> CreateAsync(CreateIncomingDto dto);
-    Task<IncomingDto> UpdateAsync(UpdateIncomingDto dto);
-    Task DeleteAsync(Guid id);
+    Task<IncomingDto> UpdateAsync(Guid id, UpdateIncomingDto dto);
+    Task DeleteAsync(Guid id, Guid? deletedBy);
 
-    // Import Operations (UC-12.1, UC-12.3, UC-12.4, UC-12.5, UC-12.6)
-    Task<ImportValidationResultDto> ValidateImportAsync(ImportIncomingRequestDto request);
-    Task<ImportResultDto> ImportAsync(ImportIncomingRequestDto request);
-    Task<TemplateDownloadDto> DownloadTemplateAsync();
+    // Catalogues + serials
+    Task<IEnumerable<CorrespondenceStatusDto>> GetAvailableStatusesAsync();
+    Task<NextSerialDto> GetNextSerialAsync(int? year, Guid? charityId);
 
-    // Export Operations (UC-12.10, UC-12.12, UC-12.13)
-    Task<ExportResultDto> ExportAsync(ExportIncomingRequestDto request);
-
-    // Import History (UC-12.7, UC-12.8)
-    Task<IEnumerable<ImportHistoryItemDto>> GetImportHistoryAsync();
-    Task RollbackImportAsync(Guid importId);
-
-    // Business Logic
-    Task<bool> IsIncomingIdUniqueAsync(string incomingId, Guid? excludeId = null);
-    Task<bool> IsLetterNumberUniqueAsync(string letterNumber, int? departmentId, int? year, Guid? excludeId = null);
-    Task<int> GetNextSerialNumberAsync(int? departmentId = null, int? year = null);
-
-    // Additional helper methods
-    Task<IEnumerable<string>> GetAvailableStatusesAsync();
-    Task<Dictionary<string, string>> GetStatusColorsAsync();
+    // Employee attachment (UC-COR-09)
+    Task<IncomingEmployeesDto> GetEmployeesAsync(Guid incomingId);
+    Task AttachEmployeeAsync(Guid incomingId, Guid userId);
+    Task DetachEmployeeAsync(Guid incomingId, Guid userId);
 }

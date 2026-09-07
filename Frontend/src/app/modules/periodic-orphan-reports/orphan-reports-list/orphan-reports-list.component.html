@@ -1,102 +1,120 @@
 <div class="orphan-reports-list">
   <app-page-header
-    [title]="'orphanReports.title' | translate"
-    [subtitle]="'orphanReports.subtitle' | translate"
-    [showAdd]="true"
-    addRoute="/orphan-reports/generate">
+    [title]="'orphanReports.statistics.title' | translate"
+    [subtitle]="'orphanReports.statistics.subtitle' | translate"
+    [icon]="'fas fa-chart-bar'">
   </app-page-header>
 
-  <!-- Quick Actions -->
-  <div class="row mb-4">
-    <div class="col-md-3">
-      <div class="card text-center h-100 cursor-pointer" (click)="navigateToGenerate()">
-        <div class="card-body">
-          <i class="fas fa-chart-bar fa-2x text-primary mb-3"></i>
-          <h5>{{ 'orphanReports.generateReport' | translate }}</h5>
-          <p class="text-muted small">{{ 'orphanReports.generateReportDesc' | translate }}</p>
+  <!-- §14.S.3 filter: الجمعية · كافة الجهات (HQ only — a charity caller is server-pinned) -->
+  <div class="card shadow mb-4">
+    <div class="card-body">
+      <form [formGroup]="filterForm">
+        <div class="row mb-3">
+          <div class="col-md-4" *ngIf="isHeadOffice">
+            <!-- Review P50 2026-08-24 precedent: app-drop-down emits onDropDownChanged
+                 only after the form control is written, so the reload sees the new value. -->
+            <app-drop-down
+              [fg]="filterForm"
+              fcn="charityId"
+              [label]="'periodicReports.filters.charity'"
+              [initialData]="charityOptions"
+              [hasDefaultValue]="true"
+              (onDropDownChanged)="onSearch()">
+            </app-drop-down>
+          </div>
         </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card text-center h-100 cursor-pointer" (click)="navigateToHistory()">
-        <div class="card-body">
-          <i class="fas fa-history fa-2x text-success mb-3"></i>
-          <h5>{{ 'orphanReports.reportHistory' | translate }}</h5>
-          <p class="text-muted small">{{ 'orphanReports.reportHistoryDesc' | translate }}</p>
+
+        <div class="row">
+          <div class="col-12">
+            <button class="btn btn-primary" type="button" (click)="onSearch()">
+              <i class="fe fe-search mr-1"></i>
+              {{ 'common.search' | translate }}
+            </button>
+            <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary ml-2" type="button" (click)="clearFilters()">
+              <i class="fe fe-x mr-1"></i>
+              {{ 'common.clearFilters' | translate }}
+            </button>
+            <!-- استخراج البيانات -->
+            <button class="btn btn-outline-success ml-2" type="button" (click)="exportData()" [disabled]="exporting">
+              <i class="fas" [class.fa-spinner]="exporting" [class.fa-spin]="exporting" [class.fa-file-excel]="!exporting"></i>
+              <span class="ms-1" translate>orphanReports.statistics.export</span>
+            </button>
+          </div>
         </div>
-      </div>
+      </form>
     </div>
-    <div class="col-md-3">
-      <div class="card text-center h-100 cursor-pointer" (click)="navigateToSchedule()">
-        <div class="card-body">
-          <i class="fas fa-clock fa-2x text-warning mb-3"></i>
-          <h5>{{ 'orphanReports.scheduleReport' | translate }}</h5>
-          <p class="text-muted small">{{ 'orphanReports.scheduleReportDesc' | translate }}</p>
+  </div>
+
+  <app-loading *ngIf="loading"></app-loading>
+
+  <!-- §23.U.14 status counts: مقبول · مرفوض · قيد الانتظار (18-14) -->
+  <div class="card mb-3" *ngIf="!loading">
+    <div class="card-body">
+      <div class="row g-3 text-center">
+        <div class="col-md-4">
+          <div class="p-3 rounded border">
+            <div class="text-muted small" translate>orphanReports.statistics.accepted</div>
+            <div class="fs-3 fw-bold text-success">{{ displayCount(statusCounts?.accepted) }}</div>
+          </div>
         </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card text-center h-100 cursor-pointer" (click)="navigateToCompare()">
-        <div class="card-body">
-          <i class="fas fa-balance-scale fa-2x text-info mb-3"></i>
-          <h5>{{ 'orphanReports.compareReports' | translate }}</h5>
-          <p class="text-muted small">{{ 'orphanReports.compareReportsDesc' | translate }}</p>
+        <div class="col-md-4">
+          <div class="p-3 rounded border">
+            <div class="text-muted small" translate>orphanReports.statistics.refused</div>
+            <div class="fs-3 fw-bold text-danger">{{ displayCount(statusCounts?.refused) }}</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="p-3 rounded border">
+            <div class="text-muted small" translate>orphanReports.statistics.pending</div>
+            <div class="fs-3 fw-bold text-warning">{{ displayCount(statusCounts?.pending) }}</div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Recent Reports -->
-  <div class="card">
-    <div class="card-header">
-      <h5 class="mb-0">
-        <i class="fas fa-clock me-2"></i>
-        <span translate>orphanReports.recentReports</span>
-      </h5>
-    </div>
+  <!-- §14.S.3 grid: الرقم · الحاله التعليميه · المرحله الدراسه · الاناث · الذكور · الاجمالي -->
+  <div class="card shadow mb-4" *ngIf="!loading">
     <div class="card-body p-0">
-      <app-loading *ngIf="loading"></app-loading>
-
-      <div class="table-responsive" *ngIf="!loading">
+      <div class="table-responsive">
         <table class="table table-hover mb-0">
           <thead>
             <tr>
-              <th translate>orphanReports.reportName</th>
-              <th translate>orphanReports.period</th>
-              <th translate>orphanReports.generatedDate</th>
-              <th translate>orphanReports.orphanCount</th>
-              <th translate>common.actions</th>
+              <th translate>orphanReports.statistics.serial</th>
+              <th translate>orphanReports.statistics.educationalStatus</th>
+              <th translate>orphanReports.statistics.educationalLevel</th>
+              <th translate>orphanReports.statistics.female</th>
+              <th translate>orphanReports.statistics.male</th>
+              <th translate>orphanReports.statistics.total</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let report of recentReports">
-              <td>
-                <div class="fw-bold">{{ report.reportName || ('orphanReports.untitledReport' | translate) }}</div>
-              </td>
-              <td>
-                <small>{{ report.reportFromDate | date:'shortDate' }} - {{ report.reportToDate | date:'shortDate' }}</small>
-              </td>
-              <td>{{ report.generatedDate | date:'mediumDate' }}</td>
-              <td>
-                <span class="badge bg-primary">{{ report.orphanCount }}</span>
-              </td>
-              <td>
-                <button class="btn btn-sm btn-outline-primary">
-                  <i class="fas fa-eye me-1"></i>
-                  {{ 'common.view' | translate }}
-                </button>
-              </td>
+            <tr *ngFor="let group of groups; let i = index; trackBy: trackByGroup">
+              <td>{{ serial(i) }}</td>
+              <td>{{ statusLabel(group.educationalStatus) }}</td>
+              <td>{{ group.educationalLevelName || '—' }}</td>
+              <td>{{ group.femaleCount }}</td>
+              <td>{{ group.maleCount }}</td>
+              <td class="fw-bold">{{ group.totalCount }}</td>
+            </tr>
+            <!-- trailing totals row -->
+            <tr class="table-secondary fw-bold" *ngIf="groups.length > 0">
+              <td></td>
+              <td colspan="2" translate>orphanReports.statistics.totalRow</td>
+              <td>{{ totals.female }}</td>
+              <td>{{ totals.male }}</td>
+              <td>{{ totals.total }}</td>
             </tr>
           </tbody>
         </table>
-
-        <app-empty-state
-          *ngIf="recentReports.length === 0"
-          [icon]="'fas fa-file-alt'"
-          [title]="'orphanReports.noReports' | translate"
-          [message]="'orphanReports.noReportsMessage' | translate">
-        </app-empty-state>
       </div>
+
+      <app-empty-state
+        *ngIf="groups.length === 0"
+        [icon]="'fas fa-chart-bar'"
+        [title]="'orphanReports.statistics.emptyTitle' | translate"
+        [description]="'orphanReports.statistics.emptyMessage' | translate">
+      </app-empty-state>
     </div>
   </div>
 </div>

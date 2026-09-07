@@ -16,9 +16,9 @@ public class OrphanFilterForPaymentDto
     public string? SearchTerm { get; set; }
 
     /// <summary>
-    /// Charity filter
+    /// Charity filter — Guid to match Orphan.FK_CharityId (10-1 type sweep).
     /// </summary>
-    public int? CharityId { get; set; }
+    public Guid? CharityId { get; set; }
 
     /// <summary>
     /// Region filter

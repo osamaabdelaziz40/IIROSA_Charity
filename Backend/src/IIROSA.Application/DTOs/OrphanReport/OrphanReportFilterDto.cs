@@ -31,6 +31,18 @@ public class OrphanReportFilterDto
     public Guid? CharityId { get; set; }
 
     /// <summary>
+    /// رقم التقرير — §14.U.11 extract criterion (contains match on the periodic report number)
+    /// </summary>
+    public string? ReportNo { get; set; }
+
+    /// <summary>
+    /// §14.U.15 أرقام التقارير المضافة — fill the statistics response's ReportNumbers
+    /// branch (the numbers-in-period extract). Requires the date window; the grouped
+    /// branch (9-10) is untouched.
+    /// </summary>
+    public bool IncludeReportNumbers { get; set; }
+
+    /// <summary>
     /// Filter by Region - UC-6.5
     /// </summary>
     public int? RegionId { get; set; }

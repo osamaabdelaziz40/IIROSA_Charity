@@ -18,5 +18,4 @@ public class UploadedFile : FullAuditedEntity
     // Navigation Collections
     public virtual ICollection<Incoming> IncomingLetters { get; set; } = new List<Incoming>();
     public virtual ICollection<Outgoing> OutgoingLetters { get; set; } = new List<Outgoing>();
-    public virtual ICollection<ChildOutGoing> ChildOutgoingLetters { get; set; } = new List<ChildOutGoing>();
 }

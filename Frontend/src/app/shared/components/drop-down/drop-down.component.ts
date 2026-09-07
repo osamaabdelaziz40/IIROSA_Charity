@@ -67,6 +67,16 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
     }
 
     if (this.initialData) {
+      // Parents commonly bind getters that return a fresh array on every
+      // change-detection pass, so ngOnChanges fires constantly even when the
+      // options never changed. Each pass would rebuild every <option> (new
+      // groupedData objects, no trackBy), Select2's MutationObserver on the
+      // select would then schedule yet another change-detection pass — an
+      // endless microtask loop that hard-freezes the page (seen on the
+      // seasonal-aid campaign list). Ignore content-identical updates.
+      if (this.sameItems(this.data, this.initialData)) {
+        return
+      }
       this.data = this.initialData
       this.processGroupedData()
       // Re-initialize Select2 when data changes, but only if view is ready
@@ -106,6 +116,20 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
         }
       }
     }
+  }
+
+  /**
+   * Normalise an id coming out of the DOM (Select2 always hands back strings).
+   * Numeric ids become numbers so they match lookup data; anything else — role
+   * names ('Admin'), enum-ish strings ('active', 'Male') — must stay verbatim:
+   * parseInt would turn them into NaN and the control would silently hold NaN.
+   */
+  private toOptionId(raw: any): any {
+    if (typeof raw !== 'string') {
+      return raw
+    }
+    const trimmed = raw.trim()
+    return /^-?\d+$/.test(trimmed) ? parseInt(trimmed, 10) : trimmed
   }
 
   private emitSelectedValue(id: any) {
@@ -153,10 +177,10 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
   }
 
   ngAfterViewInit() {
-    // Only initialize Select2 if we have data
-    if (this.data && this.data.length > 0) {
-      this.initSelect2()
-    }
+    // Initialize Select2 even with no data yet: cascading dropdowns (region/center) start
+    // empty and fill in later. Skipping initialization leaves them as bare native selects
+    // next to the styled select2 widgets — a visibly broken-looking filter row.
+    this.initSelect2()
   }
 
   private initSelect2() {
@@ -171,18 +195,38 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
         return
       }
 
-      // Only initialize if we have data
-      if (!this.data || this.data.length === 0) {
-        return
-      }
-
       const selectElement = $(this.el.nativeElement).find('select.select2')
       if (selectElement.length) {
-        // Always destroy and re-create to ensure fresh event handlers
-        if (this.select2Instance) {
-          this.select2Instance.select2('destroy')
-          this.select2Instance = null
+        // Always destroy and re-create to ensure fresh event handlers. Destroy
+        // whatever select2 lives on the element now — tracked or not — because
+        // interleaved init cycles (ngAfterViewInit + ngOnChanges + disabled
+        // changes, each behind its own setTimeout) can get out of order and
+        // leave an instance we no longer hold a reference to.
+        if (selectElement.data('select2')) {
+          try { selectElement.select2('destroy') } catch (e) { /* already torn down */ }
         }
+        this.select2Instance = null
+
+        // A destroy that threw mid-cycle (or an init that ran while the select
+        // was already hidden by a previous widget) leaves orphaned 1px-wide
+        // .select2-container spans stacked inside this host. They are invisible
+        // but appear in the accessibility tree as extra comboboxes and can
+        // intercept clicks. After the destroy above, every container still in
+        // the host is such an orphan — remove them before creating the new one.
+        $(this.el.nativeElement).find('.select2-container').remove()
+
+        // Un-hide the native select so the fresh widget measures its width from
+        // a visible element (select2-hidden-accessible is left behind when a
+        // destroy is skipped; it also breaks the fallback native control).
+        selectElement.removeClass('select2-hidden-accessible').removeAttr('aria-hidden')
+
+        // select2('destroy') removes the widget's own listeners but NOT the custom
+        // jQuery handlers we bound on this element. Every rebuild cycle (view init,
+        // data arrival, disabled toggles) stacked another set, so one selection fired
+        // select2:select N times — duplicated control writes and cascade emits.
+        // jQuery .off only touches jQuery handlers; the Angular (change) listener in
+        // the template and ReactiveForms hooks are native listeners and survive.
+        selectElement.off('select2:select select2:unselect change')
 
         // Initialize Select2 with Bootstrap 4 theme
         this.select2Instance = selectElement.select2({
@@ -200,7 +244,7 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
           const control = this.fg.get(this.fcn)
           if (control) {
             // Ensure ID is clean (no whitespace, proper type)
-            const cleanId = typeof selectedData.id === 'string' ? parseInt(selectedData.id.trim(), 10) : selectedData.id
+            const cleanId = this.toOptionId(selectedData.id)
             if (this.multiple) {
               // For multi-select, add to array
               const currentValue = control.value || []
@@ -222,7 +266,7 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
           if (control && this.multiple) {
             const currentValue = control.value || []
             // Ensure clean ID for comparison
-            const unselectedId = typeof e.params.data.id === 'string' ? parseInt(e.params.data.id.trim(), 10) : e.params.data.id
+            const unselectedId = this.toOptionId(e.params.data.id)
             const newValue = currentValue.filter((id: any) => {
               const cleanId = typeof id === 'string' ? parseInt(id.trim(), 10) : id
               return cleanId !== unselectedId
@@ -231,7 +275,17 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
             control.markAsDirty()
             this.emitSelectedValues(newValue)
           } else {
-            this.onDropDownChanged.emit(null)
+            // Single-select unselect. Select2 also fires this spuriously while a selection
+            // is replacing the placeholder pseudo-option and the control is still empty;
+            // emitting null then makes parents run their "cleared" branch (patchValue null,
+            // wipe dependent lists) a hair before the real value lands — and if the order
+            // flips it erases a selection the user just made. Only report a genuine clear:
+            // the control actually holding a value.
+            if (control && control.value !== null && control.value !== undefined && control.value !== '') {
+              control.setValue(null)
+              control.markAsDirty()
+              this.onDropDownChanged.emit(null)
+            }
           }
         })
 
@@ -241,13 +295,13 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
             // For multi-select, value is already handled by select/unselect events
             return
           }
-          // Don't set the control value here - it's already set by select2:select event
-          // Just mark as dirty and emit for cascading dropdowns
+          // select2:select has already set the control value and emitted. Re-emitting here
+          // fired a second change per selection (duplicate cascade HTTP calls) and, when
+          // the control was still empty at this instant, a spurious null that parents treat
+          // as "user cleared the field". Dirty-tracking only.
           const control = this.fg.get(this.fcn)
           if (control) {
             control.markAsDirty()
-            // Emit the current control value (not e.target.value which is a string)
-            this.emitSelectedValue(control.value)
           }
         })
 
@@ -259,24 +313,45 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
           } else if (!this.multiple) {
             selectElement.val(control.value).trigger('change.select2')
           }
+        } else if (!this.multiple && this.hasDefaultValue) {
+          // An empty control must show the placeholder, not a phantom selection:
+          // browsers initially select the first ENABLED <option>, skipping the
+          // disabled placeholder — the widget would then display e.g. the first
+          // country as if chosen while no filter is actually applied.
+          selectElement.val('').trigger('change.select2')
         }
       }
     }, 100)
   }
 
   private destroySelect2() {
-    if (this.select2Instance) {
+    const selectElement = $(this.el.nativeElement).find('select.select2')
+    if (selectElement.length && selectElement.data('select2')) {
       try {
-        // Check if the element still exists in DOM and has Select2 initialized
-        if (this.select2Instance.length && this.select2Instance.data('select2')) {
-          this.select2Instance.select2('destroy')
-        }
+        selectElement.select2('destroy')
       } catch (error) {
         console.warn('[DropDown] Select2 destroy error (element may already be destroyed):', error)
-      } finally {
-        this.select2Instance = null
       }
     }
+    this.select2Instance = null
+    // Remove any orphaned widget containers (see initSelect2 for how they appear).
+    $(this.el.nativeElement).find('.select2-container').remove()
+    selectElement.removeClass('select2-hidden-accessible').removeAttr('aria-hidden')
+  }
+
+  private sameItems(a: Array<LookupBase>, b: Array<LookupBase>): boolean {
+    if (a === b) return true
+    if (!a || !b || a.length !== b.length) return false
+    return a.every((item, i) =>
+      item.id === b[i].id && item.name === b[i].name && !!item.disabled === !!b[i].disabled)
+  }
+
+  trackByItem(index: number, item: LookupBase) {
+    return item.id
+  }
+
+  trackByGroup(index: number, group: { group?: string; items: Array<LookupBase> }) {
+    return group.group ?? '_'
   }
 
   private processGroupedData() {
@@ -367,7 +442,7 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
       this.onDropDownChanged.emit(value)
     } else {
       // If not found in data, emit the raw ID wrapped in an object
-      const cleanId = typeof rawValue === 'string' ? parseInt(rawValue.trim(), 10) : rawValue
+      const cleanId = this.toOptionId(rawValue)
       this.onDropDownChanged.emit({ id: cleanId })
     }
   }

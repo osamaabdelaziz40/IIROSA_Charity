@@ -1,0 +1,178 @@
+<app-page-header [title]="'families.providerRequests.title' | translate"
+                 [subtitle]="'families.providerRequests.subtitle' | translate"></app-page-header>
+
+<div class="container-fluid provider-request-list">
+  <!-- Filter bar: status (everyone) + charity (HQ only) -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="form-row align-items-end">
+        <div class="col-md-3">
+          <label class="form-label">{{ 'families.providerRequests.statusFilter' | translate }}</label>
+          <select class="form-control" [(ngModel)]="statusFilter" (change)="onStatusChange()"
+                  [ngModelOptions]="{ standalone: true }">
+            <option *ngFor="let option of statusOptions; trackBy: trackByStatus"
+                    [ngValue]="option.value">
+              {{ option.labelKey | translate }}
+            </option>
+          </select>
+        </div>
+        <div class="col-md-3" *ngIf="isHQ">
+          <label class="form-label">{{ 'families.providerRequests.charityFilter' | translate }}</label>
+          <select class="form-control" [(ngModel)]="charityFilter" (change)="onCharityChange()"
+                  [ngModelOptions]="{ standalone: true }">
+            <option *ngFor="let option of charityOptions; trackBy: trackByOption"
+                    [ngValue]="option.id">
+              {{ option.name }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Requests grid (§10.S.4): الرقم · الجمعيه · كود اليتيم · اسم اليتيم كامل · اسم الام ·
+       اسم المعيل الجديد · صله القرابه · الرقم القومي · تاريخ التعديل · سبب التعديل · موافقه -->
+  <div class="card">
+    <div class="card-header">
+      <h5 class="card-title mb-0">{{ 'families.providerRequests.gridTitle' | translate }}</h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="text-center py-5" *ngIf="loading">
+        <div class="spinner-border text-primary" role="status"></div>
+      </div>
+
+      <div class="table-responsive" *ngIf="!loading">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>{{ 'families.providerRequests.colCharity' | translate }}</th>
+              <th>{{ 'families.providerRequests.colOrphanCode' | translate }}</th>
+              <th>{{ 'families.providerRequests.colOrphanName' | translate }}</th>
+              <th>{{ 'families.providerRequests.colMotherName' | translate }}</th>
+              <th>{{ 'families.providerRequests.colOldGuardian' | translate }}</th>
+              <th>{{ 'families.providerRequests.colNewGuardian' | translate }}</th>
+              <th>{{ 'families.providerRequests.colRelationship' | translate }}</th>
+              <th>{{ 'families.providerRequests.colNationalId' | translate }}</th>
+              <th>{{ 'families.providerRequests.colDate' | translate }}</th>
+              <th>{{ 'families.providerRequests.colReason' | translate }}</th>
+              <th>{{ 'families.providerRequests.colApprove' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let request of requests; let i = index; trackBy: trackByRequestId">
+              <!-- Continuous serial across pages, not a per-page counter (legacy الرقم semantics). -->
+              <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+              <td>{{ request.charityName || '-' }}</td>
+              <td>{{ request.orphanCode || '-' }}</td>
+              <td>{{ request.orphanName || '-' }}</td>
+              <td>{{ request.motherName || '-' }}</td>
+              <td>
+                {{ request.oldGuardianName || '-' }}
+                <small class="d-block text-muted" *ngIf="request.oldGuardianNationalId">
+                  {{ request.oldGuardianNationalId }}
+                </small>
+              </td>
+              <td>{{ request.newGuardianName }}</td>
+              <td>{{ request.relationship }}</td>
+              <td>{{ request.newGuardianNationalId }}</td>
+              <td>{{ request.createdOn | date: 'mediumDate' }}</td>
+              <td class="text-wrap" [attr.title]="request.reason">{{ request.reason }}</td>
+              <td>
+                <!-- موافقه (UC-FAM-10): pending rows carry the decision action for the General
+                     Director; decided rows show their state — and, when refused, the reason. -->
+                <ng-container *ngIf="isPending(request); else decidedState">
+                  <button class="btn btn-sm btn-outline-success" (click)="openDecision(request)"
+                          [disabled]="!canDecide"
+                          [title]="'families.providerRequests.approvePending' | translate">
+                    <i class="fe fe-check"></i>
+                  </button>
+                </ng-container>
+                <ng-template #decidedState>
+                  <span class="badge"
+                        [class.bg-success]="isApproved(request)"
+                        [class.bg-danger]="isRejected(request)">
+                    {{ (isApproved(request)
+                        ? 'families.providerRequests.statusApproved'
+                        : 'families.providerRequests.statusRejected') | translate }}
+                  </span>
+                  <small class="d-block text-danger text-wrap" *ngIf="request.rejectionReason"
+                         [attr.title]="request.rejectionReason">
+                    {{ request.rejectionReason }}
+                  </small>
+                </ng-template>
+              </td>
+            </tr>
+            <tr *ngIf="!loading && requests.length === 0">
+              <td colspan="12" class="text-center text-muted py-4">
+                {{ 'families.providerRequests.noRequests' | translate }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer" *ngIf="!loading && totalCount > 0">
+      <app-pagination [currentPage]="currentPage" [pageSize]="pageSize" [totalCount]="totalCount"
+                      (pageChange)="onPageChange($event)"></app-pagination>
+    </div>
+  </div>
+</div>
+
+<!-- UC-FAM-10 decision modal «اعتماد تعديل العائل» — approve applies the new guardian to the
+     family file; a refusal is not accepted without a reason. -->
+<div class="modal-backdrop" *ngIf="decisionModalOpen"></div>
+<div class="modal-dialog" *ngIf="decisionModalOpen && decisionTarget as target">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">{{ 'families.providerRequests.decisionTitle' | translate }}</h5>
+      <button type="button" class="close" (click)="closeDecision()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info">
+        {{ 'families.providerRequests.decisionHint' | translate:
+            { family: target.familyCode || '-', old: target.oldGuardianName || '-',
+              new: target.newGuardianName, nationalId: target.newGuardianNationalId } }}
+      </div>
+
+      <div class="form-group">
+        <label>{{ 'families.providerRequests.decisionChoice' | translate }}</label>
+        <div class="d-flex gap-4">
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="decisionChoice" id="decisionApprove"
+                   [checked]="decisionIsApproved" (change)="decisionIsApproved = true">
+            <label class="form-check-label" for="decisionApprove">
+              {{ 'families.providerRequests.choiceApprove' | translate }}
+            </label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="decisionChoice" id="decisionReject"
+                   [checked]="!decisionIsApproved" (change)="decisionIsApproved = false">
+            <label class="form-check-label" for="decisionReject">
+              {{ 'families.providerRequests.choiceReject' | translate }}
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group" *ngIf="!decisionIsApproved">
+        <label>{{ 'families.providerRequests.rejectionReason' | translate }} *</label>
+        <textarea class="form-control" name="decisionReason" rows="3" maxlength="500"
+                  [(ngModel)]="decisionReason"
+                  [placeholder]="'families.providerRequests.rejectionReasonPlaceholder' | translate"></textarea>
+        <small class="text-muted">{{ 'families.providerRequests.reasonRequired' | translate }}</small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeDecision()">
+        {{ 'common.cancel' | translate }}
+      </button>
+      <button type="button" class="btn"
+              [class.btn-success]="decisionIsApproved" [class.btn-danger]="!decisionIsApproved"
+              [disabled]="deciding" (click)="submitDecision()">
+        <span class="spinner-border spinner-border-sm mr-1" *ngIf="deciding"></span>
+        {{ 'families.providerRequests.submitDecision' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,16 +1,16 @@
 using IIROSA.Domain.Entities.Base;
 using IIROSA.Domain.Entities.Lookups;
+using Framework.Identity.Data.Entities;
 
 namespace IIROSA.Domain.Entities;
 
 /// <summary>
-/// Incoming Letters/Correspondence Entity
-/// Implements use cases UC-12.1, UC-12.3, UC-12.4, UC-12.5, UC-12.6, UC-12.10, UC-12.12, UC-12.13
+/// Incoming Letters/Correspondence Entity (epic 16, UC-COR-01…09)
 /// Inherits audit fields from FullAuditedEntity
 /// </summary>
 public class Incoming : FullAuditedEntity
 {
-    // Serial Information (Auto-generated)
+    // Serial Information (Auto-generated, per charity + year — UC-COR-03)
     public int? Serial { get; set; }
     public string? Serial_Txt { get; set; }
 
@@ -30,15 +30,19 @@ public class Incoming : FullAuditedEntity
 
     // Foreign Keys
     public int? FK_DepartmentId { get; set; }
-    public Guid? FK_UserId { get; set; }  // Created by user (separate from audit trail)
-    public Guid? OutgoingId { get; set; }  // Linked outgoing letter (if this is a reply)
+    public Guid? FK_UserId { get; set; }  // The employee the letter is routed to (الموظف المناط به)
+    public Guid? OutgoingId { get; set; }  // Linked outgoing letter (ردا على)
     public Guid? UploadedFileId { get; set; }
+    public Guid? FK_CharityId { get; set; }  // Owning charity — tenancy (stamped server-side)
 
     // Navigation Properties
     public virtual Department? Department { get; set; }
     public virtual Outgoing? OutgoingLetter { get; set; }
     public virtual UploadedFile? UploadedFile { get; set; }
+    public virtual ApplicationUser? AssignedUser { get; set; }
+    public virtual Charity? Charity { get; set; }
 
     // Navigation Collections
     public virtual ICollection<Outgoing> Replies { get; set; } = new List<Outgoing>();
+    public virtual ICollection<IncomingEmployee> Employees { get; set; } = new List<IncomingEmployee>();
 }

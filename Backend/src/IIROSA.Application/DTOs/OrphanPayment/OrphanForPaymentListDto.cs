@@ -14,8 +14,14 @@ public class OrphanForPaymentListDto
     public string? SponsorshipStatus { get; set; }
 
     // Charity Information
-    public int? CharityId { get; set; }
+    // 10-2: was int? — FK_CharityId is Guid, the map silently no-op'd/threw
+    public Guid? CharityId { get; set; }
     public string? CharityName { get; set; }
+
+    /// <summary>
+    /// The orphan's current monthly amount — preview of the BR-17 snapshot taken at enrolment
+    /// </summary>
+    public decimal? MonthlyAmount { get; set; }
 
     // Location Information
     public int? RegionId { get; set; }

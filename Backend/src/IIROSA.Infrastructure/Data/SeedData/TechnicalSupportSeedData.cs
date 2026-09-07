@@ -21,7 +21,6 @@ public static class TechnicalSupportSeedData
         {
             new SupportTicketCategory
             {
-                Id = 1,
                 NameEn = "Technical",
                 NameAr = "تقني",
                 IsActive = true,
@@ -30,7 +29,6 @@ public static class TechnicalSupportSeedData
             },
             new SupportTicketCategory
             {
-                Id = 2,
                 NameEn = "Access",
                 NameAr = "صلاحيات",
                 IsActive = true,
@@ -39,7 +37,6 @@ public static class TechnicalSupportSeedData
             },
             new SupportTicketCategory
             {
-                Id = 3,
                 NameEn = "Data",
                 NameAr = "بيانات",
                 IsActive = true,
@@ -48,7 +45,6 @@ public static class TechnicalSupportSeedData
             },
             new SupportTicketCategory
             {
-                Id = 4,
                 NameEn = "Feature Request",
                 NameAr = "طلب ميزة",
                 IsActive = true,
@@ -57,7 +53,6 @@ public static class TechnicalSupportSeedData
             },
             new SupportTicketCategory
             {
-                Id = 5,
                 NameEn = "Bug",
                 NameAr = "خطأ",
                 IsActive = true,
@@ -66,7 +61,6 @@ public static class TechnicalSupportSeedData
             },
             new SupportTicketCategory
             {
-                Id = 6,
                 NameEn = "Other",
                 NameAr = "أخرى",
                 IsActive = true,
@@ -91,7 +85,6 @@ public static class TechnicalSupportSeedData
         {
             new SupportTicketPriority
             {
-                Id = 1,
                 NameEn = "Low",
                 NameAr = "منخفض",
                 IsActive = true,
@@ -102,7 +95,6 @@ public static class TechnicalSupportSeedData
             },
             new SupportTicketPriority
             {
-                Id = 2,
                 NameEn = "Medium",
                 NameAr = "متوسط",
                 IsActive = true,
@@ -113,7 +105,6 @@ public static class TechnicalSupportSeedData
             },
             new SupportTicketPriority
             {
-                Id = 3,
                 NameEn = "High",
                 NameAr = "عالي",
                 IsActive = true,
@@ -124,7 +115,6 @@ public static class TechnicalSupportSeedData
             },
             new SupportTicketPriority
             {
-                Id = 4,
                 NameEn = "Urgent",
                 NameAr = "عاجل",
                 IsActive = true,
@@ -151,7 +141,6 @@ public static class TechnicalSupportSeedData
         {
             new SupportTicketStatus
             {
-                Id = 1,
                 NameEn = "Open",
                 NameAr = "مفتوح",
                 IsActive = true,
@@ -162,7 +151,6 @@ public static class TechnicalSupportSeedData
             },
             new SupportTicketStatus
             {
-                Id = 2,
                 NameEn = "In Progress",
                 NameAr = "قيد التنفيذ",
                 IsActive = true,
@@ -173,7 +161,6 @@ public static class TechnicalSupportSeedData
             },
             new SupportTicketStatus
             {
-                Id = 3,
                 NameEn = "Resolved",
                 NameAr = "تم الحل",
                 IsActive = true,
@@ -184,7 +171,6 @@ public static class TechnicalSupportSeedData
             },
             new SupportTicketStatus
             {
-                Id = 4,
                 NameEn = "Closed",
                 NameAr = "مغلق",
                 IsActive = true,

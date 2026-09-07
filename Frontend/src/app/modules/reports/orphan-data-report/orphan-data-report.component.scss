@@ -1,0 +1,10 @@
+// UC-RPT-01 — the wide grid scrolls horizontally inside the shell's .table-responsive;
+// columns never wrap or squeeze (recorded decision: ~24-column subset on screen).
+:host {
+  display: block;
+}
+
+.table-responsive table {
+  white-space: nowrap;
+  font-size: 0.8125rem;
+}

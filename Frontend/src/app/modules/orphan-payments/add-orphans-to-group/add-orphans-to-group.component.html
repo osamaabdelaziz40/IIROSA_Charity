@@ -71,7 +71,7 @@
           <label class="form-label">{{ 'orphanPayments.charity' | translate }}</label>
           <select class="form-control" [(ngModel)]="filter.charityId" (change)="onSearch()">
             <option [ngValue]="null">{{ 'common.all' | translate }}</option>
-            <option *ngFor="let charity of availableCharities"
+            <option *ngFor="let charity of availableCharities; trackBy: trackById"
                     [ngValue]="charity.id">{{ charity.name }}</option>
           </select>
         </div>
@@ -81,7 +81,7 @@
           <label class="form-label">{{ 'orphanPayments.region' | translate }}</label>
           <select class="form-control" [(ngModel)]="filter.regionId" (change)="onSearch()">
             <option [ngValue]="null">{{ 'common.all' | translate }}</option>
-            <option *ngFor="let region of availableRegions"
+            <option *ngFor="let region of availableRegions; trackBy: trackById"
                     [ngValue]="region.id">{{ region.name }}</option>
           </select>
         </div>
@@ -91,7 +91,7 @@
           <label class="form-label">{{ 'orphanPayments.center' | translate }}</label>
           <select class="form-control" [(ngModel)]="filter.centerId" (change)="onSearch()">
             <option [ngValue]="null">{{ 'common.all' | translate }}</option>
-            <option *ngFor="let center of availableCenters"
+            <option *ngFor="let center of availableCenters; trackBy: trackById"
                     [ngValue]="center.id">{{ center.name }}</option>
           </select>
         </div>
@@ -204,26 +204,24 @@
                 <th>{{ 'orphanPayments.age' | translate }}</th>
                 <th>{{ 'orphanPayments.gender' | translate }}</th>
                 <th>{{ 'orphanPayments.sponsorshipStatus' | translate }}</th>
+                <th>{{ 'orphanPayments.amount' | translate }}</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let orphan of availableOrphans; trackBy: trackOrphan"
-                  [class.table-light]="orphan.isAlreadyInGroup">
+                  [class.table-light]="orphan.isInGroup">
                 <td>
                   <input type="checkbox"
                          class="form-check-input"
-                         [checked]="isOrphanSelected(orphan.orphanId)"
+                         [checked]="isOrphanSelected(orphan.id)"
                          [disabled]="isOrphanDisabled(orphan)"
-                         (change)="onToggleOrphan(orphan.orphanId)">
+                         (change)="onToggleOrphan(orphan.id)">
                 </td>
                 <td>
-                  <a routerLink="/orphans/{{orphan.orphanId}}"
-                     class="text-primary"
-                     *ngIf="!orphan.isAlreadyInGroup">
-                    {{ orphan.orphanName }}
-                  </a>
-                  <span *ngIf="orphan.isAlreadyInGroup" class="text-muted">
-                    {{ orphan.orphanName }}
+                  <!-- no orphan-profile route exists on this stack — plain text, dead link removed (10-2) -->
+                  <span [class.text-muted]="orphan.isInGroup">
+                    {{ orphan.fullName }}
+                    <small class="d-block text-muted" *ngIf="orphan.code">{{ orphan.code }}</small>
                   </span>
                 </td>
                 <td>{{ orphan.familyName }}</td>
@@ -231,18 +229,19 @@
                 <td>{{ orphan.regionName || '-' }}</td>
                 <td>{{ orphan.age }}</td>
                 <td>
-                  <span class="badge" [ngClass]="getGenderBadgeClass(orphan.gender)">
+                  <span class="badge" [ngClass]="getGenderBadgeClass(orphan.gender || '')">
                     {{ orphan.gender }}
                   </span>
                 </td>
                 <td>
-                  <span class="badge" [ngClass]="getSponsorshipBadgeClass(orphan.sponsorshipStatus)">
+                  <span class="badge" [ngClass]="getSponsorshipBadgeClass(orphan.sponsorshipStatus || '')">
                     {{ orphan.sponsorshipStatus }}
                   </span>
                 </td>
+                <td>{{ orphan.monthlyAmount != null ? (orphan.monthlyAmount | number:'1.0-2') : '-' }}</td>
               </tr>
               <tr *ngIf="availableOrphans.length === 0">
-                <td colspan="8" class="text-center py-4 text-muted">
+                <td colspan="9" class="text-center py-4 text-muted">
                   <i class="fe fe-inbox fe-2x mb-2 d-block"></i>
                   {{ 'orphanPayments.noOrphansFound' | translate }}
                 </td>
@@ -250,6 +249,16 @@
             </tbody>
           </table>
         </div>
+      </div>
+
+      <!-- Review P18: server-side paging — the read was silently capped at 200 rows -->
+      <div class="card-body pt-0" *ngIf="!loadingOrphans">
+        <app-pagination
+          [currentPage]="availablePage"
+          [pageSize]="availablePageSize"
+          [totalCount]="totalAvailable"
+          (pageChange)="onAvailablePageChange($event)">
+        </app-pagination>
       </div>
     </div>
   </div>

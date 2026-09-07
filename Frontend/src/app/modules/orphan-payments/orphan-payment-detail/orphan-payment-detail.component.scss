@@ -72,3 +72,9 @@
     margin-right: 0.5rem !important;
   }
 }
+
+// 10-8: sortable column headers
+.cursor-pointer {
+  cursor: pointer;
+  user-select: none;
+}

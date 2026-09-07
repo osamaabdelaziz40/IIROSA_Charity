@@ -1,6 +1,6 @@
 <app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
 <app-page-header
-  [title]="'incomingOutgoing.addOutgoingLetter' | translate"
+  [title]="(isEditMode ? 'incomingOutgoing.editOutgoingLetter' : 'incomingOutgoing.addOutgoingLetter') | translate"
   [subtitle]="'incomingOutgoing.fillOutgoingLetterDetails' | translate"
   [icon]="'fe fe-send'"
   [actions]="pageActions">
@@ -10,8 +10,85 @@
   <div class="card-body">
     <form [formGroup]="letterForm" (ngSubmit)="onSubmit()">
       <div class="row">
-        <!-- Subject (Required) -->
-        <div class="col-md-6">
+        <!-- Serial (UC-COR-12 — advisory, server-allocated, read-only) -->
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">{{ 'incomingOutgoing.serial' | translate }}</label>
+            <input type="text" class="form-control" [value]="nextSerialTxt" readonly />
+          </div>
+        </div>
+
+        <!-- Routing Department (Required — UC-COR-08) -->
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="letterForm"
+            fcn="departmentId"
+            [label]="'incomingOutgoing.department'"
+            [placeholder]="'incomingOutgoing.selectDepartment' | translate"
+            [initialData]="departmentOptions">
+          </app-drop-down>
+        </div>
+
+        <!-- Date (Required) -->
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="letterForm"
+            fcn="date"
+            [label]="'incomingOutgoing.date'"
+            type="date"
+            [required]="true">
+          </app-input-text>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- Category (Required — UC-COR-17 catalogue) -->
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="letterForm"
+            fcn="outgoingCategoryId"
+            [label]="'incomingOutgoing.category'"
+            [initialData]="categoryOptions">
+          </app-drop-down>
+        </div>
+
+        <!-- Reply To Incoming (ردا علي خطاب — optional per §21.S.5's `(+ -)` empty option, review P4) -->
+        <div class="col-md-8">
+          <app-drop-down
+            [fg]="letterForm"
+            fcn="incomingId"
+            [label]="'incomingOutgoing.replyToIncoming'"
+            [initialData]="incomingLetterOptions"
+            (onDropDownChanged)="onIncomingChange()">
+          </app-drop-down>
+        </div>
+      </div>
+
+      <!-- Selected incoming letter summary (§21.S.5 DisplayIncominData) -->
+      <div class="row" *ngIf="selectedIncoming">
+        <div class="col-md-12">
+          <div class="alert alert-light border">
+            <div class="row">
+              <div class="col-md-3">
+                <label class="text-muted small mb-1">{{ 'incomingOutgoing.serial' | translate }}</label>
+                <div class="font-weight-semibold">{{ selectedIncoming.serialTxt || '-' }}</div>
+              </div>
+              <div class="col-md-3">
+                <label class="text-muted small mb-1">{{ 'incomingOutgoing.letterNumber' | translate }}</label>
+                <div class="font-weight-semibold">{{ selectedIncoming.letterNumber || '-' }}</div>
+              </div>
+              <div class="col-md-6">
+                <label class="text-muted small mb-1">{{ 'incomingOutgoing.subject' | translate }}</label>
+                <div class="font-weight-semibold">{{ selectedIncoming.subject }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subject / البيان (Required) -->
+      <div class="row">
+        <div class="col-md-12">
           <app-input-text
             [fg]="letterForm"
             fcn="subject"
@@ -20,107 +97,9 @@
             [required]="true">
           </app-input-text>
         </div>
-
-        <!-- Outgoing ID (Required) -->
-        <div class="col-md-6">
-          <app-input-text
-            [fg]="letterForm"
-            fcn="outGoingId"
-            [label]="'incomingOutgoing.outGoingId'"
-            [placeholder]="'incomingOutgoing.outGoingIdPlaceholder' | translate"
-            [required]="true">
-          </app-input-text>
-        </div>
       </div>
 
-      <div class="row">
-        <!-- Outgoing Number -->
-        <div class="col-md-4">
-          <app-input-text
-            [fg]="letterForm"
-            fcn="outGoingNumber"
-            [label]="'incomingOutgoing.outGoingNumber'"
-            [placeholder]="'incomingOutgoing.outGoingNumberPlaceholder' | translate">
-          </app-input-text>
-        </div>
-
-        <!-- Date -->
-        <div class="col-md-4">
-          <app-input-text
-            [fg]="letterForm"
-            fcn="date"
-            [label]="'incomingOutgoing.date'"
-            type="date">
-          </app-input-text>
-        </div>
-
-        <!-- Year -->
-        <div class="col-md-4">
-          <app-input-text
-            [fg]="letterForm"
-            fcn="year"
-            [label]="'incomingOutgoing.year'"
-            type="number"
-            [placeholder]="'incomingOutgoing.yearPlaceholder' | translate">
-          </app-input-text>
-        </div>
-      </div>
-
-      <div class="row">
-        <!-- Department -->
-        <div class="col-md-6">
-          <app-drop-down
-            [fg]="letterForm"
-            fcn="fkDepartmentId"
-            [label]="'incomingOutgoing.department'"
-            [placeholder]="'incomingOutgoing.selectDepartment' | translate"
-            [initialData]="allDepartments"
-            (onDropDownChanged)="onDepartmentDropDownChanged($event)">
-          </app-drop-down>
-        </div>
-
-        <!-- Category -->
-        <div class="col-md-6">
-          <app-drop-down
-            [fg]="letterForm"
-            fcn="outgoingCategoryId"
-            [label]="'incomingOutgoing.category'"
-            [placeholder]="'incomingOutgoing.selectCategory' | translate"
-            [initialData]="categoryOptions"
-            (onDropDownChanged)="onCategoryDropDownChanged($event)">
-          </app-drop-down>
-        </div>
-      </div>
-
-      <div class="row">
-        <!-- Reply To Incoming -->
-        <div class="col-md-12">
-          <app-drop-down
-            [fg]="letterForm"
-            fcn="incomingId"
-            [label]="'incomingOutgoing.replyToIncoming'"
-            [placeholder]="'incomingOutgoing.selectIncomingLetter' | translate"
-            [initialData]="incomingLetterOptions"
-            (onDropDownChanged)="onIncomingDropDownChanged($event)">
-          </app-drop-down>
-        </div>
-      </div>
-
-      <!-- Body -->
-      <div class="row">
-        <div class="col-md-12">
-          <app-input-text
-            [fg]="letterForm"
-            fcn="body"
-            [label]="'incomingOutgoing.body'"
-            [placeholder]="'incomingOutgoing.bodyPlaceholder' | translate"
-            type="textarea"
-            [rows]="6">
-          </app-input-text>
-        </div>
-      </div>
-
-      <!-- File Attachment -->
+      <!-- File Attachment (PDF, optional) -->
       <div class="row">
         <div class="col-md-12">
           <label class="form-label">

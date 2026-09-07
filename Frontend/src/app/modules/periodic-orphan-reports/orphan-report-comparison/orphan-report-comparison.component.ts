@@ -11,20 +11,23 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
-import { OrphanReportService } from '../../services/orphan-report.service';
+import { OrphanReportService } from '../services/orphan-report.service';
 import {
   OrphanReportHistoryDto,
   OrphanReportComparisonDto,
   OrphanReportComparisonMetricsDto
-} from '../../models/periodic-orphan-report.model';
+} from '../models/periodic-orphan-report.model';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 
+import { BreadcrumbComponent } from '../../../shared/components/breadcrumb/breadcrumb.component';
 @Component({
   selector: 'app-orphan-report-comparison',
   standalone: true,
   imports: [
+    BreadcrumbComponent,
+
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
@@ -55,7 +58,8 @@ export class OrphanReportComparisonComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private orphanReportService: OrphanReportService
+    private orphanReportService: OrphanReportService,
+    private translate: TranslateService
   ) {
     this.comparisonForm = this.buildForm();
   }
@@ -169,9 +173,26 @@ export class OrphanReportComparisonComponent implements OnInit {
   getReportLabel(reportId: string, reportNum: number): string {
     const report = this.reportHistory.find(r => r.reportId === reportId);
     if (report) {
-      return `${report.reportName || ('orphanReports.untitledReport' | translate)} (${report.reportFromDate | date:'shortDate'} - ${report.reportToDate | date:'shortDate'})`;
+      // Pipe syntax is template-only; resolve the label and dates in TS instead.
+      const name = report.reportName || this.translate.instant('orphanReports.untitledReport');
+      // Review P28 2026-08-24: bare toLocaleDateString() renders in whatever
+      // locale the browser carries (Arabic-Indic digits on ar browsers, en-US
+      // elsewhere) — format local date parts for the module's yyyy-MM-dd shape.
+      const from = this.fmtDate(report.reportFromDate);
+      const to = this.fmtDate(report.reportToDate);
+      return `${name} (${from} - ${to})`;
     }
-    return `Report ${reportNum}`;
+    // Review P27 2026-08-24: the hard-coded English fallback leaked "Report 1"
+    // into the Arabic UI — take it from the glossary like everything else.
+    return this.translate.instant('orphanReports.reportN', { n: reportNum });
+  }
+
+  private fmtDate(value?: string | null): string {
+    if (!value) return '';
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
   /**

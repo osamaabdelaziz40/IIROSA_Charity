@@ -1,0 +1,70 @@
+<div class="report-attachment-gallery" *ngIf="report">
+  <h6 class="mb-3">
+    <i class="bi bi-images me-1"></i>{{ 'periodicReports.attachments.title' | translate }}
+  </h6>
+
+  <div class="row g-3">
+    <div class="col-md-6 col-lg-4" *ngFor="let slot of slots; trackBy: trackBySlotKey">
+      <div class="card h-100">
+        <div class="card-header py-2">
+          <span class="small fw-semibold">{{ 'periodicReports.attachments.slots.' + slot.key | translate }}</span>
+        </div>
+        <div class="card-body p-2 text-center">
+          <!-- Filled slot: thumbnail → click to enlarge -->
+          <ng-container *ngIf="slot.objectUrl; else emptyState">
+            <img [src]="slot.objectUrl"
+                 [alt]="'periodicReports.attachments.slots.' + slot.key | translate"
+                 class="img-thumbnail slot-thumb"
+                 (click)="open(slot)">
+          </ng-container>
+
+          <!-- Honest empty / loading / failed states — never a broken image (AC 3) -->
+          <ng-template #emptyState>
+            <div class="slot-empty" *ngIf="!slot.loading && !slot.id">
+              <i class="bi bi-image text-muted"></i>
+              <div class="small text-muted">{{ 'periodicReports.attachments.noImage' | translate }}</div>
+            </div>
+            <div class="slot-empty" *ngIf="slot.loading">
+              <div class="spinner-border spinner-border-sm text-muted"></div>
+            </div>
+            <div class="slot-empty" *ngIf="!slot.loading && slot.id && slot.failed">
+              <i class="bi bi-exclamation-triangle text-warning"></i>
+              <div class="small text-muted">{{ 'periodicReports.attachments.loadFailed' | translate }}</div>
+            </div>
+          </ng-template>
+        </div>
+        <div class="card-footer py-1 text-center" *ngIf="slot.id">
+          <button type="button" class="btn btn-sm btn-outline-primary me-1"
+                  (click)="open(slot)" [disabled]="!slot.objectUrl">
+            <i class="bi bi-zoom-in"></i>
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="download(slot)">
+            <i class="bi bi-download"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enlarged view -->
+  <div class="gallery-lightbox" *ngIf="enlarged" (click)="close()">
+    <div class="gallery-lightbox-body" (click)="$event.stopPropagation()">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="fw-semibold">
+          {{ 'periodicReports.attachments.slots.' + enlarged.key | translate }}
+        </span>
+        <div>
+          <button type="button" class="btn btn-sm btn-outline-secondary me-1" (click)="download(enlarged)">
+            <i class="bi bi-download me-1"></i>{{ 'periodicReports.attachments.download' | translate }}
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="close()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </div>
+      <img [src]="enlargedUrl"
+           [alt]="'periodicReports.attachments.slots.' + enlarged.key | translate"
+           class="img-fluid gallery-enlarged">
+    </div>
+  </div>
+</div>

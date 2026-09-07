@@ -1,0 +1,254 @@
+<div class="periodic-report-print">
+  <app-breadcrumb [autoGenerate]="true"></app-breadcrumb>
+
+  <app-loading *ngIf="loading"></app-loading>
+
+  <!-- AC 4 — told there is nothing to produce; never an empty document -->
+  <div class="card" *ngIf="!loading && failed">
+    <div class="card-body text-center py-5">
+      <i class="fas fa-file-excel fa-3x text-muted mb-3"></i>
+      <p class="mb-3">{{ 'periodicReports.print.nothingToProduce' | translate }}</p>
+      <button type="button" class="btn btn-secondary" (click)="back()">
+        <i class="fas fa-arrow-right me-1"></i>
+        <span translate>common.back</span>
+      </button>
+    </div>
+  </div>
+
+  <ng-container *ngIf="!loading && payload && report">
+    <!-- Screen chrome — hidden on paper -->
+    <div class="no-print d-flex justify-content-between align-items-center mb-3">
+      <button type="button" class="btn btn-secondary" (click)="back()">
+        <i class="fas fa-arrow-right me-1"></i>
+        <span translate>common.back</span>
+      </button>
+      <button type="button" class="btn btn-primary" (click)="print()">
+        <i class="fas fa-print me-2"></i>
+        <span translate>periodicReports.print.print</span>
+      </button>
+    </div>
+
+    <!-- The official form — §14.S.2 sections in the spec's order -->
+    <div class="print-form" dir="rtl">
+      <!-- Header -->
+      <div class="form-header">
+        <div class="form-title">
+          <span translate>periodicReports.print.title</span>
+        </div>
+        <div class="form-meta">
+          <!-- Review P56 2026-08-24: الجمعية is a labeled identity-table row below —
+               printing it in the header meta too put the same value on the form twice. -->
+          <span *ngIf="report.reportNo">{{ 'periodicReports.reportNo' | translate }}: {{ report.reportNo }}</span>
+          <span>{{ 'periodicReports.reportDate' | translate }}: {{ report.reportDate | date:'mediumDate' }}</span>
+          <span *ngIf="report.reportPeriodFrom || report.reportPeriodTo">
+            {{ 'periodicReports.reportPeriod' | translate }}:
+            {{ report.reportPeriodFrom | date:'shortDate' }} — {{ report.reportPeriodTo | date:'shortDate' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Orphan identity + photograph -->
+      <table class="identity-table">
+        <tbody>
+          <tr>
+            <td class="lbl">{{ 'periodicReports.orphanCode' | translate }}</td>
+            <td>{{ v(report.orphanCode) }}</td>
+            <td class="lbl">{{ 'periodicReports.orphanName' | translate }}</td>
+            <td>{{ v(report.orphanName) }}</td>
+            <td rowspan="3" class="photo-cell">
+              <img *ngIf="imageUrls.get('orphanPhoto'); else noPhoto"
+                   [src]="imageUrls.get('orphanPhoto')" alt="" />
+              <ng-template #noPhoto><span class="no-photo">&nbsp;</span></ng-template>
+            </td>
+          </tr>
+          <tr>
+            <td class="lbl">{{ 'periodicReports.charity' | translate }}</td>
+            <td>{{ v(report.charityName) }}</td>
+            <td class="lbl">{{ 'common.status' | translate }}</td>
+            <td>{{ 'periodicReports.status.' + (report.reviewStatus || 'pending').toLowerCase() | translate }}</td>
+          </tr>
+          <tr>
+            <td class="lbl">{{ 'periodicReviews.reviewedBy' | translate }}</td>
+            <td>{{ v(report.reviewerName) }}</td>
+            <td class="lbl">{{ 'periodicReports.reviewedOn' | translate }}</td>
+            <td>{{ report.reviewedDate ? (report.reviewedDate | date:'mediumDate') : '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Religious & Quran education (§14.S.2) -->
+      <div class="section">
+        <div class="section-title" translate>periodicReports.form.sections.religious</div>
+        <table class="fields-table">
+          <tbody>
+            <tr>
+              <td class="lbl">{{ 'periodicReports.form.prayerStatus' | translate }}</td>
+              <td>{{ v(report.prayerStatus) }}</td>
+              <td class="lbl">{{ 'periodicReports.form.mannersStatus' | translate }}</td>
+              <td>{{ v(report.mannersStatus) }}</td>
+              <td class="lbl">{{ 'periodicReports.form.hadeethStatus' | translate }}</td>
+              <td>{{ v(report.hadeethStatus) }}</td>
+            </tr>
+            <tr>
+              <td class="lbl">{{ 'periodicReports.form.quranParts' | translate }}</td>
+              <td>{{ v(report.quranParts) }}</td>
+              <td class="lbl">{{ 'periodicReports.form.quranVerses' | translate }}</td>
+              <td colspan="3">{{ v(report.quranVerses) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Health & medical — emphasised for the disabled variant (AC 3) -->
+      <div class="section" [class.emphasised]="variantBase === 'disabled'">
+        <div class="section-title" translate>periodicReports.form.sections.health</div>
+        <table class="fields-table">
+          <tbody>
+            <tr>
+              <td class="lbl">{{ 'periodicReports.form.medicalStatus' | translate }}</td>
+              <td>{{ v(report.medicalStatus) }}</td>
+              <td class="lbl">{{ 'periodicReports.form.disease' | translate }}</td>
+              <td>{{ v(report.disease) }}</td>
+              <td class="lbl">{{ 'periodicReports.form.disability' | translate }}</td>
+              <td>{{ v(report.disability) }}</td>
+            </tr>
+            <tr *ngIf="report.diseaseDescription || report.disabilityDescription">
+              <td class="lbl">{{ 'periodicReports.form.diseaseDescription' | translate }}</td>
+              <td colspan="2">{{ v(report.diseaseDescription) }}</td>
+              <td class="lbl">{{ 'periodicReports.form.disabilityDescription' | translate }}</td>
+              <td colspan="2">{{ v(report.disabilityDescription) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Education — the studying variant's core section (AC 3) -->
+      <div class="section" [class.emphasised]="variantBase === 'studying'">
+        <div class="section-title" translate>periodicReports.form.sections.education</div>
+        <table class="fields-table">
+          <tbody>
+            <tr>
+              <td class="lbl">{{ 'periodicReports.form.educationalLevel' | translate }}</td>
+              <td>{{ v(report.educationalLevelName) }}</td>
+              <td class="lbl">{{ 'periodicReports.form.school' | translate }}</td>
+              <td>{{ v(report.school) }}</td>
+              <td class="lbl">{{ 'periodicReports.form.grade' | translate }}</td>
+              <td>{{ v(report.grade) }}</td>
+            </tr>
+            <tr>
+              <td class="lbl">{{ 'periodicReports.form.schoolType' | translate }}</td>
+              <td>{{ v(report.schoolType) }}</td>
+              <td class="lbl">{{ 'periodicReports.form.faculty' | translate }}</td>
+              <td>{{ v(report.faculty) }}</td>
+              <td class="lbl">{{ 'periodicReports.form.specialization' | translate }}</td>
+              <td>{{ v(report.specialization) }}</td>
+            </tr>
+            <tr>
+              <td class="lbl">{{ 'periodicReports.form.isOrphanStudent' | translate }}</td>
+              <td>{{ (report.isOrphanStudent ? 'common.yes' : 'common.no') | translate }}</td>
+              <!-- Review P54 2026-08-24: always render the three pairs — hiding the
+                   optionals on *ngIf both swallowed a real 0 fee and left the row
+                   ragged (2/4/6 cells) against the section's 3-pair layout. -->
+              <td class="lbl">{{ 'periodicReports.form.annualFeeForStudy' | translate }}</td>
+              <td>{{ report.annualFeeForStudy ?? '—' }}</td>
+              <td class="lbl">{{ 'periodicReports.form.dropOut' | translate }}</td>
+              <td>{{ report.dropOut ? (report.dropOutYear || '—') : '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Life events (marriage / death) -->
+      <div class="section">
+        <div class="section-title" translate>periodicReports.form.sections.lifeEvents</div>
+        <table class="fields-table">
+          <tbody>
+            <tr>
+              <td class="lbl">{{ 'periodicReports.form.married' | translate }}</td>
+              <td>{{ (report.married ? 'common.yes' : 'common.no') | translate }}</td>
+              <td class="lbl">{{ 'periodicReports.form.marriageDate' | translate }}</td>
+              <td>{{ report.marriageDate ? (report.marriageDate | date:'shortDate') : '—' }}</td>
+              <td class="lbl">{{ 'periodicReports.form.dead' | translate }}</td>
+              <td>{{ (report.dead ? 'common.yes' : 'common.no') | translate }}</td>
+            </tr>
+            <tr>
+              <td class="lbl">{{ 'periodicReports.form.deathDate' | translate }}</td>
+              <td colspan="5">{{ report.deathDate ? (report.deathDate | date:'shortDate') : '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Personal development -->
+      <div class="section">
+        <div class="section-title" translate>periodicReports.form.sections.personalDevelopment</div>
+        <table class="fields-table">
+          <tbody>
+            <tr>
+              <td class="lbl">{{ 'periodicReports.form.hobby' | translate }}</td>
+              <td>{{ v(report.hobby) }}</td>
+              <td class="lbl">{{ 'periodicReports.form.sportName' | translate }}</td>
+              <td>{{ v(report.sportName) }}</td>
+              <td class="lbl">{{ 'periodicReports.form.course' | translate }}</td>
+              <td>{{ v(report.courseName || report.course) }}</td>
+            </tr>
+            <tr>
+              <td class="lbl">{{ 'periodicReports.form.achievement' | translate }}</td>
+              <td>{{ v(report.achievement) }}</td>
+              <td class="lbl">{{ 'periodicReports.form.wish' | translate }}</td>
+              <td>{{ v(report.wish) }}</td>
+              <td class="lbl">{{ 'periodicReports.form.missingDocumentsName' | translate }}</td>
+              <td>{{ v(report.missingDocumentsName) }}</td>
+            </tr>
+            <tr *ngIf="report.orphanMessage">
+              <td class="lbl">{{ 'periodicReports.form.orphanMessage' | translate }}</td>
+              <td colspan="5" class="message">{{ report.orphanMessage }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Attached documents — only the sections the variant carries (AC 3, BR-12 blob images) -->
+      <div class="section documents" *ngIf="documentSlots.length > 0">
+        <div class="section-title" translate>periodicReports.form.sections.attachments</div>
+        <div class="documents-row">
+          <figure class="document" *ngFor="let slot of documentSlots; trackBy: trackBySlot">
+            <figcaption>{{ slotLabel(slot.slot) | translate }}</figcaption>
+            <img *ngIf="imageUrls.get(slot.slot); else noDoc" [src]="imageUrls.get(slot.slot)" alt="" />
+            <ng-template #noDoc><span class="doc-missing" translate>periodicReports.print.imageUnavailable</span></ng-template>
+          </figure>
+        </div>
+      </div>
+
+      <!-- Refusal reason / review comments, when decided -->
+      <div class="section" *ngIf="report.isRefused || report.reviewComments">
+        <div class="section-title" translate>periodicReports.reviewActions</div>
+        <table class="fields-table">
+          <tbody>
+            <tr *ngIf="report.isRefused">
+              <td class="lbl">{{ 'periodicReports.refuseReason' | translate }}</td>
+              <td colspan="5">{{ v(report.refuseReasonName || report.refuseReason) }}</td>
+            </tr>
+            <tr *ngIf="report.reviewComments">
+              <td class="lbl">{{ 'periodicReports.reviewComments' | translate }}</td>
+              <td colspan="5">{{ report.reviewComments }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Footer — signatures + the resolved variant (testable from the payload) -->
+      <div class="form-footer">
+        <div class="signatures">
+          <span translate>periodicReports.print.preparerSignature</span>
+          <span translate>periodicReports.print.reviewerSignature</span>
+        </div>
+        <div class="meta-line">
+          <span>{{ 'periodicReports.print.variantLabel' | translate }}: {{ payload.variant }}</span>
+          <span>{{ 'periodicReports.createdOn' | translate }}: {{ report.createdOn | date:'medium' }}</span>
+          <span>{{ 'periodicReports.createdBy' | translate }}: {{ v(report.createdByName) }}</span>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

@@ -15,10 +15,15 @@ public interface ISupportTicketRepository : IRepository<SupportTicket>
     Task<(IEnumerable<SupportTicket> Items, int TotalCount)> GetByUserIdPagedAsync(string userId, int pageNumber, int pageSize);
 
     // Admin Queries (UC-13.4: View All Tickets)
+    // searchTerm/sortBy/sortDirection are honoured by the implementation — the old
+    // 8-param shape silently dropped the list's search box and sortable headers.
     Task<(IEnumerable<SupportTicket> Items, int TotalCount)> GetAllTicketsPagedAsync(
-        int pageNumber, int pageSize, int? categoryId = null, int? priorityId = null,
-        int? statusId = null, string? assignedTo = null, DateTime? startDate = null,
-        DateTime? endDate = null);
+        int pageNumber, int pageSize,
+        int? categoryId = null, int? priorityId = null, int? statusId = null,
+        string? createdByUserId = null, string? assignedTo = null,
+        DateTime? startDate = null, DateTime? endDate = null,
+        bool? isSolved = null, string? searchTerm = null,
+        string? sortBy = null, string? sortDirection = null);
 
     // Search and Filter (UC-13.9: Search Tickets)
     Task<IEnumerable<SupportTicket>> SearchAsync(string searchTerm);

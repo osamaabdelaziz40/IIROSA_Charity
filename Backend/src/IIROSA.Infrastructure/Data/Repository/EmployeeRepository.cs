@@ -19,6 +19,24 @@ public class EmployeeRepository : Repository<Employee>, IEmployeeRepository
         _dbSet = context.Set<Employee>();
     }
 
+    /// <summary>
+    /// Reads that must expose DepartmentName go through these — the base GetByIdAsync/
+    /// GetAllAsync materialize bare rows and the Department navigation is always null.
+    /// </summary>
+    public async Task<Employee?> GetByIdWithDepartmentAsync(Guid id)
+    {
+        return await _dbSet
+            .Include(e => e.Department)
+            .FirstOrDefaultAsync(e => e.Id == id);
+    }
+
+    public async Task<IEnumerable<Employee>> GetAllWithDepartmentAsync()
+    {
+        return await _dbSet
+            .Include(e => e.Department)
+            .ToListAsync();
+    }
+
     public async Task<Employee?> GetByEmailAsync(string email)
     {
         return await _dbSet

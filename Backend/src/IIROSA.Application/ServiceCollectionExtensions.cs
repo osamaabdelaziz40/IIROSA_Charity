@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using System.Reflection;
 using System.Text;
@@ -89,6 +90,14 @@ namespace IIROSA.Application
 
             // FluentValidation
             services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+
+            // Deterministic IValidator<CreateFamilyDto> (epic-7 review): CreateHousingFamilyValidator
+            // is also an AbstractValidator<CreateFamilyDto> and auto-registers alongside
+            // CreateRefugeeFamilyValidator — which one DI resolves must not be registration-order
+            // luck. Pin the refugee validator explicitly.
+            services.RemoveAll<FluentValidation.IValidator<IIROSA.Application.DTOs.Family.CreateFamilyDto>>();
+            services.AddTransient<FluentValidation.IValidator<IIROSA.Application.DTOs.Family.CreateFamilyDto>,
+                Validators.Family.CreateRefugeeFamilyValidator>();
 
             // MediatR
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
@@ -193,7 +202,10 @@ namespace IIROSA.Application
                 options.AddPolicy("AllRoles", policy => policy.RequireRole("SuperAdmin", "Admin", "Charity", "Accountant", "FinancialOfficer"));
 
                 // Operational policies
-                options.AddPolicy("CanManageUsers", policy => policy.RequireRole("SuperAdmin"));
+                // Review decision 2026-08-24: the module specs' primary actor is the General
+                // Director (Admin); SuperAdmin-only locked them out of every employee/user
+                // write while reads stayed Admin-accessible
+                options.AddPolicy("CanManageUsers", policy => policy.RequireRole("SuperAdmin", "Admin"));
                 options.AddPolicy("CanManageRoles", policy => policy.RequireRole("SuperAdmin"));
                 options.AddPolicy("CanViewReports", policy => policy.RequireRole("SuperAdmin", "Admin", "Charity", "Accountant", "FinancialOfficer"));
                 options.AddPolicy("CanManageFinance", policy => policy.RequireRole("SuperAdmin", "Accountant", "FinancialOfficer"));

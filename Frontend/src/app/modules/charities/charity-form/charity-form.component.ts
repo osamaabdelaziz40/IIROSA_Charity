@@ -311,19 +311,14 @@ export class CharityFormComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Load Banks from API
+    // Load Banks from API. On failure the dropdown stays empty (8-11 AC 6 empty-option
+    // posture) — a fake fallback list would let a required bankId bind to non-existent banks.
     this.lookupService.getBanks({ isActive: true }).subscribe({
       next: (response) => {
-        debugger;
         this.bankOptions = response.items || [];
       },
       error: () => {
-        // Keep default bank options if API fails
-        this.bankOptions = [
-          { id: '1', name: 'Bank A' },
-          { id: '2', name: 'Bank B' },
-          { id: '3', name: 'Bank C' }
-        ];
+        this.bankOptions = [];
       }
     });
   }

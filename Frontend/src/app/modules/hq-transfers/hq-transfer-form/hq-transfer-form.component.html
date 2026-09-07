@@ -1,0 +1,307 @@
+<app-breadcrumb [items]="breadcrumbsWithAction"></app-breadcrumb>
+<app-page-header
+  [title]="pageTitle"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <!-- UC-TRF-03 not-found state: absent, soft-deleted, or outside the caller's scope -->
+      <div class="card shadow" *ngIf="notFound">
+        <div class="card-body text-center py-5">
+          <i class="fe fe-alert-circle fe-3x text-muted mb-3"></i>
+          <p class="text-muted">{{ 'hqTransfers.transferNotFound' | translate }}</p>
+          <button type="button" class="btn btn-secondary" (click)="onCancel()">
+            <i class="fe fe-arrow-left mr-1"></i>
+            {{ 'hqTransfers.backToList' | translate }}
+          </button>
+        </div>
+      </div>
+
+      <div class="card shadow" *ngIf="!loading && !notFound">
+        <div class="card-body">
+          <!-- UC-TRF-05: a failed catalogue load is never silent — retry offered inline -->
+          <div class="alert alert-warning d-flex align-items-center justify-content-between" *ngIf="catalogueFailed">
+            <span><i class="fe fe-alert-triangle mr-1"></i>{{ 'hqTransfers.catalogueLoadFailed' | translate }}</span>
+            <button type="button" class="btn btn-sm btn-outline-warning" (click)="retryCatalogues()">
+              <i class="fe fe-refresh-cw mr-1"></i>{{ 'hqTransfers.retryLoad' | translate }}
+            </button>
+          </div>
+          <form [formGroup]="transferForm" (ngSubmit)="onSubmit()">
+            <!-- Classification Section (الدولة · الإدارة) -->
+            <div class="col-12">
+              <h5 class="mb-3">{{ 'hqTransfers.classification' | translate }}</h5>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="countryId">
+                    {{ 'hqTransfers.country' | translate }} <span class="required">*</span>
+                  </label>
+                  <select id="countryId"
+                          class="form-control"
+                          formControlName="countryId"
+                          [class.is-invalid]="isFieldInvalid('countryId')">
+                    <option [ngValue]="null">{{ 'hqTransfers.selectCountry' | translate }}</option>
+                    <option *ngFor="let country of countries; trackBy: trackCountry" [ngValue]="country.id">
+                      {{ country.name || country.nameAr || country.nameEn }}
+                    </option>
+                  </select>
+                  <div *ngIf="isFieldInvalid('countryId')" class="invalid-feedback">
+                    {{ getFieldError('countryId') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="departmentId">
+                    {{ 'hqTransfers.department' | translate }} <span class="required">*</span>
+                  </label>
+                  <select id="departmentId"
+                          class="form-control"
+                          formControlName="departmentId"
+                          [class.is-invalid]="isFieldInvalid('departmentId')">
+                    <option [ngValue]="null">{{ 'hqTransfers.selectDepartment' | translate }}</option>
+                    <option *ngFor="let department of departments; trackBy: trackDepartment" [ngValue]="department.id">
+                      {{ department.name || department.nameAr || department.nameEn }}
+                    </option>
+                  </select>
+                  <div *ngIf="isFieldInvalid('departmentId')" class="invalid-feedback">
+                    {{ getFieldError('departmentId') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Operation Section (رقم العملية · السنة المالية · رقم الدفعة) -->
+            <div class="col-12 mt-4">
+              <h5 class="mb-3">{{ 'hqTransfers.operationInfo' | translate }}</h5>
+            </div>
+
+            <div class="row">
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="operationNumber">
+                    {{ 'hqTransfers.operationNumber' | translate }} <span class="required">*</span>
+                  </label>
+                  <input type="text"
+                         id="operationNumber"
+                         class="form-control"
+                         formControlName="operationNumber"
+                         [placeholder]="'hqTransfers.enterOperationNumber' | translate"
+                         [class.is-invalid]="isFieldInvalid('operationNumber')">
+                  <div *ngIf="isFieldInvalid('operationNumber')" class="invalid-feedback">
+                    {{ getFieldError('operationNumber') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="finYear">
+                    {{ 'hqTransfers.finYear' | translate }} <span class="required">*</span>
+                  </label>
+                  <input type="text"
+                         id="finYear"
+                         class="form-control"
+                         formControlName="finYear"
+                         [placeholder]="'hqTransfers.enterFinYear' | translate"
+                         [class.is-invalid]="isFieldInvalid('finYear')">
+                  <div *ngIf="isFieldInvalid('finYear')" class="invalid-feedback">
+                    {{ getFieldError('finYear') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="paymentNumber">
+                    {{ 'hqTransfers.paymentNumber' | translate }} <span class="required">*</span>
+                  </label>
+                  <select id="paymentNumber"
+                          class="form-control"
+                          formControlName="paymentNumber"
+                          [class.is-invalid]="isFieldInvalid('paymentNumber')">
+                    <option [ngValue]="null">{{ 'hqTransfers.selectPaymentNumber' | translate }}</option>
+                    <option *ngFor="let paymentNumber of paymentNumbers; trackBy: trackPaymentNumber" [ngValue]="paymentNumber">
+                      {{ 'hqTransfers.payment' + paymentNumber | translate }}
+                    </option>
+                  </select>
+                  <div *ngIf="isFieldInvalid('paymentNumber')" class="invalid-feedback">
+                    {{ getFieldError('paymentNumber') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Period Section (الى تاريخ · من تاريخ) — §22.S.2 field order -->
+            <div class="col-12 mt-4">
+              <h5 class="mb-3">{{ 'hqTransfers.period' | translate }}</h5>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="dateTo">
+                    {{ 'hqTransfers.dateTo' | translate }} <span class="required">*</span>
+                  </label>
+                  <input type="date"
+                         id="dateTo"
+                         class="form-control"
+                         formControlName="dateTo"
+                         [class.is-invalid]="isFieldInvalid('dateTo')">
+                  <div *ngIf="isFieldInvalid('dateTo')" class="invalid-feedback">
+                    {{ getFieldError('dateTo') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="dateFrom">
+                    {{ 'hqTransfers.dateFrom' | translate }} <span class="required">*</span>
+                  </label>
+                  <input type="date"
+                         id="dateFrom"
+                         class="form-control"
+                         formControlName="dateFrom"
+                         [class.is-invalid]="isFieldInvalid('dateFrom')">
+                  <div *ngIf="isFieldInvalid('dateFrom')" class="invalid-feedback">
+                    {{ getFieldError('dateFrom') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Financials Section (مبلغ الدفعة · البيان · عدد المستفيدين) — §22.S.2 field order -->
+            <div class="col-12 mt-4">
+              <h5 class="mb-3">{{ 'hqTransfers.financials' | translate }}</h5>
+            </div>
+
+            <div class="row">
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="amountOfPayment">
+                    {{ 'hqTransfers.amountOfPayment' | translate }} <span class="required">*</span>
+                  </label>
+                  <input type="number"
+                         id="amountOfPayment"
+                         class="form-control"
+                         formControlName="amountOfPayment"
+                         min="0.01"
+                         step="0.01"
+                         [placeholder]="'hqTransfers.enterAmountOfPayment' | translate"
+                         [class.is-invalid]="isFieldInvalid('amountOfPayment')">
+                  <div *ngIf="isFieldInvalid('amountOfPayment')" class="invalid-feedback">
+                    {{ getFieldError('amountOfPayment') }}
+                  </div>
+                  <!-- UC-TRF-06: the destination country's ceiling, or "no limit configured" -->
+                  <small class="form-text text-muted" *ngIf="maxAmountKnown">
+                    <span *ngIf="maxAmount !== null">{{ 'hqTransfers.maxAmountLimit' | translate: {value: maxAmount} }}</span>
+                    <span *ngIf="maxAmount === null">{{ 'hqTransfers.noMaxAmountLimit' | translate }}</span>
+                  </small>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <!-- البيان — §22.S.2's optional free text -->
+                  <label for="statement">
+                    {{ 'hqTransfers.statement' | translate }}
+                  </label>
+                  <input type="text"
+                         id="statement"
+                         class="form-control"
+                         formControlName="statement"
+                         [placeholder]="'hqTransfers.enterStatement' | translate"
+                         [class.is-invalid]="isFieldInvalid('statement')">
+                  <div *ngIf="isFieldInvalid('statement')" class="invalid-feedback">
+                    {{ getFieldError('statement') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="beneficiariesNumber">
+                    {{ 'hqTransfers.beneficiariesNumber' | translate }} <span class="required">*</span>
+                  </label>
+                  <input type="number"
+                         id="beneficiariesNumber"
+                         class="form-control"
+                         formControlName="beneficiariesNumber"
+                         min="1"
+                         step="1"
+                         [placeholder]="'hqTransfers.enterBeneficiariesNumber' | translate"
+                         [class.is-invalid]="isFieldInvalid('beneficiariesNumber')">
+                  <div *ngIf="isFieldInvalid('beneficiariesNumber')" class="invalid-feedback">
+                    {{ getFieldError('beneficiariesNumber') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Transaction Section (رقم المعاملة · تاريخ المعاملة) -->
+            <div class="col-12 mt-4">
+              <h5 class="mb-3">{{ 'hqTransfers.transactionInfo' | translate }}</h5>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="transactionNumber">
+                    {{ 'hqTransfers.transactionNumber' | translate }} <span class="required">*</span>
+                  </label>
+                  <input type="text"
+                         id="transactionNumber"
+                         class="form-control"
+                         formControlName="transactionNumber"
+                         [placeholder]="'hqTransfers.enterTransactionNumber' | translate"
+                         [class.is-invalid]="isFieldInvalid('transactionNumber')">
+                  <div *ngIf="isFieldInvalid('transactionNumber')" class="invalid-feedback">
+                    {{ getFieldError('transactionNumber') }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="transactionDate">
+                    {{ 'hqTransfers.transactionDate' | translate }} <span class="required">*</span>
+                  </label>
+                  <input type="date"
+                         id="transactionDate"
+                         class="form-control"
+                         formControlName="transactionDate"
+                         [class.is-invalid]="isFieldInvalid('transactionDate')">
+                  <div *ngIf="isFieldInvalid('transactionDate')" class="invalid-feedback">
+                    {{ getFieldError('transactionDate') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions — no حفظ in view mode (the read changes nothing) -->
+            <div class="col-12 mt-4" *ngIf="!isViewMode">
+              <div class="form-group">
+                <button type="submit" class="btn btn-primary" [disabled]="saving">
+                  <i class="fe fe-save mr-1" *ngIf="!saving"></i>
+                  <span class="spinner-border spinner-border-sm mr-1" *ngIf="saving"></span>
+                  {{ 'common.save' | translate }}
+                </button>
+                <button type="button" class="btn btn-secondary ml-2" (click)="onCancel()" [disabled]="saving">
+                  <i class="fe fe-x mr-1"></i>
+                  {{ 'common.cancel' | translate }}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">{{ 'common.loading' | translate }}</span>
+        </div>
+        <p class="mt-3 text-muted">{{ 'common.loading' | translate }}...</p>
+      </div>
+    </div>
+  </div>
+</div>

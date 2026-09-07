@@ -14,6 +14,13 @@ public interface IEmployeeService
     Task<EmployeePagedResult<EmployeeListDto>> GetEmployeesFilteredAsync(EmployeeFilterDto filter);
 
     /// <summary>
+    /// Check whether a proposed login name (the identity user's email/username) is free
+    /// (UC-EMP-02: Verify employee username availability). Consults both the identity user
+    /// store and the Employee table, excluding the given employee's own account when editing.
+    /// </summary>
+    Task<bool> IsUserNameAvailableAsync(string userName, Guid? excludeEmployeeId = null);
+
+    /// <summary>
     /// Get employee by ID (UC-2.7: View Employee Profile)
     /// </summary>
     Task<EmployeeDetailDto?> GetEmployeeByIdAsync(Guid id);

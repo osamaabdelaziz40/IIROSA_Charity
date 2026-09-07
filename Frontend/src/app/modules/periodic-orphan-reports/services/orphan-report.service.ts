@@ -18,7 +18,12 @@ import {
   providedIn: 'root'
 })
 export class OrphanReportService {
-  private apiUrl = `${environment.apiUrl}/api/OrphanReports`;
+  // Review P59 2026-08-24: environment.prod.ts's apiUrl already ends in '/api'
+  // while the dev value does not — appending '/api' again would double the segment
+  // in production. Normalize here (epic-9 scope); the core services that assume
+  // the suffixed value are left to their owning sessions.
+  private readonly baseApiUrl = environment.apiUrl.replace(/\/api\/?$/, '');
+  private apiUrl = `${this.baseApiUrl}/api/OrphanReports`;
 
   constructor(private http: HttpClient) {}
 

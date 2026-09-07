@@ -1,7 +1,5 @@
 <div class="periodic-report-detail">
-  <app-breadcrumb
-    [title]="'periodicReports.reportDetails' | translate">
-  </app-breadcrumb>
+  <app-breadcrumb [autoGenerate]="true"></app-breadcrumb>
 
   <app-loading *ngIf="loading"></app-loading>
 
@@ -18,6 +16,12 @@
             <small class="text-muted">{{ report.orphanCode }} - {{ report.orphanName }}</small>
           </div>
           <div class="btn-group">
+            <!-- UC-ORR-17 — the §14.S.2 print command on the detail screen -->
+            <a class="btn btn-outline-secondary" [routerLink]="['print']"
+               [title]="'periodicReports.print.print' | translate">
+              <i class="fas fa-print me-2"></i>
+              <span translate>periodicReports.print.print</span>
+            </a>
             <button class="btn btn-primary" *ngIf="canEdit" (click)="editReport()">
               <i class="fas fa-edit me-2"></i>
               <span translate>common.edit</span>
@@ -33,48 +37,320 @@
         <div class="row">
           <div class="col-md-3">
             <div class="info-row">
-              <span class="label">{{ 'periodicReports.reportDate' | translate }}:</span>
+              <span class="label">{{ 'periodicReports.form.reportDate' | translate }}:</span>
               <span class="value">{{ report.reportDate | date:'mediumDate' }}</span>
             </div>
           </div>
           <div class="col-md-3">
             <div class="info-row">
-              <span class="label">{{ 'periodicReports.status' | translate }}:</span>
-              <span class="value">
-                <span class="badge" [ngClass]="getStatusClass(report.reviewStatus)">
-                  {{ 'periodicReports.status.' + report.reviewStatus.toLowerCase() | translate }}
-                </span>
-              </span>
+              <span class="label">{{ 'periodicReports.form.reportPeriodFrom' | translate }}:</span>
+              <span class="value">{{ report.reportPeriodFrom | date:'shortDate' }} - {{ report.reportPeriodTo | date:'shortDate' }}</span>
             </div>
           </div>
           <div class="col-md-3">
             <div class="info-row">
-              <span class="label">{{ 'periodicReports.charity' | translate }}:</span>
+              <span class="label">{{ 'periodicReports.lookup.charity' | translate }}:</span>
               <span class="value">{{ report.charityName || '-' }}</span>
             </div>
           </div>
           <div class="col-md-3">
             <div class="info-row">
-              <span class="label">{{ 'periodicReports.createdBy' | translate }}:</span>
-              <span class="value">{{ report.createdByName || '-' }}</span>
+              <span class="label">{{ 'periodicReports.form.reportNo' | translate }}:</span>
+              <span class="value">{{ report.reportNo || '-' }}</span>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Report Sections (similar to review component but read-only) -->
+    <!-- Review State - §14.U.4 (badge, deciding user, decision date, refusal reason) -->
     <div class="card mb-3">
+      <div class="card-header">
+        <h6 class="mb-0">
+          <i class="fas fa-clipboard-check me-2"></i>
+          <span translate>periodicReports.reviewState</span>
+        </h6>
+      </div>
       <div class="card-body">
-        <p class="text-muted text-center">
-          <em>{{ 'periodicReports.detailedViewPlaceholder' | translate }}</em>
-        </p>
-        <p class="text-center">
-          <a class="btn btn-outline-primary" [routerLink]="['../' + report.id + 'review']" *ngIf="!report.reviewed">
+        <div class="row">
+          <div class="col-md-3">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.columns.approved' | translate }}:</span>
+              <span class="value">
+                <span class="badge" [ngClass]="getStatusClass(report.reviewStatus)">
+                  {{ 'periodicReports.status.' + (report.reviewStatus || 'pending').toLowerCase() | translate }}
+                </span>
+              </span>
+            </div>
+          </div>
+          <div class="col-md-3" *ngIf="report.reviewed">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReviews.reviewedBy' | translate }}:</span>
+              <span class="value">{{ report.reviewerName || '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-3" *ngIf="report.reviewed">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.reviewedOn' | translate }}:</span>
+              <span class="value">{{ report.reviewedDate | date:'medium' }}</span>
+            </div>
+          </div>
+          <div class="col-md-3" *ngIf="report.isRefused">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.refuseReason' | translate }}:</span>
+              <span class="value text-danger">{{ report.refuseReasonName || report.refuseReason || '-' }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="row" *ngIf="report.reviewComments">
+          <div class="col-12">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.reviewComments' | translate }}:</span>
+              <span class="value">{{ report.reviewComments }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="text-center mt-2" *ngIf="!report.reviewed">
+          <a class="btn btn-outline-primary" [routerLink]="['review']">
             <i class="fas fa-clipboard-check me-2"></i>
             <span translate>periodicReports.reviewReport</span>
           </a>
-        </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Religious & Behavioural -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-pray me-2"></i> <span translate>periodicReports.form.sections.religious</span></h6>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.prayerStatus' | translate }}:</span>
+              <span class="value">{{ report.prayerStatus || '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.mannersStatus' | translate }}:</span>
+              <span class="value">{{ report.mannersStatus || '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.hadeethStatus' | translate }}:</span>
+              <span class="value">{{ report.hadeethStatus || '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.quranParts' | translate }}:</span>
+              <span class="value">{{ report.quranParts || '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.quranVerses' | translate }}:</span>
+              <span class="value">{{ report.quranVerses || '-' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Health & Medical -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-heartbeat me-2"></i> <span translate>periodicReports.form.sections.health</span></h6>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.medicalStatus' | translate }}:</span>
+              <span class="value">{{ report.medicalStatus || '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.disease' | translate }}:</span>
+              <span class="value">{{ report.disease || '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.disability' | translate }}:</span>
+              <span class="value">{{ report.disability || '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-6" *ngIf="report.diseaseDescription">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.diseaseDescription' | translate }}:</span>
+              <span class="value">{{ report.diseaseDescription }}</span>
+            </div>
+          </div>
+          <div class="col-md-6" *ngIf="report.disabilityDescription">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.disabilityDescription' | translate }}:</span>
+              <span class="value">{{ report.disabilityDescription }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Education -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-graduation-cap me-2"></i> <span translate>periodicReports.form.sections.education</span></h6>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.educationalLevel' | translate }}:</span>
+              <span class="value">{{ report.educationalLevelName || '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.school' | translate }}:</span>
+              <span class="value">{{ report.school || '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.grade' | translate }}:</span>
+              <span class="value">{{ report.grade || '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.schoolType' | translate }}:</span>
+              <span class="value">{{ report.schoolType || '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-4" *ngIf="report.faculty">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.faculty' | translate }}:</span>
+              <span class="value">{{ report.faculty }}</span>
+            </div>
+          </div>
+          <div class="col-md-4" *ngIf="report.specialization">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.specialization' | translate }}:</span>
+              <span class="value">{{ report.specialization }}</span>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.isOrphanStudent' | translate }}:</span>
+              <span class="value">
+                <i class="fas" [ngClass]="report.isOrphanStudent ? 'fa-check-circle text-success' : 'fa-times-circle text-muted'"></i>
+              </span>
+            </div>
+          </div>
+          <div class="col-md-3" *ngIf="report.isOrphanStudent">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.annualFeeForStudy' | translate }}:</span>
+              <span class="value">{{ report.annualFeeForStudy ?? '-' }}</span>
+            </div>
+          </div>
+          <div class="col-md-3" *ngIf="report.dropOut">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.dropOut' | translate }}:</span>
+              <span class="value badge bg-warning">{{ report.dropOutYear || '' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Life Events & Personal Development -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-heart me-2"></i> <span translate>periodicReports.form.sections.lifeEvents</span> · <span translate>periodicReports.form.sections.personalDevelopment</span></h6>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-3" *ngIf="report.married">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.married' | translate }}:</span>
+              <span class="value badge bg-success">{{ 'common.yes' | translate }}</span>
+              <span class="value ms-2">{{ report.marriageDate | date:'shortDate' }}</span>
+            </div>
+          </div>
+          <div class="col-md-3" *ngIf="report.dead">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.dead' | translate }}:</span>
+              <span class="value badge bg-danger">{{ 'common.yes' | translate }}</span>
+              <span class="value ms-2">{{ report.deathDate | date:'shortDate' }}</span>
+            </div>
+          </div>
+          <div class="col-md-3" *ngIf="report.hobby">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.hobby' | translate }}:</span>
+              <span class="value">{{ report.hobby }}</span>
+            </div>
+          </div>
+          <div class="col-md-3" *ngIf="report.sportName">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.sportName' | translate }}:</span>
+              <span class="value">{{ report.sportName }}</span>
+            </div>
+          </div>
+          <div class="col-md-3" *ngIf="report.courseName || report.course">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.course' | translate }}:</span>
+              <span class="value">{{ report.courseName || report.course }}</span>
+            </div>
+          </div>
+          <div class="col-md-3" *ngIf="report.achievement">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.achievement' | translate }}:</span>
+              <span class="value">{{ report.achievement }}</span>
+            </div>
+          </div>
+          <div class="col-md-3" *ngIf="report.wish">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.wish' | translate }}:</span>
+              <span class="value">{{ report.wish }}</span>
+            </div>
+          </div>
+          <div class="col-12" *ngIf="report.orphanMessage">
+            <div class="info-row">
+              <span class="label">{{ 'periodicReports.form.orphanMessage' | translate }}:</span>
+              <span class="value fst-italic">{{ report.orphanMessage }}</span>
+            </div>
+          </div>
+          <div class="col-12 text-muted" *ngIf="!report.married && !report.dead && !report.hobby && !report.sportName && !report.achievement && !report.wish && !report.orphanMessage">
+            <em>{{ 'periodicReports.noLifeEvents' | translate }}</em>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- الملفات المطلوبه — presence + download link (gallery interaction is 9-16) -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-paperclip me-2"></i> <span translate>periodicReports.form.sections.attachments</span></h6>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 mb-2" *ngFor="let slot of attachmentSlots; trackBy: trackBySlotControl">
+            <button type="button" class="btn btn-sm w-100 d-flex justify-content-between align-items-center"
+                    [class.btn-outline-primary]="!!slot.id" [class.btn-outline-secondary]="!slot.id"
+                    (click)="slot.id && openAttachment(slot.id)">
+              <span><i class="fas me-2" [class]="slot.id ? 'fa-paperclip' : 'fa-ban'"></i>{{ slot.labelKey | translate }}</span>
+              <i *ngIf="slot.id" class="fas fa-download"></i>
+            </button>
+          </div>
+        </div>
+        <div class="text-muted small mt-2" *ngIf="missingDocumentsNames">
+          {{ 'periodicReports.form.missingDocumentsName' | translate }}: {{ missingDocumentsNames }}
+        </div>
       </div>
     </div>
 
@@ -109,21 +385,10 @@
             </div>
           </div>
         </div>
-        <div class="row" *ngIf="report.reviewed">
-          <div class="col-md-6">
-            <div class="info-row">
-              <span class="label">{{ 'periodicReports.reviewedOn' | translate }}:</span>
-              <span class="value">{{ report.reviewedDate | date:'medium' }}</span>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="info-row">
-              <span class="label">{{ 'periodicReports.reviewedBy' | translate }}:</span>
-              <span class="value">{{ report.reviewerName || '-' }}</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
+
+    <!-- §14.U.16 attachment gallery — صور اليتيم والشهادات -->
+    <app-report-attachment-gallery [report]="report"></app-report-attachment-gallery>
   </div>
 </div>

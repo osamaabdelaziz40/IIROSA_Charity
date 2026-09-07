@@ -1,44 +1,69 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
+import { Subject, takeUntil } from 'rxjs';
 
-import { PeriodicOrphanReportService } from '../../services/periodic-orphan-report.service';
+import { PeriodicOrphanReportService } from '../services/periodic-orphan-report.service';
 import {
   PeriodicOrphanReportListDto,
   PeriodicOrphanReportFilterDto
-} from '../../models/periodic-orphan-report.model';
+} from '../models/periodic-orphan-report.model';
+import { CharityService } from '../../charities/services/charity.service';
+import { CharityDto } from '../../charities/models/charity.model';
+import { AuthService } from '../../../core/services/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { TranslateService } from '@ngx-translate/core';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { DropDownComponent } from '../../../shared/components/drop-down/drop-down.component';
 
+/**
+ * Periodic reports register — §14.S.1 / UC-ORR-01.
+ *
+ * Spec contract: 5 filters (الجمعية · من/الي تاريخ · كود اليتيم · اسم اليتيم · أكواد)
+ * plus بحث; a 6-column grid (الرقم · رقم التقرير · التاريخ · تم الاعتماد · تاريخ
+ * الاعتماد · الاجراءات). Tabs are NOT in the spec — status filtering is 9-9's screen.
+ * الجمعية is an HQ-only filter (a charity caller is server-pinned to its own rows).
+ */
 @Component({
   selector: 'app-periodic-reports-list',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
     ReactiveFormsModule,
+    RouterLink,
     TranslateModule,
+    PageHeaderComponent,
     PaginationComponent,
     LoadingComponent,
-    EmptyStateComponent
+    EmptyStateComponent,
+    DropDownComponent
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './periodic-reports-list.component.html',
   styleUrls: ['./periodic-reports-list.component.scss']
 })
-export class PeriodicReportsListComponent implements OnInit {
-  @ViewChild(PaginationComponent) pagination!: PaginationComponent;
-
-  // Tab management - UC-6.14 (Approved), UC-6.15 (Rejected)
-  activeTab: 'all' | 'pending' | 'approved' | 'rejected' = 'all';
-
-  // Data
+export class PeriodicReportsListComponent implements OnInit, OnDestroy {
   reports: PeriodicOrphanReportListDto[] = [];
   totalCount = 0;
+  totalPages = 0;
   loading = false;
 
-  // Filter
+  /** §14.S.1 filter bar — reactive form so the shared select2 drop-downs can bind (charity-list pattern). */
+  filterForm: FormGroup;
+
+  /** Select2 option arrays ({id, name}) fed to app-drop-down. */
+  charityOptions: Array<{ id: string; name: string }> = [];
+  statusOptions: Array<{ id: string; name: string }> = [];
+
+  /** HQ sees the الجمعية drop-down (كافة الجهات = no charity pin) */
+  isHeadOffice = false;
+  charities: CharityDto[] = [];
+
   filter: PeriodicOrphanReportFilterDto = {
     pageNumber: 1,
     pageSize: 20,
@@ -46,140 +71,240 @@ export class PeriodicReportsListComponent implements OnInit {
     sortDirection: 'DESC'
   };
 
-  // Search
-  searchTerm = '';
-
-  // Summary stats
-  summaryStats = {
-    total: 0,
-    pending: 0,
-    approved: 0,
-    rejected: 0
-  };
+  /** Review P27 2026-08-26 precedent: teardown for the screen's subscriptions. */
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
+    private fb: FormBuilder,
     private periodicReportService: PeriodicOrphanReportService,
-    private fb: FormBuilder
-  ) {}
+    private charityService: CharityService,
+    public auth: AuthService,
+    private notification: NotificationService,
+    private translate: TranslateService,
+    private cdr: ChangeDetectorRef
+  ) {
+    this.filterForm = this.fb.group({
+      charityId: ['all'],
+      dateFrom: [''],
+      dateTo: [''],
+      orphanCode: [''],
+      orphanName: [''],
+      codesOnly: [false],
+      reviewStatusFilter: ['all']
+    });
+  }
 
   ngOnInit(): void {
+    this.isHeadOffice = this.auth.hasRole('SuperAdmin') || this.auth.hasRole('Admin');
+    this.buildCharityOptions();
+    this.initializeStatusOptions();
+    if (this.isHeadOffice) {
+      // Review P30a 2026-08-24: OnPush — the async dropdown fill happens outside
+      // Angular's zone-visible bindings; without markForCheck the list stays empty.
+      this.charityService.getCharities({ pageNumber: 1, pageSize: 500 })
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: result => {
+            this.charities = result.items ?? [];
+            this.buildCharityOptions();
+            this.cdr.markForCheck();
+          },
+          error: () => {
+            this.charities = [];
+            this.buildCharityOptions();
+            this.cdr.markForCheck();
+          }
+        });
+    }
+
+    // أكواد only toggles the grid columns (no reload) — under OnPush the form value
+    // change alone doesn't re-run the *ngIfs, so drive markForCheck from it.
+    this.filterForm.get('codesOnly')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.cdr.markForCheck());
+
+    // Option labels are pre-translated (app-drop-down renders raw text) — the
+    // translate pipe can't refresh them, so rebuild on a language switch.
+    this.translate.onLangChange
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.buildCharityOptions();
+        this.initializeStatusOptions();
+        this.cdr.markForCheck();
+      });
+
     this.loadReports();
   }
 
-  /**
-   * Load reports based on active tab and filters
-   */
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /** كافة الجهات sentinel — 'all' maps to no charity pin in the request. */
+  private buildCharityOptions(): void {
+    this.charityOptions = [
+      { id: 'all', name: this.translate.instant('periodicReports.filters.allCharities') },
+      ...this.charities.map(charity => ({ id: charity.id, name: charity.name }))
+    ];
+  }
+
+  /** حالة الاعتماد filter (9-7 Task 3) — the reviewer's pending-queue entry. String ids stay verbatim. */
+  private initializeStatusOptions(): void {
+    this.statusOptions = [
+      { id: 'all', name: this.translate.instant('periodicReports.filters.all') },
+      { id: 'pending', name: this.translate.instant('periodicReports.status.pending') },
+      { id: 'approved', name: this.translate.instant('periodicReports.status.approved') },
+      { id: 'rejected', name: this.translate.instant('periodicReports.status.rejected') }
+    ];
+  }
+
+  /** أكواد — form-backed column toggle read by the grid *ngIfs. */
+  get codesOnly(): boolean {
+    return !!this.filterForm.get('codesOnly')?.value;
+  }
+
+  /** بحث — applies the filter bar and returns to page 1 (§14.S.1) */
+  onSearch(): void {
+    this.filter.pageNumber = 1;
+    this.loadReports();
+  }
+
   loadReports(): void {
     this.loading = true;
 
-    // Set filter based on active tab
-    this.filter.pageNumber = 1;
-    if (this.pagination) {
-      this.filter.pageNumber = this.pagination.currentPage;
-    }
-
-    // Apply tab filter
-    this.filter.reviewStatus = this.activeTab === 'all' ? undefined : this.activeTab.charAt(0).toUpperCase() + this.activeTab.slice(1);
+    const filters = this.filterForm.value;
+    this.filter.charityId = this.isHeadOffice && filters.charityId && filters.charityId !== 'all'
+      ? filters.charityId
+      : undefined;
+    this.filter.reportDateFrom = filters.dateFrom || undefined;
+    this.filter.reportDateTo = filters.dateTo || undefined;
+    this.filter.orphanCode = (filters.orphanCode || '').trim() || undefined;
+    this.filter.orphanName = (filters.orphanName || '').trim() || undefined;
+    this.filter.reviewStatus = filters.reviewStatusFilter !== 'all' ? filters.reviewStatusFilter : undefined;
 
     this.periodicReportService.getReports(this.filter).subscribe({
-      next: (result) => {
-        this.reports = result.items;
-        this.totalCount = result.totalCount;
+      next: result => {
+        this.reports = result.items ?? [];
+        this.totalCount = result.totalCount ?? 0;
+        this.totalPages = result.totalPages ?? 0;
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: (error) => {
-        console.error('Error loading reports:', error);
+      error: error => {
+        console.error('Error loading periodic reports:', error);
+        this.reports = [];
+        this.totalCount = 0;
         this.loading = false;
+        this.cdr.markForCheck();
       }
     });
   }
 
-  /**
-   * Handle tab change - UC-6.14, UC-6.15
-   */
-  onTabChange(tab: 'all' | 'pending' | 'approved' | 'rejected'): void {
-    this.activeTab = tab;
-    this.loadReports();
-  }
-
-  /**
-   * Handle search - UC-6.16
-   */
-  onSearch(): void {
-    this.filter.searchTerm = this.searchTerm;
+  /** مسح التصفية — back to the §14.S.1 defaults (sentinels included) and page 1. */
+  clearFilters(): void {
+    this.filterForm.reset({
+      charityId: 'all',
+      dateFrom: '',
+      dateTo: '',
+      orphanCode: '',
+      orphanName: '',
+      codesOnly: false,
+      reviewStatusFilter: 'all'
+    });
     this.filter.pageNumber = 1;
     this.loadReports();
   }
 
-  /**
-   * Clear search
-   */
-  clearSearch(): void {
-    this.searchTerm = '';
-    this.filter.searchTerm = undefined;
-    this.loadReports();
+  /** Whether any filter deviates from its no-filter sentinel (drives the Clear button). */
+  hasActiveFilters(): boolean {
+    const filters = this.filterForm.value;
+    return !!(
+      (this.isHeadOffice && filters.charityId && filters.charityId !== 'all') ||
+      filters.dateFrom ||
+      filters.dateTo ||
+      (filters.orphanCode || '').trim() ||
+      (filters.orphanName || '').trim() ||
+      filters.codesOnly ||
+      filters.reviewStatusFilter !== 'all'
+    );
   }
 
   /**
-   * Handle page change
+   * UC-ORR-06 — delete a register row. Confirmed first (nothing sent on decline);
+   * after a successful delete the current page refreshes, stepping back one page
+   * when it just emptied (15-1 stale-empty-page finding).
    */
+  async deleteReport(report: PeriodicOrphanReportListDto): Promise<void> {
+    const confirmed = await this.notification.confirm(
+      this.translate.instant('periodicReports.deleteConfirm'),
+      this.translate.instant('periodicReports.deleteTitle')
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    this.periodicReportService.deleteReport(report.id).subscribe({
+      next: () => {
+        this.notification.show(
+          this.translate.instant('periodicReports.deletedSuccessfully'),
+          'success'
+        );
+        const pageSize = this.filter.pageSize ?? 20;
+        const remainingOnPage = this.reports.length - 1;
+        if (remainingOnPage === 0 && (this.filter.pageNumber ?? 1) > 1) {
+          this.filter.pageNumber = (this.filter.pageNumber ?? 1) - 1;
+        }
+        this.loadReports();
+      },
+      error: error => {
+        // Review P36a 2026-08-24: handleError already unwraps to the ApiResponse
+        // body (or the message string) — the old error?.error?.message
+        // double-unwrap always missed it, so the server's refusal reason
+        // (e.g. a locked row) never surfaced.
+        const reason = (typeof error === 'string' ? error : error?.message)
+          || this.translate.instant('periodicReports.deleteFailed');
+        this.notification.show(reason, 'error');
+      }
+    });
+  }
+
+  /** Only a locked row resists deletion — HQ may remove reviewed records (§14.D-25.5 A2). */
+  canDelete(report: PeriodicOrphanReportListDto): boolean {
+    return !report.locked;
+  }
+
   onPageChange(page: number): void {
     this.filter.pageNumber = page;
     this.loadReports();
   }
 
-  /**
-   * Export reports - UC-6.17
-   */
-  exportReports(format: 'excel' | 'pdf'): void {
-    this.periodicReportService.exportToExcel(this.filter).subscribe({
-      next: (blob: Blob) => {
-        this.downloadFile(blob, `PeriodicReports_${new Date().toISOString().split('T')[0]}.xlsx`);
-      },
-      error: (error) => {
-        console.error('Error exporting reports:', error);
-      }
-    });
+  /** الرقم — serial continuous across pages: (page-1)*size + index + 1 */
+  serial(index: number): number {
+    return ((this.filter.pageNumber ?? 1) - 1) * (this.filter.pageSize ?? 20) + index + 1;
   }
 
-  /**
-   * Download file helper
-   */
-  private downloadFile(blob: Blob, filename: string): void {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+  trackByReportId(_index: number, report: PeriodicOrphanReportListDto): string {
+    return report.id;
   }
 
-  /**
-   * Get status badge class
-   */
-  getStatusClass(status: string): string {
-    switch (status.toLowerCase()) {
-      case 'approved': return 'badge-success';
-      case 'rejected': return 'badge-danger';
-      case 'pending': return 'badge-warning';
-      default: return 'badge-secondary';
+  /** تم الاعتماد badge class from the computed reviewStatus.
+   *  Review P49 2026-08-24: Bootstrap 5.3 colour utilities are bg-*, not the
+   *  Bootstrap 4 badge-* names — the old classes styled nothing on this stack. */
+  statusClass(status: string): string {
+    switch (status?.toLowerCase()) {
+      case 'approved': return 'bg-success';
+      case 'rejected': return 'bg-danger';
+      default: return 'bg-warning text-dark';
     }
   }
 
-  /**
-   * Check if report can be edited
-   */
-  canEditReport(report: PeriodicOrphanReportListDto): boolean {
-    return !report.locked && !report.reviewed;
+  /** Edit is offered while the row is not locked and not accepted — refused rows reopen for resubmission (§14.D-25.5 A1) */
+  canEdit(report: PeriodicOrphanReportListDto): boolean {
+    return !report.locked && !report.isAccepted;
   }
 
-  /**
-   * Check if user can review
-   */
-  get canReview(): boolean {
-    // TODO: Check user role (Admin, Super Admin, Accountant, Employee)
-    return true;
+  hasPermission(permission: string): boolean {
+    return this.auth.hasPermission(permission);
   }
 }

@@ -1,0 +1,5 @@
+/* UC-RPT-35 (§23.U.35 الأيتام والأرامل الجدد) — the variant grids ride the shared
+   report-viewer chrome; the variant group wraps on narrow RTL widths. */
+.btn-group {
+  flex-wrap: wrap;
+}

@@ -5,6 +5,8 @@ import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { FamilyDto, FamilySearchRequest } from '../models/family.model';
 import { FamilyService } from '../services/family.service';
+import { CharityService } from '../../charities/services/charity.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
@@ -54,6 +56,17 @@ export class FamilyListComponent implements OnInit, OnDestroy {
   housingTypeOptions: Array<{ id: string; name: string }> = [];
   statusOptions: Array<{ id: string; name: string }> = [];
 
+  // Charity transfer (UC-FAM-06 نقل الأسرة لجمعية أخرى) — HQ-only action
+  canTransfer = false;
+  showTransferModal = false;
+  transferring = false;
+  /** Transfer-modal charity dropdown fetch state (first open). */
+  charitiesLoading = false;
+  transferTarget: FamilyDto | null = null;
+  charityOptions: Array<{ id: string; name: string }> = [];
+  private allCharityOptions: Array<{ id: string; name: string }> = [];
+  transferForm: FormGroup;
+
   pageActions = [
     {
       label: 'families.addFamily',
@@ -77,6 +90,8 @@ export class FamilyListComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private familyService: FamilyService,
+    private charityService: CharityService,
+    private auth: AuthService,
     private notification: NotificationService,
     private router: Router,
     private translate: TranslateService
@@ -90,6 +105,11 @@ export class FamilyListComponent implements OnInit, OnDestroy {
       orphanCountMin: [null],
       orphanCountMax: [null]
     });
+
+    this.transferForm = this.fb.group({
+      newCharityId: [''],
+      reason: ['']
+    });
   }
 
   private getTranslation(key: string, params?: any): string {
@@ -97,6 +117,8 @@ export class FamilyListComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.canTransfer = this.auth.hasPermission('Families.Transfer');
+
     this.initializeDropdownOptions();
 
     this.langChangeSubscription = this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
@@ -295,6 +317,93 @@ export class FamilyListComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  // ==================== CHARITY TRANSFER (UC-FAM-06) ====================
+
+  openTransferModal(family: FamilyDto): void {
+    this.transferTarget = family;
+    this.transferForm.reset({ newCharityId: '', reason: '' });
+    this.showTransferModal = true;
+
+    // The receiving charity must differ from the current one — the server refuses it anyway,
+    // hiding it here spares the round trip. Only ACTIVE charities: the server refuses a
+    // transfer into a locked/inactive one, so offering it in the dropdown only wastes the
+    // operator's confirmation.
+    if (this.allCharityOptions.length === 0) {
+      this.charitiesLoading = true;
+      this.charityService.getCharities({ pageNumber: 1, pageSize: 500, isActive: true }).subscribe({
+        next: (response) => {
+          this.charitiesLoading = false;
+          this.allCharityOptions = (response.items || [])
+            .filter(c => c.isActive)
+            .map(c => ({ id: c.id, name: c.name }));
+          this.charityOptions = this.allCharityOptions.filter(c => c.id !== family.charityId);
+        },
+        error: (error: any) => {
+          this.charitiesLoading = false;
+          console.error('Error loading charities:', error);
+          this.notification.error(this.getTranslation('families.transferLoadCharitiesFailed'));
+        }
+      });
+    } else {
+      this.charityOptions = this.allCharityOptions.filter(c => c.id !== family.charityId);
+    }
+  }
+
+  closeTransferModal(): void {
+    this.showTransferModal = false;
+    this.transferTarget = null;
+  }
+
+  async submitTransfer(): Promise<void> {
+    const target = this.transferTarget;
+    if (!target || this.transferring) {
+      return;
+    }
+
+    const newCharityId = this.transferForm.value.newCharityId;
+    if (!newCharityId) {
+      this.notification.error(this.getTranslation('families.transferCharityRequired'));
+      return;
+    }
+
+    // Set BEFORE the awaited confirm: the guard at the top must hold across the SweetAlert2
+    // promise too, or a double-click opens two confirms and fires two PUTs. `target` is
+    // captured because closing the modal nulls transferTarget while the dialog is open.
+    this.transferring = true;
+    const charityName = this.charityOptions.find(c => c.id === newCharityId)?.name || '';
+    const confirmed = await this.notification.confirm(
+      this.getTranslation('families.transferConfirm', {
+        code: target.code || '-',
+        charity: charityName
+      })
+    );
+    if (!confirmed) {
+      this.transferring = false;
+      return;
+    }
+
+    this.familyService.transferFamily(target.id, {
+      newCharityId,
+      reason: this.transferForm.value.reason?.trim() || undefined
+    }).subscribe({
+      next: () => {
+        this.transferring = false;
+        this.closeTransferModal();
+        this.notification.success(this.getTranslation('families.transferSuccess'));
+        this.loadFamilies();
+      },
+      error: (error: any) => {
+        this.transferring = false;
+        console.error('Error transferring family:', error);
+        this.notification.error(error?.error?.message || error?.message || this.getTranslation('families.transferFailed'));
+      }
+    });
+  }
+
+  trackByCharityId(index: number, item: { id: string; name: string }): string {
+    return item.id;
   }
 
   exportToExcel(): void {

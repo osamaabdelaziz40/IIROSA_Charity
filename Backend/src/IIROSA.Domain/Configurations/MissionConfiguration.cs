@@ -30,6 +30,7 @@ public class MissionConfiguration : IEntityTypeConfiguration<Mission>
         // ========== Mission Classification ==========
         builder.Property(x => x.FK_MissionTypeId);
         builder.Property(x => x.FK_MissionTimeTypeId);
+        builder.Property(x => x.FK_MissionInterviewTypeId);
 
         // ========== Scheduling ==========
         builder.Property(x => x.MissionDate)
@@ -57,6 +58,9 @@ public class MissionConfiguration : IEntityTypeConfiguration<Mission>
         builder.Property(x => x.FK_UserId)
             .HasMaxLength(450);
 
+        // ========== Ownership ==========
+        builder.Property(x => x.FK_CharityId);
+
         // ========== Event Information ==========
         builder.Property(x => x.EntityName)
             .HasMaxLength(200);
@@ -76,6 +80,18 @@ public class MissionConfiguration : IEntityTypeConfiguration<Mission>
         builder.HasOne(x => x.MissionTimeType)
             .WithMany(m => m.Missions)
             .HasForeignKey(x => x.FK_MissionTimeTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Mission Interview Type (lookup, UC-MSN-04)
+        builder.HasOne(x => x.MissionInterviewType)
+            .WithMany()
+            .HasForeignKey(x => x.FK_MissionInterviewTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Owning Charity
+        builder.HasOne(x => x.Charity)
+            .WithMany()
+            .HasForeignKey(x => x.FK_CharityId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Country (lookup)
@@ -112,10 +128,12 @@ public class MissionConfiguration : IEntityTypeConfiguration<Mission>
         // Foreign key indexes
         builder.HasIndex(x => x.FK_MissionTypeId);
         builder.HasIndex(x => x.FK_MissionTimeTypeId);
+        builder.HasIndex(x => x.FK_MissionInterviewTypeId);
         builder.HasIndex(x => x.FK_CountryId);
         builder.HasIndex(x => x.FK_RegionId);
         builder.HasIndex(x => x.FK_CenterId);
         builder.HasIndex(x => x.FK_UserId);
+        builder.HasIndex(x => x.FK_CharityId);
 
         // Composite indexes for common queries
         builder.HasIndex(x => new { x.FK_UserId, x.IsMissionCompleted });

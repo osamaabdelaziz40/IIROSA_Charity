@@ -103,8 +103,31 @@ public class ExceptionMiddleware
                 response.Status = HttpStatusCode.BadRequest;
                 break;
 
+            // Architecture §5.1 — the domain's own faults carry their contract statuses, not a
+            // blanket 500: a missing record answers 404 and a broken business rule answers 400.
+            // Both types inherit Exception directly, so before these cases existed they fell
+            // through to the default and every domain refusal surfaced as an internal error.
+            // The domain message IS the product copy here (bilingual-message sweep is a
+            // recorded deferral) — it ships in every environment.
+            case IIROSA.Application.Exceptions.NotFoundException:
+                context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                response.Status = HttpStatusCode.NotFound;
+                break;
+
+            case IIROSA.Application.Exceptions.BusinessException:
+                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                response.Status = HttpStatusCode.BadRequest;
+                break;
+
             default:
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                // AC 2 — raw exception text never ships outside development. "error.unexpected"
+                // is the stable key the SPA's /error page localises; NLog keeps the full
+                // exception server-side either way (AC 3 — the pre-switch LogError above).
+                if (!_env.IsDevelopment())
+                {
+                    response.Message = "error.unexpected";
+                }
                 break;
         }
 

@@ -1,406 +1,154 @@
 /**
- * Housing Project Service
- * Handles all housing project-related API calls
- * Housing Projects Module - IIROSA Frontend Application
- * Access: Admin and Super Admin only
+ * Housing Projects Service (epic 6, chapter 11)
+ *
+ * RE-CUT (6-1/6-3/6-4): the construction-project CRUD/budget/progress surface was deleted
+ * with the invented tracker. This module's own API is the housing-FAMILY register surface on
+ * HousingProjectsController:
+ *   POST /api/housingprojects/projects        — UC-HOU-03 register a housing family (§11.S.2)
+ *   GET  /api/housingprojects/projects/{id}   — UC-HOU-04 view aggregate (§11.U.4)
+ *   PUT  /api/housingprojects/projects/{id}   — UC-HOU-04 update (§11.U.4)
+ * (beneficiaries arrives with 6-7.)
+ * The §11.S.1 list itself reads the families register through FamilyService, and the
+ * building/flat + form drop-down catalogues load through LookupManagementService.
+ *
+ * 6-6 adds the §11.S.3 reports read on the shared PeriodicOrphanReports controller:
+ *   GET    /api/PeriodicOrphanReports/by-orphan/{beneficiaryId}?childOrParent=
+ *   DELETE /api/PeriodicOrphanReports/{id}                          (epic 9 UC-ORR-06)
+ * 6-7 adds the beneficiary resolve:
+ *   GET    /api/housingprojects/projects/{id}/beneficiaries[?code=] (UC-HOU-07)
  */
 
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
 
 import {
-  HousingProject,
-  CreateHousingProjectRequest,
-  UpdateHousingProjectRequest,
-  UpdateBudgetRequest,
-  UpdateProgressRequest,
-  MarkProjectCompletedRequest,
-  HousingProjectSearchRequest,
-  HousingProjectListResponse,
-  AttachDocumentRequest,
-  HousingProjectDocument,
-  HousingProjectProgress,
-  HousingProjectReport,
-  DocumentType
+  CreateHousingFamilyRequest,
+  HousingFamilyCreatedResult,
+  HousingFamilyDetail,
+  HousingBeneficiaryType,
+  HousingBeneficiaryRow,
+  HousingReportPagedResult,
+  CreateHousingReportRequest,
+  UpdateHousingReportRequest,
+  HousingReportDetail
 } from '../models/housing-project.model';
-
-/**
- * API Response wrapper
- */
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  errors?: string[];
-}
-
-/**
- * Paged response wrapper
- */
-interface PagedApiResponse<T> {
-  items: T[];
-  totalCount: number;
-  pageNumber: number;
-  pageSize: number;
-  totalPages: number;
-}
 
 @Injectable({
   providedIn: 'root'
 })
 export class HousingProjectService {
   private readonly apiBaseUrl = '/api/housingprojects';
+  private readonly reportsBaseUrl = '/api/PeriodicOrphanReports';
 
   constructor(private http: HttpClient) {}
 
   /**
-   * Get housing projects with filtering and pagination
-   * @param search Search and filter criteria
-   * @returns Paginated housing project list
+   * UC-HOU-03 (§11.U.3): register a housing family. The server forces the Housing
+   * discriminator, enforces the §11.S.2 mandatories (ValidationException → 400 with
+   * { message, errors }) and refuses a flat outside the chosen building (BusinessException →
+   * 400 { message }). The response body is the created FamilyDto itself (201, raw — the
+   * controller does not wrap it in the ApiResponse envelope).
    */
-  getHousingProjects(search: HousingProjectSearchRequest): Observable<HousingProjectListResponse> {
-    let params = this.buildHttpParams(search);
-
-    return this.http.get<PagedApiResponse<HousingProject>>(this.apiBaseUrl, { params })
-      .pipe(
-        map(response => ({
-          items: response.items || [],
-          totalCount: response.totalCount || 0,
-          pageNumber: response.pageNumber || search.page,
-          pageSize: response.pageSize || search.pageSize,
-          totalPages: response.totalPages || 0
-        }))
-      );
+  createHousingFamily(request: CreateHousingFamilyRequest): Observable<HousingFamilyCreatedResult> {
+    return this.http.post<HousingFamilyCreatedResult>(`${this.apiBaseUrl}/projects`, request);
   }
 
   /**
-   * Get a single housing project by ID
-   * @param id Housing Project ID
-   * @returns Housing Project details
+   * UC-HOU-04 (§11.U.4): the housing-family aggregate for the view/edit screen — every
+   * §11.S.2 field incl. the guardian block and full child detail. Unknown, non-housing and
+   * foreign rows all answer 404 (a foreign id must not prove the record exists).
    */
-  getHousingProjectById(id: string): Observable<HousingProject> {
-    return this.http.get<ApiResponse<HousingProject>>(`${this.apiBaseUrl}/${id}`)
-      .pipe(
-        map(response => {
-          if (!response.success || !response.data) {
-            throw new Error(response.message || 'Failed to load housing project');
-          }
-          return response.data;
-        })
-      );
+  getHousingFamily(id: string): Observable<HousingFamilyDetail> {
+    return this.http.get<HousingFamilyDetail>(`${this.apiBaseUrl}/projects/${id}`);
   }
 
   /**
-   * Create a new housing project
-   * @param request Housing Project creation request
-   * @returns Created housing project
+   * UC-HOU-04 (§11.U.4): update a housing family under the same §11.S.2 contract as the
+   * create — family fields + allocation (flat ⊂ building re-validated) + guardian +
+   * children sync (id-matched update, id-less add, absent soft-remove). Ownership never
+   * moves (any client-sent charity field is ignored server-side). Returns the re-read
+   * aggregate (200, raw envelope).
    */
-  createHousingProject(request: CreateHousingProjectRequest): Observable<HousingProject> {
-    return this.http.post<ApiResponse<HousingProject>>(this.apiBaseUrl, request)
-      .pipe(
-        map(response => {
-          if (!response.success || !response.data) {
-            throw new Error(response.message || 'Failed to create housing project');
-          }
-          return response.data;
-        })
-      );
+  updateHousingFamily(id: string, request: CreateHousingFamilyRequest): Observable<HousingFamilyDetail> {
+    return this.http.put<HousingFamilyDetail>(`${this.apiBaseUrl}/projects/${id}`, request);
   }
 
   /**
-   * Update an existing housing project
-   * @param id Housing Project ID
-   * @param request Housing Project update request
-   * @returns Updated housing project
+   * UC-HOU-06 (§11.S.3): one housing beneficiary's periodic report history, selected by
+   * the ChildOrParent discriminator. Child ⇒ beneficiaryId is an orphan (family child) id;
+   * Parent ⇒ it is the family guardian's provider id. Scoping to the caller's charity is
+   * server-side; unknown / non-housing / out-of-scope beneficiaries answer 404, an invalid
+   * discriminator 400.
    */
-  updateHousingProject(id: string, request: UpdateHousingProjectRequest): Observable<HousingProject> {
-    return this.http.put<ApiResponse<HousingProject>>(`${this.apiBaseUrl}/${id}`, request)
-      .pipe(
-        map(response => {
-          if (!response.success || !response.data) {
-            throw new Error(response.message || 'Failed to update housing project');
-          }
-          return response.data;
-        })
-      );
+  getHousingBeneficiaryReports(
+    beneficiaryId: string,
+    beneficiaryType: HousingBeneficiaryType,
+    pageNumber = 1,
+    pageSize = 10
+  ): Observable<HousingReportPagedResult> {
+    return this.http.get<HousingReportPagedResult>(
+      `${this.reportsBaseUrl}/by-orphan/${beneficiaryId}`,
+      { params: { childOrParent: beneficiaryType, pageNumber, pageSize } }
+    );
   }
 
   /**
-   * Delete a housing project
-   * @param id Housing Project ID
-   * @returns Success status
+   * UC-ORR-06 (epic 9 endpoint, reused by §11.S.3's delete command): soft-delete a report.
+   * Server roles are SuperAdmin/Admin only, and accepted or locked reports are refused —
+   * the caller gates the icon on both.
    */
-  deleteHousingProject(id: string): Observable<boolean> {
-    return this.http.delete<ApiResponse<boolean>>(`${this.apiBaseUrl}/${id}`)
-      .pipe(
-        map(response => response.success || false)
-      );
+  deleteHousingReport(reportId: string): Observable<void> {
+    return this.http.delete<void>(`${this.reportsBaseUrl}/${reportId}`);
   }
 
   /**
-   * Update project budget
-   * @param id Housing Project ID
-   * @param request Budget update request
-   * @returns Updated housing project
+   * UC-HOU-07 (§11.U.7 البحث بالكود): the housing family's beneficiaries — children + the
+   * guardian — for the §11.S.3 picker. A non-blank code resolves a child's sponsorship code
+   * exactly; unknown / other-charity codes answer an EMPTY list (explicit not-found at the
+   * caller — never a silent empty grid). Foreign / non-housing family ids answer 404.
    */
-  updateBudget(id: string, request: UpdateBudgetRequest): Observable<HousingProject> {
-    return this.http.patch<ApiResponse<HousingProject>>(`${this.apiBaseUrl}/${id}/budget`, request)
-      .pipe(
-        map(response => {
-          if (!response.success || !response.data) {
-            throw new Error(response.message || 'Failed to update project budget');
-          }
-          return response.data;
-        })
-      );
-  }
-
-  /**
-   * Update project progress
-   * @param id Housing Project ID
-   * @param request Progress update request
-   * @returns Updated housing project
-   */
-  updateProgress(id: string, request: UpdateProgressRequest): Observable<HousingProject> {
-    return this.http.patch<ApiResponse<HousingProject>>(`${this.apiBaseUrl}/${id}/progress`, request)
-      .pipe(
-        map(response => {
-          if (!response.success || !response.data) {
-            throw new Error(response.message || 'Failed to update project progress');
-          }
-          return response.data;
-        })
-      );
-  }
-
-  /**
-   * Mark a housing project as completed
-   * @param id Housing Project ID
-   * @param request Completion request
-   * @returns Updated housing project
-   */
-  markAsCompleted(id: string, request: MarkProjectCompletedRequest): Observable<HousingProject> {
-    return this.http.patch<ApiResponse<HousingProject>>(`${this.apiBaseUrl}/${id}/complete`, request)
-      .pipe(
-        map(response => {
-          if (!response.success || !response.data) {
-            throw new Error(response.message || 'Failed to mark project as completed');
-          }
-          return response.data;
-        })
-      );
-  }
-
-  /**
-   * Assign a charity to the project
-   * @param id Housing Project ID
-   * @param charityId Charity ID
-   * @returns Updated housing project
-   */
-  assignCharity(id: string, charityId: number): Observable<HousingProject> {
-    return this.http.patch<ApiResponse<HousingProject>>(`${this.apiBaseUrl}/${id}/charity`, { charityId })
-      .pipe(
-        map(response => {
-          if (!response.success || !response.data) {
-            throw new Error(response.message || 'Failed to assign charity');
-          }
-          return response.data;
-        })
-      );
-  }
-
-  /**
-   * Assign a beneficiary family to the project
-   * @param id Housing Project ID
-   * @param familyId Family ID
-   * @returns Updated housing project
-   */
-  assignFamily(id: string, familyId: string): Observable<HousingProject> {
-    return this.http.patch<ApiResponse<HousingProject>>(`${this.apiBaseUrl}/${id}/family`, { familyId })
-      .pipe(
-        map(response => {
-          if (!response.success || !response.data) {
-            throw new Error(response.message || 'Failed to assign family');
-          }
-          return response.data;
-        })
-      );
-  }
-
-  /**
-   * Get project documents
-   * @param id Housing Project ID
-   * @returns List of project documents
-   */
-  getProjectDocuments(id: string): Observable<HousingProjectDocument[]> {
-    return this.http.get<ApiResponse<HousingProjectDocument[]>>(`${this.apiBaseUrl}/${id}/documents`)
-      .pipe(
-        map(response => response.data || [])
-      );
-  }
-
-  /**
-   * Upload project document
-   * @param id Housing Project ID
-   * @param documentType Document type
-   * @param description Optional description
-   * @param file File to upload
-   * @returns Uploaded document
-   */
-  uploadDocument(id: string, documentType: DocumentType, description: string | undefined, file: File): Observable<HousingProjectDocument> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('documentType', documentType.toString());
-    if (description) {
-      formData.append('description', description);
+  getHousingBeneficiaries(familyId: string, code?: string): Observable<HousingBeneficiaryRow[]> {
+    const params: Record<string, string> = {};
+    if (code && code.trim()) {
+      params['code'] = code.trim();
     }
+    return this.http.get<HousingBeneficiaryRow[]>(
+      `${this.apiBaseUrl}/projects/${familyId}/beneficiaries`, { params });
+  }
 
-    return this.http.post<ApiResponse<HousingProjectDocument>>(`${this.apiBaseUrl}/${id}/documents`, formData)
-      .pipe(
-        map(response => {
-          if (!response.success || !response.data) {
-            throw new Error(response.message || 'Failed to upload document');
-          }
-          return response.data;
-        })
-      );
+  // ==================== 6-8 — the §11.S.4 report form (UC-HOU-08) ====================
+
+  /**
+   * UC-HOU-08 (§11.S.4): create a housing periodic report on the shared epic-9 endpoint.
+   * The §11.U.6 discriminator picks the branch server-side: Child ⇒ the family child's
+   * orphan id; Parent ⇒ the guardian's beneficiary id (the server resolves the family and
+   * the carrier child). Validation failures answer 400 { message, errors }; business rules
+   * 400 { message }; out-of-scope beneficiaries 404. The 201 body is the created report.
+   */
+  createHousingReport(request: CreateHousingReportRequest): Observable<HousingReportDetail> {
+    return this.http.post<HousingReportDetail>(this.reportsBaseUrl, request);
   }
 
   /**
-   * Delete project document
-   * @param id Housing Project ID
-   * @param documentId Document ID
-   * @returns Success status
+   * §11.S.4 edit mode: the report detail (childOrParent + housingFamilyId tell the header
+   * which beneficiary block to render). Unknown / out-of-scope ids answer 404.
    */
-  deleteDocument(id: string, documentId: string): Observable<boolean> {
-    return this.http.delete<ApiResponse<boolean>>(`${this.apiBaseUrl}/${id}/documents/${documentId}`)
-      .pipe(
-        map(response => response.success || false)
-      );
+  getHousingReport(reportId: string): Observable<HousingReportDetail> {
+    return this.http.get<HousingReportDetail>(`${this.reportsBaseUrl}/${reportId}`);
   }
 
   /**
-   * Get project progress history
-   * @param id Housing Project ID
-   * @returns List of progress entries
+   * §11.S.4 edit save — the epic-9 full-replace PUT; every form control is sent, the
+   * housing identity fields are immutable server-side. Locked / accepted reports are
+   * refused with the literal 'You can not update old report'.
    */
-  getProgressHistory(id: string): Observable<HousingProjectProgress[]> {
-    return this.http.get<ApiResponse<HousingProjectProgress[]>>(`${this.apiBaseUrl}/${id}/progress-history`)
-      .pipe(
-        map(response => response.data || [])
-      );
+  updateHousingReport(reportId: string, request: UpdateHousingReportRequest): Observable<HousingReportDetail> {
+    return this.http.put<HousingReportDetail>(`${this.reportsBaseUrl}/${reportId}`, request);
   }
 
-  /**
-   * Generate housing project report
-   * @param search Search and filter criteria for report
-   * @returns Housing project report data
-   */
-  generateReport(search: HousingProjectSearchRequest): Observable<HousingProjectReport> {
-    let params = this.buildHttpParams(search);
-
-    return this.http.get<HousingProjectReport>(`${this.apiBaseUrl}/report`, { params });
-  }
-
-  /**
-   * Export housing projects to Excel
-   * @param search Search and filter criteria (same filters will be applied to export)
-   * @returns Blob for file download
-   */
-  exportHousingProjects(search: HousingProjectSearchRequest): Observable<Blob> {
-    let params = this.buildHttpParams(search);
-
-    return this.http.get(`${this.apiBaseUrl}/export`, {
-      params,
-      responseType: 'blob'
-    });
-  }
-
-  /**
-   * Export housing project report to PDF
-   * @param search Search and filter criteria for report
-   * @returns Blob for file download
-   */
-  exportReportToPDF(search: HousingProjectSearchRequest): Observable<Blob> {
-    let params = this.buildHttpParams(search);
-
-    return this.http.get(`${this.apiBaseUrl}/report/pdf`, {
-      params,
-      responseType: 'blob'
-    });
-  }
-
-  /**
-   * Get housing project statistics for dashboard
-   * @returns Statistics including total projects, by status, etc.
-   */
-  getStatistics(): Observable<{
-    totalProjects: number;
-    byStatus: Record<string, number>;
-    byType: Record<string, number>;
-    averageCompletionPercentage: number;
-    totalBudget: number;
-    familiesHoused: number;
-  }> {
-    return this.http.get<{
-      totalProjects: number;
-      byStatus: Record<string, number>;
-      byType: Record<string, number>;
-      averageCompletionPercentage: number;
-      totalBudget: number;
-      familiesHoused: number;
-    }>(`${this.apiBaseUrl}/statistics`);
-  }
-
-  /**
-   * Build HTTP params from search request
-   * @param search Search criteria
-   * @returns HttpParams object
-   */
-  private buildHttpParams(search: HousingProjectSearchRequest): HttpParams {
-    let params = new HttpParams();
-
-    if (search.search) {
-      params = params.set('search', search.search);
-    }
-
-    if (search.projectType) {
-      params = params.set('projectType', search.projectType.toString());
-    }
-
-    if (search.projectStatus) {
-      params = params.set('projectStatus', search.projectStatus.toString());
-    }
-
-    if (search.countryId) {
-      params = params.set('countryId', search.countryId.toString());
-    }
-
-    if (search.regionId) {
-      params = params.set('regionId', search.regionId.toString());
-    }
-
-    if (search.centerId) {
-      params = params.set('centerId', search.centerId.toString());
-    }
-
-    if (search.assignedCharityId) {
-      params = params.set('assignedCharityId', search.assignedCharityId.toString());
-    }
-
-    if (search.dateFrom) {
-      params = params.set('dateFrom', search.dateFrom.toISOString());
-    }
-
-    if (search.dateTo) {
-      params = params.set('dateTo', search.dateTo.toISOString());
-    }
-
-    params = params.set('page', search.page.toString());
-    params = params.set('pageSize', search.pageSize.toString());
-
-    return params;
+  /** §14.U.5 gate reused for the §11.S.4 edit screen — { canEdit } (false when locked/accepted). */
+  canEditHousingReport(reportId: string): Observable<{ canEdit: boolean }> {
+    return this.http.get<{ canEdit: boolean }>(`${this.reportsBaseUrl}/${reportId}/can-edit`);
   }
 }

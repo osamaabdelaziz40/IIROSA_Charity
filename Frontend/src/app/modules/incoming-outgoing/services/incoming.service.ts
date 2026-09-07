@@ -7,15 +7,18 @@ import {
   IncomingDto,
   CreateIncomingDto,
   UpdateIncomingDto,
-  IncomingSearchRequest,
-  IncomingPagedResult
+  IncomingFilterDto,
+  IncomingPagedResult,
+  CorrespondenceStatusOption,
+  NextSerialDto,
+  IncomingEmployeesDto
 } from '../models/incoming.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class IncomingService {
-  private apiUrl = `${environment.apiUrl}/api/Incoming`;
+  private apiUrl = `${environment.apiUrl}/api/IncomingOutgoing/incoming`;
 
   constructor(private http: HttpClient) {}
 
@@ -39,14 +42,18 @@ export class IncomingService {
     return params;
   }
 
-  getIncomingLetters(searchRequest: IncomingSearchRequest): Observable<IncomingPagedResult> {
-    return this.http.get<IncomingPagedResult>(`${this.apiUrl}`, {
+  // ========== UC-COR-01 / UC-COR-02 — the §21.S.1 register ==========
+
+  getIncomingLetters(filter: IncomingFilterDto): Observable<IncomingPagedResult> {
+    return this.http.get<IncomingPagedResult>(this.apiUrl, {
       headers: this.getHeaders(),
-      params: this.buildHttpParams(searchRequest)
+      params: this.buildHttpParams(filter)
     }).pipe(
       catchError(this.handleError)
     );
   }
+
+  // ========== UC-COR-05 — view ==========
 
   getIncomingLetter(id: string): Observable<IncomingDto> {
     return this.http.get<IncomingDto>(`${this.apiUrl}/${id}`, {
@@ -56,8 +63,10 @@ export class IncomingService {
     );
   }
 
+  // ========== UC-COR-04 / UC-COR-06 — register / update ==========
+
   createIncomingLetter(letter: CreateIncomingDto): Observable<IncomingDto> {
-    return this.http.post<IncomingDto>(`${this.apiUrl}`, letter, {
+    return this.http.post<IncomingDto>(this.apiUrl, letter, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -72,6 +81,8 @@ export class IncomingService {
     );
   }
 
+  // ========== UC-COR-07 — delete ==========
+
   deleteIncomingLetter(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`, {
       headers: this.getHeaders()
@@ -80,40 +91,48 @@ export class IncomingService {
     );
   }
 
-  exportToExcel(searchRequest: IncomingSearchRequest): Observable<Blob> {
-    return this.http.post(`${this.apiUrl}/export`, searchRequest, {
+  // ========== UC-COR-03 — the advisory next serial ==========
+
+  getNextSerial(year?: number, charityId?: string): Observable<NextSerialDto> {
+    return this.http.get<NextSerialDto>(`${this.apiUrl}/next-serial`, {
       headers: this.getHeaders(),
-      responseType: 'blob'
+      params: this.buildHttpParams({ year, charityId })
     }).pipe(
       catchError(this.handleError)
     );
   }
 
-  exportToPDF(searchRequest: IncomingSearchRequest): Observable<Blob> {
-    return this.http.post(`${this.apiUrl}/export/pdf`, searchRequest, {
-      headers: this.getHeaders(),
-      responseType: 'blob'
+  // ========== The §21.S.1 tri-state status options ==========
+
+  getAvailableStatuses(): Observable<CorrespondenceStatusOption[]> {
+    return this.http.get<CorrespondenceStatusOption[]>(`${this.apiUrl}/statuses`, {
+      headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
     );
   }
 
-  downloadTemplate(): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/template`, {
-      headers: this.getHeaders(),
-      responseType: 'blob'
+  // ========== UC-COR-09 — the §21.S.3 employee attachment ==========
+
+  getEmployees(incomingId: string): Observable<IncomingEmployeesDto> {
+    return this.http.get<IncomingEmployeesDto>(`${this.apiUrl}/${incomingId}/employees`, {
+      headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
     );
   }
 
-  importLetters(file: File, options: any): Observable<any> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('options', JSON.stringify(options));
+  attachEmployee(incomingId: string, userId: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${incomingId}/employees`, { userId }, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
 
-    return this.http.post(`${this.apiUrl}/import`, formData, {
-      headers: this.getHeaders().delete('Content-Type'), // Let browser set multipart boundary
+  detachEmployee(incomingId: string, userId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${incomingId}/employees/${userId}`, {
+      headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
     );

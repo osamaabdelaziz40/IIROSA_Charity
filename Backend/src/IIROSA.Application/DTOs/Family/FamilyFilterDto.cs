@@ -11,6 +11,20 @@ public class FamilyFilterDto
     public string? SearchTerm { get; set; }
 
     /// <summary>
+    /// Register discriminator filter: Regular | Housing | Refugee (string on the wire,
+    /// parsed with Enum.TryParse — invalid values are ignored)
+    /// </summary>
+    public string? FamilyType { get; set; }
+
+    /// <summary>
+    /// Typed search selector (UC-HOU-02 §11.S.1 + UC-REF-02 §12.S.1 — ONE shared vocabulary):
+    /// father | mother | student (= orphan name) | provider | nationalId | code (orphan code,
+    /// exact) | phone. Absent/unknown ⇒ the legacy 4-field SearchTerm behaviour (epic-5
+    /// back-compat).
+    /// </summary>
+    public string? SearchType { get; set; }
+
+    /// <summary>
     /// Filter by Charity ID (for Admin/SuperAdmin)
     /// </summary>
     public Guid? CharityId { get; set; }

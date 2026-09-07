@@ -10,53 +10,58 @@
       <!-- Filters Card -->
       <div class="card shadow mb-4">
         <div class="card-body">
-          <div class="row">
-            <div class="col-md-3">
-              <div class="form-group">
-                <label>{{ 'common.search' | translate }}</label>
-                <input type="text" class="form-control" [(ngModel)]="searchValue" placeholder="Search by email, name or username" />
-              </div>
-            </div>
-            <div class="col-md-2">
-              <div class="form-group">
-                <label>{{ 'userManagement.role' | translate }}</label>
-                <select class="form-control" [(ngModel)]="selectedRole" [disabled]="loadingRoles">
-                  <option [value]="null">{{ 'userManagement.allRoles' | translate }}</option>
-                  <option *ngFor="let role of allRoles" [value]="role">{{ role }}</option>
-                </select>
-                <small *ngIf="loadingRoles" class="text-muted">{{ 'common.loading' | translate }}...</small>
-              </div>
-            </div>
-            <div class="col-md-2">
-              <div class="form-group">
-                <label>{{ 'common.status' | translate }}</label>
-                <select class="form-control" [(ngModel)]="isActiveFilter">
-                  <option [value]="null">{{ 'userManagement.allStatus' | translate }}</option>
-                  <option [value]="true">Active</option>
-                  <option [value]="false">Inactive</option>
-                </select>
-              </div>
-            </div>
-            <div class="col-md-5">
-              <div class="form-group">
-                <label>&nbsp;</label>
-                <div>
-                  <button class="btn btn-primary" (click)="onSearch()">
-                    <i class="fe fe-search mr-1"></i>
-                    {{ 'common.search' | translate }}
-                  </button>
-                  <button class="btn btn-outline-secondary ml-2" (click)="clearFilters()">
-                    <i class="fe fe-x mr-1"></i>
-                    {{ 'common.clear' | translate }}
-                  </button>
-                  <button class="btn btn-outline-success ml-2" (click)="exportUsers()" [disabled]="loading">
-                    <i class="fe fe-download mr-1"></i>
-                    {{ 'common.export' | translate }}
-                  </button>
+          <form [formGroup]="filterForm">
+            <div class="row mb-3">
+              <!-- Search -->
+              <div class="col-md-3">
+                <div class="form-group">
+                  <label>{{ 'common.search' | translate }}</label>
+                  <input type="text" class="form-control" formControlName="searchValue" [placeholder]="'userManagement.searchPlaceholder' | translate" />
                 </div>
               </div>
+
+              <!-- Role -->
+              <div class="col-md-2">
+                <app-drop-down
+                  [fg]="filterForm"
+                  fcn="role"
+                  [label]="'userManagement.role'"
+                  [initialData]="roleOptions"
+                  [hasDefaultValue]="true"
+                  [disabled]="loadingRoles">
+                </app-drop-down>
+                <small *ngIf="loadingRoles" class="text-muted">{{ 'common.loading' | translate }}...</small>
+              </div>
+
+              <!-- Status -->
+              <div class="col-md-2">
+                <app-drop-down
+                  [fg]="filterForm"
+                  fcn="status"
+                  [label]="'common.status'"
+                  [initialData]="statusOptions"
+                  [hasDefaultValue]="true">
+                </app-drop-down>
+              </div>
             </div>
-          </div>
+
+            <div class="row">
+              <div class="col-12">
+                <button class="btn btn-primary" type="button" (click)="onSearch()">
+                  <i class="fe fe-search mr-1"></i>
+                  {{ 'common.search' | translate }}
+                </button>
+                <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary ml-2" type="button" (click)="clearFilters()">
+                  <i class="fe fe-x mr-1"></i>
+                  {{ 'common.clearFilters' | translate }}
+                </button>
+                <button class="btn btn-outline-success ml-2" type="button" (click)="exportUsers()" [disabled]="loading">
+                  <i class="fe fe-download mr-1"></i>
+                  {{ 'common.export' | translate }}
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
       </div>
 
@@ -69,7 +74,7 @@
       </div>
 
       <!-- Users Table -->
-      <div class="card shadow" *ngIf="!loading">
+      <div class="card shadow mb-4" *ngIf="!loading">
         <div class="card-body">
           <div class="table-responsive">
             <table class="table table-hover">

@@ -8,6 +8,8 @@ import { CampaignFormComponent } from './campaign-form/campaign-form.component';
 import { CampaignDetailComponent } from './campaign-detail/campaign-detail.component';
 import { BeneficiarySelectionComponent } from './beneficiary-selection/beneficiary-selection.component';
 import { DistributionRecordComponent } from './distribution-record/distribution-record.component';
+import { EligibleFamiliesComponent } from './eligible-families/eligible-families.component';
+import { CampaignReportComponent } from './campaign-report/campaign-report.component';
 
 const routes: Routes = [
   {
@@ -16,7 +18,7 @@ const routes: Routes = [
     canActivate: [AuthGuard, PermissionGuard],
     data: {
       title: 'seasonalAid.title',
-      permission: 'seasonalaid.view'
+      permission: 'SeasonalAid.View'
     }
   },
   {
@@ -25,7 +27,7 @@ const routes: Routes = [
     canActivate: [AuthGuard, PermissionGuard],
     data: {
       title: 'seasonalAid.createCampaign',
-      permission: 'seasonalaid.create'
+      permission: 'SeasonalAid.Create'
     }
   },
   {
@@ -34,7 +36,7 @@ const routes: Routes = [
     canActivate: [AuthGuard, PermissionGuard],
     data: {
       title: 'seasonalAid.campaignDetails',
-      permission: 'seasonalaid.view'
+      permission: 'SeasonalAid.View'
     }
   },
   {
@@ -43,7 +45,7 @@ const routes: Routes = [
     canActivate: [AuthGuard, PermissionGuard],
     data: {
       title: 'seasonalAid.editCampaign',
-      permission: 'seasonalaid.edit'
+      permission: 'SeasonalAid.Edit'
     }
   },
   {
@@ -52,7 +54,25 @@ const routes: Routes = [
     canActivate: [AuthGuard, PermissionGuard],
     data: {
       title: 'seasonalAid.manageBeneficiaries',
-      permission: 'seasonalaid.managebeneficiaries'
+      permission: 'SeasonalAid.ManageBeneficiaries'
+    }
+  },
+  {
+    path: ':id/eligible-families',
+    component: EligibleFamiliesComponent,
+    canActivate: [AuthGuard, PermissionGuard],
+    data: {
+      title: 'seasonalAid.eligibleFamilies',
+      permission: 'SeasonalAid.View'
+    }
+  },
+  {
+    path: ':id/report',
+    component: CampaignReportComponent,
+    canActivate: [AuthGuard, PermissionGuard],
+    data: {
+      title: 'seasonalAid.campaignReport',
+      permission: 'SeasonalAid.Reports'
     }
   },
   {
@@ -61,7 +81,7 @@ const routes: Routes = [
     canActivate: [AuthGuard, PermissionGuard],
     data: {
       title: 'seasonalAid.recordDistribution',
-      permission: 'seasonalaid.recorddistribution'
+      permission: 'SeasonalAid.RecordDistribution'
     }
   }
 ];

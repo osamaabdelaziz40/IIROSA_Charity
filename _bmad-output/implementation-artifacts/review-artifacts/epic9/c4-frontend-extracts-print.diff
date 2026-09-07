@@ -1,0 +1,2974 @@
+### CHUNK C4 - Frontend extract/print screens + reports module + i18n appendix
+diff --git a/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-generate/orphan-reports-generate.component.html b/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-generate/orphan-reports-generate.component.html
+index cfe4a2b..e64399e 100644
+--- a/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-generate/orphan-reports-generate.component.html
++++ b/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-generate/orphan-reports-generate.component.html
+@@ -1,381 +1,160 @@
+-<div class="orphan-reports-generate">
+-  <app-breadcrumb
+-    [title]="'orphanReports.generate' | translate"
+-    [subtitle]="'orphanReports.generateSubtitle' | translate">
+-  </app-breadcrumb>
+-
+-  <div class="row">
+-    <!-- Filters Section - UC-6.1 -->
+-    <div class="col-lg-4">
+-      <div class="card">
+-        <div class="card-header">
+-          <h5 class="mb-0">
+-            <i class="fas fa-filter me-2"></i>
+-            <span translate>orphanReports.reportFilters</span>
+-          </h5>
+-        </div>
+-        <div class="card-body">
+-          <form [formGroup]="reportForm" (ngSubmit)="generateReport()">
+-            <!-- Period Section - UC-6.2 -->
+-            <div class="section mb-4">
+-              <h6 class="section-title text-primary mb-3">
+-                <i class="fas fa-calendar me-2"></i>
+-                <span translate>orphanReports.period</span>
+-              </h6>
+-
+-              <div class="mb-3">
+-                <label class="form-label">{{ 'orphanReports.fromDate' | translate }} *</label>
+-                <input type="date" class="form-control" formControlName="fromDate" required>
+-              </div>
+-
+-              <div class="mb-3">
+-                <label class="form-label">{{ 'orphanReports.toDate' | translate }} *</label>
+-                <input type="date" class="form-control" formControlName="toDate" required>
+-              </div>
+-            </div>
+-
+-            <!-- Filters Section - UC-6.3 through UC-6.5 -->
+-            <div class="section mb-4">
+-              <h6 class="section-title text-primary mb-3">
+-                <i class="fas fa-filter me-2"></i>
+-                <span translate>orphanReports.filters</span>
+-              </h6>
+-
+-              <!-- Charity Filter - UC-6.4 (Admin/Super Admin only) -->
+-              <div class="mb-3" *ngIf="showCharityFilter">
+-                <label class="form-label">{{ 'orphanReports.charity' | translate }}</label>
+-                <select class="form-select" formControlName="charityId">
+-                  <option value="">{{ 'orphanReports.allCharities' | translate }}</option>
+-                  <option *ngFor="let charity of charities" [value]="charity.id">
+-                    {{ charity.name }}
+-                  </option>
+-                </select>
+-                <small class="text-muted">{{ 'orphanReports.charityFilterHint' | translate }}</small>
+-              </div>
+-
+-              <!-- Region Filter - UC-6.5 -->
+-              <div class="mb-3">
+-                <label class="form-label">{{ 'orphanReports.region' | translate }}</label>
+-                <select class="form-select" formControlName="regionId">
+-                  <option value="">{{ 'orphanReports.allRegions' | translate }}</option>
+-                  <option *ngFor="let region of regions" [value]="region.id">
+-                    {{ region.name }}
+-                  </option>
+-                </select>
+-              </div>
+-
+-              <!-- Center Filter -->
+-              <div class="mb-3">
+-                <label class="form-label">{{ 'orphanReports.center' | translate }}</label>
+-                <select class="form-select" formControlName="centerId">
+-                  <option value="">{{ 'orphanReports.allCenters' | translate }}</option>
+-                  <option *ngFor="let center of centers" [value]="center.id">
+-                    {{ center.name }}
+-                  </option>
+-                </select>
+-              </div>
+-
+-              <!-- Sponsorship Status - UC-6.3 -->
+-              <div class="mb-3">
+-                <label class="form-label">{{ 'orphanReports.sponsorshipStatus' | translate }}</label>
+-                <select class="form-select" formControlName="sponsorshipStatus">
+-                  <option *ngFor="let status of sponsorshipStatuses" [value]="status">
+-                    {{ getSponsorshipStatusLabel(status) | translate }}
+-                  </option>
+-                </select>
+-              </div>
+-
+-              <!-- Age Range -->
+-              <div class="row">
+-                <div class="col-6">
+-                  <div class="mb-3">
+-                    <label class="form-label">{{ 'orphanReports.ageFrom' | translate }}</label>
+-                    <input type="number" class="form-control" formControlName="ageFrom" min="0" max="30">
+-                  </div>
+-                </div>
+-                <div class="col-6">
+-                  <div class="mb-3">
+-                    <label class="form-label">{{ 'orphanReports.ageTo' | translate }}</label>
+-                    <input type="number" class="form-control" formControlName="ageTo" min="0" max="30">
+-                  </div>
+-                </div>
+-              </div>
+-
+-              <!-- Gender -->
+-              <div class="mb-3">
+-                <label class="form-label">{{ 'orphanReports.gender' | translate }}</label>
+-                <select class="form-select" formControlName="gender">
+-                  <option *ngFor="let gender of genders" [value]="gender">
+-                    {{ getGenderLabel(gender) | translate }}
+-                  </option>
+-                </select>
+-              </div>
+-            </div>
+-
+-            <!-- Report Options - UC-6.6 -->
+-            <div class="section mb-4">
+-              <h6 class="section-title text-primary mb-3">
+-                <i class="fas fa-cog me-2"></i>
+-                <span translate>orphanReports.reportOptions</span>
+-              </h6>
+-
+-              <div class="form-check mb-2">
+-                <input class="form-check-input" type="checkbox" formControlName="includeFamilyDetails" id="includeFamilyDetails">
+-                <label class="form-check-label" for="includeFamilyDetails">
+-                  {{ 'orphanReports.includeFamilyDetails' | translate }}
+-                </label>
+-              </div>
+-
+-              <div class="form-check mb-2">
+-                <input class="form-check-input" type="checkbox" formControlName="includeContactInformation" id="includeContactInformation">
+-                <label class="form-check-label" for="includeContactInformation">
+-                  {{ 'orphanReports.includeContactInformation' | translate }}
+-                </label>
+-              </div>
+-
+-              <div class="form-check mb-2">
+-                <input class="form-check-input" type="checkbox" formControlName="includeEducationDetails" id="includeEducationDetails">
+-                <label class="form-check-label" for="includeEducationDetails">
+-                  {{ 'orphanReports.includeEducationDetails' | translate }}
+-                </label>
+-              </div>
+-
+-              <div class="form-check mb-2">
+-                <input class="form-check-input" type="checkbox" formControlName="includeHealthDetails" id="includeHealthDetails">
+-                <label class="form-check-label" for="includeHealthDetails">
+-                  {{ 'orphanReports.includeHealthDetails' | translate }}
+-                </label>
+-              </div>
+-
+-              <div class="form-check mb-2" *ngIf="showGroupByCharity">
+-                <input class="form-check-input" type="checkbox" formControlName="groupByCharity" id="groupByCharity">
+-                <label class="form-check-label" for="groupByCharity">
+-                  {{ 'orphanReports.groupByCharity' | translate }}
+-                </label>
+-              </div>
+-            </div>
+-
+-            <!-- Actions -->
+-            <div class="d-grid gap-2">
+-              <button type="submit" class="btn btn-primary" [disabled]="generating">
+-                <i class="fas fa-chart-bar me-2" *ngIf="!generating"></i>
+-                <i class="fas fa-spinner fa-spin me-2" *ngIf="generating"></i>
+-                <span translate>orphanReports.generateReport</span>
+-              </button>
+-
+-              <button type="button" class="btn btn-outline-secondary" (click)="clearFilters()">
+-                <i class="fas fa-undo me-2"></i>
+-                <span translate>common.clear</span>
+-              </button>
+-            </div>
+-          </form>
+-        </div>
++<app-page-header [title]="'orphanReports.generate.title' | translate"
++                 [subtitle]="'orphanReports.generate.subtitle' | translate">
++</app-page-header>
++
++<!-- §14.U.11 criteria -->
++<div class="card mb-4">
++  <div class="card-header d-flex justify-content-between align-items-center">
++    <h6 class="mb-0">{{ 'orphanReports.generate.criteria' | translate }}</h6>
++    <button type="button" class="btn btn-outline-primary btn-sm" (click)="exportData()"
++            [disabled]="loading || exporting">
++      <i class="bi bi-file-earmark-excel me-1"></i>{{ 'orphanReports.generate.export' | translate }}
++    </button>
++  </div>
++  <div class="card-body">
++    <div class="row g-3">
++      <!-- الجمعية — HQ only (charity callers are server-pinned) -->
++      <div class="col-md-3" *ngIf="isHeadOffice">
++        <label class="form-label" for="charityId">{{ 'orphanReports.generate.charity' | translate }}</label>
++        <select id="charityId" class="form-select" [(ngModel)]="charityId" name="charityId">
++          <option value="">{{ 'common.all' | translate }}</option>
++          <option *ngFor="let charity of charities; trackBy: trackByCharityId"
++                  [ngValue]="charity.id">{{ charity.name }}</option>
++        </select>
+       </div>
+-    </div>
+-
+-    <!-- Report Results Section - UC-6.1 step 11-12 -->
+-    <div class="col-lg-8">
+-      <app-loading *ngIf="generating"></app-loading>
+ 
+-      <!-- No Results -->
+-      <div class="card" *ngIf="!reportResult && !generating">
+-        <div class="card-body text-center py-5">
+-          <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+-          <h5>{{ 'orphanReports.noReportGenerated' | translate }}</h5>
+-          <p class="text-muted">{{ 'orphanReports.noReportGeneratedMessage' | translate }}</p>
+-        </div>
++      <!-- رقم التقرير -->
++      <div class="col-md-3">
++        <label class="form-label" for="reportNo">{{ 'orphanReports.generate.reportNo' | translate }}</label>
++        <input type="text" class="form-control" id="reportNo" name="reportNo"
++               [(ngModel)]="reportNo"
++               [placeholder]="'orphanReports.generate.reportNoPlaceholder' | translate">
+       </div>
+ 
+-      <!-- Report Results -->
+-      <div class="report-results" *ngIf="reportResult">
+-        <!-- Summary Statistics - UC-6.1 step 11 -->
+-        <div class="card mb-3">
+-          <div class="card-header bg-primary text-white">
+-            <h5 class="mb-0">
+-              <i class="fas fa-chart-pie me-2"></i>
+-              <span translate>orphanReports.summaryStatistics</span>
+-            </h5>
+-          </div>
+-          <div class="card-body">
+-            <div class="row text-center">
+-              <div class="col-md-3 mb-3">
+-                <div class="stat-card">
+-                  <h3 class="text-primary">{{ reportResult.summary.totalOrphans }}</h3>
+-                  <p class="text-muted mb-0">{{ 'orphanReports.totalOrphans' | translate }}</p>
+-                </div>
+-              </div>
+-              <div class="col-md-3 mb-3">
+-                <div class="stat-card">
+-                  <h3 class="text-success">{{ reportResult.summary.sponsoredCount }}</h3>
+-                  <p class="text-muted mb-0">{{ 'orphanReports.sponsored' | translate }}</p>
+-                </div>
+-              </div>
+-              <div class="col-md-3 mb-3">
+-                <div class="stat-card">
+-                  <h3 class="text-warning">{{ reportResult.summary.unsponsoredCount }}</h3>
+-                  <p class="text-muted mb-0">{{ 'orphanReports.unsponsored' | translate }}</p>
+-                </div>
+-              </div>
+-              <div class="col-md-3 mb-3">
+-                <div class="stat-card">
+-                  <h3 class="text-info">{{ reportResult.summary.pendingCount }}</h3>
+-                  <p class="text-muted mb-0">{{ 'orphanReports.pending' | translate }}</p>
+-                </div>
+-              </div>
+-            </div>
+-
+-            <!-- Additional Stats -->
+-            <div class="row text-center mt-3">
+-              <div class="col-md-4">
+-                <div>
+-                  <i class="fas fa-male text-primary me-1"></i>
+-                  <strong>{{ reportResult.summary.maleCount }}</strong>
+-                  <span class="text-muted">{{ 'orphanReports.male' | translate }}</span>
+-                </div>
+-              </div>
+-              <div class="col-md-4">
+-                <div>
+-                  <i class="fas fa-female text-danger me-1"></i>
+-                  <strong>{{ reportResult.summary.femaleCount }}</strong>
+-                  <span class="text-muted">{{ 'orphanReports.female' | translate }}</span>
+-                </div>
+-              </div>
+-              <div class="col-md-4">
+-                <div>
+-                  <i class="fas fa-calendar text-info me-1"></i>
+-                  <strong>{{ reportResult.metadata.fromDate | date:'mediumDate' }}</strong>
+-                  <span class="text-muted"> - </span>
+-                  <strong>{{ reportResult.metadata.toDate | date:'mediumDate' }}</strong>
+-                </div>
+-              </div>
+-            </div>
+-          </div>
++      <!-- أكواد — codes-only output toggle -->
++      <div class="col-md-2 d-flex align-items-end">
++        <div class="form-check form-switch">
++          <input class="form-check-input" type="checkbox" id="codesOnly" name="codesOnly"
++                 [(ngModel)]="codesOnly">
++          <label class="form-check-label" for="codesOnly">{{ 'orphanReports.generate.codesOnly' | translate }}</label>
+         </div>
++      </div>
+ 
+-        <!-- Charity Breakdown - UC-6.1 step 11 (Admin/Super Admin only) -->
+-        <div class="card mb-3" *ngIf="showGroupByCharity && reportResult.summary.charityBreakdown">
+-          <div class="card-header">
+-            <h6 class="mb-0">
+-              <i class="fas fa-building me-2"></i>
+-              <span translate>orphanReports.charityBreakdown</span>
+-            </h6>
+-          </div>
+-          <div class="card-body">
+-            <table class="table table-sm">
+-              <thead>
+-                <tr>
+-                  <th translate>orphanReports.charity</th>
+-                  <th translate>orphanReports.totalOrphans</th>
+-                  <th translate>orphanReports.sponsored</th>
+-                  <th translate>orphanReports.unsponsored</th>
+-                </tr>
+-              </thead>
+-              <tbody>
+-                <tr *ngFor="let breakdown of reportResult.summary.charityBreakdown">
+-                  <td>{{ breakdown.charityName }}</td>
+-                  <td>{{ breakdown.orphanCount }}</td>
+-                  <td class="text-success">{{ breakdown.sponsoredCount }}</td>
+-                  <td class="text-warning">{{ breakdown.unsponsoredCount }}</td>
+-                </tr>
+-              </tbody>
+-            </table>
+-          </div>
+-        </div>
++      <!-- من تاريخ / إلى تاريخ -->
++      <div class="col-md-2">
++        <label class="form-label" for="dateFrom">{{ 'orphanReports.generate.dateFrom' | translate }}</label>        <input type="date" class="form-control" id="dateFrom" name="dateFrom" [(ngModel)]="dateFrom">
++      </div>
++      <div class="col-md-2">
++        <label class="form-label" for="dateTo">{{ 'orphanReports.generate.dateTo' | translate }}</label>
++        <input type="date" class="form-control" id="dateTo" name="dateTo" [(ngModel)]="dateTo">
++      </div>
+ 
+-        <!-- Detailed Orphan List - UC-6.1 step 11 -->
+-        <div class="card mb-3">
+-          <div class="card-header d-flex justify-content-between align-items-center">
+-            <h6 class="mb-0">
+-              <i class="fas fa-list me-2"></i>
+-              <span translate>orphanReports.detailedList</span>
+-              <span class="badge bg-primary ms-2">{{ reportResult.orphans.length }}</span>
+-            </h6>
+-            <!-- Export Options - UC-6.7 -->
+-            <div class="btn-group">
+-              <button class="btn btn-sm btn-success" (click)="exportReport('excel')">
+-                <i class="fas fa-file-excel me-1"></i>
+-                Excel
+-              </button>
+-              <button class="btn btn-sm btn-danger" (click)="exportReport('pdf')">
+-                <i class="fas fa-file-pdf me-1"></i>
+-                PDF
+-              </button>
+-            </div>
+-          </div>
+-          <div class="card-body p-0">
+-            <div class="table-responsive" style="max-height: 500px;">
+-              <table class="table table-hover table-striped mb-0">
+-                <thead class="sticky-top bg-light">
+-                  <tr>
+-                    <th translate>orphanReports.orphanCode</th>
+-                    <th translate>orphanReports.orphanName</th>
+-                    <th *ngIf="reportResult.metadata.includeFamilyDetails" translate>orphanReports.family</th>
+-                    <th translate>orphanReports.age</th>
+-                    <th translate>orphanReports.gender</th>
+-                    <th translate>orphanReports.sponsorshipStatus</th>
+-                    <th *ngIf="reportResult.metadata.includeContactInformation" translate>orphanReports.contact</th>
+-                    <th *ngIf="reportResult.metadata.includeEducationDetails" translate>orphanReports.education</th>
+-                    <th *ngIf="reportResult.metadata.includeHealthDetails" translate>orphanReports.health</th>
+-                    <th *ngIf="showCharityFilter" translate>orphanReports.charity</th>
+-                  </tr>
+-                </thead>
+-                <tbody>
+-                  <tr *ngFor="let orphan of reportResult.orphans">
+-                    <td>{{ orphan.orphanCode }}</td>
+-                    <td>{{ orphan.orphanName }}</td>
+-                    <td *ngIf="reportResult.metadata.includeFamilyDetails">
+-                      <small>
+-                        <div>{{ orphan.fatherName || '-' }}</div>
+-                        <div class="text-muted">{{ orphan.familyAddress }}</div>
+-                      </small>
+-                    </td>
+-                    <td>{{ orphan.age || '-' }}</td>
+-                    <td>
+-                      <span class="badge" [ngClass]="orphan.gender === 'Male' ? 'bg-primary' : 'bg-danger'">
+-                        <i [ngClass]="orphan.gender === 'Male' ? 'fas fa-male' : 'fas fa-female'" class="me-1"></i>
+-                        {{ orphan.gender | translate }}
+-                      </span>
+-                    </td>
+-                    <td>
+-                      <span class="badge" [ngClass]="orphan.sponsorshipStatus === 'Sponsored' ? 'bg-success' : orphan.sponsorshipStatus === 'Unsponsored' ? 'bg-warning' : 'bg-secondary'">
+-                        {{ orphan.sponsorshipStatus }}
+-                      </span>
+-                    </td>
+-                    <td *ngIf="reportResult.metadata.includeContactInformation">
+-                      <small>
+-                        <div>{{ orphan.familyPhone || '-' }}</div>
+-                        <div class="text-muted">{{ orphan.orphanPhone || '-' }}</div>
+-                      </small>
+-                    </td>
+-                    <td *ngIf="reportResult.metadata.includeEducationDetails">
+-                      <small>
+-                        <div>{{ orphan.schoolName || '-' }}</div>
+-                        <div class="text-muted">{{ orphan.gradeClass || '-' }}</div>
+-                      </small>
+-                    </td>
+-                    <td *ngIf="reportResult.metadata.includeHealthDetails">
+-                      <small>
+-                        <div>{{ orphan.healthStatusName || '-' }}</div>
+-                        <div class="text-muted">{{ orphan.disabilities || '-' }}</div>
+-                      </small>
+-                    </td>
+-                    <td *ngIf="showCharityFilter">{{ orphan.charityName || '-' }}</td>
+-                  </tr>
+-                </tbody>
+-              </table>
+-            </div>
+-          </div>
+-          <div class="card-footer text-muted">
+-            <small>
+-              <i class="fas fa-info-circle me-1"></i>
+-              {{ 'orphanReports.generatedOn' | translate }}: {{ reportResult.generatedOn | date:'medium' }}
+-              <span class="ms-3" *ngIf="reportResult.metadata.generatedByUserName">
+-                {{ 'orphanReports.generatedBy' | translate }}: {{ reportResult.metadata.generatedByUserName }}
+-              </span>
+-            </small>
+-          </div>
+-        </div>
++      <div class="col-md-12 text-end">
++        <button type="button" class="btn btn-primary" (click)="generate()" [disabled]="loading">
++          <i class="bi bi-play-fill me-1"></i>{{ 'orphanReports.generate.run' | translate }}
++        </button>
+       </div>
+     </div>
+   </div>
+ </div>
++
++<!-- Results -->
++<div class="card">
++  <div class="card-header d-flex justify-content-between align-items-center">
++    <h6 class="mb-0">
++      {{ 'orphanReports.generate.results' | translate }}
++      <span class="badge bg-secondary ms-2" *ngIf="!loading && totalCount > 0">{{ totalCount }}</span>
++    </h6>
++    <small class="text-muted" *ngIf="!loading && totalCount > rows.length">
++      {{ 'orphanReports.generate.capped' | translate:{ shown: rows.length, total: totalCount } }}
++    </small>
++  </div>
++  <div class="card-body">
++    <app-loading *ngIf="loading" message="{{ 'common.loading' | translate }}"></app-loading>
++
++    <ng-container *ngIf="!loading">
++      <app-empty-state *ngIf="rows.length === 0"
++                       [title]="'orphanReports.generate.emptyTitle' | translate"
++                       [description]="'orphanReports.generate.emptyMessage' | translate">
++      </app-empty-state>
++
++      <div class="table-responsive" *ngIf="rows.length > 0">
++        <table class="table table-hover table-sm align-middle">
++          <thead>
++            <tr>
++              <th>#</th>
++              <ng-container *ngIf="!codesOnly">
++                <th>{{ 'orphanReports.generate.columns.orphanName' | translate }}</th>
++                <th>{{ 'orphanReports.generate.columns.charity' | translate }}</th>
++                <th>{{ 'orphanReports.generate.columns.reportNo' | translate }}</th>
++                <th>{{ 'orphanReports.generate.columns.reportDate' | translate }}</th>
++                <th>{{ 'orphanReports.generate.columns.period' | translate }}</th>
++                <th>{{ 'orphanReports.generate.columns.status' | translate }}</th>
++                <th>{{ 'orphanReports.generate.columns.schoolType' | translate }}</th>
++                <th>{{ 'orphanReports.generate.columns.school' | translate }}</th>
++                <th>{{ 'orphanReports.generate.columns.degree' | translate }}</th>
++                <th>{{ 'orphanReports.generate.columns.educationalLevel' | translate }}</th>
++                <th>{{ 'orphanReports.generate.columns.medicalStatus' | translate }}</th>
++                <th>{{ 'orphanReports.generate.columns.marriageDate' | translate }}</th>
++                <th>{{ 'orphanReports.generate.columns.deathDate' | translate }}</th>
++              </ng-container>
++              <ng-container *ngIf="codesOnly">
++                <th>{{ 'orphanReports.generate.columns.reportNo' | translate }}</th>
++              </ng-container>
++            </tr>
++          </thead>
++          <tbody>
++            <tr *ngFor="let row of pagedRows; let i = index; trackBy: trackByReportId">
++              <td>{{ serial(i) }}</td>
++              <td class="fw-bold">{{ row.orphanCode || '—' }}</td>
++              <ng-container *ngIf="!codesOnly">
++                <td>{{ row.orphanName || '—' }}</td>
++                <td>{{ row.charityName || '—' }}</td>
++                <td>{{ row.reportNo || '—' }}</td>
++                <td>{{ row.reportDate | date:'yyyy-MM-dd' }}</td>
++                <td>
++                  <span class="small">
++                    {{ (row.reportPeriodFrom | date:'yyyy-MM-dd') || '—' }} -
++                    {{ (row.reportPeriodTo | date:'yyyy-MM-dd') || '—' }}
++                  </span>
++                </td>
++                <td>
++                  <span class="badge"
++                        [ngClass]="row.isAccepted ? 'bg-success' : row.isRefused ? 'bg-danger' : 'bg-warning text-dark'">
++                    {{ 'periodicReports.status.' + (row.reviewStatus || 'pending').toLowerCase() | translate }}
++                  </span>
++                </td>
++                <td>{{ row.schoolType || '—' }}</td>
++                <td>{{ row.school || '—' }}</td>
++                <td>{{ row.educationDegree || '—' }}</td>
++                <td>{{ row.educationalLevelName || '—' }}</td>
++                <td>{{ row.medicalStatus || '—' }}</td>
++                <td>{{ row.marriageDate ? (row.marriageDate | date:'yyyy-MM-dd') : '—' }}</td>
++                <td>{{ row.deathDate ? (row.deathDate | date:'yyyy-MM-dd') : '—' }}</td>
++              </ng-container>
++              <ng-container *ngIf="codesOnly">
++                <td>{{ row.reportNo || '—' }}</td>
++              </ng-container>
++            </tr>
++          </tbody>
++        </table>
++      </div>
++
++      <!-- Client-side paging over the capped batch -->
++      <nav *ngIf="rows.length > pageSize" aria-label="pagination">
++        <ul class="pagination pagination-sm justify-content-center mb-0">
++          <li class="page-item" [class.disabled]="currentPage === 1">
++            <a class="page-link" href="#" (click)="onPageChange(currentPage - 1); false">&laquo;</a>
++          </li>
++          <li class="page-item" *ngFor="let page of [].constructor(totalPages); let i = index"
++              [class.active]="currentPage === i + 1">
++            <a class="page-link" href="#" (click)="onPageChange(i + 1); false">{{ i + 1 }}</a>
++          </li>
++          <li class="page-item" [class.disabled]="currentPage === totalPages">
++            <a class="page-link" href="#" (click)="onPageChange(currentPage + 1); false">&raquo;</a>
++          </li>
++        </ul>
++      </nav>
++    </ng-container>
++  </div>
++</div>
+diff --git a/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-generate/orphan-reports-generate.component.scss b/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-generate/orphan-reports-generate.component.scss
+index 1b1a619..136d48c 100644
+--- a/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-generate/orphan-reports-generate.component.scss
++++ b/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-generate/orphan-reports-generate.component.scss
+@@ -1,32 +1,17 @@
+-// Orphan Reports Generate Styles
+ .orphan-reports-generate {
+-  .section-title {
+-    font-size: 0.95rem;
+-    font-weight: 600;
+-    margin-bottom: 0.75rem;
++  .form-check-switch {
++    padding-bottom: 0.5rem;
+   }
+ 
+-  .stat-card {
+-    h3 {
+-      font-size: 1.75rem;
+-      font-weight: 700;
+-      margin-bottom: 0.25rem;
+-    }
++  .table {
++    font-size: 0.8125rem;
+ 
+-    p {
+-      font-size: 0.875rem;
+-      color: var(--bs-secondary);
++    th {
++      white-space: nowrap;
+     }
+-  }
+ 
+-  .report-results {
+-    .table {
+-      th {
+-        position: sticky;
+-        top: 0;
+-        background-color: var(--bs-gray-100);
+-        z-index: 10;
+-      }
++    td {
++      white-space: nowrap;
+     }
+   }
+ }
+diff --git a/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-generate/orphan-reports-generate.component.ts b/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-generate/orphan-reports-generate.component.ts
+index f554066..8798ab0 100644
+--- a/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-generate/orphan-reports-generate.component.ts
++++ b/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-generate/orphan-reports-generate.component.ts
+@@ -1,239 +1,231 @@
+ /**
+  * Orphan Reports Generate Component
+- * Implements UC-6.1: Generate Orphan Report
++ * Implements UC-ORR-11 (§14.U.11): extract detailed report data تفاصيل التقارير.
+  *
+- * Provides report generation form with filters for:
+- * - Period (From/To dates)
+- * - Charity (Admin/Super Admin only)
+- * - Region
+- * - Center
+- * - Sponsorship Status
+- * - Age Range
+- * - Gender
+- * - Report Options (Family Details, Contact, Education, Health)
++ * Criteria: الجمعية (HQ-gated) · رقم التقرير · أكواد toggle · من/الي تاريخ.
++ * POST /api/OrphanReports/generate returns the detailed report rows (capped at
++ * 1000); استخراج البيانات builds the ExcelJS workbook from the loaded rows.
+  */
+ 
+-import { Component, OnInit } from '@angular/core';
++import { Component, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+ import { CommonModule } from '@angular/common';
+-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+-import { TranslateModule } from '@ngx-translate/core';
+-
+-import { OrphanReportService } from '../../services/orphan-report.service';
+-import {
+-  OrphanReportFilterDto,
+-  OrphanReportResultDto,
+-  OrphanReportExportDto
+-} from '../../models/periodic-orphan-report.model';
++import { FormsModule } from '@angular/forms';
++import { RouterLink } from '@angular/router';
++import { TranslateModule, TranslateService } from '@ngx-translate/core';
++
++import { OrphanReportService } from '../services/orphan-report.service';
++import { OrphanReportDetailRow } from '../models/periodic-orphan-report.model';
+ import { LoadingComponent } from '../../../shared/components/loading/loading.component';
++import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
++import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
++import { NotificationService } from '../../../core/services/notification.service';
++import { AuthService } from '../../../core/services/auth.service';
++import { CharityService } from '../../charities/services/charity.service';
++import { CharityDto } from '../../charities/models/charity.model';
+ 
+ @Component({
+   selector: 'app-orphan-reports-generate',
+   standalone: true,
++  changeDetection: ChangeDetectionStrategy.OnPush,
+   imports: [
+     CommonModule,
+     FormsModule,
+-    ReactiveFormsModule,
++    RouterLink,
+     TranslateModule,
+-    LoadingComponent
++    LoadingComponent,
++    EmptyStateComponent,
++    PageHeaderComponent
+   ],
+   templateUrl: './orphan-reports-generate.component.html',
+   styleUrls: ['./orphan-reports-generate.component.scss']
+ })
+-export class OrphanReportsGenerateComponent implements OnInit {
+-  // Form - UC-6.1
+-  reportForm: FormGroup;
+-
+-  // Data
++export class OrphanReportsGenerateComponent {
+   loading = false;
+-  generating = false;
+-  reportResult?: OrphanReportResultDto;
++  exporting = false;
+ 
+-  // Options (would be populated from services)
+-  charities: any[] = [];
+-  regions: any[] = [];
+-  centers: any[] = [];
+-  sponsorshipStatuses = ['Sponsored', 'Unsponsored', 'Pending', 'All'];
+-  genders = ['Male', 'Female', 'All'];
++  // §14.U.11 criteria
++  isHeadOffice = false;
++  charities: CharityDto[] = [];
++  charityId = '';
++  reportNo = '';
++  codesOnly = false;
++  dateFrom = '';
++  dateTo = '';
+ 
+-  // User role for conditional filters
+-  userRole: string = 'Charity'; // Would come from auth service
+-  isAdminOrSuperAdmin = false;
++  rows: OrphanReportDetailRow[] = [];
++  totalCount = 0;
++
++  // Client-side paging over the capped extract batch
++  currentPage = 1;
++  pageSize = 20;
+ 
+   constructor(
+-    private fb: FormBuilder,
+-    private orphanReportService: OrphanReportService
++    private orphanReportService: OrphanReportService,
++    private charityService: CharityService,
++    public auth: AuthService,
++    private notification: NotificationService,
++    private translate: TranslateService,
++    private cdr: ChangeDetectorRef
+   ) {
+-    this.reportForm = this.buildForm();
+-    this.isAdminOrSuperAdmin = this.userRole === 'Admin' || this.userRole === 'SuperAdmin';
+-  }
+-
+-  ngOnInit(): void {
+-    // Load lookup data
+-    this.loadLookupData();
++    this.isHeadOffice = this.auth.hasRole('SuperAdmin') || this.auth.hasRole('Admin');
++    if (this.isHeadOffice) {
++      this.charityService.getCharities({ pageNumber: 1, pageSize: 500 }).subscribe({
++        next: result => (this.charities = result.items ?? []),
++        error: () => (this.charities = [])
++      });
++    }
+   }
+ 
+-  /**
+-   * Build report filter form - UC-6.1
+-   */
+-  private buildForm(): FormGroup {
+-    return this.fb.group({
+-      // Period - UC-6.2
+-      fromDate: ['', Validators.required],
+-      toDate: ['', Validators.required],
+-
+-      // Filters - UC-6.3 through UC-6.5
+-      charityId: [''],
+-      regionId: [''],
+-      centerId: [''],
+-      sponsorshipStatus: ['All'],
+-      ageFrom: [''],
+-      ageTo: [''],
+-      gender: ['All'],
+-
+-      // Report Options - UC-6.6
+-      includeFamilyDetails: [false],
+-      includeContactInformation: [false],
+-      includeEducationDetails: [false],
+-      includeHealthDetails: [false],
+-      groupByCharity: [false] // Admin/Super Admin only
+-    });
++  get totalPages(): number {
++    return Math.max(1, Math.ceil(this.rows.length / this.pageSize));
+   }
+ 
+-  /**
+-   * Load lookup data for dropdowns
+-   */
+-  private loadLookupData(): void {
+-    // TODO: Load from appropriate services
+-    // This.charities = this.charityService.getAll();
+-    // This.regions = this.lookupService.getRegions();
+-    // This.centers = this.lookupService.getCenters();
++  get pagedRows(): OrphanReportDetailRow[] {
++    const start = (this.currentPage - 1) * this.pageSize;
++    return this.rows.slice(start, start + this.pageSize);
+   }
+ 
+-  /**
+-   * Generate report - UC-6.1
+-   */
+-  generateReport(): void {
+-    if (this.reportForm.invalid) {
+-      this.reportForm.markAllAsTouched();
++  /** تشغيل the extract — no stored data changes (AC 1). */
++  generate(): void {
++    if (this.dateFrom && this.dateTo && this.dateFrom > this.dateTo) {
++      this.notification.warning(this.translate.instant('orphanReports.generate.dateOrderInvalid'));
+       return;
+     }
+ 
+-    // Validate date range - UC-6.1 step 7
+-    const fromDate = this.reportForm.value.fromDate;
+-    const toDate = this.reportForm.value.toDate;
++    this.loading = true;
++    this.currentPage = 1;
++    this.cdr.markForCheck();
+ 
+-    if (new Date(fromDate) > new Date(toDate)) {
+-      alert('From date must be before To date');
+-      return;
+-    }
+-
+-    this.generating = true;
+-
+-    const filter: OrphanReportFilterDto = this.reportForm.value;
+-
+-    // For Charity users, add their charity filter automatically - UC-6.1 step 8
+-    if (!this.isAdminOrSuperAdmin) {
+-      // filter.charityId = this.currentUser.charityId; // Would come from auth
+-    }
++    const filter: any = {
++      fromDate: this.dateFrom || '0001-01-01T00:00:00Z',
++      toDate: this.dateTo || '0001-01-01T00:00:00Z',
++      charityId: this.isHeadOffice && this.charityId ? this.charityId : undefined,
++      reportNo: this.reportNo.trim() || undefined
++    };
+ 
+     this.orphanReportService.generateReport(filter).subscribe({
+-      next: (result: OrphanReportResultDto) => {
+-        this.reportResult = result;
+-        this.generating = false;
++      next: result => {
++        this.rows = result.reports ?? [];
++        this.totalCount = result.reportsTotalCount ?? this.rows.length;
++        this.loading = false;
++        this.cdr.markForCheck();
+       },
+-      error: (error) => {
+-        console.error('Error generating report:', error);
+-        this.generating = false;
++      error: error => {
++        console.error('Error generating extract:', error);
++        this.loading = false;
++        this.notification.error(
++          error?.message || this.translate.instant('orphanReports.generate.loadFailed')
++        );
++        this.cdr.markForCheck();
+       }
+     });
+   }
+ 
+-  /**
+-   * Export report - UC-6.7
+-   */
+-  exportReport(format: 'excel' | 'pdf'): void {
+-    if (!this.reportResult) {
+-      return;
+-    }
+-
+-    const filter: OrphanReportFilterDto = this.reportForm.value;
+-    const exportOptions: OrphanReportExportDto = {
+-      exportFormat: format,
+-      fileName: `OrphanReport_${this.reportForm.value.fromDate}_to_${this.reportForm.value.toDate}`
+-    };
+-
+-    this.orphanReportService.exportReport(filter, exportOptions).subscribe({
+-      next: (blob: Blob) => {
+-        this.downloadFile(blob, exportOptions.fileName || `OrphanReport.${format === 'excel' ? 'xlsx' : 'pdf'}`);
+-      },
+-      error: (error) => {
+-        console.error('Error exporting report:', error);
+-      }
+-    });
++  onPageChange(page: number): void {
++    this.currentPage = page;
+   }
+ 
+-  /**
+-   * Download file helper
+-   */
+-  private downloadFile(blob: Blob, filename: string): void {
+-    const url = window.URL.createObjectURL(blob);
+-    const a = document.createElement('a');
+-    a.href = url;
+-    a.download = filename;
+-    document.body.appendChild(a);
+-    a.click();
+-    document.body.removeChild(a);
+-    window.URL.revokeObjectURL(url);
++  serial(index: number): number {
++    return (this.currentPage - 1) * this.pageSize + index + 1;
+   }
+ 
+-  /**
+-   * Clear filters
+-   */
+-  clearFilters(): void {
+-    this.reportForm.reset({
+-      fromDate: '',
+-      toDate: '',
+-      charityId: '',
+-      regionId: '',
+-      centerId: '',
+-      sponsorshipStatus: 'All',
+-      ageFrom: '',
+-      ageTo: '',
+-      gender: 'All',
+-      includeFamilyDetails: false,
+-      includeContactInformation: false,
+-      includeEducationDetails: false,
+-      includeHealthDetails: false,
+-      groupByCharity: false
+-    });
+-    this.reportResult = undefined;
++  trackByReportId(_index: number, row: OrphanReportDetailRow): string {
++    return row.reportId;
+   }
+ 
+-  /**
+-   * Check if charity filter should be shown
+-   */
+-  get showCharityFilter(): boolean {
+-    return this.isAdminOrSuperAdmin; // UC-6.4: Only Admin/Super Admin
++  trackByCharityId(_index: number, charity: CharityDto): string {
++    return charity.id;
+   }
+ 
+-  /**
+-   * Check if group by charity should be shown
+-   */
+-  get showGroupByCharity(): boolean {
+-    return this.isAdminOrSuperAdmin; // UC-6.1: Only Admin/Super Admin
+-  }
++  // ========== استخراج البيانات — client-side ExcelJS (16-1 precedent) ==========
++
++  exportData(): void {
++    if (this.rows.length === 0) {
++      // AC 5: told there is nothing to produce — no empty file
++      this.notification.info(this.translate.instant('orphanReports.generate.nothingToExport'));
++      return;
++    }
++
++    import('exceljs').then(({ default: ExcelJS }) => {
++      const workbook = new ExcelJS.Workbook();
++      const sheet = workbook.addWorksheet(this.translate.instant('orphanReports.generate.title'));
++
++      if (this.codesOnly) {
++        sheet.addRow([
++          this.translate.instant('orphanReports.generate.columns.orphanCode'),
++          this.translate.instant('orphanReports.generate.columns.reportNo')
++        ]);
++        this.rows.forEach(r => sheet.addRow([r.orphanCode || '—', r.reportNo || '—']));
++      } else {
++        sheet.addRow([
++          this.translate.instant('orphanReports.generate.columns.orphanCode'),
++          this.translate.instant('orphanReports.generate.columns.orphanName'),
++          this.translate.instant('orphanReports.generate.columns.charity'),
++          this.translate.instant('orphanReports.generate.columns.reportNo'),
++          this.translate.instant('orphanReports.generate.columns.reportDate'),
++          this.translate.instant('orphanReports.generate.columns.period'),
++          this.translate.instant('orphanReports.generate.columns.status'),
++          this.translate.instant('orphanReports.generate.columns.schoolType'),
++          this.translate.instant('orphanReports.generate.columns.school'),
++          this.translate.instant('orphanReports.generate.columns.faculty'),
++          this.translate.instant('orphanReports.generate.columns.specialization'),
++          this.translate.instant('orphanReports.generate.columns.grade'),
++          this.translate.instant('orphanReports.generate.columns.degree'),
++          this.translate.instant('orphanReports.generate.columns.educationalLevel'),
++          this.translate.instant('orphanReports.generate.columns.medicalStatus'),
++          this.translate.instant('orphanReports.generate.columns.disease'),
++          this.translate.instant('orphanReports.generate.columns.disability'),
++          this.translate.instant('orphanReports.generate.columns.marriageDate'),
++          this.translate.instant('orphanReports.generate.columns.deathDate'),
++          this.translate.instant('orphanReports.generate.columns.refuseReason')
++        ]);
++        this.rows.forEach(r => sheet.addRow([
++          r.orphanCode || '—',
++          r.orphanName || '—',
++          r.charityName || '—',
++          r.reportNo || '—',
++          this.fmtDate(r.reportDate),
++          this.fmtDate(r.reportPeriodFrom) + ' - ' + this.fmtDate(r.reportPeriodTo),
++          this.translate.instant('periodicReports.status.' + (r.reviewStatus || 'pending').toLowerCase()),
++          r.schoolType || '—',
++          r.school || '—',
++          r.faculty || '—',
++          r.specialization || '—',
++          r.grade || '—',
++          r.educationDegree || '—',
++          r.educationalLevelName || '—',
++          r.medicalStatus || '—',
++          r.disease || '—',
++          r.disability || '—',
++          this.fmtDate(r.marriageDate) || '—',
++          this.fmtDate(r.deathDate) || '—',
++          r.isRefused ? (r.refuseReason || '—') : '—'
++        ]));
++      }
+ 
+-  /**
+-   * Get sponsorship status label
+-   */
+-  getSponsorshipStatusLabel(status: string): string {
+-    return `orphanReports.sponsorshipStatus.${status.toLowerCase()}`;
++      workbook.xlsx.writeBuffer().then(buffer => {
++        const blob = new Blob([buffer], {
++          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
++        });
++        const url = window.URL.createObjectURL(blob);
++        const a = document.createElement('a');
++        a.href = url;
++        a.download = `report_details_${new Date().toISOString().slice(0, 10)}.xlsx`;
++        document.body.appendChild(a);
++        a.click();
++        document.body.removeChild(a);
++        window.URL.revokeObjectURL(url);
++      }).catch(() =>
++        this.notification.error(this.translate.instant('orphanReports.generate.exportFailed'))
++      );
++    }).catch(() =>
++      this.notification.error(this.translate.instant('orphanReports.generate.exportFailed'))
++    );
+   }
+ 
+-  /**
+-   * Get gender label
+-   */
+-  getGenderLabel(gender: string): string {
+-    return `orphanReports.gender.${gender.toLowerCase()}`;
++  private fmtDate(value?: string): string {
++    if (!value) return '';
++    const d = new Date(value);
++    return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+   }
+ }
+diff --git a/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-list/orphan-reports-list.component.html b/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-list/orphan-reports-list.component.html
+index 85c2ce7..73a53b6 100644
+--- a/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-list/orphan-reports-list.component.html
++++ b/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-list/orphan-reports-list.component.html
+@@ -1,102 +1,105 @@
+ <div class="orphan-reports-list">
+   <app-page-header
+-    [title]="'orphanReports.title' | translate"
+-    [subtitle]="'orphanReports.subtitle' | translate"
+-    [showAdd]="true"
+-    addRoute="/orphan-reports/generate">
++    [title]="'orphanReports.statistics.title' | translate"
++    [subtitle]="'orphanReports.statistics.subtitle' | translate"
++    [icon]="'fas fa-chart-bar'">
+   </app-page-header>
+ 
+-  <!-- Quick Actions -->
+-  <div class="row mb-4">
+-    <div class="col-md-3">
+-      <div class="card text-center h-100 cursor-pointer" (click)="navigateToGenerate()">
+-        <div class="card-body">
+-          <i class="fas fa-chart-bar fa-2x text-primary mb-3"></i>
+-          <h5>{{ 'orphanReports.generateReport' | translate }}</h5>
+-          <p class="text-muted small">{{ 'orphanReports.generateReportDesc' | translate }}</p>
++  <!-- §14.S.3 filter: الجمعية · كافة الجهات (HQ only — a charity caller is server-pinned) -->
++  <div class="card mb-3">
++    <div class="card-body">
++      <div class="row g-3 align-items-end">
++        <div class="col-md-4" *ngIf="isHeadOffice">
++          <label class="form-label" translate>periodicReports.filters.charity</label>
++          <select class="form-select" [(ngModel)]="charityId" (change)="onCharityChange()">
++            <option value="" translate>periodicReports.filters.allCharities</option>
++            <option *ngFor="let charity of charities; trackBy: trackByCharityId" [ngValue]="charity.id">
++              {{ charity.name }}
++            </option>
++          </select>
+         </div>
+-      </div>
+-    </div>
+-    <div class="col-md-3">
+-      <div class="card text-center h-100 cursor-pointer" (click)="navigateToHistory()">
+-        <div class="card-body">
+-          <i class="fas fa-history fa-2x text-success mb-3"></i>
+-          <h5>{{ 'orphanReports.reportHistory' | translate }}</h5>
+-          <p class="text-muted small">{{ 'orphanReports.reportHistoryDesc' | translate }}</p>
++
++        <!-- استخراج البيانات -->
++        <div class="col-md-4 text-start">
++          <button class="btn btn-outline-success" (click)="exportData()" [disabled]="exporting">
++            <i class="fas" [class.fa-spinner]="exporting" [class.fa-spin]="exporting" [class.fa-file-excel]="!exporting"></i>
++            <span class="ms-1" translate>orphanReports.statistics.export</span>
++          </button>
+         </div>
+       </div>
+     </div>
+-    <div class="col-md-3">
+-      <div class="card text-center h-100 cursor-pointer" (click)="navigateToSchedule()">
+-        <div class="card-body">
+-          <i class="fas fa-clock fa-2x text-warning mb-3"></i>
+-          <h5>{{ 'orphanReports.scheduleReport' | translate }}</h5>
+-          <p class="text-muted small">{{ 'orphanReports.scheduleReportDesc' | translate }}</p>
++  </div>
++
++  <app-loading *ngIf="loading"></app-loading>
++
++  <!-- §23.U.14 status counts: مقبول · مرفوض · قيد الانتظار (18-14) -->
++  <div class="card mb-3" *ngIf="!loading">
++    <div class="card-body">
++      <div class="row g-3 text-center">
++        <div class="col-md-4">
++          <div class="p-3 rounded border">
++            <div class="text-muted small" translate>orphanReports.statistics.accepted</div>
++            <div class="fs-3 fw-bold text-success">{{ displayCount(statusCounts?.accepted) }}</div>
++          </div>
+         </div>
+-      </div>
+-    </div>
+-    <div class="col-md-3">
+-      <div class="card text-center h-100 cursor-pointer" (click)="navigateToCompare()">
+-        <div class="card-body">
+-          <i class="fas fa-balance-scale fa-2x text-info mb-3"></i>
+-          <h5>{{ 'orphanReports.compareReports' | translate }}</h5>
+-          <p class="text-muted small">{{ 'orphanReports.compareReportsDesc' | translate }}</p>
++        <div class="col-md-4">
++          <div class="p-3 rounded border">
++            <div class="text-muted small" translate>orphanReports.statistics.refused</div>
++            <div class="fs-3 fw-bold text-danger">{{ displayCount(statusCounts?.refused) }}</div>
++          </div>
++        </div>
++        <div class="col-md-4">
++          <div class="p-3 rounded border">
++            <div class="text-muted small" translate>orphanReports.statistics.pending</div>
++            <div class="fs-3 fw-bold text-warning">{{ displayCount(statusCounts?.pending) }}</div>
++          </div>
+         </div>
+       </div>
+     </div>
+   </div>
+ 
+-  <!-- Recent Reports -->
+-  <div class="card">
+-    <div class="card-header">
+-      <h5 class="mb-0">
+-        <i class="fas fa-clock me-2"></i>
+-        <span translate>orphanReports.recentReports</span>
+-      </h5>
+-    </div>
++  <!-- §14.S.3 grid: الرقم · الحاله التعليميه · المرحله الدراسه · الاناث · الذكور · الاجمالي -->
++  <div class="card" *ngIf="!loading">
+     <div class="card-body p-0">
+-      <app-loading *ngIf="loading"></app-loading>
+-
+-      <div class="table-responsive" *ngIf="!loading">
++      <div class="table-responsive">
+         <table class="table table-hover mb-0">
+           <thead>
+             <tr>
+-              <th translate>orphanReports.reportName</th>
+-              <th translate>orphanReports.period</th>
+-              <th translate>orphanReports.generatedDate</th>
+-              <th translate>orphanReports.orphanCount</th>
+-              <th translate>common.actions</th>
++              <th translate>orphanReports.statistics.serial</th>
++              <th translate>orphanReports.statistics.educationalStatus</th>
++              <th translate>orphanReports.statistics.educationalLevel</th>
++              <th translate>orphanReports.statistics.female</th>
++              <th translate>orphanReports.statistics.male</th>
++              <th translate>orphanReports.statistics.total</th>
+             </tr>
+           </thead>
+           <tbody>
+-            <tr *ngFor="let report of recentReports">
+-              <td>
+-                <div class="fw-bold">{{ report.reportName || ('orphanReports.untitledReport' | translate) }}</div>
+-              </td>
+-              <td>
+-                <small>{{ report.reportFromDate | date:'shortDate' }} - {{ report.reportToDate | date:'shortDate' }}</small>
+-              </td>
+-              <td>{{ report.generatedDate | date:'mediumDate' }}</td>
+-              <td>
+-                <span class="badge bg-primary">{{ report.orphanCount }}</span>
+-              </td>
+-              <td>
+-                <button class="btn btn-sm btn-outline-primary">
+-                  <i class="fas fa-eye me-1"></i>
+-                  {{ 'common.view' | translate }}
+-                </button>
+-              </td>
++            <tr *ngFor="let group of groups; let i = index; trackBy: trackByGroup">
++              <td>{{ serial(i) }}</td>
++              <td>{{ statusLabel(group.educationalStatus) }}</td>
++              <td>{{ group.educationalLevelName || '—' }}</td>
++              <td>{{ group.femaleCount }}</td>
++              <td>{{ group.maleCount }}</td>
++              <td class="fw-bold">{{ group.totalCount }}</td>
++            </tr>
++            <!-- trailing totals row -->
++            <tr class="table-secondary fw-bold" *ngIf="groups.length > 0">
++              <td></td>
++              <td colspan="2" translate>orphanReports.statistics.totalRow</td>
++              <td>{{ totals.female }}</td>
++              <td>{{ totals.male }}</td>
++              <td>{{ totals.total }}</td>
+             </tr>
+           </tbody>
+         </table>
+-
+-        <app-empty-state
+-          *ngIf="recentReports.length === 0"
+-          [icon]="'fas fa-file-alt'"
+-          [title]="'orphanReports.noReports' | translate"
+-          [message]="'orphanReports.noReportsMessage' | translate">
+-        </app-empty-state>
+       </div>
++
++      <app-empty-state
++        *ngIf="groups.length === 0"
++        [icon]="'fas fa-chart-bar'"
++        [title]="'orphanReports.statistics.emptyTitle' | translate"
++        [description]="'orphanReports.statistics.emptyMessage' | translate">
++      </app-empty-state>
+     </div>
+   </div>
+ </div>
+diff --git a/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-list/orphan-reports-list.component.ts b/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-list/orphan-reports-list.component.ts
+index 95cc725..127cbf4 100644
+--- a/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-list/orphan-reports-list.component.ts
++++ b/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-list/orphan-reports-list.component.ts
+@@ -1,71 +1,212 @@
+ /**
+  * Orphan Reports List Component
+- * List view for orphan reports with navigation to generate new reports
+- * Implements UC-6.1 entry point
++ * Implements UC-ORR-10 (§14.S.3): report statistics by group احصائيات عامة للأيتام.
++ *
++ * One row per (الحاله التعليميه × المرحله الدراسه) with الاناث / الذكور / الاجمالي,
++ * aggregated server-side by POST /api/OrphanReports/statistics. الجمعية filter is
++ * HQ-only — a charity caller is server-pinned to its own rows.
+  */
+ 
+-import { Component, OnInit } from '@angular/core';
++import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+ import { CommonModule } from '@angular/common';
+-import { Router } from '@angular/router';
+-import { TranslateModule } from '@ngx-translate/core';
++import { FormsModule } from '@angular/forms';
++import { TranslateModule, TranslateService } from '@ngx-translate/core';
+ 
+-import { OrphanReportService } from '../../services/orphan-report.service';
+-import { OrphanReportHistoryDto } from '../../models/periodic-orphan-report.model';
++import { OrphanReportService } from '../services/orphan-report.service';
++import { PeriodicOrphanReportService } from '../services/periodic-orphan-report.service';
++import {
++  OrphanStatisticsDto,
++  OrphanReportGroupCountRow,
++  OrphanReportStatusCounts
++} from '../models/periodic-orphan-report.model';
+ import { LoadingComponent } from '../../../shared/components/loading/loading.component';
+ import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
++import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
++import { NotificationService } from '../../../core/services/notification.service';
++import { AuthService } from '../../../core/services/auth.service';
++import { CharityService } from '../../charities/services/charity.service';
++import { CharityDto } from '../../charities/models/charity.model';
+ 
+ @Component({
+   selector: 'app-orphan-reports-list',
+   standalone: true,
++  changeDetection: ChangeDetectionStrategy.OnPush,
+   imports: [
+     CommonModule,
++    FormsModule,
+     TranslateModule,
+     LoadingComponent,
+-    EmptyStateComponent
++    EmptyStateComponent,
++    PageHeaderComponent
+   ],
+   templateUrl: './orphan-reports-list.component.html',
+   styleUrls: ['./orphan-reports-list.component.scss']
+ })
+ export class OrphanReportsListComponent implements OnInit {
+   loading = false;
+-  recentReports: OrphanReportHistoryDto[] = [];
++  exporting = false;
++
++  // §14.S.3 filter — الجمعية drop-down (HQ only), '' = كافة الجهات
++  isHeadOffice = false;
++  charities: CharityDto[] = [];
++  charityId = '';
++
++  statistics?: OrphanStatisticsDto;
++
++  // 18-14 / UC-RPT-14 — status-grouped counts (مقبول / مرفوض / قيد الانتظار)
++  statusCounts?: OrphanReportStatusCounts;
+ 
+   constructor(
+-    private router: Router,
+-    private orphanReportService: OrphanReportService
++    private orphanReportService: OrphanReportService,
++    private periodicReportService: PeriodicOrphanReportService,
++    private charityService: CharityService,
++    public auth: AuthService,
++    private notification: NotificationService,
++    private translate: TranslateService,
++    private cdr: ChangeDetectorRef
+   ) {}
+ 
+   ngOnInit(): void {
+-    this.loadRecentReports();
++    this.isHeadOffice = this.auth.hasRole('SuperAdmin') || this.auth.hasRole('Admin');
++    if (this.isHeadOffice) {
++      this.charityService.getCharities({ pageNumber: 1, pageSize: 500 }).subscribe({
++        next: result => (this.charities = result.items ?? []),
++        error: () => (this.charities = [])
++      });
++    }
++    this.loadStatistics();
+   }
+ 
+-  private loadRecentReports(): void {
++  /** getCharityData() — reload on الجمعية change. */
++  onCharityChange(): void {
++    this.loadStatistics();
++  }
++
++  private loadStatistics(): void {
+     this.loading = true;
+-    this.orphanReportService.getReportHistory(1, 5).subscribe({
+-      next: (result) => {
+-        this.recentReports = result.items;
++    this.cdr.markForCheck();
++
++    const filter = {
++      charityId: this.isHeadOffice && this.charityId ? this.charityId : undefined
++    };
++
++    this.orphanReportService.getOrphanStatistics(filter).subscribe({
++      next: result => {
++        this.statistics = result;
+         this.loading = false;
++        this.cdr.markForCheck();
+       },
+-      error: (error) => {
+-        console.error('Error loading recent reports:', error);
++      error: error => {
++        console.error('Error loading statistics:', error);
+         this.loading = false;
++        this.notification.error(
++          error?.message || this.translate.instant('orphanReports.statistics.loadFailed')
++        );
++        this.cdr.markForCheck();
++      }
++    });
++
++    // 18-14 — same charity scope, three reads; failed legs already degrade to null
++    this.periodicReportService.getStatusCounts({ charityId: filter.charityId }).subscribe({
++      next: counts => {
++        this.statusCounts = counts;
++        this.cdr.markForCheck();
++      },
++      error: () => {
++        this.statusCounts = undefined;
++        this.cdr.markForCheck();
+       }
+     });
+   }
+ 
+-  navigateToGenerate(): void {
+-    this.router.navigate(['/orphan-reports/generate']);
++  /** Tile value — a null leg renders "—" rather than a misleading zero. */
++  displayCount(value: number | null | undefined): string {
++    return value === null || value === undefined ? '—' : String(value);
+   }
+ 
+-  navigateToHistory(): void {
+-    this.router.navigate(['/orphan-reports/history']);
++  get groups(): OrphanReportGroupCountRow[] {
++    return this.statistics?.groups ?? [];
+   }
+ 
+-  navigateToSchedule(): void {
+-    this.router.navigate(['/orphan-reports/schedule']);
++  /** Trailing totals row — الاناث + الذكور + الاجمالي sums (reconciliation helper). */
++  get totals(): { female: number; male: number; total: number } {
++    return {
++      female: this.groups.reduce((s, g) => s + (g.femaleCount || 0), 0),
++      male: this.groups.reduce((s, g) => s + (g.maleCount || 0), 0),
++      total: this.groups.reduce((s, g) => s + (g.totalCount || 0), 0)
++    };
+   }
+ 
+-  navigateToCompare(): void {
+-    this.router.navigate(['/orphan-reports/compare']);
++  /** Stable token → i18n label (closed set per the 9-3 ruling). */
++  statusLabel(token: string): string {
++    return this.translate.instant('orphanReports.statistics.status.' + token);
++  }
++
++  serial(index: number): number {
++    return index + 1;
++  }
++
++  trackByGroup(_index: number, row: OrphanReportGroupCountRow): string {
++    return row.educationalStatus + '|' + (row.educationalLevelName ?? '-');
++  }
++
++  trackByCharityId(_index: number, charity: CharityDto): string {
++    return charity.id;
++  }
++
++  // ========== استخراج البيانات — client-side ExcelJS (16-1 precedent) ==========
++
++  exportData(): void {
++    if (this.groups.length === 0) {
++      this.notification.info(this.translate.instant('orphanReports.statistics.nothingToExport'));
++      return;
++    }
++
++    import('exceljs').then(({ default: ExcelJS }) => {
++      const workbook = new ExcelJS.Workbook();
++      const sheet = workbook.addWorksheet(this.translate.instant('orphanReports.statistics.title'));
++      sheet.addRow([
++        this.translate.instant('orphanReports.statistics.serial'),
++        this.translate.instant('orphanReports.statistics.educationalStatus'),
++        this.translate.instant('orphanReports.statistics.educationalLevel'),
++        this.translate.instant('orphanReports.statistics.female'),
++        this.translate.instant('orphanReports.statistics.male'),
++        this.translate.instant('orphanReports.statistics.total')
++      ]);
++      this.groups.forEach((g, i) => sheet.addRow([
++        i + 1,
++        this.statusLabel(g.educationalStatus),
++        g.educationalLevelName || '—',
++        g.femaleCount || 0,
++        g.maleCount || 0,
++        g.totalCount || 0
++      ]));
++      sheet.addRow([
++        '',
++        this.translate.instant('orphanReports.statistics.totalRow'),
++        '',
++        this.totals.female,
++        this.totals.male,
++        this.totals.total
++      ]);
++
++      workbook.xlsx.writeBuffer().then(buffer => {
++        const blob = new Blob([buffer], {
++          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
++        });
++        const url = window.URL.createObjectURL(blob);
++        const a = document.createElement('a');
++        a.href = url;
++        a.download = `orphan_statistics_${new Date().toISOString().slice(0, 10)}.xlsx`;
++        document.body.appendChild(a);
++        a.click();
++        document.body.removeChild(a);
++        window.URL.revokeObjectURL(url);
++      }).catch(() =>
++        this.notification.error(this.translate.instant('orphanReports.statistics.exportFailed'))
++      );
++    }).catch(() =>
++      this.notification.error(this.translate.instant('orphanReports.statistics.exportFailed'))
++    );
+   }
+ }
+diff --git a/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-list/orphan-reports-list.component.scss b/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-list/orphan-reports-list.component.scss
+new file mode 100644
+index 0000000..373dc79
+--- /dev/null
++++ b/Frontend/src/app/modules/periodic-orphan-reports/orphan-reports-list/orphan-reports-list.component.scss
+@@ -0,0 +1 @@
++/* orphan-reports-list */
+diff --git a/Frontend/src/app/modules/periodic-orphan-reports/report-attachment-gallery/report-attachment-gallery.component.html b/Frontend/src/app/modules/periodic-orphan-reports/report-attachment-gallery/report-attachment-gallery.component.html
+new file mode 100644
+index 0000000..3320c43
+--- /dev/null
++++ b/Frontend/src/app/modules/periodic-orphan-reports/report-attachment-gallery/report-attachment-gallery.component.html
+@@ -0,0 +1,70 @@
++<div class="report-attachment-gallery" *ngIf="report">
++  <h6 class="mb-3">
++    <i class="bi bi-images me-1"></i>{{ 'periodicReports.attachments.title' | translate }}
++  </h6>
++
++  <div class="row g-3">
++    <div class="col-md-6 col-lg-4" *ngFor="let slot of slots; trackBy: trackBySlotKey">
++      <div class="card h-100">
++        <div class="card-header py-2">
++          <span class="small fw-semibold">{{ 'periodicReports.attachments.slots.' + slot.key | translate }}</span>
++        </div>
++        <div class="card-body p-2 text-center">
++          <!-- Filled slot: thumbnail → click to enlarge -->
++          <ng-container *ngIf="slot.objectUrl; else emptyState">
++            <img [src]="slot.objectUrl"
++                 [alt]="'periodicReports.attachments.slots.' + slot.key | translate"
++                 class="img-thumbnail slot-thumb"
++                 (click)="open(slot)">
++          </ng-container>
++
++          <!-- Honest empty / loading / failed states — never a broken image (AC 3) -->
++          <ng-template #emptyState>
++            <div class="slot-empty" *ngIf="!slot.loading && !slot.id">
++              <i class="bi bi-image text-muted"></i>
++              <div class="small text-muted">{{ 'periodicReports.attachments.noImage' | translate }}</div>
++            </div>
++            <div class="slot-empty" *ngIf="slot.loading">
++              <div class="spinner-border spinner-border-sm text-muted"></div>
++            </div>
++            <div class="slot-empty" *ngIf="!slot.loading && slot.id && slot.failed">
++              <i class="bi bi-exclamation-triangle text-warning"></i>
++              <div class="small text-muted">{{ 'periodicReports.attachments.loadFailed' | translate }}</div>
++            </div>
++          </ng-template>
++        </div>
++        <div class="card-footer py-1 text-center" *ngIf="slot.id">
++          <button type="button" class="btn btn-sm btn-outline-primary me-1"
++                  (click)="open(slot)" [disabled]="!slot.objectUrl">
++            <i class="bi bi-zoom-in"></i>
++          </button>
++          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="download(slot)">
++            <i class="bi bi-download"></i>
++          </button>
++        </div>
++      </div>
++    </div>
++  </div>
++
++  <!-- Enlarged view -->
++  <div class="gallery-lightbox" *ngIf="enlarged" (click)="close()">
++    <div class="gallery-lightbox-body" (click)="$event.stopPropagation()">
++      <div class="d-flex justify-content-between align-items-center mb-2">
++        <span class="fw-semibold">
++          {{ 'periodicReports.attachments.slots.' + enlarged.key | translate }}
++        </span>
++        <div>
++          <button type="button" class="btn btn-sm btn-outline-secondary me-1" (click)="download(enlarged)">
++            <i class="bi bi-download me-1"></i>{{ 'periodicReports.attachments.download' | translate }}
++          </button>
++          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="close()">
++            <i class="bi bi-x-lg"></i>
++          </button>
++        </div>
++      </div>
++      <img [src]="enlargedUrl"
++           [alt]="'periodicReports.attachments.slots.' + enlarged.key | translate"
++           class="img-fluid gallery-enlarged">
++    </div>
++  </div>
++</div>
+diff --git a/Frontend/src/app/modules/periodic-orphan-reports/report-attachment-gallery/report-attachment-gallery.component.scss b/Frontend/src/app/modules/periodic-orphan-reports/report-attachment-gallery/report-attachment-gallery.component.scss
+new file mode 100644
+index 0000000..f487e2c
+--- /dev/null
++++ b/Frontend/src/app/modules/periodic-orphan-reports/report-attachment-gallery/report-attachment-gallery.component.scss
+@@ -0,0 +1,44 @@
++.report-attachment-gallery {
++  .slot-thumb {
++    max-height: 140px;
++    cursor: pointer;
++    object-fit: cover;
++  }
++
++  .slot-empty {
++    min-height: 100px;
++    display: flex;
++    flex-direction: column;
++    align-items: center;
++    justify-content: center;
++    gap: 0.25rem;
++
++    i {
++      font-size: 1.5rem;
++    }
++  }
++
++  .gallery-lightbox {
++    position: fixed;
++    inset: 0;
++    z-index: 1055;
++    background: rgba(0, 0, 0, 0.75);
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    padding: 2rem;
++
++    .gallery-lightbox-body {
++      background: var(--bs-body-bg, #fff);
++      border-radius: 0.5rem;
++      padding: 1rem;
++      max-width: 90vw;
++      max-height: 90vh;
++      overflow: auto;
++    }
++
++    .gallery-enlarged {
++      max-height: 75vh;
++    }
++  }
++}
+diff --git a/Frontend/src/app/modules/periodic-orphan-reports/report-attachment-gallery/report-attachment-gallery.component.ts b/Frontend/src/app/modules/periodic-orphan-reports/report-attachment-gallery/report-attachment-gallery.component.ts
+new file mode 100644
+index 0000000..1bf1d7d
+--- /dev/null
++++ b/Frontend/src/app/modules/periodic-orphan-reports/report-attachment-gallery/report-attachment-gallery.component.ts
+@@ -0,0 +1,135 @@
++/**
++ * Report Attachment Gallery Component
++ * Implements UC-ORR-16 (§14.U.16 صور اليتيم والشهادات) — the viewer over a report's
++ * five attachment slots: orphan photo, student certificate, medical report,
++ * death certificate, marriage contract.
++ *
++ * The ids are the single truth (BR-12); images stream as blobs through the
++ * authenticated ApiService and bind as object URLs — an <img src> cannot carry the
++ * Bearer header and the endpoint stays [Authorize]. Empty slots show the honest
++ * "no image" state (AC 3).
++ */
++
++import { Component, ChangeDetectionStrategy, ChangeDetectorRef, Input, OnChanges, OnDestroy } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { TranslateModule, TranslateService } from '@ngx-translate/core';
++
++import { PeriodicOrphanReportDto } from '../models/periodic-orphan-report.model';
++import { AttachmentService } from '../../../core/services/attachment.service';
++import { NotificationService } from '../../../core/services/notification.service';
++
++/** One viewer slot — the report's field pair (id wins; the URL field is informational). */
++interface AttachmentSlot {
++  key: string;
++  id?: string;
++  objectUrl?: string;
++  loading: boolean;
++  failed: boolean;
++}
++
++@Component({
++  selector: 'app-report-attachment-gallery',
++  standalone: true,
++  changeDetection: ChangeDetectionStrategy.OnPush,
++  imports: [CommonModule, TranslateModule],
++  templateUrl: './report-attachment-gallery.component.html',
++  styleUrls: ['./report-attachment-gallery.component.scss']
++})
++export class ReportAttachmentGalleryComponent implements OnChanges, OnDestroy {
++  @Input() report: PeriodicOrphanReportDto | null = null;
++
++  slots: AttachmentSlot[] = [];
++
++  /** The enlarged view (lightboxed slot), null when closed. */
++  enlarged: AttachmentSlot | null = null;
++  enlargedUrl = '';
++
++  constructor(
++    private attachmentService: AttachmentService,
++    private notification: NotificationService,
++    private translate: TranslateService,
++    private cdr: ChangeDetectorRef
++  ) {}
++
++  /** Re-reads the five slots whenever the loaded report changes. */
++  ngOnChanges(): void {
++    this.releaseAll();
++    const r = this.report;
++    if (!r) {
++      this.slots = [];
++      return;
++    }
++
++    this.slots = [
++      { key: 'orphanPhoto', id: r.orphanImageId, loading: !!r.orphanImageId, failed: false },
++      { key: 'certificate', id: r.orphanCertificateImageId, loading: !!r.orphanCertificateImageId, failed: false },
++      { key: 'medicalReport', id: r.medicalReportImageId, loading: !!r.medicalReportImageId, failed: false },
++      { key: 'deathCertificate', id: r.orphanDeadImageId, loading: !!r.orphanDeadImageId, failed: false },
++      { key: 'marriageContract', id: r.orphanMarriageImageId, loading: !!r.orphanMarriageImageId, failed: false }
++    ];
++
++    this.slots.filter(s => s.id).forEach(s => this.loadSlot(s));
++    this.cdr.markForCheck();
++  }
++
++  ngOnDestroy(): void {
++    this.releaseAll();
++  }
++
++  private loadSlot(slot: AttachmentSlot): void {
++    this.attachmentService.getImage(slot.id!).subscribe({
++      next: blob => {
++        slot.objectUrl = URL.createObjectURL(blob);
++        slot.loading = false;
++        this.cdr.markForCheck();
++      },
++      error: () => {
++        // The slot keeps its honest state — label + no-image marker, never a broken img.
++        slot.loading = false;
++        slot.failed = true;
++        this.cdr.markForCheck();
++      }
++    });
++  }
++
++  trackBySlotKey(_index: number, slot: AttachmentSlot): string {
++    return slot.key;
++  }
++
++  open(slot: AttachmentSlot): void {
++    if (!slot.objectUrl) return;
++    this.enlarged = slot;
++    this.enlargedUrl = slot.objectUrl;
++  }
++
++  close(): void {
++    this.enlarged = null;
++    this.enlargedUrl = '';
++  }
++
++  /** Download via the blob pattern (the stored bytes, not the object URL re-encode). */
++  download(slot: AttachmentSlot): void {
++    if (!slot.id) return;
++    this.attachmentService.download(slot.id).subscribe({
++      next: blob => {
++        const url = URL.createObjectURL(blob);
++        const a = document.createElement('a');
++        a.href = url;
++        a.download = `${slot.key}_${slot.id}`;
++        document.body.appendChild(a);
++        a.click();
++        document.body.removeChild(a);
++        URL.revokeObjectURL(url);
++      },
++      error: () =>
++        this.notification.error(this.translate.instant('periodicReports.attachments.downloadFailed'))
++    });
++  }
++
++  private releaseAll(): void {
++    this.slots?.forEach(s => {
++      if (s.objectUrl) URL.revokeObjectURL(s.objectUrl);
++    });
++    this.close();
++  }
++}
+diff --git a/Frontend/src/app/modules/periodic-orphan-reports/periodic-report-print/periodic-report-print.component.html b/Frontend/src/app/modules/periodic-orphan-reports/periodic-report-print/periodic-report-print.component.html
+new file mode 100644
+index 0000000..61db382
+--- /dev/null
++++ b/Frontend/src/app/modules/periodic-orphan-reports/periodic-report-print/periodic-report-print.component.html
+@@ -0,0 +1,250 @@
++<div class="periodic-report-print">
++  <app-breadcrumb [autoGenerate]="true"></app-breadcrumb>
++
++  <app-loading *ngIf="loading"></app-loading>
++
++  <!-- AC 4 — told there is nothing to produce; never an empty document -->
++  <div class="card" *ngIf="!loading && failed">
++    <div class="card-body text-center py-5">
++      <i class="fas fa-file-excel fa-3x text-muted mb-3"></i>
++      <p class="mb-3">{{ 'periodicReports.print.nothingToProduce' | translate }}</p>
++      <button type="button" class="btn btn-secondary" (click)="back()">
++        <i class="fas fa-arrow-right me-1"></i>
++        <span translate>common.back</span>
++      </button>
++    </div>
++  </div>
++
++  <ng-container *ngIf="!loading && payload && report">
++    <!-- Screen chrome — hidden on paper -->
++    <div class="no-print d-flex justify-content-between align-items-center mb-3">
++      <button type="button" class="btn btn-secondary" (click)="back()">
++        <i class="fas fa-arrow-right me-1"></i>
++        <span translate>common.back</span>
++      </button>
++      <button type="button" class="btn btn-primary" (click)="print()">
++        <i class="fas fa-print me-2"></i>
++        <span translate>periodicReports.print.print</span>
++      </button>
++    </div>
++
++    <!-- The official form — §14.S.2 sections in the spec's order -->
++    <div class="print-form" dir="rtl">
++      <!-- Header -->
++      <div class="form-header">
++        <div class="form-title">
++          <span translate>periodicReports.print.title</span>
++        </div>
++        <div class="form-meta">
++          <span>{{ v(report.charityName) }}</span>
++          <span *ngIf="report.reportNo">{{ 'periodicReports.reportNo' | translate }}: {{ report.reportNo }}</span>
++          <span>{{ 'periodicReports.reportDate' | translate }}: {{ report.reportDate | date:'mediumDate' }}</span>
++          <span *ngIf="report.reportPeriodFrom || report.reportPeriodTo">
++            {{ 'periodicReports.reportPeriod' | translate }}:
++            {{ report.reportPeriodFrom | date:'shortDate' }} — {{ report.reportPeriodTo | date:'shortDate' }}
++          </span>
++        </div>
++      </div>
++
++      <!-- Orphan identity + photograph -->
++      <table class="identity-table">
++        <tbody>
++          <tr>
++            <td class="lbl">{{ 'periodicReports.orphanCode' | translate }}</td>
++            <td>{{ v(report.orphanCode) }}</td>
++            <td class="lbl">{{ 'periodicReports.orphanName' | translate }}</td>
++            <td>{{ v(report.orphanName) }}</td>
++            <td rowspan="3" class="photo-cell">
++              <img *ngIf="imageUrls.get('orphanPhoto'); else noPhoto"
++                   [src]="imageUrls.get('orphanPhoto')" alt="" />
++              <ng-template #noPhoto><span class="no-photo">&nbsp;</span></ng-template>
++            </td>
++          </tr>
++          <tr>
++            <td class="lbl">{{ 'periodicReports.charity' | translate }}</td>
++            <td>{{ v(report.charityName) }}</td>
++            <td class="lbl">{{ 'common.status' | translate }}</td>
++            <td>{{ 'periodicReports.status.' + (report.reviewStatus || 'pending').toLowerCase() | translate }}</td>
++          </tr>
++          <tr>
++            <td class="lbl">{{ 'periodicReviews.reviewedBy' | translate }}</td>
++            <td>{{ v(report.reviewerName) }}</td>
++            <td class="lbl">{{ 'periodicReports.reviewedOn' | translate }}</td>
++            <td>{{ report.reviewedDate ? (report.reviewedDate | date:'mediumDate') : '—' }}</td>
++          </tr>
++        </tbody>
++      </table>
++
++      <!-- Religious & Quran education (§14.S.2) -->
++      <div class="section">
++        <div class="section-title" translate>periodicReports.form.sections.religious</div>
++        <table class="fields-table">
++          <tbody>
++            <tr>
++              <td class="lbl">{{ 'periodicReports.form.prayerStatus' | translate }}</td>
++              <td>{{ v(report.prayerStatus) }}</td>
++              <td class="lbl">{{ 'periodicReports.form.mannersStatus' | translate }}</td>
++              <td>{{ v(report.mannersStatus) }}</td>
++              <td class="lbl">{{ 'periodicReports.form.hadeethStatus' | translate }}</td>
++              <td>{{ v(report.hadeethStatus) }}</td>
++            </tr>
++            <tr>
++              <td class="lbl">{{ 'periodicReports.form.quranParts' | translate }}</td>
++              <td>{{ v(report.quranParts) }}</td>
++              <td class="lbl">{{ 'periodicReports.form.quranVerses' | translate }}</td>
++              <td colspan="3">{{ v(report.quranVerses) }}</td>
++            </tr>
++          </tbody>
++        </table>
++      </div>
++
++      <!-- Health & medical — emphasised for the disabled variant (AC 3) -->
++      <div class="section" [class.emphasised]="variantBase === 'disabled'">
++        <div class="section-title" translate>periodicReports.form.sections.health</div>
++        <table class="fields-table">
++          <tbody>
++            <tr>
++              <td class="lbl">{{ 'periodicReports.form.medicalStatus' | translate }}</td>
++              <td>{{ v(report.medicalStatus) }}</td>
++              <td class="lbl">{{ 'periodicReports.form.disease' | translate }}</td>
++              <td>{{ v(report.disease) }}</td>
++              <td class="lbl">{{ 'periodicReports.form.disability' | translate }}</td>
++              <td>{{ v(report.disability) }}</td>
++            </tr>
++            <tr *ngIf="report.diseaseDescription || report.disabilityDescription">
++              <td class="lbl">{{ 'periodicReports.form.diseaseDescription' | translate }}</td>
++              <td colspan="2">{{ v(report.diseaseDescription) }}</td>
++              <td class="lbl">{{ 'periodicReports.form.disabilityDescription' | translate }}</td>
++              <td colspan="2">{{ v(report.disabilityDescription) }}</td>
++            </tr>
++          </tbody>
++        </table>
++      </div>
++
++      <!-- Education — the studying variant's core section (AC 3) -->
++      <div class="section" [class.emphasised]="variantBase === 'studying'">
++        <div class="section-title" translate>periodicReports.form.sections.education</div>
++        <table class="fields-table">
++          <tbody>
++            <tr>
++              <td class="lbl">{{ 'periodicReports.form.educationalLevel' | translate }}</td>
++              <td>{{ v(report.educationalLevelName) }}</td>
++              <td class="lbl">{{ 'periodicReports.form.school' | translate }}</td>
++              <td>{{ v(report.school) }}</td>
++              <td class="lbl">{{ 'periodicReports.form.grade' | translate }}</td>
++              <td>{{ v(report.grade) }}</td>
++            </tr>
++            <tr>
++              <td class="lbl">{{ 'periodicReports.form.schoolType' | translate }}</td>
++              <td>{{ v(report.schoolType) }}</td>
++              <td class="lbl">{{ 'periodicReports.form.faculty' | translate }}</td>
++              <td>{{ v(report.faculty) }}</td>
++              <td class="lbl">{{ 'periodicReports.form.specialization' | translate }}</td>
++              <td>{{ v(report.specialization) }}</td>
++            </tr>
++            <tr>
++              <td class="lbl">{{ 'periodicReports.form.isOrphanStudent' | translate }}</td>
++              <td>{{ (report.isOrphanStudent ? 'common.yes' : 'common.no') | translate }}</td>
++              <td class="lbl" *ngIf="report.annualFeeForStudy">{{ 'periodicReports.form.annualFeeForStudy' | translate }}</td>
++              <td *ngIf="report.annualFeeForStudy">{{ report.annualFeeForStudy }}</td>
++              <td class="lbl" *ngIf="report.dropOut">{{ 'periodicReports.form.dropOut' | translate }}</td>
++              <td *ngIf="report.dropOut">{{ report.dropOutYear || '—' }}</td>
++            </tr>
++          </tbody>
++        </table>
++      </div>
++
++      <!-- Life events (marriage / death) -->
++      <div class="section">
++        <div class="section-title" translate>periodicReports.form.sections.lifeEvents</div>
++        <table class="fields-table">
++          <tbody>
++            <tr>
++              <td class="lbl">{{ 'periodicReports.form.married' | translate }}</td>
++              <td>{{ (report.married ? 'common.yes' : 'common.no') | translate }}</td>
++              <td class="lbl">{{ 'periodicReports.form.marriageDate' | translate }}</td>
++              <td>{{ report.marriageDate ? (report.marriageDate | date:'shortDate') : '—' }}</td>
++              <td class="lbl">{{ 'periodicReports.form.dead' | translate }}</td>
++              <td>{{ (report.dead ? 'common.yes' : 'common.no') | translate }}</td>
++            </tr>
++            <tr>
++              <td class="lbl">{{ 'periodicReports.form.deathDate' | translate }}</td>
++              <td colspan="5">{{ report.deathDate ? (report.deathDate | date:'shortDate') : '—' }}</td>
++            </tr>
++          </tbody>
++        </table>
++      </div>
++
++      <!-- Personal development -->
++      <div class="section">
++        <div class="section-title" translate>periodicReports.form.sections.personalDevelopment</div>
++        <table class="fields-table">
++          <tbody>
++            <tr>
++              <td class="lbl">{{ 'periodicReports.form.hobby' | translate }}</td>
++              <td>{{ v(report.hobby) }}</td>
++              <td class="lbl">{{ 'periodicReports.form.sportName' | translate }}</td>
++              <td>{{ v(report.sportName) }}</td>
++              <td class="lbl">{{ 'periodicReports.form.course' | translate }}</td>
++              <td>{{ v(report.courseName || report.course) }}</td>
++            </tr>
++            <tr>
++              <td class="lbl">{{ 'periodicReports.form.achievement' | translate }}</td>
++              <td>{{ v(report.achievement) }}</td>
++              <td class="lbl">{{ 'periodicReports.form.wish' | translate }}</td>
++              <td>{{ v(report.wish) }}</td>
++              <td class="lbl">{{ 'periodicReports.form.missingDocumentsName' | translate }}</td>
++              <td>{{ v(report.missingDocumentsName) }}</td>
++            </tr>
++            <tr *ngIf="report.orphanMessage">
++              <td class="lbl">{{ 'periodicReports.form.orphanMessage' | translate }}</td>
++              <td colspan="5" class="message">{{ report.orphanMessage }}</td>
++            </tr>
++          </tbody>
++        </table>
++      </div>
++
++      <!-- Attached documents — only the sections the variant carries (AC 3, BR-12 blob images) -->
++      <div class="section documents" *ngIf="documentSlots.length > 0">
++        <div class="section-title" translate>periodicReports.form.sections.attachments</div>
++        <div class="documents-row">
++          <figure class="document" *ngFor="let slot of documentSlots; trackBy: trackBySlot">
++            <figcaption>{{ slotLabel(slot.slot) | translate }}</figcaption>
++            <img *ngIf="imageUrls.get(slot.slot); else noDoc" [src]="imageUrls.get(slot.slot)" alt="" />
++            <ng-template #noDoc><span class="doc-missing" translate>periodicReports.print.imageUnavailable</span></ng-template>
++          </figure>
++        </div>
++      </div>
++
++      <!-- Refusal reason / review comments, when decided -->
++      <div class="section" *ngIf="report.isRefused || report.reviewComments">
++        <div class="section-title" translate>periodicReports.reviewActions</div>
++        <table class="fields-table">
++          <tbody>
++            <tr *ngIf="report.isRefused">
++              <td class="lbl">{{ 'periodicReports.refuseReason' | translate }}</td>
++              <td colspan="5">{{ v(report.refuseReasonName || report.refuseReason) }}</td>
++            </tr>
++            <tr *ngIf="report.reviewComments">
++              <td class="lbl">{{ 'periodicReports.reviewComments' | translate }}</td>
++              <td colspan="5">{{ report.reviewComments }}</td>
++            </tr>
++          </tbody>
++        </table>
++      </div>
++
++      <!-- Footer — signatures + the resolved variant (testable from the payload) -->
++      <div class="form-footer">
++        <div class="signatures">
++          <span translate>periodicReports.print.preparerSignature</span>
++          <span translate>periodicReports.print.reviewerSignature</span>
++        </div>
++        <div class="meta-line">
++          <span>{{ 'periodicReports.print.variantLabel' | translate }}: {{ payload.variant }}</span>
++          <span>{{ 'periodicReports.createdOn' | translate }}: {{ report.createdOn | date:'medium' }}</span>
++          <span>{{ 'periodicReports.createdBy' | translate }}: {{ v(report.createdByName) }}</span>
++        </div>
++      </div>
++    </div>
++  </ng-container>
++</div>
+diff --git a/Frontend/src/app/modules/periodic-orphan-reports/periodic-report-print/periodic-report-print.component.scss b/Frontend/src/app/modules/periodic-orphan-reports/periodic-report-print/periodic-report-print.component.scss
+new file mode 100644
+index 0000000..0938044
+--- /dev/null
++++ b/Frontend/src/app/modules/periodic-orphan-reports/periodic-report-print/periodic-report-print.component.scss
+@@ -0,0 +1,178 @@
++/**
++ * UC-ORR-17 — print-optimised official form. On screen it looks like a sheet of
++ * paper; on paper the chrome drops and the sheet fills the A4 page.
++ */
++
++.print-form {
++  background: #fff;
++  color: #000;
++  max-width: 210mm;
++  margin: 0 auto;
++  padding: 12mm 10mm;
++  border: 1px solid #dee2e6;
++  border-radius: 4px;
++  font-size: 13px;
++}
++
++.form-header {
++  text-align: center;
++  border-bottom: 2px solid #000;
++  padding-bottom: 8px;
++  margin-bottom: 10px;
++
++  .form-title {
++    font-size: 18px;
++    font-weight: 700;
++  }
++
++  .form-meta {
++    display: flex;
++    justify-content: center;
++    flex-wrap: wrap;
++    gap: 12px;
++    margin-top: 6px;
++    font-size: 12px;
++  }
++}
++
++.identity-table,
++.fields-table {
++  width: 100%;
++  border-collapse: collapse;
++
++  td {
++    border: 1px solid #999;
++    padding: 4px 8px;
++    vertical-align: middle;
++
++    &.lbl {
++      background: #f1f1f1;
++      font-weight: 600;
++      white-space: nowrap;
++      width: 14%;
++    }
++
++    &.message {
++      font-style: italic;
++    }
++  }
++}
++
++.identity-table .photo-cell {
++  width: 30mm;
++
++  img {
++    width: 100%;
++    max-height: 35mm;
++    object-fit: contain;
++    display: block;
++  }
++
++  .no-photo {
++    display: block;
++    height: 30mm;
++    background: repeating-linear-gradient(45deg, #fafafa, #fafafa 6px, #f0f0f0 6px, #f0f0f0 12px);
++  }
++}
++
++.section {
++  margin-top: 10px;
++
++  .section-title {
++    font-weight: 700;
++    border-right: 4px solid #000;
++    padding-right: 8px;
++    margin-bottom: 4px;
++  }
++
++  &.emphasised .section-title {
++    border-right-width: 8px;
++    text-decoration: underline;
++  }
++}
++
++.documents-row {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 8px;
++
++  .document {
++    flex: 1 1 40%;
++    border: 1px solid #999;
++    padding: 6px;
++    margin: 0;
++    text-align: center;
++
++    figcaption {
++      font-weight: 600;
++      font-size: 12px;
++      margin-bottom: 4px;
++    }
++
++    img {
++      max-width: 100%;
++      max-height: 55mm;
++      object-fit: contain;
++    }
++
++    .doc-missing {
++      display: block;
++      padding: 18px 0;
++      color: #666;
++      font-size: 12px;
++    }
++  }
++}
++
++.form-footer {
++  margin-top: 14px;
++
++  .signatures {
++    display: flex;
++    justify-content: space-between;
++    padding-top: 22mm;
++
++    span {
++      border-top: 1px solid #000;
++      padding-top: 4px;
++      width: 40%;
++      text-align: center;
++      font-size: 12px;
++    }
++  }
++
++  .meta-line {
++    display: flex;
++    justify-content: space-between;
++    flex-wrap: wrap;
++    gap: 8px;
++    margin-top: 10px;
++    font-size: 10px;
++    color: #444;
++  }
++}
++
++@media print {
++  .no-print {
++    display: none !important;
++  }
++
++  @page {
++    size: A4;
++    margin: 10mm;
++  }
++
++  .print-form {
++    max-width: none;
++    border: none;
++    border-radius: 0;
++    padding: 0;
++    margin: 0;
++  }
++
++  // Keep section blocks intact across page breaks
++  .section,
++  .documents .document {
++    break-inside: avoid;
++  }
++}
+diff --git a/Frontend/src/app/modules/periodic-orphan-reports/periodic-report-print/periodic-report-print.component.ts b/Frontend/src/app/modules/periodic-orphan-reports/periodic-report-print/periodic-report-print.component.ts
+new file mode 100644
+index 0000000..bd914bf
+--- /dev/null
++++ b/Frontend/src/app/modules/periodic-orphan-reports/periodic-report-print/periodic-report-print.component.ts
+@@ -0,0 +1,170 @@
++/**
++ * Periodic Report Print Component
++ * Implements UC-ORR-17 (§14.U.17 طباعة التقرير الدوري) — renders the official periodic
++ * report form and hands it to the browser's print-to-PDF.
++ *
++ * Per the recorded client-side print ruling (epics 9/10/18): the legacy
++ * POST /api/Reports/orphan-report-form/export/pdf route returns the composed JSON payload
++ * (report data + resolved variant + attachment ids), this screen renders the document, and
++ * `window.print()` produces the paper/PDF — no server PDF pipeline, no jsPDF (18-21 owns
++ * that decision). The collapsed legacy template matrix drives the layout via the variant
++ * key: disabled > studying > not-studying base + the document sections present.
++ *
++ * Document images stream as authenticated blobs (§14.U.16 pattern) and bind as object
++ * URLs — an <img src> cannot carry the Bearer header. The print dialog opens once every
++ * image has settled (loaded or failed); a manual print button stays available regardless.
++ */
++
++import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { ActivatedRoute, Router, RouterLink } from '@angular/router';
++import { TranslateModule } from '@ngx-translate/core';
++
++import { PeriodicOrphanReportService } from '../services/periodic-orphan-report.service';
++import {
++  OrphanReportFormPrintPayload,
++  OrphanReportFormAttachmentSlot,
++  PeriodicOrphanReportDto
++} from '../models/periodic-orphan-report.model';
++import { AttachmentService } from '../../../core/services/attachment.service';
++import { BreadcrumbComponent } from '../../../shared/components/breadcrumb/breadcrumb.component';
++import { LoadingComponent } from '../../../shared/components/loading/loading.component';
++
++@Component({
++  selector: 'app-periodic-report-print',
++  standalone: true,
++  changeDetection: ChangeDetectionStrategy.OnPush,
++  imports: [
++    CommonModule,
++    TranslateModule,
++    RouterLink,
++    BreadcrumbComponent,
++    LoadingComponent
++  ],
++  templateUrl: './periodic-report-print.component.html',
++  styleUrls: ['./periodic-report-print.component.scss']
++})
++export class PeriodicReportPrintComponent implements OnInit, OnDestroy {
++  payload: OrphanReportFormPrintPayload | null = null;
++  loading = true;
++  /** AC 4 — nothing was produced (unknown/foreign id or a failed fetch); told, not an empty file. */
++  failed = false;
++
++  /** slot key → object URL (blob fetch per §14.U.16); missing key = that image is absent. */
++  readonly imageUrls = new Map<string, string>();
++
++  private readonly destroy$ = new Set<() => void>();
++  private printed = false;
++
++  constructor(
++    private route: ActivatedRoute,
++    private router: Router,
++    private reportService: PeriodicOrphanReportService,
++    private attachmentService: AttachmentService,
++    private cdr: ChangeDetectorRef
++  ) {}
++
++  ngOnInit(): void {
++    const id = this.route.snapshot.paramMap.get('id');
++    if (!id) {
++      this.loading = false;
++      this.failed = true;
++      this.cdr.markForCheck();
++      return;
++    }
++
++    this.reportService.getPrintForm(id).subscribe({
++      next: payload => {
++        this.payload = payload;
++        this.loading = false;
++        this.cdr.markForCheck();
++        this.loadImages(payload.attachments || []);
++      },
++      error: () => {
++        // 404 (unknown id or outside the caller's charity scope) and transport failures
++        // land in the same honest state — there is nothing to produce (AC 4/5).
++        this.loading = false;
++        this.failed = true;
++        this.cdr.markForCheck();
++      }
++    });
++  }
++
++  ngOnDestroy(): void {
++    this.destroy$.forEach(release => release());
++    this.imageUrls.forEach(url => URL.revokeObjectURL(url));
++    this.imageUrls.clear();
++  }
++
++  get report(): PeriodicOrphanReportDto | null {
++    return this.payload?.report ?? null;
++  }
++
++  /** The collapsed matrix base — drives the education/health section emphasis (AC 3). */
++  get variantBase(): string {
++    return (this.payload?.variant || 'not-studying').split('+')[0];
++  }
++
++  /** Document sections to render, in the payload's order, minus the header photo. */
++  get documentSlots(): OrphanReportFormAttachmentSlot[] {
++    return (this.payload?.attachments || []).filter(a => a.slot !== 'orphanPhoto');
++  }
++
++  /** Manual print (also auto-invoked once after the images settle). */
++  print(): void {
++    window.print();
++  }
++
++  back(): void {
++    this.router.navigate(['/periodic-orphan-reports']);
++  }
++
++  /** §14.S.2 slot label keys (shared with the 9-16 gallery). */
++  slotLabel(slot: string): string {
++    return `periodicReports.attachments.slots.${slot}`;
++  }
++
++  /** Empty values render as the dash — the official form never shows blanks. */
++  v(value: string | null | undefined): string {
++    const trimmed = (value ?? '').toString().trim();
++    return trimmed.length > 0 ? trimmed : '—';
++  }
++
++  trackBySlot(_index: number, slot: OrphanReportFormAttachmentSlot): string {
++    return slot.slot;
++  }
++
++  /** Fetch each document image as a blob, then open the print dialog once all settle. */
++  private loadImages(slots: OrphanReportFormAttachmentSlot[]): void {
++    if (slots.length === 0) {
++      this.autoPrint();
++      return;
++    }
++
++    let pending = slots.length;
++    slots.forEach(slot => {
++      const sub = this.attachmentService.getImage(slot.id).subscribe({
++        next: blob => {
++          this.imageUrls.set(slot.slot, URL.createObjectURL(blob));
++          this.cdr.markForCheck();
++        },
++        // A failed image prints its section without the picture — the form still produces.
++        error: () => undefined,
++        complete: () => this.settled(--pending)
++      });
++      this.destroy$.add(() => sub.unsubscribe());
++    });
++  }
++
++  private settled(remaining: number): void {
++    if (remaining > 0) return;
++    this.autoPrint();
++  }
++
++  /** One shot — after the payload and every image have settled (images render in <img> on paper). */
++  private autoPrint(): void {
++    if (this.printed || this.failed) return;
++    this.printed = true;
++    setTimeout(() => window.print(), 400);
++  }
++}
+diff --git a/Frontend/src/app/modules/reports/models/report.model.ts b/Frontend/src/app/modules/reports/models/report.model.ts
+new file mode 100644
+index 0000000..9954693
+--- /dev/null
++++ b/Frontend/src/app/modules/reports/models/report.model.ts
+@@ -0,0 +1,416 @@
++import { FamilyFollowUpRow } from '../../families/models/family.model';
++
++/**
++ * UC-FAM-14 — printable sheet payloads from POST /api/Reports/{reportKey}/export/pdf.
++ * The endpoint returns JSON (client-side print ruling); the browser's print-to-PDF
++ * produces the file.
++ */
++export interface ReportSheetPayload<TRow> {
++  variantKey: string;
++  title: string;
++  charityName?: string | null;
++  generatedOn: string;
++  rows: TRow[];
++  /** True when the selection exceeded the server's row ceiling — the document is partial and
++   * the operator is warned (a sheet must never print silently incomplete). */
++  truncated?: boolean;
++}
++
++/** One guardian/widow identification-sheet row. */
++export interface IdentificationSheetRow {
++  familyCode: string;
++  fullName: string;
++  nationalId?: string | null;
++  relationship?: string | null;
++  phone?: string | null;
++  charityName?: string | null;
++}
++
++/** The tracking sheet reuses the follow-up grid's row shape (5-11). */
++export type FamilyUpdateTrackingPayload = ReportSheetPayload<FamilyFollowUpRow>;
++export type IdentificationSheetPayload = ReportSheetPayload<IdentificationSheetRow>;
++
++// ==================== EP-18 — Reports & Printing (18-1 onwards) ====================
++
++/**
++ * Paged envelope shared by every EP-18 report key (ReportPagedResult&lt;T&gt; server shape).
++ */
++export interface ReportPagedResult<T> {
++  items: T[];
++  totalCount: number;
++  page: number;
++  pageSize: number;
++  totalPages: number;
++}
++
++/** UC-RPT-01 (§23.S.3) — filter payload for POST /api/Reports/orphans. */
++export interface OrphanDataFilter {
++  page: number;
++  pageSize: number;
++  batchNumber?: string;
++  charityId?: string;
++  governorateId?: number;
++  centerId?: number;
++  ageFrom?: number;
++  ageTo?: number;
++  /** العمر checkbox — accepted on the wire; finished-sponsorship semantics land with 18-4. */
++  isFinishedSponsorship?: boolean;
++  allOrphans?: boolean;
++  excluded?: boolean;
++  notExcluded?: boolean;
++}
++
++/**
++ * UC-RPT-01 (§23.S.3) — one orphan-data grid row; the full 44-column contract. Columns with no
++ * backing field today (mobileNumber2, fatherDeathCause, exclusion…) stay null and render blank —
++ * data is never invented (epic-wide no-migration ruling).
++ */
++export interface OrphanDataRow {
++  // identity
++  code: string;
++  fullName: string;
++  nationalId?: string | null;
++  dateOfBirth?: string | null;
++  age?: number | null;
++  gender?: string | null;
++  // guardian — Provider first, then Father, then Mother
++  guardianName?: string | null;
++  guardianRelationship?: string | null;
++  guardianNationalId?: string | null;
++  guardianEducationLevel?: string | null;
++  guardianJob?: string | null;
++  guardianHealthStatus?: string | null;
++  guardianSocialStatus?: string | null;
++  guardianDevelopmentProject?: string | null;
++  // residence & income
++  governorateName?: string | null;
++  centerName?: string | null;
++  cityVillage?: string | null;
++  detailedAddress?: string | null;
++  mobileNumber?: string | null;
++  mobileNumber2?: string | null;
++  houseOwnershipName?: string | null;
++  rentAmount?: number | null;
++  housingTypeName?: string | null;
++  houseStatusName?: string | null;
++  monthlyIncome?: number | null;
++  // status
++  socialStatusName?: string | null;
++  healthStatusName?: string | null;
++  profession?: string | null;
++  // education
++  educationLevelName?: string | null;
++  gradeClass?: string | null;
++  schoolName?: string | null;
++  facultyName?: string | null;
++  departmentName?: string | null;
++  hasAcademicDegree?: boolean | null;
++  // father
++  fatherDeathDate?: string | null;
++  fatherDeathCause?: string | null;
++  // exclusion (no backing columns — recorded gap)
++  isExcluded: boolean;
++  exclusionReason?: string | null;
++  // audit / org
++  notes?: string | null;
++  charityId?: string | null;
++  charityName?: string | null;
++  lastUpdatedDate?: string | null;
++}
++
++// ---- §23.S.4 excluded orphans (UC-RPT-03) ---------------------------------------
++
++/** UC-RPT-03 — filter payload for POST /api/Reports/excluded-orphans. */
++export interface ExcludedOrphansFilter {
++  page: number;
++  pageSize: number;
++  charityId?: string;
++}
++
++/**
++ * UC-RPT-03 — one excluded-orphans grid row (6-column contract). The exclusion flag/reason
++ * have no backing columns today — keys stay in the contract, values render blank.
++ */
++export interface ExcludedOrphanRow {
++  code: string;
++  fullName: string;
++  isExcluded: boolean;
++  exclusionReason?: string | null;
++  charityId?: string | null;
++  charityName?: string | null;
++  lastUpdatedDate?: string | null;
++}
++
++// ---- §23.S.5 / §23.S.6 orphan status reports (UC-RPT-04, UC-RPT-05) --------------
++
++/** Shared filter payload for POST /api/Reports/finished-sponsorship-orphans and unsponsored-orphans. */
++export interface OrphanStatusReportFilter {
++  page: number;
++  pageSize: number;
++  charityId?: string;
++}
++
++/** One §23.S.5/§23.S.6 grid row — orphan code, name, charity, family code, age. */
++export interface OrphanStatusReportRow {
++  code: string;
++  fullName: string;
++  charityId?: string | null;
++  charityName?: string | null;
++  familyCode?: string | null;
++  age?: number | null;
++}
++
++// ---- §23.S.9 widows requiring sponsorship (UC-RPT-06) ----------------------------
++
++/** UC-RPT-06 — filter payload for POST /api/Reports/widows-allowing-sponsorship. */
++export interface WidowSponsorshipFilter {
++  page: number;
++  pageSize: number;
++  charityId?: string;
++}
++
++/**
++ * UC-RPT-06 — one §23.S.9 grid row: the widow (family mother) with her family's
++ * residence/income columns. Columns with no backing field (mobileNumber2,
++ * developmentProject) stay null and render blank — recorded gap.
++ */
++export interface WidowSponsorshipRow {
++  widowName: string;
++  governorateName?: string | null;
++  centerName?: string | null;
++  cityVillage?: string | null;
++  detailedAddress?: string | null;
++  mobileNumber?: string | null;
++  mobileNumber2?: string | null;
++  houseOwnershipName?: string | null;
++  rentAmount?: number | null;
++  housingTypeName?: string | null;
++  houseStatusName?: string | null;
++  monthlyIncome?: number | null;
++  husbandDeathDate?: string | null;
++  developmentProject?: string | null;
++  educationLevelName?: string | null;
++  profession?: string | null;
++  healthStatusName?: string | null;
++  nationalId?: string | null;
++  notes?: string | null;
++  charityId?: string | null;
++  charityName?: string | null;
++  lastUpdatedDate?: string | null;
++}
++
++// ---- §23.S.8 registered Meza cards (UC-RPT-07) -----------------------------------
++
++/** UC-RPT-07 — filter payload for POST /api/Reports/meza-cards. */
++export interface MezaCardsFilter {
++  page: number;
++  pageSize: number;
++  charityId?: string;
++  // ---- §23.U.8 extract keys (UC-RPT-08) — reportNo's presence selects the extract path ----
++  reportNo?: number;
++  isCodes?: boolean;
++  batchId?: string;
++  dateFrom?: string;
++  dateTo?: string;
++  mezaCardExist?: boolean;
++}
++
++/**
++ * UC-RPT-07 — one §23.S.8 grid row: a family with its guardian and aggregated orphan
++ * names/codes. The Meza card number/expiry have no backing column today — keys stay in the
++ * contract, values render blank (recorded gap).
++ */
++export interface MezaCardsRow {
++  familyCode: string;
++  guardianName: string;
++  guardianNationalId?: string | null;
++  phone?: string | null;
++  orphanNames?: string | null;
++  orphanCodes?: string | null;
++  mezaCardNumber?: string | null;
++  mezaCardExpiry?: string | null;
++  charityId?: string | null;
++  charityName?: string | null;
++}
++
++// ---- §23.S.13 assistance family data (UC-RPT-09) ---------------------------------
++
++/** UC-RPT-09 — request for POST /api/Reports/beneficiary-family-details. */
++export interface BeneficiaryFamilyFilter {
++  page: number;
++  pageSize: number;
++  charityId?: string;
++}
++
++/**
++ * UC-RPT-09 — one §23.S.13 grid row: a distinct family benefiting from seasonal-aid
++ * assistance, with the campaign names aggregated.
++ */
++export interface BeneficiaryFamilyRow {
++  familyCode: string;
++  headOfFamilyName?: string | null;
++  phone?: string | null;
++  address?: string | null;
++  charityId?: string | null;
++  charityName?: string | null;
++  campaignNames?: string | null;
++}
++
++// ---- §23.S.7 family projects (UC-RPT-11) ------------------------------------------
++
++/** UC-RPT-11 — request for POST /api/Reports/registered-family-projects. */
++export interface FamilyProjectsFilter {
++  page: number;
++  pageSize: number;
++  charityId?: string;
++}
++
++/**
++ * UC-RPT-11 — one §23.S.7 grid row: a family's registered project with the orphan
++ * name/code/national-id strings joined. The two experience columns have no backing field —
++ * keys stay in the contract, values render blank (recorded gap).
++ */
++export interface FamilyProjectRow {
++  orphanNames?: string | null;
++  orphanNationalIds?: string | null;
++  guardianName?: string | null;
++  orphanCodes?: string | null;
++  familyCode: string;
++  phone?: string | null;
++  charityId?: string | null;
++  charityName?: string | null;
++  projectStatus?: string | null;
++  yearsOfExperience?: number | null;
++  totalBudget?: number | null;
++  budgetCurrency?: string | null;
++  projectStartDate?: string | null;
++  projectAddress?: string | null;
++  hasExperience?: boolean | null;
++  projectDescription?: string | null;
++}
++
++// ---- §23.S.19 guardian change history (UC-RPT-12) --------------------------------
++
++/** UC-RPT-12 — the §23.S.19 filter (charity narrow + paging). */
++export interface ProviderChangesFilter {
++  page: number;
++  pageSize: number;
++  charityId?: string;
++}
++
++/**
++ * UC-RPT-12 — one §23.S.19 grid row: a provider assignment with the current guardian's
++ * fields and the family/charity/orphan context. The three prior-guardian columns have no
++ * backing field — keys stay in the contract, values render blank (recorded gap).
++ */
++export interface ProviderChangeRow {
++  providerId: string;
++  familyCode: string;
++  familyId?: string | null;
++  previousGuardianName?: string | null;
++  previousRelationship?: string | null;
++  changeReason?: string | null;
++  newGuardianName?: string | null;
++  newRelationship?: string | null;
++  changeDate?: string | null;
++  charityId?: string | null;
++  charityName?: string | null;
++  orphanCodes?: string | null;
++}
++
++// ---- §23.S.14 coded orphans needing a report (UC-RPT-15) -------------------------
++
++/** UC-RPT-15 — the summary filter (charity narrow + paging). */
++export interface OrphansMissingReportsFilter {
++  page: number;
++  pageSize: number;
++  charityId?: string;
++}
++
++/** UC-RPT-15 — one summary row: a charity and its chase count. */
++export interface OrphansMissingReportsSummaryRow {
++  charityId?: string | null;
++  charityName?: string | null;
++  missingCount: number;
++}
++
++/** UC-RPT-15 — one drill-down row: an orphan in the charity's chase list. */
++export interface OrphansMissingReportsDetailRow {
++  orphanId: string;
++  orphanCode: string;
++  orphanName: string;
++  lastReportDate?: string | null;
++}
++
++// ---- §23.S.15 orphans missing files (UC-RPT-16) ----------------------------------
++
++/** UC-RPT-16 — the worklist filter (charity narrow + paging). */
++export interface OrphansMissingFilesFilter {
++  page: number;
++  pageSize: number;
++  charityId?: string;
++}
++
++/** UC-RPT-16 — one worklist row: an orphan whose latest report flags missing documents. */
++export interface OrphansMissingFilesRow {
++  orphanId: string;
++  familyId?: string | null;
++  orphanCode: string;
++  orphanName: string;
++  address?: string | null;
++  village?: string | null;
++  charityId?: string | null;
++  charityName?: string | null;
++  missingDocumentsName?: string | null;
++}
++
++// ---- §23.S.10 family & orphan entry tracking (UC-RPT-13) -------------------------
++
++/** UC-RPT-13 — إجماليات: families and orphans entered since the date. */
++export interface FamilyEntryTotals {
++  newFamilies: number;
++  newOrphans: number;
++  sinceDate?: string | null;
++}
++
++/** UC-RPT-13 — تفاصيل: one row per family entered on/after the date. */
++export interface FamilyEntryDetailRow {
++  familyId: string;
++  familyCode: string;
++  headOfFamily: string;
++  charityName?: string | null;
++  registrationDate?: string | null;
++  orphansCount: number;
++}
++
++// ---- §14.U.14 non-renewed chase list (UC-ORR-14) --------------------------------
++
++/** UC-ORR-14 — request for POST /api/Reports/non-renewed-reports. */
++export interface NonRenewedReportsRequest {
++  charityId?: string;
++  dateFrom: string;
++  dateTo: string;
++  /** The legacy _Number screens — response carries just the count. */
++  countOnly?: boolean;
++  page?: number;
++  pageSize?: number;
++}
++
++/** One chase-list row — the orphan and, if any, its latest report date. */
++export interface NonRenewedOrphanRow {
++  orphanId: string;
++  code: string;
++  fullName: string;
++  familyCode?: string | null;
++  lastReportDate?: string | null;
++  charityId?: string | null;
++  charityName?: string | null;
++}
++
++/** The chase list — count is always the full matched count; items empty when countOnly. */
++export interface NonRenewedReportsResult {
++  count: number;
++  items: NonRenewedOrphanRow[];
++  page: number;
++  pageSize: number;
++}
+diff --git a/Frontend/src/app/modules/reports/services/report.service.ts b/Frontend/src/app/modules/reports/services/report.service.ts
+new file mode 100644
+index 0000000..195d7f5
+--- /dev/null
++++ b/Frontend/src/app/modules/reports/services/report.service.ts
+@@ -0,0 +1,228 @@
++import { Injectable } from '@angular/core';
++import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
++import { Observable, throwError } from 'rxjs';
++import { catchError } from 'rxjs/operators';
++import { environment } from '../../../../environments/environment';
++
++import { BeneficiaryFamilyFilter, BeneficiaryFamilyRow, ExcludedOrphansFilter, ExcludedOrphanRow, FamilyEntryDetailRow, FamilyEntryTotals, FamilyProjectsFilter, FamilyProjectRow, MezaCardsFilter, MezaCardsRow, NonRenewedReportsRequest, NonRenewedReportsResult, OrphanDataFilter, OrphanDataRow, OrphansMissingFilesFilter, OrphansMissingFilesRow, OrphansMissingReportsFilter, OrphansMissingReportsSummaryRow, OrphansMissingReportsDetailRow, OrphanStatusReportFilter, OrphanStatusReportRow, ProviderChangesFilter, ProviderChangeRow, ReportPagedResult, ReportSheetPayload, WidowSponsorshipFilter, WidowSponsorshipRow } from '../models/report.model';
++
++/**
++ * Reports module service (UC-FAM-14 sheet payloads; EP-18 report queries from 18-1 on).
++ * Sheet payloads keep their legacy POST /api/Reports/{reportKey}/export/pdf shape; EP-18
++ * report keys are typed POST endpoints returning the raw paged envelope.
++ */
++@Injectable({
++  providedIn: 'root'
++})
++export class ReportService {
++  private apiUrl = `${environment.apiUrl}/api/Reports`;
++
++  constructor(private http: HttpClient) {}
++
++  /** Build a printable sheet for one of the served report keys (whole selection, unpaged). */
++  exportSheet<T>(reportKey: string, payload: {
++    date?: string;
++    charityId?: string;
++    familyCode?: string;
++  }): Observable<ReportSheetPayload<T>> {
++    return this.http.post<ReportSheetPayload<T>>(`${this.apiUrl}/${reportKey}/export/pdf`, payload, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /**
++   * UC-RPT-01 (§23.S.3 بيانات الأيتام) — caller-scoped orphan master listing. The charity
++   * scope resolves server-side from the token; charityId in the filter is an HQ-only narrow.
++   */
++  getOrphanData(filter: OrphanDataFilter): Observable<ReportPagedResult<OrphanDataRow>> {
++    return this.http.post<ReportPagedResult<OrphanDataRow>>(`${this.apiUrl}/orphans`, filter, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /**
++   * UC-RPT-03 (§23.S.4 الايتام المستبعدين) — the excluded set; charityId in the filter is an
++   * HQ-only narrow, charity callers are pinned server-side.
++   */
++  getExcludedOrphans(filter: ExcludedOrphansFilter): Observable<ReportPagedResult<ExcludedOrphanRow>> {
++    return this.http.post<ReportPagedResult<ExcludedOrphanRow>>(`${this.apiUrl}/excluded-orphans`, filter, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /**
++   * UC-RPT-04 (§23.S.5 أيتام انتهت كفالتهم) — HQ-only. The domain has no ended state today;
++   * the contract ships now, the set is empty until the state lands (recorded ruling).
++   */
++  getFinishedSponsorshipOrphans(filter: OrphanStatusReportFilter): Observable<ReportPagedResult<OrphanStatusReportRow>> {
++    return this.http.post<ReportPagedResult<OrphanStatusReportRow>>(`${this.apiUrl}/finished-sponsorship-orphans`, filter, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /**
++   * UC-RPT-05 (§23.S.6 أيتام غير مكفولين) — HQ-only. Coded orphans with status Unsponsored;
++   * an empty Code is UNCODED, not unsponsored (EP-08 ruling).
++   */
++  getUnsponsoredOrphans(filter: OrphanStatusReportFilter): Observable<ReportPagedResult<OrphanStatusReportRow>> {
++    return this.http.post<ReportPagedResult<OrphanStatusReportRow>>(`${this.apiUrl}/unsponsored-orphans`, filter, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /**
++   * UC-RPT-06 (§23.S.9 ارامل مطلوب لهم كفاله) — the 22-column widow grid (family mother +
++   * family residence/income). Query-only: the spec lists no استخراج command for this screen.
++   */
++  getWidowsAllowingSponsorship(filter: WidowSponsorshipFilter): Observable<ReportPagedResult<WidowSponsorshipRow>> {
++    return this.http.post<ReportPagedResult<WidowSponsorshipRow>>(`${this.apiUrl}/widows-allowing-sponsorship`, filter, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /**
++   * UC-RPT-07 (§23.S.8 تقرير الكروت المسجله) — HQ-only. The row source is families carrying
++   * registered guardian Meza cards; no card column exists yet, so the set is empty with a
++   * recorded gap until the registration vertical lands the fields.
++   */
++  getMezaCards(filter: MezaCardsFilter): Observable<ReportPagedResult<MezaCardsRow>> {
++    return this.http.post<ReportPagedResult<MezaCardsRow>>(`${this.apiUrl}/meza-cards`, filter, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /** UC-RPT-09 (§23.S.13) — the distinct assisted-families listing. */
++  getBeneficiaryFamilies(filter: BeneficiaryFamilyFilter): Observable<ReportPagedResult<BeneficiaryFamilyRow>> {
++    return this.http.post<ReportPagedResult<BeneficiaryFamilyRow>>(`${this.apiUrl}/beneficiary-family-details`, filter, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /** UC-RPT-11 (§23.S.7) — registered family projects (empty until the family-project linkage lands). */
++  getRegisteredFamilyProjects(filter: FamilyProjectsFilter): Observable<ReportPagedResult<FamilyProjectRow>> {
++    return this.http.post<ReportPagedResult<FamilyProjectRow>>(`${this.apiUrl}/registered-family-projects`, filter, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /** UC-RPT-12 (§23.S.19) — guardian change history, one row per provider assignment. */
++  getProviderSponsorChanges(filter: ProviderChangesFilter): Observable<ReportPagedResult<ProviderChangeRow>> {
++    return this.http.post<ReportPagedResult<ProviderChangeRow>>(`${this.apiUrl}/provider-sponsor-changes`, filter, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /** UC-RPT-15 (§23.S.14) — per-charity counts of coded orphans needing a report. */
++  getOrphansMissingReports(filter: OrphansMissingReportsFilter): Observable<ReportPagedResult<OrphansMissingReportsSummaryRow>> {
++    return this.http.post<ReportPagedResult<OrphansMissingReportsSummaryRow>>(`${this.apiUrl}/orphans-missing-reports`, filter, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /** UC-RPT-15 drill-down (ExtractDetails) — one charity's chase list; server clamps scope. */
++  getOrphansMissingReportsDetail(charityId: string, page: number, pageSize: number): Observable<ReportPagedResult<OrphansMissingReportsDetailRow>> {
++    return this.http.post<ReportPagedResult<OrphansMissingReportsDetailRow>>(`${this.apiUrl}/orphans-missing-reports/details`, {
++      charityId,
++      page,
++      pageSize
++    }, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /** UC-RPT-16 (§23.S.15) — the missing-files worklist for the selected charity. */
++  getOrphansMissingFiles(filter: OrphansMissingFilesFilter): Observable<ReportPagedResult<OrphansMissingFilesRow>> {
++    return this.http.post<ReportPagedResult<OrphansMissingFilesRow>>(`${this.apiUrl}/orphans-missing-files`, filter, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /**
++   * UC-RPT-13 (§23.S.10) — entry tracking off the one Families endpoint: totals or details.
++   * The route id is the charity; 'all' maps to Guid.Empty (كل الجهات, HQ only — the server
++   * pins a charity caller anyway).
++   */
++  getFamilyEntryTracking(params: {
++    charityId?: string;
++    date?: string;
++    mode: 'totals' | 'details';
++    page?: number;
++    pageSize?: number;
++  }): Observable<FamilyEntryTotals | ReportPagedResult<FamilyEntryDetailRow>> {
++    const EMPTY_GUID = '00000000-0000-0000-0000-000000000000';
++    const id = params.charityId || EMPTY_GUID;
++    let query = new HttpParams().set('mode', params.mode);
++    if (params.date) {
++      query = query.set('date', params.date);
++    }
++    if (params.page) {
++      query = query.set('page', String(params.page));
++    }
++    if (params.pageSize) {
++      query = query.set('pageSize', String(params.pageSize));
++    }
++    return this.http.get<FamilyEntryTotals | ReportPagedResult<FamilyEntryDetailRow>>(
++      `${environment.apiUrl}/api/Families/${id}/follow-up`,
++      { params: query, headers: this.getHeaders() }
++    ).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  private getHeaders(): HttpHeaders {
++    return new HttpHeaders({
++      'Content-Type': 'application/json'
++    });
++  }
++
++  /**
++   * UC-ORR-14 (§14.U.14 الأيتام بدون تقرير مجدد) — the chase list: coded orphans of the
++   * (token-scoped) charity with no accepted report covering the window. countOnly collapses
++   * the legacy _Number variant.
++   */
++  getNonRenewedReports(request: NonRenewedReportsRequest): Observable<NonRenewedReportsResult> {
++    return this.http.post<NonRenewedReportsResult>(`${this.apiUrl}/non-renewed-reports`, request, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  private handleError(error: any): Observable<never> {
++    console.error('Report service error:', error);
++    return throwError(() => {
++      const errorMessage = error.error?.message || error.error?.title || 'An unexpected error occurred';
++      return {
++        message: errorMessage,
++        status: error.status || 500,
++        details: error.error?.errors || null
++      };
++    });
++  }
++}

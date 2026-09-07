@@ -7,7 +7,7 @@
   [actions]="pageActions">
 </app-page-header>
 
-<div class="card">
+<div class="card shadow mb-4">
   <div class="card-body">
     <!-- Filters -->
     <form [formGroup]="filterForm">
@@ -119,17 +119,26 @@
             (change)="onDateChange()">
           </app-input-text>
         </div>
+      </div>
 
-        <!-- Clear Filters Button -->
-        <div class="col-md-3 d-flex align-items-end" *ngIf="hasActiveFilters()">
-          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+      <div class="row">
+        <div class="col-12">
+          <button class="btn btn-primary" type="button" (click)="onSearch()">
+            <i class="fe fe-search mr-1"></i>
+            {{ 'common.search' | translate }}
+          </button>
+          <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary ml-2" type="button" (click)="clearFilters()">
             <i class="fe fe-x mr-1"></i>
             {{ 'common.clearFilters' | translate }}
           </button>
         </div>
       </div>
     </form>
+  </div>
+</div>
 
+<div class="card shadow mb-4">
+  <div class="card-body">
     <!-- Loading State -->
     <div *ngIf="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status">
@@ -142,6 +151,7 @@
       <table class="table table-hover table-striped">
         <thead>
           <tr>
+            <th>{{ 'officeDevelopmentProjects.serial' | translate }}</th>
             <th>{{ 'officeDevelopmentProjects.projectName' | translate }}</th>
             <th>{{ 'officeDevelopmentProjects.projectType' | translate }}</th>
             <th>{{ 'officeDevelopmentProjects.region' | translate }}</th>
@@ -156,16 +166,17 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let project of paginatedProjects">
+          <tr *ngFor="let project of paginatedProjects; let i = index">
+            <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
             <td>
               <a [routerLink]="['/office-development-projects', project.id]" class="text-primary">
                 <strong>{{ project.projectName }}</strong>
               </a>
             </td>
-            <td>{{ project.officeProjectType || '-' }}</td>
-            <td>{{ project.regionName || '-' }}</td>
-            <td>{{ project.centerName || '-' }}</td>
-            <td>{{ project.villageName || '-' }}</td>
+            <td>{{ project.projectType || '-' }}</td>
+            <td>{{ project.region || '-' }}</td>
+            <td>{{ project.center || '-' }}</td>
+            <td>{{ project.village || '-' }}</td>
             <td>
               <div *ngIf="project.projectCostEGP">{{ formatCurrency(project.projectCostEGP) }} EGP</div>
               <div *ngIf="project.projectCostSAR" class="text-muted small">{{ formatCurrency(project.projectCostSAR) }} SAR</div>
@@ -178,7 +189,7 @@
                 {{ (project.isFinished ? 'officeDevelopmentProjects.completed' : 'officeDevelopmentProjects.ongoing') | translate }}
               </span>
             </td>
-            <td>{{ project.assignedCharityName || '-' }}</td>
+            <td>{{ project.assignedCharity || '-' }}</td>
             <td>
               <div class="btn-group">
                 <button
@@ -192,7 +203,6 @@
                   type="button"
                   class="btn btn-sm btn-light"
                   [title]="'common.edit' | translate"
-                  [disabled]="project.isFinished"
                   (click)="editProject(project.id)">
                   <i class="fe fe-edit"></i>
                 </button>
@@ -200,23 +210,23 @@
                   <button
                     type="button"
                     class="btn btn-sm btn-light dropdown-toggle"
-                    data-toggle="dropdown"
-                    [disabled]="project.isFinished">
+                    data-toggle="dropdown">
                     <i class="fe fe-more-vertical"></i>
                   </button>
                   <div class="dropdown-menu dropdown-menu-right">
                     <a
                       class="dropdown-item"
                       href="javascript:void(0)"
-                      [class.disabled]="project.isFinished"
-                      (click)="project.isFinished ? null : markAsCompleted(project.id)">
+                      *ngIf="!project.isFinished"
+                      (click)="markAsCompleted(project.id)">
                       <i class="fe fe-check-circle mr-2"></i>
                       {{ 'officeDevelopmentProjects.markAsCompleted' | translate }}
                     </a>
-                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-divider" *ngIf="canDelete"></div>
                     <a
                       class="dropdown-item text-danger"
                       href="javascript:void(0)"
+                      *ngIf="canDelete"
                       (click)="deleteProject(project.id)">
                       <i class="fe fe-trash mr-2"></i>
                       {{ 'common.delete' | translate }}
@@ -229,7 +239,7 @@
 
           <!-- Empty State -->
           <tr *ngIf="paginatedProjects.length === 0">
-            <td colspan="11" class="text-center py-5">
+            <td colspan="12" class="text-center py-5">
               <div class="empty-state">
                 <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
                 <p class="text-muted">{{ 'officeDevelopmentProjects.noProjectsFound' | translate }}</p>

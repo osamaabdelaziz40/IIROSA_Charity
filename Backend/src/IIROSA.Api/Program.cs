@@ -175,6 +175,47 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 
+    // Schema ids default to the bare class name, but some DTOs share a name across
+    // module namespaces (Family.OrphanLookupDto vs PeriodicOrphanReport.OrphanLookupDto),
+    // which crashes doc generation with "The same schemaId is already used for type ...".
+    // Qualify only the ambiguous names with the last namespace segment; unique names
+    // keep the default id so generated clients don't churn.
+    var ambiguousTypeNames = new Lazy<HashSet<string>>(() =>
+        AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => a.FullName?.StartsWith("IIROSA") == true || a.FullName?.StartsWith("Framework") == true)
+            .SelectMany(a => a.GetTypes())
+            .GroupBy(t => t.Name)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToHashSet());
+
+    options.CustomSchemaIds(type =>
+    {
+        // Closed generics (e.g. LookupPagedResult<RegionDto>) arrive here as-is once
+        // CustomSchemaIds is set; compose "WrapperOfArg" so each closed type gets its
+        // own id, mirroring the default selector's naming.
+        if (type.IsConstructedGenericType)
+        {
+            var wrapperId = SchemaIdFor(type.GetGenericTypeDefinition());
+            var argumentIds = type.GetGenericArguments().Select(SchemaIdFor);
+            return $"{wrapperId}Of{string.Join("And", argumentIds)}";
+        }
+
+        return SchemaIdFor(type);
+
+        string SchemaIdFor(Type t)
+        {
+            var name = t.IsGenericType ? t.Name.Remove(t.Name.IndexOf('`')) : t.Name;
+            if (!ambiguousTypeNames.Value.Contains(t.Name))
+            {
+                return name;
+            }
+
+            var module = t.Namespace?[(t.Namespace.LastIndexOf('.') + 1)..];
+            return $"{module}.{name}";
+        }
+    });
+
     // Include XML comments
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);

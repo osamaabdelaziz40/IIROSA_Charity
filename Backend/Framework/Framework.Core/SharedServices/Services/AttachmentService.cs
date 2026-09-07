@@ -202,6 +202,29 @@ namespace Framework.Core.SharedServices.Services
         }
 
 
+        /// <summary>
+        /// Metadata-only batch read (UC-SYS-03): rows for the given ids without loading file bytes.
+        /// </summary>
+        public async Task<List<Attachment>> GetAttachmentsMetadataAsync(List<Guid> attachmentIds)
+        {
+            return await _attachmentRepository
+                .TableNoTracking.Include(x => x.AttachmentType)
+                .Where(at => attachmentIds.Contains(at.Id))
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// Content lengths (database-stored files) for the given ids, translated to DATALENGTH — no bytes over the wire.
+        /// </summary>
+        public async Task<Dictionary<Guid, long>> GetAttachmentSizesAsync(List<Guid> attachmentIds)
+        {
+            return await _attachmentRepository
+                .TableNoTracking
+                .Where(at => attachmentIds.Contains(at.Id) && at.AttachmentContent != null)
+                .Select(at => new { at.Id, Length = (long?)at.AttachmentContent.FileContent.Length })
+                .ToDictionaryAsync(x => x.Id, x => x.Length ?? 0);
+        }
+
         public async Task<Attachment> GetAttachmentForDownload(Guid? attachmentId)
         {
             var attachment = _attachmentRepository.TableNoTracking.Include(c=>c.AttachmentContent).Where(at => at.Id == attachmentId).SingleOrDefault();

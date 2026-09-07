@@ -3,16 +3,14 @@ using IIROSA.Application.DTOs.LookupManagement;
 using IIROSA.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace IIROSA.Api.Controllers;
 
 /// <summary>
-/// Mission Management API Controller
-/// Implements UC-8.1 to UC-8.13: Mission CRUD operations and specialized actions
-/// Follows approved Framework.Core architecture
-/// IMPORTANT: Only Admin and Super Admin roles can access this controller.
-/// Charity users are explicitly blocked from this module.
+/// Mission Management API Controller (epic 15, UC-MSN-01…09)
+/// Follows approved Framework.Core architecture.
+/// IMPORTANT: Only Admin and Super Admin roles can access this controller;
+/// UC-MSN-08 (delete) is the General Director's alone — SuperAdmin only.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -21,22 +19,25 @@ public class MissionManagementController : ControllerBase
 {
     private readonly IMissionService _missionService;
     private readonly IMissionTypeService _missionTypeService;
+    private readonly IMissionTimeTypeService _missionTimeTypeService;
     private readonly ILogger<MissionManagementController> _logger;
 
     public MissionManagementController(
         IMissionService missionService,
         IMissionTypeService missionTypeService,
+        IMissionTimeTypeService missionTimeTypeService,
         ILogger<MissionManagementController> logger)
     {
         _missionService = missionService;
         _missionTypeService = missionTypeService;
+        _missionTimeTypeService = missionTimeTypeService;
         _logger = logger;
     }
 
     // ========== CRUD Operations ==========
 
     /// <summary>
-    /// Get all missions with filtering and pagination (UC-8.10: View Mission List)
+    /// Get all missions with filtering and pagination (UC-MSN-01/02)
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<MissionPagedResult<MissionListDto>>> GetMissions(
@@ -55,7 +56,7 @@ public class MissionManagementController : ControllerBase
     }
 
     /// <summary>
-    /// Get mission by ID (UC-8.11: View Mission Details)
+    /// Get mission by ID (UC-MSN-07: view mission details)
     /// </summary>
     [HttpGet("{id}")]
     public async Task<ActionResult<MissionDetailDto>> GetMission(Guid id)
@@ -78,7 +79,7 @@ public class MissionManagementController : ControllerBase
     }
 
     /// <summary>
-    /// Create new mission (UC-8.1: Create Mission)
+    /// Create new mission (UC-MSN-06)
     /// </summary>
     [HttpPost]
     public async Task<ActionResult<MissionDetailDto>> CreateMission([FromBody] CreateMissionDto model)
@@ -87,6 +88,20 @@ public class MissionManagementController : ControllerBase
         {
             var mission = await _missionService.CreateMissionAsync(model);
             return CreatedAtAction(nameof(GetMission), new { id = mission.Id }, mission);
+        }
+        // Must precede the catch-all: ValidationException derives from Exception, so without
+        // this it is swallowed into a 500, leaving the client no `errors` map to flag fields.
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (InvalidOperationException ex)
         {
@@ -100,7 +115,7 @@ public class MissionManagementController : ControllerBase
     }
 
     /// <summary>
-    /// Update mission (UC-8.7: Update Mission Details)
+    /// Update mission (UC-MSN-07)
     /// </summary>
     [HttpPut("{id}")]
     public async Task<ActionResult<MissionDetailDto>> UpdateMission(Guid id, [FromBody] UpdateMissionDto model)
@@ -109,6 +124,20 @@ public class MissionManagementController : ControllerBase
         {
             var mission = await _missionService.UpdateMissionAsync(id, model);
             return Ok(mission);
+        }
+        // Must precede the catch-all: ValidationException derives from Exception, so without
+        // this it is swallowed into a 500, leaving the client no `errors` map to flag fields.
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (InvalidOperationException ex)
         {
@@ -122,9 +151,10 @@ public class MissionManagementController : ControllerBase
     }
 
     /// <summary>
-    /// Delete mission
+    /// Delete mission (UC-MSN-08) — the General Director's alone (SuperAdmin only).
     /// </summary>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "SuperAdmin")]
     public async Task<ActionResult> DeleteMission(Guid id)
     {
         try
@@ -144,7 +174,43 @@ public class MissionManagementController : ControllerBase
         }
     }
 
-    // ========== Mission-Specific Operations ==========
+    /// <summary>
+    /// Register the mission result (UC-MSN-09): findings + completion outcome + السبب.
+    /// </summary>
+    [HttpPost("{id}/event")]
+    public async Task<ActionResult<MissionDetailDto>> RegisterMissionResult(Guid id, [FromBody] RegisterMissionResultDto model)
+    {
+        try
+        {
+            var mission = await _missionService.RegisterMissionResultAsync(id, model);
+            return Ok(mission);
+        }
+        // Must precede the catch-all: ValidationException derives from Exception, so without
+        // this it is swallowed into a 500, leaving the client no `errors` map to flag fields.
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while registering result for mission {MissionId}", id);
+            return StatusCode(500, new { message = "An error occurred while registering mission result" });
+        }
+    }
+
+    // ========== Legacy fine-grained operations (UC-8.x capability variants) ==========
 
     /// <summary>
     /// Set mission date (UC-8.2: Set Mission Date)
@@ -261,56 +327,10 @@ public class MissionManagementController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Complete mission (UC-8.8: Mark Mission as Completed)
-    /// </summary>
-    [HttpPut("{id}/complete")]
-    public async Task<ActionResult> CompleteMission(Guid id, [FromBody] CompleteMissionDto model)
-    {
-        try
-        {
-            await _missionService.CompleteMissionAsync(id, model);
-            _logger.LogInformation("Mission completed: {MissionId} by {CompletedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Mission completed successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while completing mission {MissionId}", id);
-            return StatusCode(500, new { message = "An error occurred while completing mission" });
-        }
-    }
-
-    /// <summary>
-    /// Record conference/entity information (UC-8.9: Record Conference/Entity)
-    /// </summary>
-    [HttpPut("{id}/event")]
-    public async Task<ActionResult> RecordConferenceEntity(Guid id, [FromBody] RecordEventDto model)
-    {
-        try
-        {
-            await _missionService.RecordConferenceEntityAsync(id, model.ConferenceName, model.EntityName);
-            _logger.LogInformation("Conference/Entity information recorded for mission {MissionId} by {UpdatedBy}", id, User.Identity?.Name);
-            return Ok(new { message = "Conference/Entity information recorded successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while recording conference/entity for mission {MissionId}", id);
-            return StatusCode(500, new { message = "An error occurred while recording conference/entity information" });
-        }
-    }
-
     // ========== View Operations ==========
 
     /// <summary>
-    /// Get missions assigned to current user (UC-8.12: View My Missions)
+    /// The §20.U.1 register read — scoped server-side to the caller's charity and country.
     /// </summary>
     [HttpGet("my-missions")]
     public async Task<ActionResult<MissionPagedResult<MissionListDto>>> GetMyMissions(
@@ -318,14 +338,7 @@ public class MissionManagementController : ControllerBase
     {
         try
         {
-            // Get current user ID from claims
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
-            {
-                return Unauthorized(new { message = "User ID not found in token" });
-            }
-
-            var result = await _missionService.GetMyMissionsAsync(userId, filter);
+            var result = await _missionService.GetMyMissionsAsync(filter ?? new MissionFilterDto());
             return Ok(result);
         }
         catch (Exception ex)
@@ -336,7 +349,7 @@ public class MissionManagementController : ControllerBase
     }
 
     /// <summary>
-    /// Get mission status summary (UC-8.13: Track Mission Status)
+    /// Get mission status summary (legacy UC-8.13: Track Mission Status)
     /// </summary>
     [HttpGet("status-summary")]
     public async Task<ActionResult<MissionStatusSummaryDto>> GetStatusSummary()
@@ -374,7 +387,7 @@ public class MissionManagementController : ControllerBase
     // ========== Export ==========
 
     /// <summary>
-    /// Export missions to Excel (UC-8.10: Export to Excel)
+    /// Export missions to Excel (legacy capability — not in epic 15's scope)
     /// </summary>
     [HttpPost("export")]
     public async Task<IActionResult> ExportMissions([FromBody] MissionFilterDto filter)
@@ -391,6 +404,10 @@ public class MissionManagementController : ControllerBase
                 $"missions_{DateTime.UtcNow:yyyyMMddHHmmss}.xlsx"
             );
         }
+        catch (NotImplementedException)
+        {
+            return StatusCode(501, new { message = "Excel export is not implemented yet" });
+        }
         catch (InvalidOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
@@ -405,7 +422,7 @@ public class MissionManagementController : ControllerBase
     // ========== Lookup Data ==========
 
     /// <summary>
-    /// Get all active mission types for dropdown
+    /// Get all active mission types for dropdown (UC-MSN-03)
     /// </summary>
     [HttpGet("mission-types")]
     public async Task<ActionResult<List<MissionTypeDto>>> GetMissionTypes()
@@ -429,24 +446,22 @@ public class MissionManagementController : ControllerBase
     }
 
     /// <summary>
-    /// Get all active mission time types for dropdown
-    /// TODO: Create IMissionTimeTypeService and MissionTimeTypeService similar to MissionTypeService
+    /// Get all active mission time types for dropdown (UC-MSN-05) — served from the
+    /// MissionTimeType lookup table.
     /// </summary>
     [HttpGet("mission-time-types")]
-    public ActionResult<List<MissionTimeTypeDto>> GetMissionTimeTypes()
+    public async Task<ActionResult<List<MissionTimeTypeDto>>> GetMissionTimeTypes()
     {
         try
         {
-            // TODO: Implement this endpoint once MissionTimeTypeService is created
-            // For now, return a hardcoded list based on common mission time types
-            var timeTypes = new List<MissionTimeTypeDto>
+            var filter = new LookupFilterDto
             {
-                new() { Id = 1, Name = "One-time", NameAr = "مرة واحدة", TimeTypeCode = "ONETIME", IsActive = true },
-                new() { Id = 2, Name = "Daily", NameAr = "يومي", TimeTypeCode = "DAILY", IsActive = true },
-                new() { Id = 3, Name = "Weekly", NameAr = "أسبوعي", TimeTypeCode = "WEEKLY", IsActive = true },
-                new() { Id = 4, Name = "Monthly", NameAr = "شهري", TimeTypeCode = "MONTHLY", IsActive = true }
+                IsActive = true,
+                Page = 1,
+                PageSize = 1000 // Get all active types
             };
-            return Ok(timeTypes);
+            var result = await _missionTimeTypeService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
         }
         catch (Exception ex)
         {

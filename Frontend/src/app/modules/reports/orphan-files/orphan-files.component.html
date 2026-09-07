@@ -1,0 +1,148 @@
+<app-report-viewer titleKey="reports.orphanFiles.title"
+                   subtitleKey="reports.orphanFiles.subtitle"
+                   [loading]="loading"
+                   [exporting]="exporting"
+                   [hasRun]="activeGrid === 'certificates' ? certHasRun : hasRun"
+                   [currentPage]="currentPage"
+                   [pageSize]="pageSize"
+                   [totalCount]="activeGrid === 'certificates' ? certTotalCount : totalCount"
+                   (search)="search()"
+                   (export)="exportData()"
+                   (pageChange)="onPageChange($event)">
+
+  <!-- ==================== §23.S.18 filter panel (shared by both grids) ==================== -->
+  <div report-filters>
+    <form [formGroup]="filterForm" (ngSubmit)="search()" class="row g-3 align-items-end">
+      <div class="col-lg-3 col-md-4" *ngIf="isHeadOffice">
+        <app-drop-down [fg]="filterForm" fcn="charityId"
+                       [label]="'reports.orphanFiles.filterCharity'"
+                       [placeholder]="'reports.orphanFiles.filterCharity'"
+                       [initialData]="charityOptions">
+        </app-drop-down>
+      </div>
+      <!-- من تاريخ — mandatory (the legacy DateTo binding swap is corrected, story note) -->
+      <div class="col-lg-3 col-md-4">
+        <label class="form-label" for="dateFrom">
+          {{ 'reports.orphanFiles.dateFrom' | translate }} <span class="text-danger">*</span>
+        </label>
+        <input id="dateFrom" type="date" class="form-control"
+               formControlName="dateFrom"
+               [class.is-invalid]="filterForm.get('dateFrom')?.invalid &&
+                                   (filterForm.get('dateFrom')?.touched || filterForm.get('dateFrom')?.dirty)" />
+        <!-- Review P27 2026-08-26: a server refusal shows the server's own reason —
+             dateFromRequired remains the message for the client-side required flag. -->
+        <div class="invalid-feedback" *ngIf="filterForm.get('dateFrom')?.errors">
+          {{ filterForm.get('dateFrom')?.errors?.['server'] || ('reports.orphanFiles.dateFromRequired' | translate) }}
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-4">
+        <label class="form-label" for="dateTo">{{ 'reports.orphanFiles.dateTo' | translate }}</label>
+        <input id="dateTo" type="date" class="form-control" formControlName="dateTo" />
+      </div>
+      <div class="col-lg-3 d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary"
+                [disabled]="loading || exporting">
+          {{ 'reports.orphanFiles.search' | translate }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ==================== grid switch — one pager, two result sets ==================== -->
+  <div report-grid class="mb-2">
+    <ul class="nav nav-pills grid-tabs">
+      <li class="nav-item">
+        <button type="button" class="nav-link" [ngClass]="activeGrid === 'photos' ? 'active' : ''"
+                [disabled]="loading || exporting" (click)="switchGrid('photos')">
+          {{ 'reports.orphanFiles.tabPhotos' | translate }}
+        </button>
+      </li>
+      <li class="nav-item">
+        <button type="button" class="nav-link" [ngClass]="activeGrid === 'certificates' ? 'active' : ''"
+                [disabled]="loading || exporting" (click)="switchGrid('certificates')">
+          {{ 'reports.orphanFiles.tabCertificates' | translate }}
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ==================== §23.S.18 photos grid — اسم اليتيم · كود اليتيم · الصوره (18-24) ==================== -->
+  <div report-grid class="table-responsive" *ngIf="activeGrid === 'photos'">
+    <table class="table table-hover table-striped align-middle text-nowrap"
+           *ngIf="rows.length > 0">
+      <thead>
+        <tr>
+          <th>{{ 'reports.orphanFiles.colSerial' | translate }}</th>
+          <th>{{ 'reports.orphanFiles.colOrphanName' | translate }}</th>
+          <th>{{ 'reports.orphanFiles.colOrphanCode' | translate }}</th>
+          <th>{{ 'reports.orphanFiles.colPhoto' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow">
+          <td>{{ serial(i) }}</td>
+          <td>{{ row.orphanName }}</td>
+          <td>{{ row.orphanCode }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <ng-container *ngIf="thumbUrls[rowKey(row)]; else noImage">
+                <img [src]="thumbUrls[rowKey(row)]"
+                     [alt]="row.orphanName"
+                     class="photo-thumb" />
+              </ng-container>
+              <ng-template #noImage>
+                <span class="text-muted small">{{ 'reports.orphanFiles.photoUnavailable' | translate }}</span>
+              </ng-template>
+              <!-- downloadImageData — the §23.S.18 per-row icon command -->
+              <button type="button" class="btn btn-sm btn-outline-secondary"
+                      [title]="'reports.orphanFiles.download' | translate"
+                      (click)="downloadImage(row)">
+                <i class="bi bi-download"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ==================== §23.S.18 certificates grid — same columns (18-25) ==================== -->
+  <div report-grid class="table-responsive" *ngIf="activeGrid === 'certificates'">
+    <table class="table table-hover table-striped align-middle text-nowrap"
+           *ngIf="certRows.length > 0">
+      <thead>
+        <tr>
+          <th>{{ 'reports.orphanFiles.colSerial' | translate }}</th>
+          <th>{{ 'reports.orphanFiles.colOrphanName' | translate }}</th>
+          <th>{{ 'reports.orphanFiles.colOrphanCode' | translate }}</th>
+          <th>{{ 'reports.orphanFiles.colPhoto' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of certRows; let i = index; trackBy: trackByRow">
+          <td>{{ serial(i) }}</td>
+          <td>{{ row.orphanName }}</td>
+          <td>{{ row.orphanCode }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <ng-container *ngIf="certThumbUrls[rowKey(row)]; else noCertImage">
+                <img [src]="certThumbUrls[rowKey(row)]"
+                     [alt]="row.orphanName"
+                     class="photo-thumb" />
+              </ng-container>
+              <ng-template #noCertImage>
+                <span class="text-muted small">{{ 'reports.orphanFiles.photoUnavailable' | translate }}</span>
+              </ng-template>
+              <!-- downloadCertificatesData — the §23.S.18 per-row icon command -->
+              <button type="button" class="btn btn-sm btn-outline-secondary"
+                      [title]="'reports.orphanFiles.download' | translate"
+                      (click)="downloadImage(row)">
+                <i class="bi bi-download"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</app-report-viewer>

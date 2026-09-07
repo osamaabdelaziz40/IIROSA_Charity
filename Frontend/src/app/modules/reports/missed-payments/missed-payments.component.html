@@ -1,0 +1,77 @@
+<app-report-viewer titleKey="reports.missedPayments.title"
+                   subtitleKey="reports.missedPayments.subtitle"
+                   [loading]="loading"
+                   [exporting]="exporting"
+                   [hasRun]="hasRun"
+                   [currentPage]="currentPage"
+                   [pageSize]="pageSize"
+                   [totalCount]="totalCount"
+                   (search)="search()"
+                   (export)="exportData()"
+                   (pageChange)="onPageChange($event)">
+
+  <!-- ==================== §23.S.11 filter panel (charity — HQ only) ==================== -->
+  <div report-filters>
+    <form [formGroup]="filterForm" (ngSubmit)="search()" class="row g-3 align-items-end">
+      <div class="col-lg-3 col-md-4" *ngIf="isHeadOffice">
+        <app-drop-down [fg]="filterForm" fcn="charityId"
+                       [label]="'reports.missedPayments.filterCharity'"
+                       [placeholder]="'reports.missedPayments.filterCharity'"
+                       [initialData]="charityOptions">
+        </app-drop-down>
+      </div>
+      <div class="col-lg-12 d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary"
+                [disabled]="loading || exporting">
+          {{ 'reports.missedPayments.search' | translate }}
+        </button>
+        <!-- §23.S.11 icon command (UC-RPT-23) — HQ-only widened scope; the endpoint refuses -->
+        <!-- non-HQ callers sending the flag (client toggle is convenience, never the control) -->
+        <button type="button" class="btn"
+                [ngClass]="allOrphans ? 'btn-primary' : 'btn-outline-secondary'"
+                [title]="'reports.missedPayments.allOrphansTooltip' | translate"
+                *ngIf="isHeadOffice"
+                [disabled]="loading || exporting"
+                (click)="toggleAllOrphans()">
+          <i class="bi" [ngClass]="allOrphans ? 'bi-people-fill' : 'bi-people'"></i>
+          {{ (allOrphans ? 'reports.missedPayments.allOrphansActive' : 'reports.missedPayments.allOrphansInactive') | translate }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ==================== bespoke grid — 4 fixed columns + dynamic batch columns ==================== -->
+  <div report-grid class="table-responsive">
+    <table class="table table-hover table-striped align-middle text-nowrap"
+           *ngIf="rows.length > 0">
+      <thead>
+        <tr>
+          <th>{{ 'reports.missedPayments.colSerial' | translate }}</th>
+          <th>{{ 'reports.missedPayments.colOrphanCode' | translate }}</th>
+          <th>{{ 'reports.missedPayments.colCharity' | translate }}</th>
+          <th>{{ 'reports.missedPayments.colOrphanName' | translate }}</th>
+          <th>{{ 'reports.missedPayments.colReason' | translate }}</th>
+          <th *ngFor="let batch of batchColumns; trackBy: trackByBatch">{{ batch }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow">
+          <td>{{ serial(i) }}</td>
+          <td>{{ row.orphanCode }}</td>
+          <td>{{ row.charityName || '—' }}</td>
+          <td>{{ row.orphanName }}</td>
+          <td>{{ row.reason || '—' }}</td>
+          <td *ngFor="let batch of batchColumns; trackBy: trackByBatch">
+            <ng-container *ngIf="row.batchStates[batch] !== undefined; else noCell">
+              <span class="badge"
+                    [ngClass]="row.batchStates[batch] ? 'text-bg-success' : 'text-bg-danger'">
+                {{ (row.batchStates[batch] ? 'reports.missedPayments.received' : 'reports.missedPayments.missed') | translate }}
+              </span>
+            </ng-container>
+            <ng-template #noCell>—</ng-template>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</app-report-viewer>

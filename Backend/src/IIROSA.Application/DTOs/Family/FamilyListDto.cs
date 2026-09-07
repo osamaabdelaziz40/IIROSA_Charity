@@ -16,5 +16,15 @@ public class FamilyListDto
     public string? ProviderType { get; set; }
     public DateTime RegistrationDate { get; set; }
     public bool IsActive { get; set; }
+    /// <summary>Register discriminator: Regular | Housing | Refugee</summary>
+    public string? FamilyType { get; set; }
+    public string? PhoneNumber { get; set; }
+    public Guid? CharityId { get; set; }
     public string? CharityName { get; set; }
+
+    /// <summary>
+    /// Holding-family marker (5-6/5-7/5-8 ruling 2026-08-24): rows created only to hold a member
+    /// detached by member control — lets lists/reports tell them from register families.
+    /// </summary>
+    public bool IsHoldingFamily { get; set; }
 }

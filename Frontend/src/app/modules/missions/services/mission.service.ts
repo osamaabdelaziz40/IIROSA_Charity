@@ -1,7 +1,7 @@
 /**
  * Mission Service
- * Handles all mission-related API calls
- * Missions Module - IIROSA Frontend Application
+ * Handles all mission-related API calls (epic 15, UC-MSN-01…09)
+ * The API returns raw DTOs — no {success, data} envelope.
  */
 
 import { Injectable } from '@angular/core';
@@ -11,33 +11,22 @@ import { map } from 'rxjs/operators';
 
 import {
   Mission,
+  MissionDetail,
   CreateMissionRequest,
   UpdateMissionRequest,
+  RegisterMissionResultRequest,
   MissionSearchRequest,
   MissionListResponse,
-  MarkMissionCompletedRequest,
-  MissionStatusCounts,
-  MissionType,
-  MissionTimeType
+  MissionLookupItem
 } from '../models/mission.model';
 
 /**
- * API Response wrapper
- */
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  errors?: string[];
-}
-
-/**
- * Paged response wrapper
+ * Paged response wrapper as the API serializes it
  */
 interface PagedApiResponse<T> {
   items: T[];
   totalCount: number;
-  pageNumber: number;
+  page: number;
   pageSize: number;
   totalPages: number;
 }
@@ -47,190 +36,108 @@ interface PagedApiResponse<T> {
 })
 export class MissionService {
   private readonly apiBaseUrl = '/api/missionmanagement';
+  private readonly lookupBaseUrl = '/api/lookupmanagement';
 
   constructor(private http: HttpClient) {}
 
   /**
-   * Get missions with filtering and pagination
-   * @param search Search and filter criteria
-   * @returns Paginated mission list
-   */
-  getMissions(search: MissionSearchRequest): Observable<MissionListResponse> {
-    let params = this.buildHttpParams(search);
-
-    return this.http.get<PagedApiResponse<Mission>>(this.apiBaseUrl, { params })
-      .pipe(
-        map(response => ({
-          items: response.items || [],
-          totalCount: response.totalCount || 0,
-          pageNumber: response.pageNumber || search.page,
-          pageSize: response.pageSize || search.pageSize,
-          totalPages: response.totalPages || 0
-        }))
-      );
-  }
-
-  /**
-   * Get a single mission by ID
-   * @param id Mission ID
-   * @returns Mission details
-   */
-  getMissionById(id: string): Observable<Mission> {
-    return this.http.get<ApiResponse<Mission>>(`${this.apiBaseUrl}/${id}`)
-      .pipe(
-        map(response => {
-          if (!response.success || !response.data) {
-            throw new Error(response.message || 'Failed to load mission');
-          }
-          return response.data;
-        })
-      );
-  }
-
-  /**
-   * Create a new mission
-   * @param request Mission creation request
-   * @returns Created mission
-   */
-  createMission(request: CreateMissionRequest): Observable<Mission> {
-    return this.http.post<ApiResponse<Mission>>(this.apiBaseUrl, request)
-      .pipe(
-        map(response => {
-          if (!response.success || !response.data) {
-            throw new Error(response.message || 'Failed to create mission');
-          }
-          return response.data;
-        })
-      );
-  }
-
-  /**
-   * Update an existing mission
-   * @param id Mission ID
-   * @param request Mission update request
-   * @returns Updated mission
-   */
-  updateMission(id: string, request: UpdateMissionRequest): Observable<Mission> {
-    return this.http.put<ApiResponse<Mission>>(`${this.apiBaseUrl}/${id}`, request)
-      .pipe(
-        map(response => {
-          if (!response.success || !response.data) {
-            throw new Error(response.message || 'Failed to update mission');
-          }
-          return response.data;
-        })
-      );
-  }
-
-  /**
-   * Delete a mission
-   * @param id Mission ID
-   * @returns Success status
-   */
-  deleteMission(id: string): Observable<boolean> {
-    return this.http.delete<ApiResponse<boolean>>(`${this.apiBaseUrl}/${id}`)
-      .pipe(
-        map(response => response.success || false)
-      );
-  }
-
-  /**
-   * Mark a mission as completed
-   * @param id Mission ID
-   * @param request Completion request with optional notes
-   * @returns Updated mission
-   */
-  markAsCompleted(id: string, request: MarkMissionCompletedRequest): Observable<Mission> {
-    return this.http.patch<ApiResponse<Mission>>(`${this.apiBaseUrl}/${id}/complete`, request)
-      .pipe(
-        map(response => {
-          if (!response.success || !response.data) {
-            throw new Error(response.message || 'Failed to mark mission as completed');
-          }
-          return response.data;
-        })
-      );
-  }
-
-  /**
-   * Reopen a completed mission
-   * @param id Mission ID
-   * @returns Updated mission
-   */
-  reopenMission(id: string): Observable<Mission> {
-    return this.http.patch<ApiResponse<Mission>>(`${this.apiBaseUrl}/${id}/reopen`, {})
-      .pipe(
-        map(response => {
-          if (!response.success || !response.data) {
-            throw new Error(response.message || 'Failed to reopen mission');
-          }
-          return response.data;
-        })
-      );
-  }
-
-  /**
-   * Get mission status counts for dashboard
-   * @returns Status counts (pending, inProgress, completed, overdue)
-   */
-  getMissionStatusCounts(): Observable<MissionStatusCounts> {
-    return this.http.get<MissionStatusCounts>(`${this.apiBaseUrl}/status-counts`);
-  }
-
-  /**
-   * Get missions for the current user (My Missions)
-   * @param search Search and filter criteria
-   * @returns Paginated mission list
+   * The §20.U.1 register read — scoped server-side to the caller's charity and country
    */
   getMyMissions(search: MissionSearchRequest): Observable<MissionListResponse> {
-    let params = this.buildHttpParams(search);
+    const params = this.buildHttpParams(search);
 
     return this.http.get<PagedApiResponse<Mission>>(`${this.apiBaseUrl}/my-missions`, { params })
       .pipe(
         map(response => ({
           items: response.items || [],
           totalCount: response.totalCount || 0,
-          pageNumber: response.pageNumber || search.page,
+          page: response.page || search.page,
           pageSize: response.pageSize || search.pageSize,
-          totalPages: response.totalPages || 0
+          // The wire carries no totalPages — derive it (guarded division: the server
+          // clamps pageSize ≥ 1, the fallback covers a stale client value)
+          totalPages: Math.ceil((response.totalCount || 0) / Math.max(1, response.pageSize || search.pageSize || 1))
         }))
       );
   }
 
   /**
-   * Export missions to Excel
-   * @param search Search and filter criteria (same filters will be applied to export)
-   * @returns Blob for file download
+   * Filtered read of the register (UC-MSN-02) — same pipeline, same wire contract
    */
-  exportMissions(search: MissionSearchRequest): Observable<Blob> {
-    let params = this.buildHttpParams(search);
+  getMissions(search: MissionSearchRequest): Observable<MissionListResponse> {
+    const params = this.buildHttpParams(search);
 
-    return this.http.get(`${this.apiBaseUrl}/export`, {
-      params,
-      responseType: 'blob'
-    });
+    return this.http.get<PagedApiResponse<Mission>>(this.apiBaseUrl, { params })
+      .pipe(
+        map(response => ({
+          items: response.items || [],
+          totalCount: response.totalCount || 0,
+          page: response.page || search.page,
+          pageSize: response.pageSize || search.pageSize,
+          // The wire carries no totalPages — derive it (guarded division: the server
+          // clamps pageSize ≥ 1, the fallback covers a stale client value)
+          totalPages: Math.ceil((response.totalCount || 0) / Math.max(1, response.pageSize || search.pageSize || 1))
+        }))
+      );
   }
 
   /**
-   * Get available mission types
-   * @returns List of mission types
+   * Get a single mission by ID — the raw MissionDetailDto
    */
-  getMissionTypes(): Observable<MissionType[]> {
-    return this.http.get<MissionType[]>(`${this.apiBaseUrl}/mission-types`);
+  getMissionById(id: string): Observable<MissionDetail> {
+    return this.http.get<MissionDetail>(`${this.apiBaseUrl}/${id}`);
   }
 
   /**
-   * Get available mission time types
-   * @returns List of mission time types
+   * Create a new mission (UC-MSN-06) — returns the created MissionDetailDto
    */
-  getMissionTimeTypes(): Observable<MissionTimeType[]> {
-    return this.http.get<MissionTimeType[]>(`${this.apiBaseUrl}/mission-time-types`);
+  createMission(request: CreateMissionRequest): Observable<MissionDetail> {
+    return this.http.post<MissionDetail>(this.apiBaseUrl, request);
   }
 
   /**
-   * Build HTTP params from search request
-   * @param search Search criteria
-   * @returns HttpParams object
+   * Update an existing mission (UC-MSN-07) — returns the updated MissionDetailDto
+   */
+  updateMission(id: string, request: UpdateMissionRequest): Observable<MissionDetail> {
+    return this.http.put<MissionDetail>(`${this.apiBaseUrl}/${id}`, request);
+  }
+
+  /**
+   * Delete a mission (UC-MSN-08, SuperAdmin only) — raw response, no envelope mapping
+   */
+  deleteMission(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiBaseUrl}/${id}`);
+  }
+
+  /**
+   * Register the mission result (UC-MSN-09)
+   */
+  registerMissionResult(id: string, request: RegisterMissionResultRequest): Observable<MissionDetail> {
+    return this.http.post<MissionDetail>(`${this.apiBaseUrl}/${id}/event`, request);
+  }
+
+  /**
+   * Get available mission types (UC-MSN-03)
+   */
+  getMissionTypes(): Observable<MissionLookupItem[]> {
+    return this.http.get<MissionLookupItem[]>(`${this.apiBaseUrl}/mission-types`);
+  }
+
+  /**
+   * Get available mission time types (UC-MSN-05) — served from the lookup table
+   */
+  getMissionTimeTypes(): Observable<MissionLookupItem[]> {
+    return this.http.get<MissionLookupItem[]>(`${this.apiBaseUrl}/mission-time-types`);
+  }
+
+  /**
+   * Get available mission interview types (UC-MSN-04)
+   */
+  getMissionInterviewTypes(): Observable<MissionLookupItem[]> {
+    return this.http.get<MissionLookupItem[]>(`${this.lookupBaseUrl}/mission-interview-types`);
+  }
+
+  /**
+   * Build HTTP params from search request — the keys mirror MissionFilterDto on the wire
    */
   private buildHttpParams(search: MissionSearchRequest): HttpParams {
     let params = new HttpParams();
@@ -245,6 +152,10 @@ export class MissionService {
 
     if (search.missionTimeTypeId) {
       params = params.set('missionTimeTypeId', search.missionTimeTypeId.toString());
+    }
+
+    if (search.charityId) {
+      params = params.set('charityId', search.charityId);
     }
 
     if (search.isCompleted !== undefined) {
@@ -263,16 +174,16 @@ export class MissionService {
       params = params.set('centerId', search.centerId.toString());
     }
 
-    if (search.assignedTo) {
-      params = params.set('assignedTo', search.assignedTo);
+    if (search.assignedToUserId) {
+      params = params.set('assignedToUserId', search.assignedToUserId);
     }
 
     if (search.dateFrom) {
-      params = params.set('dateFrom', search.dateFrom.toISOString());
+      params = params.set('dateFrom', search.dateFrom);
     }
 
     if (search.dateTo) {
-      params = params.set('dateTo', search.dateTo.toISOString());
+      params = params.set('dateTo', search.dateTo);
     }
 
     params = params.set('page', search.page.toString());

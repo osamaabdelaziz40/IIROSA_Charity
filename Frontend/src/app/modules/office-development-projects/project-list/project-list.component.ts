@@ -25,6 +25,7 @@ import { DropDownComponent } from '../../../shared/components/drop-down/drop-dow
 import { SharedModule } from '../../../shared/shared.module';
 import { CharityService } from '../../charities/services/charity.service';
 import { CharitySearchRequest } from '../../charities/models/charity.model';
+import { AuthService } from '../../../core/services/auth.service';
 import { Subject, Subscription } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -108,6 +109,7 @@ export class ProjectListComponent implements OnInit, OnDestroy {
     private notification: NotificationService,
     private router: Router,
     private charityService: CharityService,
+    private auth: AuthService,
     private translate: TranslateService
   ) {
     this.filterForm = this.fb.group({
@@ -216,11 +218,11 @@ export class ProjectListComponent implements OnInit, OnDestroy {
 
     const filter: OfficeProjectFilter = {
       searchText: formValues.searchValue || undefined,
-      fk_OfficeProjectTypeId: formValues.projectType || undefined,
-      fk_CountryId: formValues.country || undefined,
-      fk_RegionId: formValues.region || undefined,
-      fk_CenterId: formValues.center || undefined,
-      fk_CharityId: formValues.charity || undefined,
+      officeProjectTypeId: formValues.projectType || undefined,
+      countryId: formValues.country || undefined,
+      regionId: formValues.region || undefined,
+      centerId: formValues.center || undefined,
+      charityId: formValues.charity || undefined,
       isFinished: formValues.status === 'true' ? true : formValues.status === 'false' ? false : undefined,
       startDate: formValues.dateFrom || undefined,
       endDate: formValues.dateTo || undefined,
@@ -390,11 +392,11 @@ export class ProjectListComponent implements OnInit, OnDestroy {
 
     const filter: OfficeProjectFilter = {
       searchText: formValues.searchValue || undefined,
-      fk_OfficeProjectTypeId: formValues.projectType || undefined,
-      fk_CountryId: formValues.country || undefined,
-      fk_RegionId: formValues.region || undefined,
-      fk_CenterId: formValues.center || undefined,
-      fk_CharityId: formValues.charity || undefined,
+      officeProjectTypeId: formValues.projectType || undefined,
+      countryId: formValues.country || undefined,
+      regionId: formValues.region || undefined,
+      centerId: formValues.center || undefined,
+      charityId: formValues.charity || undefined,
       isFinished: formValues.status === 'true' ? true : formValues.status === 'false' ? false : undefined,
       startDate: formValues.dateFrom || undefined,
       endDate: formValues.dateTo || undefined
@@ -432,14 +434,16 @@ export class ProjectListComponent implements OnInit, OnDestroy {
     this.loadProjects();
   }
 
+  // The server already returns the requested page (page/pageSize go up in the filter), so the
+  // rows are shown as-is — slicing again here would blank every page after the first.
   get paginatedProjects(): OfficeProjectListItem[] {
-    // Ensure we always return an array
-    if (!Array.isArray(this.projects)) {
-      return [];
-    }
-    const start = (this.currentPage - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    return this.projects.slice(start, end);
+    return Array.isArray(this.projects) ? this.projects : [];
+  }
+
+  // UC-OFP-05: deletion is the General Director's alone. The endpoint enforces it; this only
+  // keeps the button from offering an action the server would refuse.
+  get canDelete(): boolean {
+    return this.auth.hasRole('SuperAdmin');
   }
 
   get totalPages(): number {

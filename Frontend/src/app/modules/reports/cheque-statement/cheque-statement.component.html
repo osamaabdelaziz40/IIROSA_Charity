@@ -1,0 +1,92 @@
+<app-report-viewer titleKey="reports.chequeStatement.title"
+                   subtitleKey="reports.chequeStatement.subtitle"
+                   [previewProducer]="previewDocument"
+                   [exportRequest]="buildExportRequest"
+                   [loading]="loading"
+                   [hasRun]="hasRun"
+                   [totalCount]="totalCount"
+                   (search)="search()">
+
+  <!-- ==================== §23.U.33 filter panel — bank / date range / cheque type ==================== -->
+  <div report-filters>
+    <form [formGroup]="filterForm" (ngSubmit)="search()" class="row g-3 align-items-end">
+      <div class="col-lg-3 col-md-4">
+        <app-drop-down [fg]="filterForm" fcn="bankId"
+                       [label]="'reports.chequeStatement.filterBank'"
+                       [placeholder]="'reports.chequeStatement.filterBank'"
+                       [initialData]="bankOptions">
+        </app-drop-down>
+      </div>
+
+      <div class="col-lg-2 col-md-3">
+        <label class="form-label">{{ 'reports.chequeStatement.filterFrom' | translate }}</label>
+        <input type="date" class="form-control" formControlName="dateFrom" />
+      </div>
+      <div class="col-lg-2 col-md-3">
+        <label class="form-label">{{ 'reports.chequeStatement.filterTo' | translate }}</label>
+        <input type="date" class="form-control" formControlName="dateTo" />
+      </div>
+
+      <div class="col-lg-3 col-md-4">
+        <app-drop-down [fg]="filterForm" fcn="chequeType"
+                       [label]="'reports.chequeStatement.filterType'"
+                       [placeholder]="'reports.chequeStatement.filterType'"
+                       [initialData]="typeOptions">
+        </app-drop-down>
+      </div>
+    </form>
+  </div>
+
+  <!-- طباعة — the statement document via the epic's browser-print pipeline -->
+  <div class="d-flex justify-content-start mb-2 gap-2 flex-wrap">
+    <button type="button" class="btn btn-sm btn-outline-secondary"
+            (click)="printStatement()" [disabled]="printing || loading">
+      <i class="fe fe-printer me-1" *ngIf="!printing; else printSpin"></i>
+      <ng-template #printSpin><span class="spinner-border spinner-border-sm me-1"></span></ng-template>
+      {{ 'reports.chequeStatement.print' | translate }}
+    </button>
+  </div>
+
+  <!-- ==================== bespoke grid — the audited CheckListDto columns ==================== -->
+  <div report-grid class="table-responsive">
+    <table class="table table-hover table-striped align-middle"
+           *ngIf="rows.length > 0">
+      <thead>
+        <tr>
+          <th>{{ 'reports.chequeStatement.colSerial' | translate }}</th>
+          <th>{{ 'reports.chequeStatement.colNumber' | translate }}</th>
+          <th>{{ 'reports.chequeStatement.colDate' | translate }}</th>
+          <th>{{ 'reports.chequeStatement.colBeneficiary' | translate }}</th>
+          <th>{{ 'reports.chequeStatement.colAmount' | translate }}</th>
+          <th>{{ 'reports.chequeStatement.colType' | translate }}</th>
+          <th>{{ 'reports.chequeStatement.colBank' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow">
+          <td>{{ i + 1 }}</td>
+          <td>{{ row.checkNumber }}</td>
+          <td>{{ row.checkDate | date:'yyyy-MM-dd' }}</td>
+          <td>{{ row.beneficiaryName }}</td>
+          <td>{{ row.amount }} {{ row.currency }}</td>
+          <td>{{ row.chequeType === 'Orphans'
+                ? ('reports.chequeStatement.typeOrphans' | translate)
+                : ('reports.chequeStatement.typeIndividuals' | translate) }}</td>
+          <td>{{ row.bankName || '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Per-currency totals (server-computed over the whole filtered set) -->
+    <div class="d-flex justify-content-end mt-2" *ngIf="rows.length > 0 && statement?.totalByCurrency">
+      <table class="table table-sm w-auto">
+        <tbody>
+          <tr *ngFor="let entry of statement?.totalByCurrency | keyvalue; trackBy: trackTotal">
+            <td>{{ 'reports.chequeStatement.metaTotal' | translate }} ({{ entry.key }})</td>
+            <td><strong>{{ entry.value }}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</app-report-viewer>

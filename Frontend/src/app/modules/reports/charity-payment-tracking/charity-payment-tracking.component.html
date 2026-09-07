@@ -1,0 +1,93 @@
+<app-report-viewer titleKey="reports.charityTracking.title"
+                   subtitleKey="reports.charityTracking.subtitle"
+                   [previewProducer]="previewDocument"
+                   [loading]="loading"
+                   [exporting]="exporting"
+                   [hasRun]="hasRun"
+                   [currentPage]="currentPage"
+                   [pageSize]="pageSize"
+                   [totalCount]="totalCount"
+                   (search)="runTracking()"
+                   (export)="exportData()"
+                   (pageChange)="onPageChange($event)">
+
+  <!-- ==================== §23.S.12 filter panel (charity + batch + update date) ==================== -->
+  <div report-filters>
+    <form [formGroup]="filterForm" (ngSubmit)="runTracking()" class="row g-3 align-items-end">
+      <!-- Review P27 2026-08-26: the charity narrow is an HQ dropdown — hidden for charity
+           callers (the endpoint scopes them server-side regardless). -->
+      <div class="col-lg-3 col-md-4" *ngIf="isHQ">
+        <app-drop-down [fg]="filterForm" fcn="charityId"
+                       [label]="'reports.charityTracking.filterCharity'"
+                       [placeholder]="'reports.charityTracking.filterCharity'"
+                       [initialData]="charityOptions">
+        </app-drop-down>
+      </div>
+      <div class="col-lg-3 col-md-4">
+        <app-drop-down [fg]="filterForm" fcn="batchId"
+                       [label]="'reports.charityTracking.filterBatch'"
+                       [placeholder]="'reports.charityTracking.filterBatch'"
+                       [initialData]="batchOptions">
+        </app-drop-down>
+      </div>
+      <!-- تحديثات الجمعيات — the date is UC-RPT-21's required print input -->
+      <div class="col-lg-3 col-md-4">
+        <label class="form-label" for="updateDate">{{ 'reports.charityTracking.filterUpdateDate' | translate }}</label>
+        <input id="updateDate" type="date" class="form-control" formControlName="updateDate"
+               [class.is-invalid]="filterForm.get('updateDate')?.invalid === true" />
+      </div>
+
+      <!-- §23.S.12 commands: the run + UC-RPT-21's load/print pair + the reset -->
+      <div class="col-lg-12 d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary"
+                [disabled]="loading || exporting">
+          {{ 'reports.charityTracking.runTracking' | translate }}
+        </button>
+        <button type="button" class="btn btn-outline-secondary"
+                [disabled]="loading || exporting || updateLoading"
+                (click)="loadUpdates()">
+          {{ 'reports.charityTracking.updatesTracking' | translate }}
+        </button>
+        <button type="button" class="btn btn-outline-secondary"
+                [disabled]="loading || exporting || updateLoading"
+                (click)="printUpdates()">
+          {{ 'reports.charityTracking.confirm' | translate }}
+        </button>
+        <button type="button" class="btn btn-outline-danger" (click)="resetFilters()">
+          {{ 'reports.charityTracking.close' | translate }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ==================== bespoke grid — serial + 5 tracking columns ==================== -->
+  <div report-grid class="table-responsive">
+    <table class="table table-hover table-striped align-middle text-nowrap"
+           *ngIf="rows.length > 0">
+      <thead>
+        <tr>
+          <th>{{ 'reports.charityTracking.colSerial' | translate }}</th>
+          <th>{{ 'reports.charityTracking.colCharity' | translate }}</th>
+          <th>{{ 'reports.charityTracking.colOrphansInBatch' | translate }}</th>
+          <th>{{ 'reports.charityTracking.colReportsEntered' | translate }}</th>
+          <th>{{ 'reports.charityTracking.colBatchUploaded' | translate }}</th>
+          <th>{{ 'reports.charityTracking.colUploadDate' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow">
+          <td>{{ serial(i) }}</td>
+          <td>{{ row.charityName || '—' }}</td>
+          <td>{{ row.orphansInBatch }}</td>
+          <td>{{ row.reportsEntered }}</td>
+          <td>
+            <span class="badge" [ngClass]="row.batchUploaded ? 'text-bg-success' : 'text-bg-secondary'">
+              {{ (row.batchUploaded ? 'reports.charityTracking.yes' : 'reports.charityTracking.no') | translate }}
+            </span>
+          </td>
+          <td>{{ (row.uploadDate ? (row.uploadDate | date:'dd/MM/yyyy') : '—') }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</app-report-viewer>

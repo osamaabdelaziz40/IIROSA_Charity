@@ -1,0 +1,220 @@
+<div class="container-fluid">
+  <app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+  <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+    <div>
+      <button class="btn btn-outline-secondary btn-sm mb-2" (click)="onBack()">
+        <i class="fe fe-arrow-left me-1"></i>
+        {{ 'common.back' | translate }}
+      </button>
+      <h2 class="page-title">
+        <i class="fe fe-file-text me-2"></i>
+        {{ 'seasonalAid.campaignReport' | translate }}
+      </h2>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-outline-secondary" (click)="getPrev()" [disabled]="!canGoPrev"
+              [title]="'seasonalAid.prevCampaign' | translate">
+        <i class="fe fe-chevron-right"></i>
+      </button>
+      <button class="btn btn-outline-secondary" (click)="getNext()" [disabled]="!canGoNext"
+              [title]="'seasonalAid.nextCampaign' | translate">
+        <i class="fe fe-chevron-left"></i>
+      </button>
+      <button class="btn btn-primary" (click)="printReport()">
+        <i class="fe fe-printer me-1"></i>
+        {{ 'common.print' | translate }}
+      </button>
+      <button class="btn btn-success" (click)="exportReportData()" [disabled]="exporting">
+        <span class="spinner-border spinner-border-sm me-1" *ngIf="exporting"></span>
+        <i class="fe fe-file-plus me-1" *ngIf="!exporting"></i>
+        {{ 'common.exportToExcel' | translate }}
+      </button>
+    </div>
+  </div>
+
+  <!-- §23.S.2 filters: الجمعية (client-side breakdown filter) + the campaign selector
+       (recorded adaptation for the nonexistent Projects lookup). -->
+  <div class="row g-3 mb-4 no-print" *ngIf="!loading && report">
+    <div class="col-md-5">
+      <label class="form-label" for="reportCharityFilter">{{ 'seasonalAid.filterCharity' | translate }}</label>
+      <select id="reportCharityFilter" class="form-select"
+              (change)="onCharityFilterChange($any($event.target).value)">
+        <option *ngFor="let option of charityOptions; trackBy: trackByOption" [value]="option.id"
+                [selected]="option.id === selectedCharityId">
+          {{ option.name }}
+        </option>
+      </select>
+    </div>
+    <div class="col-md-5">
+      <label class="form-label" for="reportCampaignSelect">{{ 'seasonalAid.filterCampaign' | translate }}</label>
+      <select id="reportCampaignSelect" class="form-select" (change)="onCampaignSelect($any($event.target).value)">
+        <option value="">{{ 'seasonalAid.selectCampaign' | translate }}</option>
+        <option *ngFor="let campaign of campaigns; trackBy: trackByCampaign" [value]="campaign.id"
+                [selected]="campaign.id === report.campaignId">
+          {{ campaign.name }}
+        </option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">{{ 'common.loading' | translate }}</span>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && report" class="report-body">
+    <!-- Report Header -->
+    <div class="text-center mb-4 pb-3 report-header">
+      <h3>{{ report.campaignName }}</h3>
+      <div class="text-muted">
+        {{ 'seasonalAid.campaignTypes.' + report.campaignType | translate }} —
+        {{ report.startDate | date:'mediumDate' }} {{ 'common.to' | translate }} {{ report.endDate | date:'mediumDate' }}
+      </div>
+      <div class="small text-muted mt-1">
+        {{ 'seasonalAid.generatedOn' | translate }}: {{ report.reportGeneratedOn | date:'medium' }}
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card stat-card">
+          <div class="card-body text-center">
+            <h6 class="stat-title">{{ 'seasonalAid.totalBeneficiaries' | translate }}</h6>
+            <h3 class="stat-value">{{ report.totalBeneficiaries }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card stat-card">
+          <div class="card-body text-center">
+            <h6 class="stat-title">{{ 'seasonalAid.distributedBeneficiaries' | translate }}</h6>
+            <h3 class="stat-value text-success">{{ report.distributedBeneficiaries }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card stat-card">
+          <div class="card-body text-center">
+            <h6 class="stat-title">{{ 'seasonalAid.pendingBeneficiaries' | translate }}</h6>
+            <h3 class="stat-value text-warning">{{ report.pendingBeneficiaries }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card stat-card">
+          <div class="card-body text-center">
+            <h6 class="stat-title">{{ 'seasonalAid.distributionRate' | translate }}</h6>
+            <h3 class="stat-value">{{ report.beneficiaryDistributionPercentage | number:'.1' }}%</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Budget Summary -->
+    <div class="card mb-4">
+      <div class="card-header"><h5 class="card-title">{{ 'seasonalAid.financialInformation' | translate }}</h5></div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-3"><strong>{{ 'seasonalAid.totalBudget' | translate }}:</strong> {{ report.totalBudget | number }} {{ report.budgetCurrency }}</div>
+          <div class="col-md-3"><strong>{{ 'seasonalAid.allocatedAmount' | translate }}:</strong> {{ report.allocatedBudget | number }} {{ report.budgetCurrency }}</div>
+          <div class="col-md-3"><strong>{{ 'seasonalAid.distributedAmount' | translate }}:</strong> {{ report.distributedBudget | number }} {{ report.budgetCurrency }}</div>
+          <div class="col-md-3"><strong>{{ 'seasonalAid.remainingBudget' | translate }}:</strong> {{ report.remainingBudget | number }} {{ report.budgetCurrency }}</div>
+        </div>
+        <div class="progress mt-3">
+          <div class="progress-bar bg-success" role="progressbar" [style.width.%]="report.budgetUtilizationPercentage"></div>
+        </div>
+        <div class="small text-muted mt-1">
+          {{ 'seasonalAid.budgetUtilization' | translate }}: {{ report.budgetUtilizationPercentage | number:'.1' }}%
+        </div>
+      </div>
+    </div>
+
+    <!-- Coverage Breakdowns -->
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-header"><h6 class="card-title">{{ 'seasonalAid.byRegion' | translate }}</h6></div>
+          <ul class="list-group list-group-flush">
+            <!-- Review P27 2026-08-26: the region breakdown follows the charity filter like
+                 the details grid and the charity breakdown (campaign-wide when unfiltered). -->
+            <li class="list-group-item d-flex justify-content-between" *ngFor="let entry of filteredRegionEntries; trackBy: trackByEntry">
+              <span>{{ entry.key }}</span><span class="badge bg-primary">{{ entry.value }}</span>
+            </li>
+            <li class="list-group-item text-center text-muted" *ngIf="filteredRegionEntries.length === 0">
+              {{ 'common.noData' | translate }}
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-header"><h6 class="card-title">{{ 'seasonalAid.byCharity' | translate }}</h6></div>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between" *ngFor="let entry of filteredCharityEntries; trackBy: trackByEntry">
+              <span>{{ entry.key }}</span><span class="badge bg-success">{{ entry.value }}</span>
+            </li>
+            <li class="list-group-item text-center text-muted" *ngIf="filteredCharityEntries.length === 0">
+              {{ 'common.noData' | translate }}
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-header"><h6 class="card-title">{{ 'seasonalAid.byFamilyType' | translate }}</h6></div>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between" *ngFor="let entry of toEntries(report.beneficiariesByFamilyType); trackBy: trackByEntry">
+              <span>{{ 'seasonalAid.familyTypes.' + familyTypeKey(entry.key) | translate }}</span>
+              <span class="badge bg-info">{{ entry.value }}</span>
+            </li>
+            <li class="list-group-item text-center text-muted" *ngIf="toEntries(report.beneficiariesByFamilyType).length === 0">
+              {{ 'common.noData' | translate }}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Distribution Details -->
+    <div class="card">
+      <div class="card-header"><h5 class="card-title">{{ 'seasonalAid.distributionDetails' | translate }}</h5></div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-striped mb-0">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>{{ 'seasonalAid.familyCode' | translate }}</th>
+                <th>{{ 'seasonalAid.charity' | translate }}</th>
+                <th>{{ 'seasonalAid.region' | translate }}</th>
+                <th>{{ 'seasonalAid.allocation' | translate }}</th>
+                <th>{{ 'seasonalAid.distributedAmount' | translate }}</th>
+                <th>{{ 'seasonalAid.distributedOn' | translate }}</th>
+                <th>{{ 'seasonalAid.receivedBy' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let detail of filteredDetails; let i = index; trackBy: trackByDetail">
+                <td>{{ i + 1 }}</td>
+                <td>{{ detail.familyCode }}</td>
+                <td>{{ detail.charityName }}</td>
+                <td>{{ detail.regionName }}</td>
+                <td>{{ detail.allocationAmount | number }}</td>
+                <td [class.text-success]="detail.isDistributed">{{ detail.isDistributed ? (detail.distributedAmount | number) : '—' }}</td>
+                <td>{{ detail.distributionDate ? (detail.distributionDate | date:'mediumDate') : '—' }}</td>
+                <td>{{ detail.receivedBy || '—' }}</td>
+              </tr>
+              <tr *ngIf="filteredDetails.length === 0">
+                <td colspan="8" class="text-center py-4 text-muted">{{ 'seasonalAid.noFilteredRows' | translate }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

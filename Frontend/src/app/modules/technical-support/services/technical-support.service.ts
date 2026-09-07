@@ -1,24 +1,31 @@
 import { Injectable } from '@angular/core';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, map } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import {
   SupportTicket,
   CreateTicketRequest,
+  UpdateTicketRequest,
   UpdateTicketStatusRequest,
   MarkTicketSolvedRequest,
   AddTicketResponseRequest,
+  TicketResponse,
   TicketSearchRequest,
-  TicketListResponse,
+  TicketLookups,
   SupportReportRequest,
   SupportReport
 } from '../../../core/models/technical-support.model';
-import { ApiResponse, PagedResponse } from '../../../core/models/common.model';
+import { PagedResponse } from '../../../core/models/common.model';
 
+/**
+ * Technical Support service — wired to the real SupportTicketsController
+ * (route api/SupportTickets). Responses are bare DTOs; the controller does not
+ * use the ApiResponse envelope, so never read `.value` off a response here.
+ */
 @Injectable({
   providedIn: 'root'
 })
 export class TechnicalSupportService {
-  private readonly endpoint = '/api/technicalsupport';
+  private readonly endpoint = '/api/SupportTickets';
   private ticketsUpdated = new BehaviorSubject<number>(0);
   ticketsUpdated$ = this.ticketsUpdated.asObservable();
 
@@ -30,176 +37,109 @@ export class TechnicalSupportService {
 
   // Ticket CRUD Operations
   getMyTickets(search: TicketSearchRequest): Observable<PagedResponse<SupportTicket>> {
-    return this.api.get(`${this.endpoint}/mytickets`, search);
+    return this.api
+      .get<any>(`${this.endpoint}/my-tickets`, search)
+      .pipe(map(res => this.toPagedResponse(res, search)));
   }
 
   getAllTickets(search: TicketSearchRequest): Observable<PagedResponse<SupportTicket>> {
-    return this.api.get(`${this.endpoint}`, search);
+    return this.api
+      .get<any>(`${this.endpoint}/all-tickets`, search)
+      .pipe(map(res => this.toPagedResponse(res, search)));
   }
 
   getTicketById(id: string): Observable<SupportTicket> {
-    return this.api.get(`${this.endpoint}/${id}`);
+    return this.api.get<SupportTicket>(`${this.endpoint}/${id}`);
   }
 
-  createTicket(request: CreateTicketRequest): Observable<ApiResponse<SupportTicket>> {
-    const formData = this.createTicketFormData(request);
-    return this.api.post(`${this.endpoint}`, formData);
+  createTicket(request: CreateTicketRequest): Observable<SupportTicket> {
+    return this.api.post<SupportTicket>(`${this.endpoint}`, request);
   }
 
+  updateTicket(id: string, request: UpdateTicketRequest): Observable<SupportTicket> {
+    return this.api.put<SupportTicket>(`${this.endpoint}/${id}`, request);
+  }
+
+  deleteTicket(id: string): Observable<void> {
+    return this.api.delete<void>(`${this.endpoint}/${id}`);
+  }
+
+  // Ticket form lookups
+  getTicketLookups(): Observable<TicketLookups> {
+    return this.api.get<TicketLookups>(`${this.endpoint}/lookups`);
+  }
+
+  // Status / resolution management
   updateTicketStatus(
     id: string,
     request: UpdateTicketStatusRequest
-  ): Observable<ApiResponse<SupportTicket>> {
-    return this.api.patch(`${this.endpoint}/${id}/status`, request);
+  ): Observable<{ message: string }> {
+    return this.api.put<{ message: string }>(`${this.endpoint}/${id}/status`, {
+      ticketId: id,
+      statusId: request.statusId,
+      statusNote: request.statusNote
+    });
   }
 
   markTicketAsSolved(
     id: string,
     request: MarkTicketSolvedRequest
-  ): Observable<ApiResponse<SupportTicket>> {
-    const formData = this.createSolvedFormData(request);
-    return this.api.patch(`${this.endpoint}/${id}/solve`, formData);
-  }
-
-  closeTicket(id: string): Observable<ApiResponse<SupportTicket>> {
-    return this.api.patch(`${this.endpoint}/${id}/close`, {});
-  }
-
-  deleteTicket(id: string): Observable<ApiResponse<boolean>> {
-    return this.api.delete(`${this.endpoint}/${id}`);
+  ): Observable<{ message: string }> {
+    return this.api.post<{ message: string }>(`${this.endpoint}/${id}/mark-solved`, {
+      ticketId: id,
+      resolutionDescription: request.resolutionDescription,
+      solutionSteps: request.solutionSteps
+    });
   }
 
   // Ticket Responses
-  addTicketResponse(
-    id: string,
-    request: AddTicketResponseRequest
-  ): Observable<ApiResponse<SupportTicket>> {
-    const formData = this.createResponseFormData(request);
-    return this.api.post(`${this.endpoint}/${id}/responses`, formData);
-  }
-
-  getTicketResponses(id: string): Observable<any> {
-    return this.api.get(`${this.endpoint}/${id}/responses`);
-  }
-
-  deleteTicketResponse(ticketId: string, responseId: string): Observable<ApiResponse<boolean>> {
-    return this.api.delete(`${this.endpoint}/${ticketId}/responses/${responseId}`);
-  }
-
-  // Ticket Attachments
-  uploadTicketAttachment(ticketId: string, file: File, description?: string): Observable<any> {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (description) {
-      formData.append('description', description);
-    }
-    return this.api.post(`${this.endpoint}/${ticketId}/attachments`, formData);
-  }
-
-  downloadTicketAttachment(ticketId: string, attachmentId: string): Observable<Blob> {
-    return this.api.download(`${this.endpoint}/${ticketId}/attachments/${attachmentId}`);
-  }
-
-  deleteTicketAttachment(ticketId: string, attachmentId: string): Observable<ApiResponse<boolean>> {
-    return this.api.delete(`${this.endpoint}/${ticketId}/attachments/${attachmentId}`);
-  }
-
-  // Ticket Assignment
-  assignTicket(ticketId: string, userId: string): Observable<ApiResponse<SupportTicket>> {
-    return this.api.post(`${this.endpoint}/${ticketId}/assign`, { userId });
-  }
-
-  unassignTicket(ticketId: string): Observable<ApiResponse<SupportTicket>> {
-    return this.api.post(`${this.endpoint}/${ticketId}/unassign`, {});
-  }
-
-  // Search and Filter
-  searchTickets(search: TicketSearchRequest): Observable<PagedResponse<SupportTicket>> {
-    return this.api.get(`${this.endpoint}/search`, search);
-  }
-
-  getTicketCategories(): Observable<string[]> {
-    return this.api.get(`${this.endpoint}/categories`);
-  }
-
-  getTicketPriorities(): Observable<string[]> {
-    return this.api.get(`${this.endpoint}/priorities`);
-  }
-
-  getTicketStatuses(): Observable<string[]> {
-    return this.api.get(`${this.endpoint}/statuses`);
+  addTicketResponse(id: string, request: AddTicketResponseRequest): Observable<TicketResponse> {
+    return this.api.post<TicketResponse>(`${this.endpoint}/${id}/responses`, {
+      ticketId: id,
+      responseText: request.responseText,
+      isInternalNote: request.isInternalNote
+    });
   }
 
   // Reports
   generateReport(request: SupportReportRequest): Observable<SupportReport> {
-    return this.api.post(`${this.endpoint}/reports`, request);
-  }
-
-  exportTicketsToExcel(search: TicketSearchRequest): Observable<Blob> {
-    return this.api.getBlob(`${this.endpoint}/export/excel`, search);
-  }
-
-  exportTicketsToPDF(search: TicketSearchRequest): Observable<Blob> {
-    return this.api.getBlob(`${this.endpoint}/export/pdf`, search);
+    return this.api.post<SupportReport>(`${this.endpoint}/report`, request);
   }
 
   // Statistics
-  getTicketStatistics(): Observable<any> {
-    return this.api.get(`${this.endpoint}/statistics`);
+  getMyTicketsCount(): Observable<number> {
+    return this.api.get<number>(`${this.endpoint}/my-tickets/count`);
   }
 
-  getMyTicketStatistics(): Observable<any> {
-    return this.api.get(`${this.endpoint}/mytickets/statistics`);
+  getAllTicketsCount(): Observable<number> {
+    return this.api.get<number>(`${this.endpoint}/all-tickets/count`);
   }
 
-  // Helper Methods
-  private createTicketFormData(request: CreateTicketRequest): FormData {
-    const formData = new FormData();
-    formData.append('title', request.title);
-    formData.append('message', request.message);
-    formData.append('category', request.category);
-    formData.append('priority', request.priority);
-
-    if (request.attachedFile) {
-      formData.append('attachedFile', request.attachedFile);
-    }
-    if (request.browserInfo) {
-      formData.append('browserInfo', request.browserInfo);
-    }
-    if (request.pageUrl) {
-      formData.append('pageUrl', request.pageUrl);
-    }
-    if (request.userAction) {
-      formData.append('userAction', request.userAction);
-    }
-
-    return formData;
+  getUnsolvedTicketsCount(): Observable<number> {
+    return this.api.get<number>(`${this.endpoint}/unsolved/count`);
   }
 
-  private createSolvedFormData(request: MarkTicketSolvedRequest): FormData {
-    const formData = new FormData();
-    formData.append('resolutionDescription', request.resolutionDescription);
-
-    if (request.solutionSteps) {
-      formData.append('solutionSteps', request.solutionSteps);
-    }
-    if (request.attachment) {
-      formData.append('attachment', request.attachment);
-    }
-
-    return formData;
-  }
-
-  private createResponseFormData(request: AddTicketResponseRequest): FormData {
-    const formData = new FormData();
-    formData.append('responseText', request.responseText);
-    formData.append('isInternal', request.isInternal.toString());
-
-    if (request.attachment) {
-      formData.append('attachment', request.attachment);
-    }
-
-    return formData;
+  /**
+   * The list endpoints return Ok(new { result.Items, result.TotalCount }),
+   * which serializes as { items: [...], totalCount: N } (Newtonsoft camelCase).
+   */
+  private toPagedResponse(
+    payload: { items?: SupportTicket[]; totalCount?: number } | null,
+    search: TicketSearchRequest
+  ): PagedResponse<SupportTicket> {
+    const items = payload?.items ?? [];
+    const totalCount = payload?.totalCount ?? 0;
+    const pageNumber = search?.pageNumber ?? 1;
+    const pageSize = search?.pageSize ?? 10;
+    return {
+      items,
+      totalCount,
+      pageNumber,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
+      hasPrevious: pageNumber > 1,
+      hasNext: pageNumber * pageSize < totalCount
+    };
   }
 
   // Browser Information Detection

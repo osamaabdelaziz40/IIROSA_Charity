@@ -1,50 +1,44 @@
 /**
- * Mission List Component
- * Displays missions in a grid with filtering, search, and status dashboard
- * Implements UC-8.10 (View Mission List) and UC-8.13 (Track Mission Status)
+ * Mission List Component (epic 15, UC-MSN-01/02)
+ * The §20.S.1 register: charity + date filters, 13-column grid, serial numbering.
+ * Loads via my-missions (caller-scoped register read); بحث re-queries GET /api/MissionManagement.
  */
 
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { MissionService } from '../services/mission.service';
-import {
-  Mission,
-  MissionSearchRequest,
-  MissionStatusCounts
-} from '../models/mission.model';
-import { PaginationComponent, BreadcrumbComponent, PageHeaderComponent, BreadcrumbItem } from '../../../shared/components';
+import { Mission, MissionSearchRequest } from '../models/mission.model';
+import { CharityService } from '../../charities/services/charity.service';
+import { CharityDto } from '../../charities/models/charity.model';
+import { UserManagementService } from '../../user-management/services/user-management.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { PaginationComponent, BreadcrumbComponent, PageHeaderComponent, BreadcrumbItem, DropDownComponent } from '../../../shared/components';
 import type { PageAction } from '../../../shared/components/page-header/page-header.component';
 
 @Component({
   selector: 'app-mission-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, PaginationComponent, BreadcrumbComponent, PageHeaderComponent],
+  imports: [CommonModule, ReactiveFormsModule, TranslateModule, PaginationComponent, BreadcrumbComponent, PageHeaderComponent, DropDownComponent],
   templateUrl: './mission-list.component.html',
   styleUrls: ['./mission-list.component.scss']
 })
 export class MissionListComponent implements OnInit, OnDestroy {
-  // Expose Math to template for pagination calculations
-  Math = Math;
   private destroy$ = new Subject<void>();
 
   // Data
   missions: Mission[] = [];
-  statusCounts: MissionStatusCounts = {
-    pending: 0,
-    inProgress: 0,
-    completed: 0,
-    overdue: 0
-  };
+  charities: CharityDto[] = [];
+  users: Array<{ id: string; fullName?: string; userName?: string; email?: string }> = [];
 
   // Loading states
   loading = false;
-  statusLoading = false;
 
   // Pagination
   currentPage = 1;
@@ -52,24 +46,16 @@ export class MissionListComponent implements OnInit, OnDestroy {
   totalCount = 0;
   totalPages = 0;
 
-  // Filters
-  search = '';
-  selectedMissionType?: number;
-  selectedMissionTimeType?: number;
-  selectedStatus?: string; // 'all', 'pending', 'completed', 'overdue'
-  selectedCountry?: number;
-  selectedRegion?: number;
-  selectedCenter?: number;
-  selectedAssignedTo?: string;
-  dateFrom?: Date;
-  dateTo?: Date;
+  // §20.S.1 filters: الجمعية + من تاريخ / الي تاريخ — bound to filterForm
+  // (charities-list pattern; the shared select2 drop-down needs a FormGroup).
+  filterForm: FormGroup;
 
-  // Show my missions only
-  showMyMissionsOnly = false;
+  // Select2 option array ({id, name}) fed to app-drop-down.
+  charityOptions: Array<{ id: string; name: string }> = [];
+  userOptions: Array<{ id: string; name: string }> = [];
 
-  // Sort
-  sortColumn = 'missionDate';
-  sortDirection: 'asc' | 'desc' = 'asc';
+  /** Sentinel id meaning "all" for the charity/user filter drop-downs — maps to no filter. */
+  private static readonly ALL = 'all';
 
   // Breadcrumb items
   breadcrumbs: BreadcrumbItem[] = [
@@ -81,31 +67,47 @@ export class MissionListComponent implements OnInit, OnDestroy {
   pageActions: PageAction[] = [
     {
       label: 'missions.addMission',
-      icon: 'fe fe-plus',
+      icon: 'fe-plus',
       type: 'primary',
       click: () => this.createMission()
-    },
-    {
-      label: 'missions.myMissions',
-      icon: 'fe fe-user',
-      click: () => this.toggleMyMissions()
-    },
-    {
-      label: 'missions.exportToExcel',
-      icon: 'fe fe-download',
-      click: () => this.exportToExcel()
     }
   ];
 
   constructor(
+    private fb: FormBuilder,
     protected missionService: MissionService,
+    protected charityService: CharityService,
+    protected userManagementService: UserManagementService,
+    protected auth: AuthService,
     protected router: Router,
-    protected translate: TranslateService
-  ) {}
+    protected translate: TranslateService,
+    protected notification: NotificationService
+  ) {
+    this.filterForm = this.fb.group({
+      charityId: [MissionListComponent.ALL],
+      assignedToUserId: [MissionListComponent.ALL],
+      search: [''],
+      dateFrom: [''],
+      dateTo: ['']
+    });
+  }
 
   ngOnInit(): void {
+    this.buildCharityOptions();
+    this.buildUserOptions();
+    this.loadCharities();
+    this.loadUsers();
     this.loadMissions();
-    this.loadStatusCounts();
+
+    // The "كافة الجهات"/"كافة المستخدمين" option labels are pre-translated
+    // (app-drop-down renders raw text), so a language switch needs a rebuild —
+    // the translate pipe can't refresh them.
+    this.translate.onLangChange
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.buildCharityOptions();
+        this.buildUserOptions();
+      });
   }
 
   ngOnDestroy(): void {
@@ -114,22 +116,129 @@ export class MissionListComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Load missions with current filters
+   * UC-MSN-08: deletion is the General Director's alone. The endpoint enforces it; this
+   * only keeps the button from offering an action the server would refuse.
+   */
+  get canDelete(): boolean {
+    return this.auth.hasPermission('Missions.Delete');
+  }
+
+  /**
+   * Load charities for the filter drop-down
+   */
+  loadCharities(): void {
+    this.charityService.getCharities({ pageNumber: 1, pageSize: 1000, isActive: true })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.charities = result.items || [];
+          this.buildCharityOptions();
+        },
+        error: () => {
+          // The filter degrades to كافة الجهات only — not fatal
+          this.charities = [];
+          this.buildCharityOptions();
+        }
+      });
+  }
+
+  /** Filter options — an explicit "كافة الجهات" sentinel first, then one entry per charity. */
+  private buildCharityOptions(): void {
+    this.charityOptions = [
+      { id: MissionListComponent.ALL, name: this.translate.instant('missions.allCharities') },
+      ...this.charities.map(c => ({ id: c.id, name: c.name }))
+    ];
+  }
+
+  /**
+   * Load users for the assigned-to filter drop-down — the same identity store the
+   * create form's picker uses (/api/usermanagement), so every offered value matches
+   * an FK_UserId the register can actually hold.
+   */
+  loadUsers(): void {
+    this.userManagementService.getUsers({ page: 1, pageSize: 1000 })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.users = result.items || [];
+          this.buildUserOptions();
+        },
+        error: () => {
+          // The filter degrades to كافة المستخدمين only — not fatal
+          this.users = [];
+          this.buildUserOptions();
+        }
+      });
+  }
+
+  /** Assigned-user filter options — a "كافة المستخدمين" sentinel first, then every user. */
+  private buildUserOptions(): void {
+    this.userOptions = [
+      { id: MissionListComponent.ALL, name: this.translate.instant('missions.allUsers') },
+      ...this.users.map(u => ({ id: u.id, name: u.fullName || u.userName || u.email }))
+    ];
+  }
+
+  /**
+   * Load the register (initial load + pagination) — the caller-scoped my-missions read
    */
   loadMissions(): void {
     this.loading = true;
 
+    const filters = this.filterForm.value;
     const request: MissionSearchRequest = {
-      search: this.search || undefined,
-      missionTypeId: this.selectedMissionType,
-      missionTimeTypeId: this.selectedMissionTimeType,
-      isCompleted: this.getCompletedFilter(),
-      countryId: this.selectedCountry,
-      regionId: this.selectedRegion,
-      centerId: this.selectedCenter,
-      assignedTo: this.showMyMissionsOnly ? this.getCurrentUserId() : this.selectedAssignedTo,
-      dateFrom: this.dateFrom,
-      dateTo: this.dateTo,
+      charityId: filters.charityId && filters.charityId !== MissionListComponent.ALL ? filters.charityId : undefined,
+      assignedToUserId: filters.assignedToUserId && filters.assignedToUserId !== MissionListComponent.ALL ? filters.assignedToUserId : undefined,
+      search: filters.search?.trim() || undefined,
+      dateFrom: filters.dateFrom || undefined,
+      dateTo: filters.dateTo || undefined,
+      page: this.currentPage,
+      pageSize: this.pageSize
+    };
+
+    this.missionService.getMyMissions(request)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.missions = response.items;
+          this.totalCount = response.totalCount;
+          this.totalPages = response.totalPages;
+          this.loading = false;
+        },
+        error: () => {
+          this.loading = false;
+          this.notification.error(this.translate.instant('missions.loadFailed'));
+        }
+      });
+  }
+
+  /**
+   * Serial column — continuous across pages (13-1 formula)
+   */
+  serial(index: number): number {
+    return (this.currentPage - 1) * this.pageSize + index + 1;
+  }
+
+  /**
+   * بحث (UC-MSN-02): date-range search against GET /api/MissionManagement. Inverted
+   * ranges are refused client-side with a translated message; the server tolerates them.
+   */
+  onSearch(): void {
+    const filters = this.filterForm.value;
+    if (filters.dateFrom && filters.dateTo && filters.dateFrom > filters.dateTo) {
+      this.notification.error(this.translate.instant('missions.invalidDateRange'));
+      return;
+    }
+
+    this.currentPage = 1;
+    this.loading = true;
+
+    const request: MissionSearchRequest = {
+      charityId: filters.charityId && filters.charityId !== MissionListComponent.ALL ? filters.charityId : undefined,
+      assignedToUserId: filters.assignedToUserId && filters.assignedToUserId !== MissionListComponent.ALL ? filters.assignedToUserId : undefined,
+      search: filters.search?.trim() || undefined,
+      dateFrom: filters.dateFrom || undefined,
+      dateTo: filters.dateTo || undefined,
       page: this.currentPage,
       pageSize: this.pageSize
     };
@@ -145,256 +254,98 @@ export class MissionListComponent implements OnInit, OnDestroy {
         },
         error: () => {
           this.loading = false;
+          this.notification.error(this.translate.instant('missions.loadFailed'));
         }
       });
   }
 
   /**
-   * Load status counts for dashboard
+   * Clear both dates (and the charity filter) and return to the unfiltered register
    */
-  loadStatusCounts(): void {
-    this.statusLoading = true;
-
-    this.missionService.getMissionStatusCounts()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (counts) => {
-          this.statusCounts = counts;
-          this.statusLoading = false;
-        },
-        error: () => {
-          this.statusLoading = false;
-        }
-      });
+  clearFilters(): void {
+    this.filterForm.reset({
+      charityId: MissionListComponent.ALL,
+      assignedToUserId: MissionListComponent.ALL,
+      search: '',
+      dateFrom: '',
+      dateTo: ''
+    });
+    this.currentPage = 1;
+    this.loadMissions();
   }
 
-  /**
-   * Navigate to mission details
-   */
+  /** Any filter off its default? Drives the conditional Clear Filters button. */
+  hasActiveFilters(): boolean {
+    const filters = this.filterForm.value;
+    return !!(
+      (filters.charityId && filters.charityId !== MissionListComponent.ALL) ||
+      (filters.assignedToUserId && filters.assignedToUserId !== MissionListComponent.ALL) ||
+      filters.search?.trim() ||
+      filters.dateFrom ||
+      filters.dateTo
+    );
+  }
+
+  // ========== Actions (الاجراءات) ==========
+
   viewMission(id: string): void {
     this.router.navigate(['/missions', id]);
   }
 
-  /**
-   * Navigate to create mission
-   */
   createMission(): void {
     this.router.navigate(['/missions/create']);
   }
 
-  /**
-   * Navigate to edit mission
-   */
   editMission(id: string): void {
     this.router.navigate(['/missions', id, 'edit']);
   }
 
   /**
-   * Mark mission as completed
+   * UC-MSN-09 entry point — §20.S.1's RegisterMission(id) command
    */
-  markAsCompleted(mission: Mission): void {
-    const confirmed = confirm(this.translate.instant('missions.confirmComplete'));
-    if (!confirmed) return;
-
-    this.missionService.markAsCompleted(mission.id, {})
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.loadMissions();
-          this.loadStatusCounts();
-        },
-        error: () => {
-          // Error handling
-        }
-      });
+  registerResult(id: string): void {
+    this.router.navigate(['/missions', id, 'register']);
   }
 
   /**
-   * Delete mission
+   * UC-MSN-08 — confirm first; declining deletes nothing. Raw response: a successful
+   * delete returns 200 with no envelope, so there is nothing to map.
    */
-  deleteMission(id: string): void {
-    const confirmed = confirm(this.translate.instant('common.deleteConfirm'));
+  async deleteMission(id: string): Promise<void> {
+    const confirmed = await this.notification.confirm(
+      this.translate.instant('missions.confirmDelete'),
+      this.translate.instant('missions.deleteMission')
+    );
     if (!confirmed) return;
 
     this.missionService.deleteMission(id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
+          this.notification.success(this.translate.instant('missions.missionDeleted'));
+          // Deleting the last row of the last page would leave the list on a stale
+          // empty page — step back one page before reloading.
+          if (this.missions.length === 1 && this.currentPage > 1) {
+            this.currentPage--;
+          }
           this.loadMissions();
-          this.loadStatusCounts();
         },
         error: () => {
-          // Error handling
+          this.notification.error(this.translate.instant('missions.deleteFailed'));
         }
       });
   }
 
-  /**
-   * Toggle my missions view
-   */
-  toggleMyMissions(): void {
-    this.showMyMissionsOnly = !this.showMyMissionsOnly;
-    this.currentPage = 1;
-    this.loadMissions();
+  // ========== TrackBys ==========
+
+  trackMission(index: number, mission: Mission): string {
+    return mission.id;
   }
 
-  /**
-   * Apply all filters
-   */
-  applyFilters(): void {
-    this.currentPage = 1;
-    this.loadMissions();
-  }
+  // ========== Pagination ==========
 
-  /**
-   * Clear all filters
-   */
-  clearFilters(): void {
-    this.search = '';
-    this.selectedMissionType = undefined;
-    this.selectedMissionTimeType = undefined;
-    this.selectedStatus = undefined;
-    this.selectedCountry = undefined;
-    this.selectedRegion = undefined;
-    this.selectedCenter = undefined;
-    this.selectedAssignedTo = undefined;
-    this.dateFrom = undefined;
-    this.dateTo = undefined;
-    this.showMyMissionsOnly = false;
-    this.currentPage = 1;
-    this.loadMissions();
-  }
-
-  /**
-   * Handle search
-   */
-  onSearch(): void {
-    this.currentPage = 1;
-    this.loadMissions();
-  }
-
-  /**
-   * Handle page change
-   */
   onPageChange(page: number): void {
     this.currentPage = page;
     this.loadMissions();
-  }
-
-  /**
-   * Handle page size change
-   */
-  onPageSizeChange(size: number): void {
-    this.pageSize = size;
-    this.currentPage = 1;
-    this.loadMissions();
-  }
-
-  /**
-   * Handle sort
-   */
-  onSort(column: string): void {
-    if (this.sortColumn === column) {
-      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-      this.sortColumn = column;
-      this.sortDirection = 'asc';
-    }
-    this.loadMissions();
-  }
-
-  /**
-   * Export missions to Excel
-   */
-  exportToExcel(): void {
-    const request: MissionSearchRequest = {
-      search: this.search || undefined,
-      missionTypeId: this.selectedMissionType,
-      missionTimeTypeId: this.selectedMissionTimeType,
-      isCompleted: this.getCompletedFilter(),
-      countryId: this.selectedCountry,
-      regionId: this.selectedRegion,
-      centerId: this.selectedCenter,
-      assignedTo: this.showMyMissionsOnly ? this.getCurrentUserId() : this.selectedAssignedTo,
-      dateFrom: this.dateFrom,
-      dateTo: this.dateTo,
-      page: 1,
-      pageSize: this.totalCount // Export all filtered results
-    };
-
-    this.missionService.exportMissions(request)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (blob) => {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `missions_${new Date().toISOString().split('T')[0]}.xlsx`;
-          a.click();
-          window.URL.revokeObjectURL(url);
-        },
-        error: () => {
-          // Error handling
-        }
-      });
-  }
-
-  /**
-   * Get completed filter value
-   */
-  private getCompletedFilter(): boolean | undefined {
-    if (this.selectedStatus === 'pending') return false;
-    if (this.selectedStatus === 'completed') return true;
-    return undefined;
-  }
-
-  /**
-   * Get current user ID (placeholder - should get from AuthService)
-   */
-  private getCurrentUserId(): string {
-    // TODO: Get from AuthService
-    return '';
-  }
-
-  /**
-   * Check if mission is completed
-   */
-  isCompleted(mission: Mission): boolean {
-    return mission.isMissionCompleted;
-  }
-
-  /**
-   * Check if mission is overdue
-   */
-  isOverdue(mission: Mission): boolean {
-    if (mission.isMissionCompleted) return false;
-    const missionDate = new Date(mission.missionDate);
-    return missionDate < new Date();
-  }
-
-  /**
-   * Get mission status class
-   */
-  getStatusClass(mission: Mission): string {
-    if (mission.isMissionCompleted) return 'badge-success';
-    if (this.isOverdue(mission)) return 'badge-danger';
-    return 'badge-warning';
-  }
-
-  /**
-   * Get mission status text
-   */
-  getStatusText(mission: Mission): string {
-    if (mission.isMissionCompleted) return this.translate.instant('missions.completed');
-    if (this.isOverdue(mission)) return this.translate.instant('missions.overdue');
-    return this.translate.instant('missions.pending');
-  }
-
-  /**
-   * Get page range for pagination
-   */
-  getPageRange(): number[] {
-    // Now using shared pagination component
-    return [];
   }
 }

@@ -1,0 +1,219 @@
+- generic [ref=f136e5]:
+  - navigation [ref=f136e6]:
+    - button "" [ref=f136e401] [cursor=pointer]
+    - list [ref=f136e9]:
+      - listitem [ref=f136e10]:
+        - link "English " [ref=f136e402] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f136e403]: 
+          - text: English 
+      - listitem [ref=f136e12]:
+        - link "" [ref=f136e404] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f136e15]:
+        - link "" [ref=f136e405] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f136e18]:
+        - button [ref=f136e19] [cursor=pointer]:
+          - generic [ref=f136e20]:
+            - text: Welcome System Admin
+            - img "..." [ref=f136e21]
+          - text: 
+  - complementary [ref=f136e22]:
+    - generic [ref=f136e411]:
+      - text: 
+      - navigation [ref=f136e23]:
+        - link [ref=f136e25] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f136e26]
+        - paragraph [ref=f136e27]: Website Elements
+        - list [ref=f136e28]:
+          - listitem [ref=f136e29]:
+            - link " Home Page (current) " [ref=f136e412] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f136e413]: 
+              - generic [ref=f136e31]: Home Page
+              - generic [ref=f136e32]: (current)
+              - text: 
+            - list [ref=f136e33]:
+              - listitem [ref=f136e34]:
+                - link "Home" [ref=f136e35] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f136e36]:
+            - link " Users " [ref=f136e414] [cursor=pointer]:
+              - /url: "#user-management"
+              - generic [ref=f136e415]: 
+              - generic [ref=f136e38]: Users
+              - text: 
+          - listitem [ref=f136e39]:
+            - link " Employees " [ref=f136e416] [cursor=pointer]:
+              - /url: "#employees"
+              - generic [ref=f136e417]: 
+              - generic [ref=f136e41]: Employees
+              - text: 
+          - listitem [ref=f136e42]:
+            - link " NGOs " [ref=f136e418] [cursor=pointer]:
+              - /url: "#charities"
+              - generic [ref=f136e419]: 
+              - generic [ref=f136e44]: NGOs
+              - text: 
+          - listitem [ref=f136e45]:
+            - link " Office Projects " [ref=f136e420] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f136e421]: 
+              - generic [ref=f136e47]: Office Projects
+              - text: 
+          - listitem [ref=f136e48]:
+            - link " Housing Projects " [ref=f136e422] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f136e423]: 
+              - generic [ref=f136e50]: Housing Projects
+              - text: 
+          - listitem [ref=f136e51]:
+            - link " Seasonal Aid " [ref=f136e424] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f136e425]: 
+              - generic [ref=f136e53]: Seasonal Aid
+              - text: 
+          - listitem [ref=f136e54]:
+            - link " Incoming & Outgoing " [ref=f136e426] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f136e427]: 
+              - generic [ref=f136e56]: Incoming & Outgoing
+              - text: 
+            - list [ref=f136e1286]:
+              - listitem [ref=f136e1287]:
+                - link "Incoming Letters" [ref=f136e1288] [cursor=pointer]:
+                  - /url: "#/incoming-outgoing/incoming"
+              - listitem [ref=f136e1289]:
+                - link "Outgoing Letters" [ref=f136e1290] [cursor=pointer]:
+                  - /url: "#/incoming-outgoing/outgoing"
+              - listitem [ref=f136e1291]:
+                - link "Attach Employees to Incoming Letter" [ref=f136e1292] [cursor=pointer]:
+                  - /url: "#/incoming-outgoing/export/incoming"
+              - listitem [ref=f136e1293]:
+                - link "Attach Orphan Reports to Outgoing Letter" [ref=f136e1294] [cursor=pointer]:
+                  - /url: "#/incoming-outgoing/export/outgoing"
+              - listitem [ref=f136e1295]:
+                - link "Orphans by Outgoing Letter Report" [ref=f136e1296] [cursor=pointer]:
+                  - /url: "#/incoming-outgoing/export/outgoing-orphans"
+          - listitem [ref=f136e57]:
+            - link " Orphan Payments " [ref=f136e428] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f136e429]: 
+              - generic [ref=f136e59]: Orphan Payments
+              - text: 
+          - listitem [ref=f136e60]:
+            - link " Families " [ref=f136e430] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f136e431]: 
+              - generic [ref=f136e62]: Families
+              - text: 
+          - listitem [ref=f136e63]:
+            - link " Reports " [ref=f136e432] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f136e433]: 
+              - generic [ref=f136e65]: Reports
+              - text: 
+          - listitem [ref=f136e66]:
+            - link " General Cheques " [ref=f136e434] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f136e435]: 
+              - generic [ref=f136e68]: General Cheques
+              - text: 
+          - listitem [ref=f136e69]:
+            - link " Missions " [ref=f136e436] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f136e437]: 
+              - generic [ref=f136e71]: Missions
+              - text: 
+          - listitem [ref=f136e72]:
+            - link " Periodic Orphan Reports " [ref=f136e438] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f136e439]: 
+              - generic [ref=f136e74]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=f136e75]:
+            - link " Financial Transfers " [ref=f136e440] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f136e441]: 
+              - generic [ref=f136e77]: Financial Transfers
+              - text: 
+          - listitem [ref=f136e78]:
+            - link " Technical Support " [ref=f136e442] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f136e443]: 
+              - generic [ref=f136e80]: Technical Support
+              - text: 
+          - listitem [ref=f136e81]:
+            - link " Lookup Management " [ref=f136e444] [cursor=pointer]:
+              - /url: "#lookup-management"
+              - generic [ref=f136e445]: 
+              - generic [ref=f136e83]: Lookup Management
+              - text: 
+  - main [ref=f136e84]:
+    - generic [ref=f136e1398]:
+      - navigation "breadcrumb" [ref=f136e1400]:
+        - list [ref=f136e1401]:
+          - listitem [ref=f136e1402]:
+            - link "Home" [ref=f136e1403] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=f136e1404]:
+            - text: /
+            - generic [ref=f136e1405]: Outgoing Letters
+      - generic [ref=f136e1407]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f136e1408]:
+          - generic [ref=f136e1409]:
+            - generic [ref=f136e1410]: 
+            - generic [ref=f136e1411]:
+              - heading "Outgoing Letters" [level=3] [ref=f136e1412]
+              - paragraph [ref=f136e1413]: Manage outgoing letters
+          - generic [ref=f136e1414]:
+            - button "Add Outgoing Letter" [ref=f136e1415] [cursor=pointer]:
+              - generic [ref=f136e1416]: 
+              - text: Add Outgoing Letter
+            - button "Attach Orphan Reports to Outgoing Letter" [ref=f136e1417] [cursor=pointer]:
+              - generic [ref=f136e1418]: 
+              - text: Attach Orphan Reports to Outgoing Letter
+            - button "Orphans by Outgoing Letter Report" [ref=f136e1419] [cursor=pointer]:
+              - generic [ref=f136e1420]: 
+              - text: Orphans by Outgoing Letter Report
+            - button "Extract page" [ref=f136e1421] [cursor=pointer]:
+              - generic [ref=f136e1422]: 
+              - text: Extract page
+            - button "Extract all" [ref=f136e1423] [cursor=pointer]:
+              - generic [ref=f136e1424]: 
+              - text: Extract all
+      - generic [ref=f136e1427]:
+        - generic [ref=f136e1428]:
+          - generic [ref=f136e1430]:
+            - generic [ref=f136e1431]: Subject
+            - textbox "Search by subject or serial..." [ref=f136e1432]
+          - generic [ref=f136e1434]:
+            - generic [ref=f136e1435]: Serial
+            - spinbutton [ref=f136e1436]
+          - generic [ref=f136e1437]: Status
+          - generic [ref=f136e1441]: Outgoing Category
+        - generic [ref=f136e1445]:
+          - generic [ref=f136e1446]: Department
+          - generic [ref=f136e1451]:
+            - generic [ref=f136e1452]: Date from
+            - textbox [ref=f136e1453]
+          - generic [ref=f136e1455]:
+            - generic [ref=f136e1456]: Date to
+            - textbox [ref=f136e1457]
+          - generic [ref=f136e1459]:
+            - generic [ref=f136e1460]: Year
+            - spinbutton [ref=f136e1461]
+        - button " Search" [ref=f136e1464] [cursor=pointer]:
+          - generic [ref=f136e1465]: 
+          - text: Search
+      - status [ref=f136e1469] [cursor=pointer]:
+        - generic [ref=f136e1470]: Loading...
+  - contentinfo [ref=f136e394]:
+    - generic [ref=f136e396]:
+      - paragraph [ref=f136e398]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f136e400]: Version 1.0.0

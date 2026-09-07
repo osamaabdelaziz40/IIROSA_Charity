@@ -35,7 +35,9 @@ public class OrphanReportsController : ControllerBase
     /// Admin/Super Admin see all orphans with optional charity filter
     /// </summary>
     [HttpPost("generate")]
-    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
+    // Review D1 2026-08-24: story role tables list Accountant/Employee as HQ roles for
+    // UC-ORR-10/11/15 — aligned with the frontend PeriodicReports.View map.
+    [Authorize(Roles = "SuperAdmin,Admin,Charity,Accountant,Employee")]
     [ProducesResponseType(typeof(OrphanReportResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<OrphanReportResultDto>> GenerateReport([FromBody] OrphanReportFilterDto filter)
@@ -51,6 +53,15 @@ public class OrphanReportsController : ControllerBase
 
             var report = await _orphanReportService.GenerateReportAsync(filter);
             return Ok(report);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("refusing unscoped query"))
+        {
+            // Review P3 2026-08-24: claim-less caller — fail closed, not a 500.
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -318,7 +329,8 @@ public class OrphanReportsController : ControllerBase
     /// Get orphan statistics for dashboard
     /// </summary>
     [HttpPost("statistics")]
-    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
+    // Review D1 2026-08-24: shared 9-10/9-15 endpoint — see generate note above.
+    [Authorize(Roles = "SuperAdmin,Admin,Charity,Accountant,Employee")]
     [ProducesResponseType(typeof(OrphanStatisticsDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<OrphanStatisticsDto>> GetOrphanStatistics([FromBody] OrphanReportFilterDto filter)
     {
@@ -326,6 +338,15 @@ public class OrphanReportsController : ControllerBase
         {
             var statistics = await _orphanReportService.GetOrphanStatisticsAsync(filter);
             return Ok(statistics);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("refusing unscoped query"))
+        {
+            // Review P3 2026-08-24: claim-less caller — fail closed, not a 500.
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {

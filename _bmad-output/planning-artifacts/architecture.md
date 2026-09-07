@@ -367,6 +367,29 @@ These were inherited with the copy and are **not** approved architecture:
 - `src/IIROSA.Infrastructure/Repositories/` is an empty folder that shadows the real
   `Data/Repository/`. Delete it, or it will attract misplaced files.
 
+### Ratified platform rulings — epic-18 review, 2026-08-26 (§10 D1)
+
+The epic-18 delivery recorded a set of "code wins" story rulings that sit against the binding
+convention table. The 2026-08-26 code review escalated them as D1; the platform owner ratified
+the set platform-wide. Where the CLAUDE.md table and the rulings below disagree, **the ruling
+below wins until formally overturned**:
+
+| # | Ruling | Scope note |
+| --- | --- | --- |
+| R1 | Reports endpoints return **raw paged/JSON envelopes**, not `ApiResponse<T>`, where a story recorded that shape | Applies to epic-18 report reads. Mixed error shapes *inside one controller* were normalized in the review patch — new endpoints pick one error shape per controller |
+| R2 | `DashboardController : ControllerBase` | The 17-1 convention; do not "fix" toward `ApiController` on touch |
+| R3 | Report screens may omit `OnPush` | Perf posture, not a control; new screens prefer OnPush but its absence is not a defect |
+| R4 | Report screens bypass `data-list` / `input-fields` | Bespoke grids are accepted for report projections; CRUD modules still use the shared components |
+| R5 | Hand projections over AutoMapper in report services | The 25+ hand projections stand; AutoMapper remains the mapper for entity↔DTO elsewhere |
+| R6 | `NameAr`/`NameEn` flattened server-side into single display strings | Report DTO contract; bilingual charity names remain blocked by DF4 (entity lacks the columns) |
+| R7 | Auth interceptor leaves 403 unhandled | As designed (18-40/18-41 AC5 as written is superseded); the endpoint `[Authorize]` is the control |
+| R8 | **Client-side print + ExcelJS** supersede a server PDF/Excel pipeline | Epic-wide recorded path; `POST {reportKey}/export/pdf` returns a print payload (JSON) and has a live consumer — kept, not renamed |
+| R9 | 18-33 bank field omitted from the bank-file contract | In-story AC relaxation stands (recorded) |
+
+Not ratified: hard-coded English server strings (P16) — deferred to a platform message-catalog
+decision; the tenancy fail-closed ladder (P1) and the review's security fixes are **binding
+direction**, not deviations.
+
 ---
 
 ## 11. Target scope

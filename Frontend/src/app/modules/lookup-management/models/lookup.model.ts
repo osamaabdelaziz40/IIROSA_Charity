@@ -49,6 +49,12 @@ export interface CountryDto extends LookupDto {
   flagIcon?: string;
   regionCount?: number;
   centerCount?: number;
+  /** UC-TRF-06/07 per-country transfer ceiling — null/absent = unlimited */
+  maxTransferAmount?: number | null;
+  /** UC-SYS-11 NID regex rule — null/absent = no rule, input stays free-form */
+  nationalIdPattern?: string | null;
+  /** UC-SYS-11 NID exact length rule — null/absent = no rule */
+  nationalIdLength?: number | null;
 }
 
 export interface CreateCountryDto {

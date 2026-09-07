@@ -25,6 +25,17 @@ public interface ISeasonalAidCampaignRepository : IRepository<SeasonalAidCampaig
         bool? isClosed = null, int? countryId = null, int? regionId = null,
         int? centerId = null, Guid? charityId = null);
 
+    // Paged variant with the full filter surface. The DTO-typed overload lives on the concrete
+    // class only — Domain interfaces cannot reference Application DTOs — so callers go through
+    // these primitives, named-argument style, same as ICharityRepository.GetFilteredPaginatedAsync.
+    Task<(IEnumerable<SeasonalAidCampaign> Items, int TotalCount)> GetFilteredPaginatedAsync(
+        string? searchTerm = null, string? campaignType = null, bool? isActive = null,
+        bool? isClosed = null, int? countryId = null, int? regionId = null,
+        int? centerId = null, Guid? charityId = null,
+        DateTime? startDateFrom = null, DateTime? startDateTo = null,
+        DateTime? endDateFrom = null, DateTime? endDateTo = null,
+        int pageNumber = 1, int pageSize = 10, string? sortBy = null, bool sortDescending = false);
+
     // Specific Queries
     Task<bool> IsNameUniqueAsync(string name, Guid? excludeId = null);
     Task<bool> ExistsAsync(Guid id);

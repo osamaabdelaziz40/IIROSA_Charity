@@ -12,7 +12,8 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { MissionService } from '../services/mission.service';
-import { Mission } from '../models/mission.model';
+import { MissionDetail } from '../models/mission.model';
+import { AuthService } from '../../../core/services/auth.service';
 import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
 
 @Component({
@@ -32,7 +33,7 @@ export class MissionDetailComponent implements OnInit, OnDestroy {
     { label: 'missions.details' }
   ];
 
-  mission: Mission | null = null;
+  mission: MissionDetail | null = null;
   loading = false;
   error: string | null = null;
 
@@ -40,7 +41,8 @@ export class MissionDetailComponent implements OnInit, OnDestroy {
     private missionService: MissionService,
     private route: ActivatedRoute,
     private router: Router,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private auth: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -95,24 +97,12 @@ export class MissionDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Mark mission as completed
+   * UC-MSN-09 entry — the register-result screen
    */
-  markAsCompleted(): void {
-    if (!this.mission) return;
-
-    const confirmed = confirm(this.translate.instant('missions.confirmComplete'));
-    if (!confirmed) return;
-
-    this.missionService.markAsCompleted(this.mission.id, {})
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.loadMission();
-        },
-        error: () => {
-          // Error handling
-        }
-      });
+  registerResult(): void {
+    if (this.mission && !this.mission.isMissionCompleted) {
+      this.router.navigate(['/missions', this.mission.id, 'register']);
+    }
   }
 
   /**
@@ -123,10 +113,10 @@ export class MissionDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Check if mission can be marked as completed
+   * Whether the register-result action is offered (UC-MSN-09, Missions.Edit holders)
    */
-  canMarkCompleted(): boolean {
-    return this.mission !== null && !this.mission.isMissionCompleted;
+  canRegister(): boolean {
+    return this.canEdit() && this.auth.hasPermission('Missions.Edit');
   }
 
   /**

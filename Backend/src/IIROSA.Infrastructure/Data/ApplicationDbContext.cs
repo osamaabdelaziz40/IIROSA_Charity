@@ -90,6 +90,15 @@ public class ApplicationDbContext : BaseDbContext<ApplicationDbContext>, IAppDbC
         // Auto-discover and apply all entity configurations from IIROSA.Domain assembly
         builder.ApplyConfigurationsFromAssembly(typeof(FullAuditedEntity).Assembly);
 
+        // ApplicationUser reaches this model only through navigations (Mission.AssignedUser).
+        // By convention it mapped to dbo.ApplicationUser — an empty duplicate of the users table
+        // that drifted behind the entity (no CharityId/CountryId columns), so every assignee join
+        // failed with "Invalid column name". The live users live in the identity schema table
+        // owned by AppIdentityDbContext; map the entity to THAT table and keep this context's
+        // migrations away from it — the identity context owns its schema.
+        builder.Entity<Framework.Identity.Data.Entities.ApplicationUser>()
+            .ToTable("Users", "identity", t => t.ExcludeFromMigrations());
+
         // Note: Framework entities are configured in their respective DbContexts:
         // - User/Role management: AppIdentityDbContext (Framework.Identity)
         // - Attachment, SystemSetting, NotificationTemplate: CommonsDbContext (Framework.Core)

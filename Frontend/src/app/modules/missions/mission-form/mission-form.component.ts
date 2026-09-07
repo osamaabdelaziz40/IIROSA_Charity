@@ -1,7 +1,11 @@
 /**
- * Mission Form Component
- * Create or edit mission form with validation
- * Implements UC-8.1 (Create Mission) and UC-8.7 (Update Mission Details)
+ * Mission Form Component (epic 15, UC-MSN-06/07 — §20.S.2)
+ * Create/update a mission. All catalogues load from real endpoints: mission types
+ * (15-3), interview types (15-4), time types (15-5), countries/regions/centers
+ * (LookupManagement), all users (الموظف المسئول — /api/usermanagement).
+ * Every select is the shared app-drop-down (Select2), matching the
+ * office-development-projects form; catalogue labels are language-aware
+ * (nameAr in Arabic mode, nameEn in English mode).
  */
 
 import { Component, OnInit, OnDestroy } from '@angular/core';
@@ -14,23 +18,30 @@ import { takeUntil } from 'rxjs/operators';
 
 import { MissionService } from '../services/mission.service';
 import {
-  Mission,
+  MissionDetail,
   CreateMissionRequest,
-  UpdateMissionRequest
+  UpdateMissionRequest,
+  MissionLookupItem
 } from '../models/mission.model';
+import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
+import { CountryDto, RegionDto, CenterDto } from '../../lookup-management/models/lookup.model';
+import { UserManagementService } from '../../user-management/services/user-management.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
+import { SharedModule } from '../../../shared/shared.module';
+import type { PageAction } from '../../../shared/components/page-header/page-header.component';
 
-// Lookup data interfaces (simplified)
-interface LookupItem {
-  id: number;
+/** Shared-dropdown option — label is the display text, value is the id (lookup int or user Guid) */
+interface DropdownOption {
+  id: any;
   name: string;
 }
 
 @Component({
   selector: 'app-mission-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslateModule, PageHeaderComponent, BreadcrumbComponent],
+  imports: [CommonModule, ReactiveFormsModule, TranslateModule, SharedModule, PageHeaderComponent, BreadcrumbComponent],
   templateUrl: './mission-form.component.html',
   styleUrls: ['./mission-form.component.scss']
 })
@@ -51,26 +62,25 @@ export class MissionFormComponent implements OnInit, OnDestroy {
   }
 
   missionForm: FormGroup;
-  mission: Mission | null = null;
+  mission: MissionDetail | null = null;
   loading = false;
   saving = false;
   isEditMode = false;
   error: string | null = null;
 
-  // Lookup data
-  missionTypes: LookupItem[] = [];
-  missionTimeTypes: LookupItem[] = [];
-  countries: LookupItem[] = [];
-  regions: LookupItem[] = [];
-  centers: LookupItem[] = [];
-  users: LookupItem[] = [];
-
-  // Filtered lookup data
-  filteredRegions: LookupItem[] = [];
-  filteredCenters: LookupItem[] = [];
+  // Catalogues (§20.S.2) — options for the shared dropdowns; catalogue labels
+  // are resolved per current language at load time (the app hard-reloads on
+  // language switch, so no re-map subscription is needed)
+  missionTypeOptions: DropdownOption[] = [];
+  missionTimeTypeOptions: DropdownOption[] = [];
+  missionInterviewTypeOptions: DropdownOption[] = [];
+  countries: CountryDto[] = [];
+  regions: RegionDto[] = [];
+  centers: CenterDto[] = [];
+  userOptions: DropdownOption[] = [];
 
   // Page actions for header
-  pageActions = [
+  pageActions: PageAction[] = [
     {
       label: 'common.cancel',
       type: 'secondary',
@@ -82,15 +92,18 @@ export class MissionFormComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private missionService: MissionService,
+    private lookupService: LookupManagementService,
+    private userManagementService: UserManagementService,
     private route: ActivatedRoute,
     private router: Router,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private notification: NotificationService
   ) {
     this.missionForm = this.createForm();
   }
 
   ngOnInit(): void {
-    this.loadLookupData();
+    this.loadCatalogues();
     this.checkEditMode();
   }
 
@@ -100,24 +113,26 @@ export class MissionFormComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Create reactive form
+   * §20.S.2 mandatory flags: كل الحقول اجباريه — every field carries Validators.required;
+   * the server validator re-checks (the browser is not the control).
    */
   private createForm(): FormGroup {
     return this.fb.group({
-      missionTarget: ['', Validators.required],
-      missionDetails: [''],
-      details: [''],
-      missionTypeId: [null, Validators.required],
-      missionTimeTypeId: [null, Validators.required],
-      missionDate: ['', Validators.required],
-      countryId: [null],
-      regionId: [null],
-      centerId: [null],
-      missionLocation: [''],
-      village: [''],
-      assignedTo: [null, Validators.required],
-      entityName: [''],
-      conferenceName: ['']
+      missionTarget: ['', Validators.required],          // الهدف
+      missionDetails: ['', Validators.required],         // التفاصيل
+      details: ['', Validators.required],                // المهمه
+      missionTypeId: [null, Validators.required],        // نوع المأموريه
+      missionTimeTypeId: [null, Validators.required],    // نوع التوقيت
+      missionInterviewTypeId: [null, Validators.required], // نوع المقابلة
+      missionDate: ['', Validators.required],            // التاريخ
+      countryId: [null, Validators.required],            // الدولة
+      regionId: [null, Validators.required],             // المنطقة
+      centerId: [null, Validators.required],             // المركز
+      missionLocation: ['', Validators.required],        // الموقع
+      village: ['', Validators.required],                // الحي
+      entityName: ['', Validators.required],             // اسم الجهة المنظمة
+      conferenceName: ['', Validators.required],         // اسم المؤتمر
+      assignedToUserId: [null, Validators.required]      // الموظف المسئول
     });
   }
 
@@ -133,7 +148,7 @@ export class MissionFormComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Load mission for editing
+   * Load the mission being edited
    */
   private loadMission(id: string): void {
     this.loading = true;
@@ -154,169 +169,243 @@ export class MissionFormComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Populate form with mission data
+   * Populate the form from the detail DTO, then rehydrate the cascade selects
+   * (regions for the mission's country, centers for its region).
    */
-  private populateForm(mission: Mission): void {
+  private populateForm(mission: MissionDetail): void {
     this.missionForm.patchValue({
       missionTarget: mission.missionTarget,
       missionDetails: mission.missionDetails || '',
       details: mission.details || '',
-      missionTypeId: mission.missionTypeId,
-      missionTimeTypeId: mission.missionTimeTypeId,
-      missionDate: mission.missionDate.split('T')[0], // Format for date input
-      countryId: mission.countryId || null,
-      regionId: mission.regionId || null,
-      centerId: mission.centerId || null,
+      missionTypeId: mission.missionTypeId ?? null,
+      missionTimeTypeId: mission.missionTimeTypeId ?? null,
+      missionInterviewTypeId: mission.missionInterviewTypeId ?? null,
+      missionDate: mission.missionDate.split('T')[0],
       missionLocation: mission.missionLocation || '',
       village: mission.village || '',
-      assignedTo: mission.assignedTo,
       entityName: mission.entityName || '',
-      conferenceName: mission.conferenceName || ''
+      conferenceName: mission.conferenceName || '',
+      assignedToUserId: mission.assignedToUserId ?? null,
+      countryId: mission.countryId ?? null
     });
 
-    // Filter regions and centers based on selected country/region
+    // Cascade: regions need the country loaded first, then patch region → load centers
     if (mission.countryId) {
-      this.onCountryChange();
-    }
-    if (mission.regionId) {
-      this.onRegionChange();
+      this.lookupService.getRegionsByCountry(mission.countryId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: regions => {
+            this.regions = regions || [];
+            this.missionForm.get('regionId')?.setValue(mission.regionId ?? null);
+
+            if (mission.regionId) {
+              this.lookupService.getCentersByRegion(mission.regionId)
+                .pipe(takeUntil(this.destroy$))
+                .subscribe({
+                  next: centers => {
+                    this.centers = centers || [];
+                    this.missionForm.get('centerId')?.setValue(mission.centerId ?? null);
+                  },
+                  error: () => this.handleCatalogueError()
+                });
+            }
+          },
+          error: () => this.handleCatalogueError()
+        });
     }
   }
 
   /**
-   * Load lookup data
+   * Bilingual catalogue label — nameAr in Arabic mode, nameEn in English mode,
+   * falling back to the raw name then the opposite-language name (never blank).
    */
-  private loadLookupData(): void {
-    // TODO: Load from actual lookup services
-    // For now, using static data as placeholders
+  private localizedCatalogLabel(item: MissionLookupItem): string {
+    const arabic = this.translate.currentLang === 'ar';
+    const primary = arabic ? item.nameAr : item.nameEn;
+    const opposite = arabic ? item.nameEn : item.nameAr;
+    return primary || item.name || opposite || '';
+  }
 
-    this.missionTypes = [
-      { id: 1, name: this.translate.instant('missions.missionTypeFieldwork') },
-      { id: 2, name: this.translate.instant('missions.missionTypeConference') },
-      { id: 3, name: this.translate.instant('missions.missionTypeTraining') },
-      { id: 4, name: this.translate.instant('missions.missionTypeMeeting') },
-      { id: 5, name: this.translate.instant('missions.missionTypeInspection') },
-      { id: 6, name: this.translate.instant('missions.missionTypeOther') }
-    ];
+  /**
+   * Load every §20.S.2 catalogue from its real endpoint
+   */
+  private loadCatalogues(): void {
+    // نوع المأموريه (15-3) / نوع التوقيت (15-5)
+    this.missionService.getMissionTypes()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (items) => (this.missionTypeOptions = (items || []).map(item => ({ id: item.id, name: this.localizedCatalogLabel(item) }))),
+        error: () => this.handleCatalogueError()
+      });
 
-    this.missionTimeTypes = [
-      { id: 1, name: this.translate.instant('missions.missionTimeTypeOneTime') },
-      { id: 2, name: this.translate.instant('missions.missionTimeTypeDaily') },
-      { id: 3, name: this.translate.instant('missions.missionTimeTypeWeekly') },
-      { id: 4, name: this.translate.instant('missions.missionTimeTypeMonthly') },
-      { id: 5, name: this.translate.instant('missions.missionTimeTypeQuarterly') },
-      { id: 6, name: this.translate.instant('missions.missionTimeTypeAnnually') }
-    ];
+    this.missionService.getMissionTimeTypes()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (items) => (this.missionTimeTypeOptions = (items || []).map(item => ({ id: item.id, name: this.localizedCatalogLabel(item) }))),
+        error: () => this.handleCatalogueError()
+      });
 
-    // TODO: Load from LookupManagementService
-    this.countries = [];
+    // نوع المقابلة (15-4)
+    this.missionService.getMissionInterviewTypes()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (items) => (this.missionInterviewTypeOptions = (items || []).map(item => ({ id: item.id, name: this.localizedCatalogLabel(item) }))),
+        error: () => this.handleCatalogueError()
+      });
+
+    // الدول — regions and centers load on cascade
+    this.lookupService.getCountries({ isActive: true, page: 1, pageSize: 1000 })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({ next: (result) => (this.countries = result.items || []), error: () => this.handleCatalogueError() });
+
+    // الموظف المسئول — every user in the database, not just employee records
+    this.userManagementService.getUsers({ page: 1, pageSize: 1000 })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.userOptions = (result.items || []).map(user => ({
+            id: user.id,
+            name: user.fullName || user.userName || user.email
+          }));
+        },
+        error: () => this.handleCatalogueError()
+      });
+  }
+
+  /**
+   * A failed catalogue load must not pass silently — the actor would face an empty
+   * dropdown with no explanation.
+   */
+  private handleCatalogueError(): void {
+    this.notification.error(this.translate.instant('missions.catalogueLoadFailed'));
+  }
+
+  /**
+   * Country changed → reload regions, reset the region/center cascade.
+   * The shared dropdown emits the selected option object (or null when cleared)
+   * and has already written the id to the control.
+   */
+  onCountryChanged(value: DropdownOption | null): void {
+    const countryId = value && value.id != null ? value.id : null;
+
+    if (!countryId) {
+      this.missionForm.get('countryId')?.setValue(null);
+    }
+
     this.regions = [];
     this.centers = [];
+    this.missionForm.get('regionId')?.setValue(null);
+    this.missionForm.get('centerId')?.setValue(null);
 
-    // TODO: Load from UserService
-    this.users = [];
-  }
-
-  /**
-   * Handle country change
-   */
-  onCountryChange(): void {
-    const countryId = this.missionForm.get('countryId')?.value;
     if (countryId) {
-      this.filteredRegions = this.regions.filter(r => r.id === countryId); // Placeholder logic
-      this.missionForm.get('regionId')?.setValue(null);
-      this.missionForm.get('centerId')?.setValue(null);
-      this.filteredCenters = [];
-    } else {
-      this.filteredRegions = [];
-      this.filteredCenters = [];
+      this.lookupService.getRegionsByCountry(countryId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({ next: (regions) => (this.regions = regions || []), error: () => this.handleCatalogueError() });
     }
   }
 
   /**
-   * Handle region change
+   * Region changed → reload centers, reset center
    */
-  onRegionChange(): void {
-    const regionId = this.missionForm.get('regionId')?.value;
+  onRegionChanged(value: DropdownOption | null): void {
+    const regionId = value && value.id != null ? value.id : null;
+
+    if (!regionId) {
+      this.missionForm.get('regionId')?.setValue(null);
+    }
+
+    this.centers = [];
+    this.missionForm.get('centerId')?.setValue(null);
+
     if (regionId) {
-      this.filteredCenters = this.centers.filter(c => c.id === regionId); // Placeholder logic
-      this.missionForm.get('centerId')?.setValue(null);
-    } else {
-      this.filteredCenters = [];
+      this.lookupService.getCentersByRegion(regionId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({ next: (centers) => (this.centers = centers || []), error: () => this.handleCatalogueError() });
     }
   }
 
   /**
-   * Submit form
+   * Submit — create or update with the clean wire keys
    */
   onSubmit(): void {
     if (this.missionForm.invalid) {
       this.markFormGroupTouched(this.missionForm);
+      this.notification.error(this.translate.instant('missions.fixValidationErrors'));
       return;
     }
 
     this.saving = true;
-
     const formValue = this.missionForm.value;
 
-    if (this.isEditMode && this.mission) {
-      const request: UpdateMissionRequest = {
-        missionTarget: formValue.missionTarget,
-        missionDetails: formValue.missionDetails || undefined,
-        details: formValue.details || undefined,
-        missionTypeId: formValue.missionTypeId,
-        missionTimeTypeId: formValue.missionTimeTypeId,
-        missionDate: formValue.missionDate,
-        countryId: formValue.countryId || undefined,
-        regionId: formValue.regionId || undefined,
-        centerId: formValue.centerId || undefined,
-        missionLocation: formValue.missionLocation || undefined,
-        village: formValue.village || undefined,
-        assignedTo: formValue.assignedTo,
-        entityName: formValue.entityName || undefined,
-        conferenceName: formValue.conferenceName || undefined
-      };
+    const request: CreateMissionRequest = {
+      missionTarget: formValue.missionTarget,
+      missionDetails: formValue.missionDetails,
+      details: formValue.details,
+      missionTypeId: formValue.missionTypeId,
+      missionTimeTypeId: formValue.missionTimeTypeId,
+      missionInterviewTypeId: formValue.missionInterviewTypeId,
+      missionDate: formValue.missionDate,
+      countryId: formValue.countryId,
+      regionId: formValue.regionId,
+      centerId: formValue.centerId,
+      missionLocation: formValue.missionLocation,
+      village: formValue.village,
+      entityName: formValue.entityName,
+      conferenceName: formValue.conferenceName,
+      assignedToUserId: formValue.assignedToUserId
+    };
 
-      this.missionService.updateMission(this.mission.id, request)
+    if (this.isEditMode && this.mission) {
+      this.missionService.updateMission(this.mission.id, request as UpdateMissionRequest)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
+            this.notification.success(this.translate.instant('missions.missionUpdated'));
             this.saving = false;
             this.router.navigate(['/missions', this.mission!.id]);
           },
-          error: () => {
-            this.saving = false;
-          }
+          error: (httpError) => this.handleSaveError(httpError, 'missions.updateFailed')
         });
     } else {
-      const request: CreateMissionRequest = {
-        missionTarget: formValue.missionTarget,
-        missionDetails: formValue.missionDetails || undefined,
-        details: formValue.details || undefined,
-        missionTypeId: formValue.missionTypeId,
-        missionTimeTypeId: formValue.missionTimeTypeId,
-        missionDate: formValue.missionDate,
-        countryId: formValue.countryId || undefined,
-        regionId: formValue.regionId || undefined,
-        centerId: formValue.centerId || undefined,
-        missionLocation: formValue.missionLocation || undefined,
-        village: formValue.village || undefined,
-        assignedTo: formValue.assignedTo,
-        entityName: formValue.entityName || undefined,
-        conferenceName: formValue.conferenceName || undefined
-      };
-
       this.missionService.createMission(request)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
+            this.notification.success(this.translate.instant('missions.missionCreated'));
             this.saving = false;
             this.router.navigate(['/missions']);
           },
-          error: () => {
-            this.saving = false;
-          }
+          error: (httpError) => this.handleSaveError(httpError, 'missions.createFailed')
         });
+    }
+  }
+
+  /**
+   * Surface the server's field→messages map (FluentValidation via the controller's
+   * BadRequest(new { message, errors }) shape): flag each named control and toast
+   * the summary message.
+   */
+  private handleSaveError(httpError: any, fallbackKey: string): void {
+    this.saving = false;
+
+    const errors = httpError?.error?.errors;
+    if (errors && typeof errors === 'object') {
+      for (const [field, messages] of Object.entries<any>(errors)) {
+        // Server keys are PascalCase DTO names ("MissionDate") — controls are camelCase
+        const controlName = field.charAt(0).toLowerCase() + field.slice(1);
+        const control = this.missionForm.get(controlName);
+        const message = Array.isArray(messages) ? messages.join(' · ') : String(messages);
+
+        if (control) {
+          // 'server' carries the message itself — the shared app-drop-down reads
+          // errors['server'] verbatim ({server: true} renders as literal "true").
+          control.setErrors({ server: message });
+          control.markAsTouched();
+        }
+      }
+      this.notification.error(httpError?.error?.message || this.translate.instant(fallbackKey));
+    } else {
+      this.notification.error(httpError?.error?.message || this.translate.instant(fallbackKey));
     }
   }
 
@@ -340,12 +429,15 @@ export class MissionFormComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Get field error message
+   * Get field error message — client required or the server's own text
    */
   getFieldError(fieldName: string): string {
     const field = this.missionForm.get(fieldName);
     if (!field || !field.errors) return '';
 
+    if (field.errors['server']) {
+      return field.errors['server'] || this.translate.instant('validation.invalid');
+    }
     if (field.errors['required']) {
       return this.translate.instant('validation.required');
     }

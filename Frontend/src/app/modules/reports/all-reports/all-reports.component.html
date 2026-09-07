@@ -1,0 +1,61 @@
+<!-- All Reports hub (#/reports/all) — TinyDash contacts-grid layout -->
+<div class="container-fluid">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <!-- Page title header -->
+      <div class="row align-items-center my-4">
+        <div class="col">
+          <h2 class="h3 mb-0 page-title">{{ 'reports.allReports.title' | translate }}</h2>
+          <p class="small text-muted mb-0 mt-1">{{ 'reports.allReports.subtitle' | translate }}</p>
+        </div>
+      </div>
+
+      <!-- Reports Grid -->
+      <div class="row" *ngIf="cards.length > 0; else noDataTemplate">
+        <div class="col-md-3" *ngFor="let card of pagedCards; let i = index; trackBy: trackByRoute">
+          <a class="card shadow mb-4 text-decoration-none" [routerLink]="card.route">
+            <div class="card-body text-center">
+              <div class="circle circle-lg mt-3 mb-2 text-white {{ getIconColorClass(i) }}">
+                <i class="{{ card.icon }} fe-24 align-self-center"></i>
+              </div>
+              <div class="card-text my-2">
+                <strong class="card-title my-0 d-block">{{ card.titleKey | translate }}</strong>
+              </div>
+            </div>
+            <div class="card-footer">
+              <div class="row align-items-center justify-content-between">
+                <div class="col-auto">
+                  <small class="text-muted">
+                    <span class="dot dot-lg {{ getIconColorClass(i) }} mr-1"></span>
+                    {{ 'common.view' | translate }}
+                  </small>
+                </div>
+                <div class="col-auto">
+                  <i class="fe fe-chevrons-left report-card-go text-muted"></i>
+                </div>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <ng-template #noDataTemplate>
+        <div class="card shadow mb-4">
+          <div class="card-body text-center empty-state py-5">
+            <i class="fe fe-search fe-3x text-muted mb-3"></i>
+            <p class="text-muted mb-0">{{ 'reports.allReports.emptyState' | translate }}</p>
+          </div>
+        </div>
+      </ng-template>
+
+      <!-- Pagination -->
+      <app-pagination
+        [currentPage]="currentPage"
+        [pageSize]="pageSize"
+        [totalCount]="cards.length"
+        (pageChange)="onPageChange($event)">
+      </app-pagination>
+    </div>
+  </div>
+</div>

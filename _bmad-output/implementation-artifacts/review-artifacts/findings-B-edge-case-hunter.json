@@ -1,0 +1,92 @@
+[
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.ts:93",
+    "trigger_condition": "Any one of the four forkJoin loads fails (e.g. provider 404)",
+    "guard_snippet": "error: () => { this.loadFailed = true; this.loading = false; } + template *ngIf=\"!loading && family; else errTpl\"",
+    "potential_consequence": "Entire detail page blank; only transient toast, no retry path"
+  },
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.ts:87",
+    "trigger_condition": "Route :id belongs to a Regular-register family",
+    "guard_snippet": "if (result.family.familyType !== 'Refugee') { this.router.navigate(['/families/refugees']); return; }",
+    "potential_consequence": "Regular family rendered on refugee screen with missing refugee fields"
+  },
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-detail/refugee-family-detail.component.html:86",
+    "trigger_condition": "Provider nationalityCountryId is set",
+    "guard_snippet": "{{ countryOptions.find(c => c.id === provider.nationalityCountryId)?.name || '—' }}",
+    "potential_consequence": "Raw numeric catalogue id displayed instead of country name"
+  },
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.ts:271",
+    "trigger_condition": "Any catalogue GET (regions, relations, etc.) fails",
+    "guard_snippet": "error: () => { this.regionOptions = []; this.notification.error(this.translate.instant('families.refugeeLookupLoadFailed')); }",
+    "potential_consequence": "Required dropdowns silently empty; form unsavable with no surfaced reason"
+  },
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.ts:348",
+    "trigger_condition": "Loaded provider relation name absent from Relation catalogue",
+    "guard_snippet": "else { this.relationOptions = [...this.relationOptions, { id: name, name }]; this.providerForm.get('relationshipToFamily')!.setValue(name); }",
+    "potential_consequence": "Required control stays null; save blocked with no user remedy"
+  },
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.ts:173-174",
+    "trigger_condition": "Provider marked dead with deathDate/deathReason left blank",
+    "guard_snippet": "save(): if (!provider.isAlive && (!provider.deathDate || !provider.deathReason)) { warn; return; }",
+    "potential_consequence": "Incomplete death record passes client validation; server refusal only"
+  },
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.ts:551",
+    "trigger_condition": "deathDate earlier than dateOfBirth, or dates in future",
+    "guard_snippet": "if (provider.deathDate && provider.deathDate < provider.dateOfBirth) { this.notification.warning(...); return; }",
+    "potential_consequence": "Nonsensical dates accepted and submitted"
+  },
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.ts:580",
+    "trigger_condition": "User cancels/navigates while create POST is in flight",
+    "guard_snippet": "this.familyService.createFamily(payload).pipe(takeUntil(this.destroy$)).subscribe({",
+    "potential_consequence": "Late handlers fire on destroyed component; unexpected redirect to list"
+  },
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.ts:660",
+    "trigger_condition": "Edit save fails after some createOrphan/createRelative calls succeeded",
+    "guard_snippet": "ops.push(this.familyService.createOrphan(dto).pipe(tap(o => row.get('id')!.setValue(o.id))));",
+    "potential_consequence": "Created ids never captured; retry re-POSTs rows creating duplicates"
+  },
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.ts:703",
+    "trigger_condition": "One member op fails mid forkJoin batch",
+    "guard_snippet": "forkJoin(ops.map(o => o.pipe(catchError(e => { this.failedOps++; return EMPTY; }))))",
+    "potential_consequence": "Partial persistence, no rollback or per-op report; family half-updated"
+  },
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-form/refugee-family-form.component.ts:356",
+    "trigger_condition": "Regular-register family id opened on refugees/:id/edit",
+    "guard_snippet": "if (family.familyType !== 'Refugee') { this.notification.warning(...); this.cancel(); return; }",
+    "potential_consequence": "Refugee PUT overwrites household fields of a Regular family"
+  },
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.ts:175",
+    "trigger_condition": "Component destroyed before getFamilies response arrives",
+    "guard_snippet": "this.familyService.getFamilies(searchRequest).pipe(takeUntil(this.destroy$)).subscribe({",
+    "potential_consequence": "State mutated and markForCheck called on destroyed view"
+  },
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.ts:176",
+    "trigger_condition": "Overlapping loads; slow older response resolves last",
+    "guard_snippet": "const seq = ++this.reqSeq; next: r => { if (seq !== this.reqSeq) return; ... }",
+    "potential_consequence": "Stale rows and counts overwrite fresh search results"
+  },
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.ts:139",
+    "trigger_condition": "getCharities fails or resolves after destroy; HQ filter opened",
+    "guard_snippet": "this.charityService.getCharities(...).pipe(takeUntil(this.destroy$)).subscribe({ error: () => this.notification.error(...) })",
+    "potential_consequence": "Charity filter stays empty/late silently; HQ scoping unusable"
+  },
+  {
+    "location": "Frontend/src/app/modules/families/refugee-family-list/refugee-family-list.component.ts:183",
+    "trigger_condition": "Reload fails while previous results are displayed",
+    "guard_snippet": "error: () => { this.families = []; this.totalCount = 0; ... }",
+    "potential_consequence": "Stale families remain rendered as current data after failed reload"
+  }
+]

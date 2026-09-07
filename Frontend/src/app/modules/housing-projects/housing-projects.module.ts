@@ -1,7 +1,8 @@
 /**
- * Housing Projects Module
- * Housing project management functionality for IIROSA application
- * Access: Admin and Super Admin only (Charity users CANNOT access)
+ * Housing Projects Module (epic 6, chapter 11)
+ * The housing-FAMILY register — families housed in organisation-owned buildings.
+ * Access: Charity + HQ (Admin/SuperAdmin). The pre-re-cut header barred Charity
+ * users; that described the deleted construction tracker, not this register.
  */
 
 import { NgModule } from '@angular/core';

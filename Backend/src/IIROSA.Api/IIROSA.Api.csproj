@@ -16,6 +16,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Beside the exe: the API is launched directly from bin/ (VS F5 / exe run), where NLog
+         does not see the project folder. Without this the config never ships and Program.cs's
+         UseNLog() silently discards every log (found live, 6-8 battery 2026-08-24). -->
+    <None Update="nlog.config" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.1.0" />

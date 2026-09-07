@@ -120,7 +120,26 @@ public class FamilyRepository : Repository<Family>, IFamilyRepository
             .Include(f => f.Country)
             .Include(f => f.City)
             .Include(f => f.Charity)
-            .Include(f => f.Orphans);
+            .Include(f => f.Father)
+            .Include(f => f.Mother)
+            // The housing register's guardian (ولي الأمر) — 6-4's guardian block and 6-7's
+            // Parent beneficiary row read family.Provider; without this Include both are
+            // silently empty on every housing family (found live, 6-8 battery).
+            .Include(f => f.Provider)
+            .Include(f => f.Orphans)
+                .ThenInclude(o => o.SocialStatus)
+            // Refugee/housing register reference navs (§12.S.2 / §11.S.2) — resolved names
+            .Include(f => f.Region)
+            .Include(f => f.Center)
+            .Include(f => f.HouseOwnership)
+            .Include(f => f.HouseStatus)
+            .Include(f => f.HousingType)
+            .Include(f => f.IncomeType)
+            // Housing allocation navs (§11.S.2 رقم العماره / رقم الشقه) — review 2026-08-24:
+            // the detail projection reads HousingBuilding/HousingFlat names; without these
+            // Includes (and no lazy loading) both rendered null on GET projects/{id}.
+            .Include(f => f.HousingBuilding)
+            .Include(f => f.HousingFlat);
     }
 
     public async Task<(IEnumerable<Family> Items, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize)

@@ -128,328 +128,47 @@
           </ul>
         </li>
 
-        <!-- User Management -->
-        <li *ngIf="hasPermission('users.view')" class="nav-item dropdown"
-            [class.show]="isActive('/user-management')">
-          <a href="#user-management" data-toggle="collapse" aria-expanded="false"
-             class="dropdown-toggle nav-link">
-            <i class="fe fe-user fe-16"></i>
-            <span class="ml-3 item-text">{{"userManagement.users" | translate }}</span>
-          </a>
-          <ul class="collapse list-unstyled pl-4 w-100"
-              [class.show]="isActive('/user-management')"
-              id="user-management">
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/user-management/users">
-                <span class="ml-1 item-text">{{ "userManagement.allUsers" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/user-management/users/create">
-                <span class="ml-1 item-text">{{ "userManagement.addUser" |translate }}</span>
-              </a>
-            </li>
-          </ul>
-        </li>
+        <!-- Settings — admin parent: Users, Employees, Charities, Lookup Management.
+             Section shows when any child is permitted; each child keeps its own gate. -->
+             <li class="nav-item dropdown"
+             *ngIf="hasPermission('users.view') || hasPermission('employees.view') || hasPermission('charities.view') || hasPermission('lookups.view')"
+             [class.show]="isActive('/user-management') || isActive('/employees') || isActive('/charities') || isActive('/lookup-management')">
+           <a href="#settings" data-toggle="collapse" aria-expanded="false"
+              class="dropdown-toggle nav-link">
+             <i class="fe fe-settings fe-16"></i>
+             <span class="ml-3 item-text">{{ "menu.settings" | translate }}</span>
+           </a>
+           <ul class="collapse list-unstyled pl-4 w-100"
+               [class.show]="isActive('/user-management') || isActive('/employees') || isActive('/charities') || isActive('/lookup-management')"
+               id="settings">
+             <li class="nav-item" *ngIf="hasPermission('users.view')" routerLinkActive="active"
+                 [routerLinkActiveOptions]="{ exact: true }">
+               <a class="nav-link pl-3" routerLink="/user-management/users">
+                 <span class="ml-1 item-text">{{ "menu.users" | translate }}</span>
+               </a>
+             </li>
+             <li class="nav-item" *ngIf="hasPermission('employees.view')" routerLinkActive="active"
+                 [routerLinkActiveOptions]="{ exact: true }">
+               <a class="nav-link pl-3" routerLink="/employees">
+                 <span class="ml-1 item-text">{{ "menu.employees" | translate }}</span>
+               </a>
+             </li>
+             <li class="nav-item" *ngIf="hasPermission('charities.view')" routerLinkActive="active"
+                 [routerLinkActiveOptions]="{ exact: true }">
+               <a class="nav-link pl-3" routerLink="/charities">
+                 <span class="ml-1 item-text">{{ "menu.charities" | translate }}</span>
+               </a>
+             </li>
+             <li class="nav-item" *ngIf="hasPermission('lookups.view')" routerLinkActive="active"
+                 [routerLinkActiveOptions]="{ exact: true }">
+               <a class="nav-link pl-3" routerLink="/lookup-management">
+                 <span class="ml-1 item-text">{{ "menu.lookupManagement" | translate }}</span>
+               </a>
+             </li>
+           </ul>
+         </li>
 
-        <!-- Employees -->
-        <li class="nav-item dropdown" *ngIf="hasPermission('employees.view')"
-            [class.show]="isActive('/employees')">
-          <a href="#employees" data-toggle="collapse" aria-expanded="false"
-             class="dropdown-toggle nav-link">
-            <i class="fe fe-users fe-16"></i>
-            <span class="ml-3 item-text">{{"IIROSA.employees" | translate }}</span>
-          </a>
-          <ul class="collapse list-unstyled pl-4 w-100"
-              [class.show]="isActive('/employees')"
-              id="employees">
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/employees">
-                <span class="ml-1 item-text">{{ "IIROSA.allEmployees" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/employees/create">
-                <span class="ml-1 item-text">{{ "IIROSA.addEmployee" |translate }}</span>
-              </a>
-            </li>
-          </ul>
-        </li>
-
-        <!-- Charities -->
-        <li class="nav-item dropdown" *ngIf="hasPermission('charities.view')"
-            [class.show]="isActive('/charities')">
-          <a href="#charities" data-toggle="collapse" aria-expanded="false"
-             class="dropdown-toggle nav-link">
-            <i class="fe fe-heart fe-16"></i>
-            <span class="ml-3 item-text">{{"IIROSA.nGOs" | translate }}</span>
-          </a>
-          <ul class="collapse list-unstyled pl-4 w-100"
-              [class.show]="isActive('/charities')"
-              id="charities">
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/charities">
-                <span class="ml-1 item-text">{{ "IIROSA.allNGOs" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/charities/create">
-                <span class="ml-1 item-text">{{ "IIROSA.addNGO" |translate }}</span>
-              </a>
-            </li>
-          </ul>
-        </li>
-
-        <!-- Office Development Projects (Admin/SuperAdmin only) -->
-        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
-            [class.show]="isActive('/office-development-projects')">
-          <a href="#office-development-projects" data-toggle="collapse" aria-expanded="false"
-             class="dropdown-toggle nav-link">
-            <i class="fe fe-grid fe-16"></i>
-            <span class="ml-3 item-text">{{"IIROSA.officeProjects" | translate }}</span>
-          </a>
-          <ul class="collapse list-unstyled pl-4 w-100"
-              [class.show]="isActive('/office-development-projects')"
-              id="office-development-projects">
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/office-development-projects">
-                <span class="ml-1 item-text">{{ "IIROSA.allOfficeProjects" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/office-development-projects/create">
-                <span class="ml-1 item-text">{{ "IIROSA.addOfficeProjects" |translate }}</span>
-              </a>
-            </li>
-          </ul>
-        </li>
-        
-        <!-- Housing Projects (Admin/SuperAdmin only) -->
-        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
-            [class.show]="isActive('/housing-projects')">
-          <a href="#housing-projects" data-toggle="collapse" aria-expanded="false"
-             class="dropdown-toggle nav-link">
-            <i class="fe fe-home fe-16"></i>
-            <span class="ml-3 item-text">{{"IIROSA.housingProjects" | translate }}</span>
-          </a>
-          <ul class="collapse list-unstyled pl-4 w-100"
-              [class.show]="isActive('/housing-projects')"
-              id="housing-projects">
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/housing-projects">
-                <span class="ml-1 item-text">{{ "IIROSA.allHousingProjects" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/housing-projects/create">
-                <span class="ml-1 item-text">{{ "IIROSA.addHousingProject" |translate }}</span>
-              </a>
-            </li>
-          </ul>
-        </li>
-
-        <!-- Seasonal Aid (Admin/SuperAdmin only) -->
-        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
-            [class.show]="isActive('/seasonal-aid')">
-          <a href="#seasonal-aid" data-toggle="collapse" aria-expanded="false"
-             class="dropdown-toggle nav-link">
-            <i class="fe fe-sun fe-16"></i>
-            <span class="ml-3 item-text">{{"IIROSA.seasonalAid" | translate }}</span>
-          </a>
-          <ul class="collapse list-unstyled pl-4 w-100"
-              [class.show]="isActive('/seasonal-aid')"
-              id="seasonal-aid">
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/seasonal-aid">
-                <span class="ml-1 item-text">{{ "IIROSA.allSeasonalAid" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/seasonal-aid/create">
-                <span class="ml-1 item-text">{{ "IIROSA.addSeasonalAid" |translate }}</span>
-              </a>
-            </li>
-          </ul>
-        </li>
-
-         <!-- Incoming & Outgoing Correspondence (Admin/SuperAdmin/Accountant/Employee only, NOT Charity) -->
-        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Accountant', 'Employee'])"
-            [class.show]="isActive('/incoming-outgoing')">
-          <a href="#incoming-outgoing" data-toggle="collapse" aria-expanded="false"
-             class="dropdown-toggle nav-link">
-            <i class="fe fe-inbox fe-16"></i>
-            <span class="ml-3 item-text">{{"IIROSA.importExport" | translate }}</span>
-          </a>
-          <ul class="collapse list-unstyled pl-4 w-100"
-              [class.show]="isActive('/incoming-outgoing')"
-              id="incoming-outgoing">
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/incoming-outgoing/incoming">
-                <span class="ml-1 item-text">{{ "incomingOutgoing.incomingLetters" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/incoming-outgoing/outgoing">
-                <span class="ml-1 item-text">{{ "incomingOutgoing.outgoingLetters" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/incoming-outgoing/import/incoming">
-                <span class="ml-1 item-text">{{ "IIROSA.importData" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/incoming-outgoing/export/incoming">
-                <span class="ml-1 item-text">{{ "IIROSA.exportData" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/incoming-outgoing/history">
-                <span class="ml-1 item-text">{{ "IIROSA.importExportHistory" |translate }}</span>
-              </a>
-            </li>
-          </ul>
-        </li>
-        
-        <!-- Orphan Payments (Admin/SuperAdmin only) -->
-        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
-            [class.show]="isActive('/orphan-payments')">
-          <a href="#orphan-payments" data-toggle="collapse" aria-expanded="false"
-             class="dropdown-toggle nav-link">
-            <i class="fe fe-credit-card fe-16"></i>
-            <span class="ml-3 item-text">{{"orphanPayments.title" | translate }}</span>
-          </a>
-          <ul class="collapse list-unstyled pl-4 w-100"
-              [class.show]="isActive('/orphan-payments')"
-              id="orphan-payments">
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/orphan-payments">
-                <span class="ml-1 item-text">{{ "orphanPayments.manageGroups" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/orphan-payments/create">
-                <span class="ml-1 item-text">{{ "orphanPayments.addNewGroup" |translate }}</span>
-              </a>
-            </li>
-          </ul>
-        </li>
-
-        <!-- Families -->
-        <li class="nav-item dropdown" *ngIf="hasPermission('families.view')"
-            [class.show]="isActive('/families')">
-          <a href="#families" data-toggle="collapse" aria-expanded="false"
-             class="dropdown-toggle nav-link">
-            <i class="fe fe-users fe-16"></i>
-            <span class="ml-3 item-text">{{"IIROSA.families" | translate}}</span>
-          </a>
-          <ul class="collapse list-unstyled pl-4 w-100"
-              [class.show]="isActive('/families')"
-              id="families">
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/families">
-                <span class="ml-1 item-text">{{ "IIROSA.allFamilies" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/families/create">
-                <span class="ml-1 item-text">{{ "IIROSA.addFamily" |translate }}</span>
-              </a>
-            </li>
-          </ul>
-        </li>
-
-        
-
-
-        
-
-        <!-- General Checks (Admin/SuperAdmin/Accountant only) -->
-        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Accountant'])"
-            [class.show]="isActive('/general-checks')">
-          <a href="#general-checks" data-toggle="collapse" aria-expanded="false"
-             class="dropdown-toggle nav-link">
-            <i class="fe fe-check-square fe-16"></i>
-            <span class="ml-3 item-text">{{"generalChecks.title" | translate }}</span>
-          </a>
-          <ul class="collapse list-unstyled pl-4 w-100"
-              [class.show]="isActive('/general-checks')"
-              id="general-checks">
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/general-checks">
-                <span class="ml-1 item-text">{{ "generalChecks.manageChecks" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/general-checks/create">
-                <span class="ml-1 item-text">{{ "generalChecks.createCheck" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/general-checks/reconcile">
-                <span class="ml-1 item-text">{{ "generalChecks.reconciliation" |translate }}</span>
-              </a>
-            </li>
-          </ul>
-        </li>
-
-
-        
-       
-
-        <!-- Missions (Admin/SuperAdmin only) -->
-        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
-            [class.show]="isActive('/missions')">
-          <a href="#missions" data-toggle="collapse" aria-expanded="false"
-             class="dropdown-toggle nav-link">
-            <i class="fe fe-briefcase fe-16"></i>
-            <span class="ml-3 item-text">{{"IIROSA.mission" | translate }}</span>
-          </a>
-          <ul class="collapse list-unstyled pl-4 w-100"
-              [class.show]="isActive('/missions')"
-              id="missions">
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/missions">
-                <span class="ml-1 item-text">{{ "IIROSA.allMission" |translate }}</span>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/missions/create">
-                <span class="ml-1 item-text">{{ "IIROSA.addMission" |translate }}</span>
-              </a>
-            </li>   
-          </ul>
-        </li>
-        
-
-        
-        <!-- Technical Support (All Users) -->
+         <!-- Technical Support (All Users) -->
         <li class="nav-item dropdown" [class.show]="isActive('/technical-support')">
           <a href="#technical-support" data-toggle="collapse" aria-expanded="false"
              class="dropdown-toggle nav-link">
@@ -488,31 +207,533 @@
           </ul>
         </li>
 
-        <!-- Lookup Management -->
-        <li class="nav-item dropdown" *ngIf="hasPermission('lookups.view')"
-            [class.show]="isActive('/lookup-management')">
-          <a href="#lookup-management" data-toggle="collapse" aria-expanded="false"
+        <!-- Missions (Admin/SuperAdmin only) -->
+        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Charity'])"
+            [class.show]="isActive('/missions')">
+          <a href="#missions" data-toggle="collapse" aria-expanded="false"
              class="dropdown-toggle nav-link">
-            <i class="fe fe-database fe-16"></i>
-            <span class="ml-3 item-text">{{"IIROSA.lookupManagement" | translate }}</span>
+            <i class="fe fe-briefcase fe-16"></i>
+            <span class="ml-3 item-text">{{"IIROSA.mission" | translate }}</span>
           </a>
           <ul class="collapse list-unstyled pl-4 w-100"
-              [class.show]="isActive('/lookup-management')"
-              id="lookup-management">
+              [class.show]="isActive('/missions')"
+              id="missions">
             <li class="nav-item" routerLinkActive="active"
                 [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/lookup-management">
-                <span class="ml-1 item-text">{{ "IIROSA.allLookups" |translate }}</span>
+              <a class="nav-link pl-3" routerLink="/missions">
+                <span class="ml-1 item-text">{{ "IIROSA.allMission" |translate }}</span>
               </a>
             </li>
             <li class="nav-item" routerLinkActive="active"
                 [routerLinkActiveOptions]="{ exact: true }">
-              <a class="nav-link pl-3" routerLink="/lookup-management/create">
-                <span class="ml-1 item-text">{{ "IIROSA.addLookup" |translate }}</span>
+              <a class="nav-link pl-3" routerLink="/missions/create">
+                <span class="ml-1 item-text">{{ "IIROSA.addMission" |translate }}</span>
               </a>
             </li>
           </ul>
         </li>
+        
+        <!-- Orphan Payments (HQ financial set + Charity — list server-refuses Charity without orphanId) -->
+        <li class="nav-item dropdown" *ngIf="hasAnyRole(['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer', 'Charity'])"
+            [class.show]="isActive('/orphan-payments')">
+          <a href="#orphan-payments" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-credit-card fe-16"></i>
+            <span class="ml-3 item-text">{{"orphanPayments.title" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/orphan-payments')"
+              id="orphan-payments">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/orphan-payments">
+                <span class="ml-1 item-text">{{ "orphanPayments.manageGroups" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/orphan-payments/create">
+                <span class="ml-1 item-text">{{ "orphanPayments.addNewGroup" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Office Development Projects (Admin/SuperAdmin only) -->
+        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Charity'])"
+            [class.show]="isActive('/office-development-projects')">
+          <a href="#office-development-projects" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-grid fe-16"></i>
+            <span class="ml-3 item-text">{{"IIROSA.officeProjects" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/office-development-projects')"
+              id="office-development-projects">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/office-development-projects">
+                <span class="ml-1 item-text">{{ "IIROSA.allOfficeProjects" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/office-development-projects/create">
+                <span class="ml-1 item-text">{{ "IIROSA.addOfficeProjects" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+        
+        <!-- Housing Projects (Charity + HQ roles) -->
+        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Charity'])"
+            [class.show]="isActive('/housing-projects')">
+          <a href="#housing-projects" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-home fe-16"></i>
+            <span class="ml-3 item-text">{{"IIROSA.housingProjects" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/housing-projects')"
+              id="housing-projects">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/housing-projects">
+                <span class="ml-1 item-text">{{ "IIROSA.allHousingProjects" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/housing-projects/create">
+                <span class="ml-1 item-text">{{ "IIROSA.addHousingProject" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Seasonal Aid (Charity sees campaigns it is scoped to; creation is HQ only) -->
+        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Charity'])"
+            [class.show]="isActive('/seasonal-aid')">
+          <a href="#seasonal-aid" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-sun fe-16"></i>
+            <span class="ml-3 item-text">{{"IIROSA.seasonalAid" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/seasonal-aid')"
+              id="seasonal-aid">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/seasonal-aid">
+                <span class="ml-1 item-text">{{ "IIROSA.allSeasonalAid" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/seasonal-aid/create">
+                <span class="ml-1 item-text">{{ "IIROSA.addSeasonalAid" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+         <!-- Incoming & Outgoing Correspondence (Admin/SuperAdmin only — matches the controller's [Authorize]) -->
+        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
+            [class.show]="isActive('/incoming-outgoing')">
+          <a href="#incoming-outgoing" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-inbox fe-16"></i>
+            <span class="ml-3 item-text">{{"incomingOutgoing.moduleTitle" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/incoming-outgoing')"
+              id="incoming-outgoing">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/incoming-outgoing/incoming">
+                <span class="ml-1 item-text">{{ "incomingOutgoing.incomingLetters" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/incoming-outgoing/outgoing">
+                <span class="ml-1 item-text">{{ "incomingOutgoing.outgoingLetters" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/incoming-outgoing/export/incoming">
+                <span class="ml-1 item-text">{{ "incomingOutgoing.attachEmployeesTitle" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/incoming-outgoing/export/outgoing">
+                <span class="ml-1 item-text">{{ "incomingOutgoing.attachOrphansTitle" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/incoming-outgoing/export/outgoing-orphans">
+                <span class="ml-1 item-text">{{ "incomingOutgoing.orphansReportTitle" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+        
+        
+
+        <!-- Families -->
+        <li class="nav-item dropdown" *ngIf="hasPermission('Families.View')"
+            [class.show]="isActive('/families')">
+          <a href="#families" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-users fe-16"></i>
+            <span class="ml-3 item-text">{{"IIROSA.families" | translate}}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/families')"
+              id="families">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/families">
+                <span class="ml-1 item-text">{{ "IIROSA.allFamilies" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/families/create">
+                <span class="ml-1 item-text">{{ "IIROSA.addFamily" |translate }}</span>
+              </a>
+            </li>
+            <!-- Refugee register (UC-REF) -->
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/families/refugees">
+                <span class="ml-1 item-text">{{ "IIROSA.refugeeFamilies" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Families.Create')" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/families/refugees/create">
+                <span class="ml-1 item-text">{{ "IIROSA.addRefugeeFamily" |translate }}</span>
+              </a>
+            </li>
+            <!-- Orphan coding (UC-ORP / epic 8) — HQ coding clerk -->
+            <li class="nav-item" *ngIf="hasPermission('OrphanCoding.View')" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/families/orphans/coding">
+                <span class="ml-1 item-text">{{ "orphanCoding.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('OrphanCoding.View')" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/families/orphans/coding/worklist">
+                <span class="ml-1 item-text">{{ "orphanCoding.worklistTitle" | translate }}</span>
+              </a>
+            </li>
+            <!-- Guardian-change review queue (UC-FAM-09) -->
+            <li class="nav-item" *ngIf="hasPermission('Families.ProviderRequests')" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/families/provider-requests">
+                <span class="ml-1 item-text">{{ "families.providerRequests.title" | translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Reports (التقارير) — founded by UC-FAM-11; epic 18 extends the section.
+             Review P27 2026-08-26: the section also opens for Families.FollowUp — the
+             family follow-up entry below is gated on THAT permission, and a user holding
+             only it previously lost the whole section (route reachable, menu absent). -->
+        <li class="nav-item dropdown" *ngIf="hasPermission('Reports.View') || hasPermission('Families.FollowUp')"
+            [class.show]="isActive('/reports')">
+          <a href="#reports" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-bar-chart-2 fe-16"></i>
+            <span class="ml-3 item-text">{{ "reports.title" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/reports')"
+              id="reports">
+            <!-- All Reports hub — card directory of every report below; gated by the section
+                 itself (Reports.View OR Families.FollowUp), cards filter per-report inside. -->
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/all">
+                <span class="ml-1 item-text">{{ "reports.allReports.title" | translate }}</span>
+              </a>
+            </li>
+            <!-- UC-FAM-11: family follow-up activity (legacy screen name kept verbatim) -->
+            <li class="nav-item" *ngIf="hasPermission('Families.FollowUp')" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/family-orphans">
+                <span class="ml-1 item-text">{{ "families.followUp.title" | translate }}</span>
+              </a>
+            </li>
+            <!-- UC-RPT-01: orphan data بيانات الأيتام (EP-18) -->
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/orphans">
+                <span class="ml-1 item-text">{{ "reports.orphanData.title" | translate }}</span>
+              </a>
+            </li>
+            <!-- UC-RPT-03: excluded orphans الايتام المستبعدين (EP-18) -->
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/excluded-orphans">
+                <span class="ml-1 item-text">{{ "reports.excludedOrphans.title" | translate }}</span>
+              </a>
+            </li>
+            <!-- UC-RPT-04/05: orphan status reports. Review P27 2026-08-26: the entries now
+                 follow the ROUTE gates (Reports.View only) — the extra menu-side HQ role gate
+                 hid routes the guard let through, and the endpoint enforces HQ regardless. -->
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/finished-sponsorship-orphans">
+                <span class="ml-1 item-text">{{ "reports.finishedSponsorship.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/unsponsored-orphans">
+                <span class="ml-1 item-text">{{ "reports.unsponsoredOrphans.title" | translate }}</span>
+              </a>
+            </li>
+            <!-- UC-RPT-06: widows requiring sponsorship ارامل مطلوب لهم كفاله (EP-18) -->
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/widows-allowing-sponsorship">
+                <span class="ml-1 item-text">{{ "reports.widowsSponsorship.title" | translate }}</span>
+              </a>
+            </li>
+            <!-- UC-RPT-07: registered Meza cards تقرير الكروت المسجله (EP-18). Review P27
+                 2026-08-26: route-gated (Reports.View) — the menu's extra HQ role gate hid a
+                 reachable route; the endpoint enforces HQ server-side. -->
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/meza-cards">
+                <span class="ml-1 item-text">{{ "reports.mezaCards.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/beneficiary-family-details">
+                <span class="ml-1 item-text">{{ "reports.beneficiaryFamilyDetails.title" | translate }}</span>
+              </a>
+            </li>
+            <!-- Review P27 2026-08-26: same route-alignment rule — the HQ role gate hid a
+                 Reports.View-gated route from users the guard admits. -->
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/registered-family-projects">
+                <span class="ml-1 item-text">{{ "reports.familyProjects.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/provider-sponsor-changes">
+                <span class="ml-1 item-text">{{ "reports.providerChanges.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/family-orphans-entries">
+                <span class="ml-1 item-text">{{ "reports.familyOrphans.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/orphans-missing-reports">
+                <span class="ml-1 item-text">{{ "reports.orphansMissingReports.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/orphans-missing-files">
+                <span class="ml-1 item-text">{{ "reports.orphansMissingFiles.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/reports-awaiting-approval">
+                <span class="ml-1 item-text">{{ "reports.awaitingApproval.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/refused-reports">
+                <span class="ml-1 item-text">{{ "reports.refusedReports.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/non-renewed-reports">
+                <span class="ml-1 item-text">{{ "reports.nonRenewed.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/charity-payment-tracking">
+                <span class="ml-1 item-text">{{ "reports.charityTracking.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/missed-payments">
+                <span class="ml-1 item-text">{{ "reports.missedPayments.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/orphan-files">
+                <span class="ml-1 item-text">{{ "reports.orphanFiles.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/survey-questionnaire">
+                <span class="ml-1 item-text">{{ "reports.surveyQuestionnaire.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/orphans-without-payment">
+                <span class="ml-1 item-text">{{ "reports.orphansWithoutPayment.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/follow-up-sheets">
+                <span class="ml-1 item-text">{{ "reports.followUpSheets.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/missing-outgoing-attachments">
+                <span class="ml-1 item-text">{{ "reports.missingOutgoingAttachments.title" | translate }}</span>
+              </a>
+            </li>
+            <!-- Review P27 2026-08-26: three routed screens had NO menu entry — reachable by
+                 URL only. Entries added, gated like their routes (Reports.View). -->
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/cheque-statement">
+                <span class="ml-1 item-text">{{ "reports.chequeStatement.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/new-beneficiaries">
+                <span class="ml-1 item-text">{{ "reports.newBeneficiaries.title" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')"
+                routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/family-orphans-by-date">
+                <span class="ml-1 item-text">{{ "reports.familyOrphansByDate.title" | translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- General Cheques (financial roles; issue/edit is the approver subset) -->
+        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Accountant', 'FinancialOfficer'])"
+            [class.show]="isActive('/general-checks')">
+          <a href="#general-checks" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-check-square fe-16"></i>
+            <span class="ml-3 item-text">{{"generalChecks.title" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/general-checks')"
+              id="general-checks">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/general-checks">
+                <span class="ml-1 item-text">{{ "generalChecks.manageChecks" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasAnyRole(['SuperAdmin', 'Accountant', 'FinancialOfficer'])"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/general-checks/create">
+                <span class="ml-1 item-text">{{ "generalChecks.addCheck" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/general-checks/statement">
+                <span class="ml-1 item-text">{{ "generalChecks.statement" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+
+        
+       
+
+        
+
+        <!-- Periodic Orphan Reports (epic 9, UC-ORR) -->
+        <li class="nav-item dropdown" *ngIf="hasPermission('PeriodicReports.View')"
+            [class.show]="isActive('/periodic-orphan-reports')">
+          <a href="#periodic-orphan-reports" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-file-text fe-16"></i>
+            <span class="ml-3 item-text">{{ "IIROSA.periodicOrphanReports" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/periodic-orphan-reports')"
+              id="periodic-orphan-reports">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/periodic-orphan-reports">
+                <span class="ml-1 item-text">{{ "periodicReports.sidebar.allReports" | translate }}</span>
+              </a>
+            </li>
+            <!-- UC-ORR-09 — §14.S.4 حالة اليتيم status search -->
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/periodic-orphan-reports/orphan-reports/search">
+                <span class="ml-1 item-text">{{ "periodicReports.search.title" | translate }}</span>
+              </a>
+            </li>
+            <!-- UC-ORR-10 — §14.S.3 grouped statistics -->
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/periodic-orphan-reports/orphan-reports">
+                <span class="ml-1 item-text">{{ "orphanReports.statistics.title" | translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+
+        <!-- HQ Financial Transfers (Admin/SuperAdmin only) -->
+        <li class="nav-item dropdown" *ngIf="hasPermission('HqTransfers.View')"
+            [class.show]="isActive('/hq-transfers')">
+          <a href="#hq-transfers" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-dollar-sign fe-16"></i>
+            <span class="ml-3 item-text">{{"hqTransfers.title" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/hq-transfers')"
+              id="hq-transfers">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/hq-transfers">
+                <span class="ml-1 item-text">{{ "hqTransfers.title" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        
+        
 
       </ul>
     </nav>

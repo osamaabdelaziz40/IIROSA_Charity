@@ -1,4 +1,5 @@
 using IIROSA.Domain.Entities.Base;
+using IIROSA.Domain.Enums;
 
 namespace IIROSA.Domain.Entities;
 
@@ -14,6 +15,20 @@ public class PeriodicOrphanReport : FullAuditedEntity
     /// Foreign key to Orphan (Required) - UC-6.11
     /// </summary>
     public Guid OrphanId { get; set; }
+
+    /// <summary>
+    /// UC-HOU-06/08 (§11.S.3) — the ChildOrParent discriminator: which kind of housing
+    /// beneficiary this report is about (a child of the family, or the guardian). Defaults to
+    /// Child — every pre-housing row is a child report by definition.
+    /// </summary>
+    public ReportBeneficiaryType ChildOrParent { get; set; } = ReportBeneficiaryType.Child;
+
+    /// <summary>
+    /// UC-HOU-06/08 — the housing family the report belongs to. Set for housing-register
+    /// reports; links guardian-subject reports to the family even though OrphanId (required,
+    /// non-null by schema) then carries the family's first-child row as its carrier key.
+    /// </summary>
+    public Guid? FK_HousingFamilyId { get; set; }
 
     /// <summary>
     /// Optional link to OrphanPayment (UC-6.11) - Report can be created with or without payment selection
@@ -511,6 +526,11 @@ public class PeriodicOrphanReport : FullAuditedEntity
     /// Navigation to OrphanPayment (optional) - UC-6.11
     /// </summary>
     public virtual OrphanPayment? OrphanPayment { get; set; }
+
+    /// <summary>
+    /// Navigation to the housing family (UC-HOU-06/08) — null on non-housing reports.
+    /// </summary>
+    public virtual Family? HousingFamily { get; set; }
 
     /// <summary>
     /// Navigation to Reviewer - UC-6.13

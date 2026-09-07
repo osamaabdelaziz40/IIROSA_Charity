@@ -51,10 +51,15 @@ public class SupportTicketsController : ControllerBase
                 return Unauthorized(new { message = "User not found" });
             }
 
-            // Add system information from request
-            dto.BrowserInfo = Request.Headers["User-Agent"].ToString();
-            dto.PageUrl = Request.Headers.Referer.ToString();
-            dto.UserAction = "Create Ticket";
+            // Fill system information only when the client didn't supply it — overwriting
+            // unconditionally discarded the form's detected context and the user's answer
+            // to "what were you doing?" (UC-CST-01 reproduction context).
+            if (string.IsNullOrWhiteSpace(dto.BrowserInfo))
+                dto.BrowserInfo = Request.Headers["User-Agent"].ToString();
+            if (string.IsNullOrWhiteSpace(dto.PageUrl))
+                dto.PageUrl = Request.Headers.Referer.ToString();
+            if (string.IsNullOrWhiteSpace(dto.UserAction))
+                dto.UserAction = "Create Ticket";
 
             var ticket = await _ticketService.CreateTicketAsync(dto, userId);
             return CreatedAtAction(nameof(GetTicket), new { id = ticket.Id }, ticket);
@@ -63,10 +68,17 @@ public class SupportTicketsController : ControllerBase
         {
             return NotFound(new { message = ex.Message });
         }
+        catch (FluentValidation.ValidationException ex)
+        {
+            var errors = ex.Errors
+                .GroupBy(f => f.PropertyName)
+                .ToDictionary(g => g.Key, g => string.Join("; ", g.Select(f => f.ErrorMessage)));
+            return BadRequest(new { message = "Validation failed", errors });
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating support ticket");
-            return StatusCode(500, new { message = "Error creating support ticket", error = ex.Message });
+            return StatusCode(500, new { message = "Error creating support ticket" });
         }
     }
 
@@ -96,7 +108,7 @@ public class SupportTicketsController : ControllerBase
                 return Forbid();
             }
 
-            var ticket = await _ticketService.GetTicketDetailsAsync(id, userId);
+            var ticket = await _ticketService.GetTicketDetailsAsync(id, userId, isAdmin);
             return Ok(ticket);
         }
         catch (KeyNotFoundException ex)
@@ -110,7 +122,72 @@ public class SupportTicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving ticket: {Id}", id);
-            return StatusCode(500, new { message = "Error retrieving ticket", error = ex.Message });
+            return StatusCode(500, new { message = "Error retrieving ticket" });
+        }
+    }
+
+    /// <summary>
+    /// Update a support ticket (UC-CST-04: Update a support ticket تعديل الطلب)
+    /// Admin/Super Admin only
+    /// </summary>
+    [HttpPut("{id}")]
+    [Authorize(Roles = "SuperAdmin,Admin")]
+    [ProducesResponseType(typeof(SupportTicketDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SupportTicketDto>> UpdateTicket(Guid id, [FromBody] UpdateSupportTicketDto dto)
+    {
+        try
+        {
+            if (id != dto.Id)
+            {
+                return BadRequest(new { message = "ID mismatch" });
+            }
+
+            var userId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { message = "User not found" });
+            }
+
+            var updated = await _ticketService.UpdateTicketAsync(dto, userId);
+            return Ok(updated);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            var errors = ex.Errors
+                .GroupBy(f => f.PropertyName)
+                .ToDictionary(g => g.Key, g => string.Join("; ", g.Select(f => f.ErrorMessage)));
+            return BadRequest(new { message = "Validation failed", errors });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating ticket: {Id}", id);
+            return StatusCode(500, new { message = "Error updating ticket" });
+        }
+    }
+
+    /// <summary>
+    /// Get ticket lookups (categories, priorities, statuses) for the ticket form selects.
+    /// Available to all authenticated users — the create form needs it too.
+    /// </summary>
+    [HttpGet("lookups")]
+    [ProducesResponseType(typeof(TicketLookupsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<TicketLookupsDto>> GetTicketLookups()
+    {
+        try
+        {
+            var lookups = await _ticketService.GetTicketLookupsAsync();
+            return Ok(lookups);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving ticket lookups");
+            return StatusCode(500, new { message = "Error retrieving ticket lookups" });
         }
     }
 
@@ -137,7 +214,7 @@ public class SupportTicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving my tickets");
-            return StatusCode(500, new { message = "Error retrieving tickets", error = ex.Message });
+            return StatusCode(500, new { message = "Error retrieving tickets" });
         }
     }
 
@@ -159,7 +236,7 @@ public class SupportTicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving all tickets");
-            return StatusCode(500, new { message = "Error retrieving tickets", error = ex.Message });
+            return StatusCode(500, new { message = "Error retrieving tickets" });
         }
     }
 
@@ -181,7 +258,7 @@ public class SupportTicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching tickets");
-            return StatusCode(500, new { message = "Error searching tickets", error = ex.Message });
+            return StatusCode(500, new { message = "Error searching tickets" });
         }
     }
 
@@ -197,7 +274,8 @@ public class SupportTicketsController : ControllerBase
     {
         try
         {
-            await _ticketService.DeleteTicketAsync(id);
+            var deletedBy = GetCurrentUserId() ?? string.Empty;
+            await _ticketService.DeleteTicketAsync(id, deletedBy);
             return NoContent();
         }
         catch (KeyNotFoundException ex)
@@ -207,7 +285,7 @@ public class SupportTicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting ticket: {Id}", id);
-            return StatusCode(500, new { message = "Error deleting ticket", error = ex.Message });
+            return StatusCode(500, new { message = "Error deleting ticket" });
         }
     }
 
@@ -248,7 +326,7 @@ public class SupportTicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating ticket status: {Id}", id);
-            return StatusCode(500, new { message = "Error updating ticket status", error = ex.Message });
+            return StatusCode(500, new { message = "Error updating ticket status" });
         }
     }
 
@@ -294,7 +372,7 @@ public class SupportTicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error marking ticket as solved: {Id}", id);
-            return StatusCode(500, new { message = "Error marking ticket as solved", error = ex.Message });
+            return StatusCode(500, new { message = "Error marking ticket as solved" });
         }
     }
 
@@ -344,7 +422,7 @@ public class SupportTicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error adding response to ticket: {Id}", id);
-            return StatusCode(500, new { message = "Error adding response", error = ex.Message });
+            return StatusCode(500, new { message = "Error adding response" });
         }
     }
 
@@ -374,7 +452,7 @@ public class SupportTicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error assigning ticket: {Id}", id);
-            return StatusCode(500, new { message = "Error assigning ticket", error = ex.Message });
+            return StatusCode(500, new { message = "Error assigning ticket" });
         }
     }
 
@@ -400,7 +478,7 @@ public class SupportTicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error generating support report");
-            return StatusCode(500, new { message = "Error generating report", error = ex.Message });
+            return StatusCode(500, new { message = "Error generating report" });
         }
     }
 
@@ -430,7 +508,7 @@ public class SupportTicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving my tickets count");
-            return StatusCode(500, new { message = "Error retrieving count", error = ex.Message });
+            return StatusCode(500, new { message = "Error retrieving count" });
         }
     }
 
@@ -451,7 +529,7 @@ public class SupportTicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving all tickets count");
-            return StatusCode(500, new { message = "Error retrieving count", error = ex.Message });
+            return StatusCode(500, new { message = "Error retrieving count" });
         }
     }
 
@@ -472,7 +550,7 @@ public class SupportTicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving unsolved tickets count");
-            return StatusCode(500, new { message = "Error retrieving count", error = ex.Message });
+            return StatusCode(500, new { message = "Error retrieving count" });
         }
     }
 

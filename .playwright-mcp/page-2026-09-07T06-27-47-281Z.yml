@@ -1,0 +1,311 @@
+- generic [ref=f1e5]:
+  - navigation [ref=f1e6]:
+    - button "" [ref=f1e7] [cursor=pointer]
+    - list [ref=f1e9]:
+      - listitem [ref=f1e10]:
+        - link "English " [ref=f1e11] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f1e12]: 
+          - text: English 
+      - listitem [ref=f1e13]:
+        - link "" [ref=f1e14] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f1e16]:
+        - link "" [ref=f1e17] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f1e20]:
+        - button [ref=f1e21] [cursor=pointer]:
+          - generic [ref=f1e22]:
+            - text: Welcome System Admin
+            - img "..." [ref=f1e23]
+          - text: 
+  - complementary [ref=f1e24]:
+    - generic [ref=f1e29]:
+      - text: 
+      - navigation [ref=f1e30]:
+        - link [ref=f1e32] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f1e33]
+        - paragraph [ref=f1e34]: Website Elements
+        - list [ref=f1e35]:
+          - listitem [ref=f1e36]:
+            - link " Home Page (current) " [ref=f1e37] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f1e38]: 
+              - generic [ref=f1e39]: Home Page
+              - generic [ref=f1e40]: (current)
+              - text: 
+            - list [ref=f1e41]:
+              - listitem [ref=f1e42]:
+                - link "Home" [ref=f1e43] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f1e44]:
+            - link " Settings " [ref=f1e45] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=f1e46]: 
+              - generic [ref=f1e47]: Settings
+              - text: 
+          - listitem [ref=f1e48]:
+            - link " Technical Support " [ref=f1e49] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f1e50]: 
+              - generic [ref=f1e51]: Technical Support
+              - text: 
+          - listitem [ref=f1e52]:
+            - link " Office Projects " [ref=f1e53] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f1e54]: 
+              - generic [ref=f1e55]: Office Projects
+              - text: 
+          - listitem [ref=f1e56]:
+            - link " Housing Projects " [ref=f1e57] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f1e58]: 
+              - generic [ref=f1e59]: Housing Projects
+              - text: 
+          - listitem [ref=f1e60]:
+            - link " Seasonal Aid " [ref=f1e61] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f1e62]: 
+              - generic [ref=f1e63]: Seasonal Aid
+              - text: 
+          - listitem [ref=f1e64]:
+            - link " Incoming & Outgoing " [ref=f1e65] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f1e66]: 
+              - generic [ref=f1e67]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=f1e68]:
+            - link " Orphan Payments " [ref=f1e69] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f1e70]: 
+              - generic [ref=f1e71]: Orphan Payments
+              - text: 
+            - list [ref=f1e72]:
+              - listitem [ref=f1e73]:
+                - link "Manage Payment Groups" [ref=f1e74] [cursor=pointer]:
+                  - /url: "#/orphan-payments"
+              - listitem [ref=f1e75]:
+                - link "Add New Payment Group" [ref=f1e76] [cursor=pointer]:
+                  - /url: "#/orphan-payments/create"
+          - listitem [ref=f1e77]:
+            - link " Families " [ref=f1e78] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f1e79]: 
+              - generic [ref=f1e80]: Families
+              - text: 
+          - listitem [ref=f1e81]:
+            - link " Reports " [ref=f1e82] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f1e83]: 
+              - generic [ref=f1e84]: Reports
+              - text: 
+          - listitem [ref=f1e85]:
+            - link " General Cheques " [ref=f1e86] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f1e87]: 
+              - generic [ref=f1e88]: General Cheques
+              - text: 
+          - listitem [ref=f1e89]:
+            - link " Missions " [ref=f1e90] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f1e91]: 
+              - generic [ref=f1e92]: Missions
+              - text: 
+          - listitem [ref=f1e93]:
+            - link " Periodic Orphan Reports " [ref=f1e94] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f1e95]: 
+              - generic [ref=f1e96]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=f1e97]:
+            - link " Financial Transfers " [ref=f1e98] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f1e99]: 
+              - generic [ref=f1e100]: Financial Transfers
+              - text: 
+  - main [ref=f1e101]:
+    - generic [ref=f1e103]:
+      - navigation "breadcrumb" [ref=f1e105]:
+        - list [ref=f1e106]:
+          - listitem [ref=f1e107]:
+            - link "Home" [ref=f1e108] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=f1e109]:
+            - text: /
+            - link "Orphan Payments" [ref=f1e110] [cursor=pointer]:
+              - /url: "#/orphan-payments"
+          - listitem [ref=f1e111]:
+            - text: /
+            - generic [ref=f1e112]: Add New Payment Group
+      - generic [ref=f1e114]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f1e115]:
+          - heading "Add New Payment Group" [level=3] [ref=f1e118]
+          - button "Cancel" [ref=f1e120] [cursor=pointer]
+      - generic [ref=f1e126]:
+        - heading "Basic Information" [level=5] [ref=f1e128]
+        - generic [ref=f1e129]:
+          - generic [ref=f1e131]:
+            - generic [ref=f1e132]: Group Name
+            - textbox "Group Name" [ref=f1e133]:
+              - /placeholder: Enter payment group name (e.g., January 2026 - Region A)
+          - generic [ref=f1e135]:
+            - generic [ref=f1e136]:
+              - generic [ref=f1e137]: Charity
+              - combobox [expanded] [ref=f1e313] [cursor=pointer]:
+                - textbox "Headquarters" [ref=f1e314]
+                - listbox [expanded] [ref=f1e220]:
+                  - option "All charities" [ref=f1e316]
+                  - option "dga" [ref=f1e317]
+                  - option "dga2" [ref=f1e318]
+                  - option "Headquarters" [selected] [ref=f1e319]
+                  - option "TestAdmin" [ref=f1e320]
+                  - option "أيتام مكتب مصر" [ref=f1e321]
+                  - option "اسم الجمعية *" [ref=f1e322]
+                  - option "الجمعية الإسلامية للخدمات الاجتماعية - أوسيم" [ref=f1e323]
+                  - option "الجمعية الإسلامية للخدمات الاجتماعية - الهياتم" [ref=f1e324]
+                  - option "الجمعية الخيرية - وادى النطرون" [ref=f1e325]
+                  - option "الجمعية الخيرية الإسلامية بالعصايد" [ref=f1e326]
+                  - option "الجمعية الخيرية الاسلامية - بئر العبد - شمال سيناء" [ref=f1e327]
+                  - option "الجمعية الخيرية الاسلامية - ديو الوسطى" [ref=f1e328]
+                  - option "الجمعية الخيرية الاسلامية والتنمية - ديروط الشريف" [ref=f1e329]
+                  - option "الجمعية الخيرية لانشاء وتعمير المساجد - طهطا" [ref=f1e330]
+                  - option "الجمعية الشرعية - ابو كبير" [ref=f1e331]
+                  - option "الجمعية الشرعية - العريش" [ref=f1e332]
+                  - option "الجمعية الشرعية - قنتير" [ref=f1e333]
+                  - option "اللاجئين اليمنيين - الجيزة - فيصل" [ref=f1e334]
+                  - option "ايتام مدينة شبين القناطر - القليوبية" [ref=f1e335]
+                  - option "ايتام مدينة وادي النطرون" [ref=f1e336]
+                  - option "بوادي سيناء" [ref=f1e337]
+                  - option "جمعية الإصلاح للخدمات والتنمية - ناهيا" [ref=f1e338]
+                  - option "جمعية الايمان لكفالة الايتام - كفر الشيخ" [ref=f1e339]
+                  - option "جمعية الرحمة الخيرية" [ref=f1e340]
+                  - option "جمعية الرحمن الخيرية - قويسنا - المنوفية" [ref=f1e341]
+                  - option "جمعية الصفوة لتنمية المجتمع وكفالة اليتيم - الفيوم" [ref=f1e342]
+                  - option "جمعية الطيبين الخيرية" [ref=f1e343]
+                  - option "جمعية المحافظة على القرآن الكريم - ابو كبير" [ref=f1e344]
+                  - option "جمعية المحافظة على القرآن الكريم - الهجارسة" [ref=f1e345]
+                  - option "جمعية المحافظة على القرآن الكريم - شندويل - سوهاج" [ref=f1e346]
+                  - option "جمعية المحافظة على القرآن الكريم - كفر الغول" [ref=f1e347]
+                  - option "جمعية النهوض بالمرأة" [ref=f1e348]
+                  - option "جمعية انصار السنة المحمدية - شبين القناطر" [ref=f1e349]
+                  - option "جمعية انصار السنة المحمدية - صدقا" [ref=f1e350]
+                  - option "جمعية اولاد الاحباء - العريش - شمال سيناء" [ref=f1e351]
+                  - option "جمعية بصمة خير - نبروه - الدقهلية" [ref=f1e352]
+                  - option "جمعية تحفيظ القرآن الكريم - بنى مر - اسيوط" [ref=f1e353]
+                  - option "جمعية تحفيظ القرآن الكريم - كفر المنشي" [ref=f1e354]
+                  - option "جمعية تنمية المجتمع - الزوامل البحرية - كفر الشيخ" [ref=f1e355]
+                  - option "جمعية تنمية مجتمع العلم والإيمان- كفر الدوار" [ref=f1e356]
+                  - option "جمعية حقوق المرأة السيناوية" [ref=f1e357]
+                  - option "جمعية دعوة الحق - دمياط" [ref=f1e358]
+                  - option "جمعية دعوة الحق الاسلامية - الرياض" [ref=f1e359]
+                  - option "جمعية دمنهور الوحش الخيرية" [ref=f1e360]
+                  - option "جمعية رسالة - بني سويف" [ref=f1e361]
+                  - option "جمعية رسالة نور على نور" [ref=f1e362]
+                  - option "جمعية رعاية الأسرة - ايتاي البارود- البحيرة" [ref=f1e363]
+                  - option "جمعية رعاية المجتمع بابو داود العنب" [ref=f1e364]
+                  - option "جمعية زكاة الفاتح عمرو" [ref=f1e365]
+                  - option "جمعية زهرة مصر - مدينة نصر - القاهرة" [ref=f1e366]
+                  - option "جمعية سفراء الهداية" [ref=f1e367]
+                  - option "جمعية عمر بن الخطاب لتنمية المجتمع - وادي النطرون" [ref=f1e368]
+                  - option "جمعية كفالة اليتيم والتنمية -المدمر - سوهاج" [ref=f1e369]
+                  - option "جمعية مسجد تبارك بحلوان" [ref=f1e370]
+                  - option "جمعية مصعب بن عمير الخيرية الاسلامية" [ref=f1e371]
+                  - option "جمعية هيئة علماء الوعظ" [ref=f1e372]
+                  - option "لجنة زكاة ابو شعبان - المنصورية - الجيزة" [ref=f1e373]
+                  - option "لجنة زكاة الجندية - بني مزار - المنيا" [ref=f1e374]
+                  - option "لجنة زكاة الحاج فارس - المنيا" [ref=f1e375]
+                  - option "لجنة زكاة الكوم الطويل - كفر الشيخ" [ref=f1e376]
+                  - option "لجنة زكاة المسجد البحري - ميت غراب" [ref=f1e377]
+                  - option "لجنة زكاة المسجد الكبير - الدروتين" [ref=f1e378]
+                  - option "لجنة زكاة سمالوط - بالمنيا" [ref=f1e379]
+                  - option "لجنة زكاة كفر الشيخ سليم بطنطا" [ref=f1e380]
+                  - option "لجنة زكاة كفر حكيم" [ref=f1e381]
+                  - option "لجنة زكاة مدرسة البرانية الثانوية" [ref=f1e382]
+                  - option "لجنة زكاة مسجد أبو سنة" [ref=f1e383]
+                  - option "لجنة زكاة مسجد الخمسة الاهلي - سنبلاوين - الدقهلية" [ref=f1e384]
+                  - option "لجنة زكاة مسجد الدعوة - شبرا" [ref=f1e385]
+                  - option "لجنة زكاة مسجد السلام - بنا ابو صير" [ref=f1e386]
+                  - option "لجنة زكاة مسجد الهداية - مدينة نصر- القاهرة" [ref=f1e387]
+                  - option "لجنة زكاة مسجد عمر بن الخطاب -وادي حوف- حلوان" [ref=f1e388]
+                  - option "لجنة زكاة مسجد محمد شحاته عبيد - الغربية" [ref=f1e389]
+                  - option "لجنة زكاة منيل شيحة" [ref=f1e390]
+                  - option "مؤسسة بناء الانسان للمستقبل" [ref=f1e391]
+                  - option "مؤسسة سوريا الغد للإغاثة - القاهرة" [ref=f1e392]
+                  - option "مؤسسة سوريا الغد للإغاثة / 6 اكتوبر" [ref=f1e393]
+                  - option "مؤسسة سوريا الغد للإغاثة / العبور" [ref=f1e394]
+                  - option "مؤسسة سوريا الغد للإغاثة / القاهرة" [ref=f1e395]
+                  - option "مؤسسة سوريا الغد للإغاثة / جسر السويس" [ref=f1e396]
+                  - option "مؤسسة سوريا الغد للإغاثة / فيصل" [ref=f1e397]
+                  - option "مؤسسة سوريا الغد للإغاثة / مدينة السادات" [ref=f1e398]
+                  - option "مؤسسة سوريا الغد للإغاثة/ دمياط" [ref=f1e399]
+                  - option "مؤسسة سوريا الغد للإغاثة/العاشر من رمضان" [ref=f1e400]
+                  - option "مؤسسة محمد نادي الخيرية" [ref=f1e401]
+                  - option "مؤسسة مصر الامل للتنمية الانسانية" [ref=f1e402]
+                  - option "مؤسسة نماء للتنمية الاجتماعية - الصف - القاهرة" [ref=f1e403]
+              - generic [ref=f1e315]: Looks good!
+            - searchbox [active] [ref=f1e311]
+        - generic [ref=f1e144]:
+          - generic [ref=f1e145]: Batch Number
+          - combobox "Batch Number" [ref=f1e146]:
+            - option "Auto-generate" [selected]
+          - text: Leave blank to auto-generate the batch number on save
+          - button " Add Batch Number" [ref=f1e148] [cursor=pointer]:
+            - generic [ref=f1e149]: 
+            - text: Add Batch Number
+        - generic [ref=f1e152]:
+          - generic [ref=f1e153]: Description
+          - textbox "Description" [ref=f1e154]:
+            - /placeholder: Enter group description (optional)
+        - generic [ref=f1e155]:
+          - generic [ref=f1e157]:
+            - generic [ref=f1e158]: Payment Period From
+            - textbox "Payment Period From" [ref=f1e159]: 2026-09-07
+          - generic [ref=f1e161]:
+            - generic [ref=f1e162]: Payment Period To
+            - textbox "Payment Period To" [ref=f1e163]: 2026-09-07
+          - generic [ref=f1e165]:
+            - generic [ref=f1e166]: Group Date
+            - textbox "Group Date" [ref=f1e167]: 2026-09-07
+          - generic [ref=f1e169]:
+            - generic [ref=f1e170]: Distribution Start Date
+            - textbox "Distribution Start Date" [ref=f1e171]: 2026-09-07
+        - heading "Financial Information" [level=5] [ref=f1e173]
+        - generic [ref=f1e174]:
+          - generic [ref=f1e176]:
+            - generic [ref=f1e177]: Exchange Rate
+            - generic [ref=f1e178]:
+              - spinbutton "Exchange Rate" [ref=f1e179]
+              - generic [ref=f1e181]:
+                - generic "Used for reporting calculations only"
+            - text: Rate used for converting amounts in reports
+          - generic [ref=f1e184]:
+            - generic [ref=f1e185]: Currency
+            - combobox [ref=f1e188] [cursor=pointer]:
+              - textbox "EGP - Egyptian Pound" [ref=f1e189]
+          - generic [ref=f1e192]:
+            - checkbox "Lock Exchange Rate" [ref=f1e193]
+            - generic [ref=f1e194]: Lock Exchange Rate
+            - generic [ref=f1e195]: Prevents accidental changes to the exchange rate
+        - heading "Settings" [level=5] [ref=f1e197]
+        - generic [ref=f1e200]:
+          - generic [ref=f1e201]: Show Order
+          - spinbutton "Show Order" [ref=f1e202]: "0"
+        - generic [ref=f1e205]:
+          - generic [ref=f1e206]: Notes
+          - textbox "Notes" [ref=f1e207]:
+            - /placeholder: Enter additional notes (optional)
+        - generic [ref=f1e208]:
+          - button " Save" [disabled] [ref=f1e209] [cursor=pointer]:
+            - generic [ref=f1e210]: 
+            - text: Save
+          - button " Cancel" [ref=f1e211] [cursor=pointer]:
+            - generic [ref=f1e212]: 
+            - text: Cancel
+  - contentinfo [ref=f1e213]:
+    - generic [ref=f1e215]:
+      - paragraph [ref=f1e217]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f1e219]: Version 1.0.0

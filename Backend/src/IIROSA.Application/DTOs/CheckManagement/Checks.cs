@@ -1,38 +1,41 @@
 namespace IIROSA.Application.DTOs.CheckManagement;
 
 /// <summary>
-/// Check list item for grid display (UC-11.7)
+/// Cheque list row — the columns of the register grid (§16.S.1) and the statement grid (§16.S.3).
 /// </summary>
 public class CheckListDto
 {
     public Guid Id { get; set; }
     public string CheckNumber { get; set; } = string.Empty;
     public DateTime CheckDate { get; set; }
-    public DateTime? DueDate { get; set; }
     public string BeneficiaryName { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public string Currency { get; set; } = string.Empty;
-    public string CheckStatus { get; set; } = string.Empty;
+    public string ChequeType { get; set; } = "Individuals";
     public string? BankName { get; set; }
-    public string? CreatedBy { get; set; }
-    public DateTime CreatedOn { get; set; }
+    public Guid? CharityId { get; set; }
+    public bool IsDamaged { get; set; }
+    public bool IsReturned { get; set; }
+    public bool IsDispensed { get; set; }
+    public bool IsDone { get; set; }
+    public string? Comment { get; set; }
 }
 
 /// <summary>
-/// Check detail with all information (UC-11.8)
+/// Full cheque record for the view/edit screens (§16.S.2 fields plus the stored snapshot).
 /// </summary>
 public class CheckDetailDto
 {
     public Guid Id { get; set; }
 
-    // Check Information
+    // Check information
     public string CheckNumber { get; set; } = string.Empty;
     public DateTime CheckDate { get; set; }
-    public DateTime? DueDate { get; set; }
     public string Currency { get; set; } = string.Empty;
+    public string ChequeType { get; set; } = "Individuals";
 
-    // Beneficiary Information
-    public int? FK_ChequeBeneficiaryId { get; set; }
+    // Beneficiary snapshot
+    public int? ChequeBeneficiaryId { get; set; }
     public string? BeneficiaryType { get; set; }
     public string BeneficiaryName { get; set; } = string.Empty;
     public string? BeneficiaryAddress { get; set; }
@@ -40,126 +43,95 @@ public class CheckDetailDto
     public string? BeneficiaryEmail { get; set; }
     public string? BeneficiaryIdNumber { get; set; }
 
-    // Financial Information
+    // Financial
     public decimal Amount { get; set; }
     public string? AmountInWords { get; set; }
-    public string? PaymentReason { get; set; }
-    public string? PaymentDescription { get; set; }
 
-    // Bank Information
-    public int? FK_BankId { get; set; }
+    // Bank
+    public int? BankId { get; set; }
     public string? BankName { get; set; }
     public string? BankBranch { get; set; }
     public string? AccountNumber { get; set; }
 
-    // Status Information
-    public string CheckStatus { get; set; } = string.Empty;
-    public DateTime? IssueDate { get; set; }
-    public DateTime? ClearanceDate { get; set; }
-    public string? BankReference { get; set; }
-    public string? ClearanceNotes { get; set; }
-    public DateTime? VoidDate { get; set; }
-    public string? VoidReason { get; set; }
-    public string? VoidNotes { get; set; }
+    // Tenancy & flags
+    public Guid? CharityId { get; set; }
+    public string? CharityName { get; set; }
+    public bool IsDamaged { get; set; }
+    public bool IsReturned { get; set; }
+    public bool IsDispensed { get; set; }
+    public bool IsDone { get; set; }
 
-    // Approval
-    public bool RequiresApproval { get; set; }
-    public Guid? ApprovedBy { get; set; }
-    public string? ApproverName { get; set; }
-    public DateTime? ApprovalDate { get; set; }
-
-    // Additional
-    public string? Notes { get; set; }
-
-    // Computed Properties
-    public bool CanModify { get; set; }
-    public bool CanBeCleared { get; set; }
-    public bool CanBeVoided { get; set; }
+    /// <summary>تعليقات.</summary>
+    public string? Comment { get; set; }
 
     // Audit
     public DateTime CreatedOn { get; set; }
     public string? CreatedBy { get; set; }
-    public string? CreatorName { get; set; }
     public DateTime? UpdatedOn { get; set; }
     public string? UpdatedBy { get; set; }
-    public string? ModifierName { get; set; }
 }
 
 /// <summary>
-/// Create check DTO (UC-11.1)
+/// UC-CHQ-02 — issue a cheque. Mandatory fields per §16.S.2:
+/// bank, beneficiary name, cheque date, cheque number, currency, amount.
 /// </summary>
 public class CreateCheckDto
 {
-    // Required fields
-    public string CheckNumber { get; set; } = string.Empty;
-    public DateTime CheckDate { get; set; } = DateTime.Today;
-    public decimal Amount { get; set; }
+    public int? BankId { get; set; }
     public string BeneficiaryName { get; set; } = string.Empty;
-
-    // Optional fields
-    public DateTime? DueDate { get; set; }
+    public DateTime CheckDate { get; set; } = DateTime.Today;
+    public string CheckNumber { get; set; } = string.Empty;
     public string Currency { get; set; } = "EGP";
+    public decimal Amount { get; set; }
+
+    // Optional
+    public Guid? CharityId { get; set; }
+    public int? ChequeBeneficiaryId { get; set; }
     public string? BeneficiaryType { get; set; }
-    public int? FK_ChequeBeneficiaryId { get; set; }
     public string? BeneficiaryAddress { get; set; }
     public string? BeneficiaryPhone { get; set; }
     public string? BeneficiaryEmail { get; set; }
     public string? BeneficiaryIdNumber { get; set; }
-    public string? AmountInWords { get; set; }
-    public string? PaymentReason { get; set; }
-    public string? PaymentDescription { get; set; }
-    public int? FK_BankId { get; set; }
     public string? BankBranch { get; set; }
     public string? AccountNumber { get; set; }
-    public bool RequiresApproval { get; set; } = false;
-    public string? Notes { get; set; }
+    public string? AmountInWords { get; set; }
+    public string ChequeType { get; set; } = "Individuals";
+    public bool IsDamaged { get; set; }
+    public bool IsReturned { get; set; }
+    public bool IsDispensed { get; set; }
+    public bool IsDone { get; set; }
+    public string? Comment { get; set; }
 }
 
 /// <summary>
-/// Update check DTO
+/// UC-CHQ-04 — update a cheque. Same fields as create; the record id travels in the body
+/// because the legacy contract (and the spec) is PUT /api/CheckManagement.
 /// </summary>
-public class UpdateCheckDto
+public class UpdateCheckDto : CreateCheckDto
 {
-    public string? CheckNumber { get; set; }
-    public DateTime? CheckDate { get; set; }
-    public DateTime? DueDate { get; set; }
-    public string? Currency { get; set; }
-    public string? BeneficiaryType { get; set; }
-    public string? BeneficiaryName { get; set; }
-    public int? FK_ChequeBeneficiaryId { get; set; }
-    public string? BeneficiaryAddress { get; set; }
-    public string? BeneficiaryPhone { get; set; }
-    public string? BeneficiaryEmail { get; set; }
-    public string? BeneficiaryIdNumber { get; set; }
-    public decimal? Amount { get; set; }
-    public string? AmountInWords { get; set; }
-    public string? PaymentReason { get; set; }
-    public string? PaymentDescription { get; set; }
-    public int? FK_BankId { get; set; }
-    public string? BankBranch { get; set; }
-    public string? AccountNumber { get; set; }
-    public string? Notes { get; set; }
+    public Guid Id { get; set; }
 }
 
 /// <summary>
-/// Check filter DTO for queries (UC-11.7)
+/// Register filter (§16.S.1 / §16.S.3): charity, bank, date range, cheque type, free text.
 /// </summary>
 public class CheckFilterDto
 {
-    public string? SearchText { get; set; }               // Search by check number or beneficiary
-    public string? CheckStatus { get; set; }               // Filter by status
-    public int? FK_BankId { get; set; }                    // Filter by bank
-    public string? Currency { get; set; }                  // Filter by currency
-    public DateTime? StartDate { get; set; }               // Date range filter
-    public DateTime? EndDate { get; set; }
-    public decimal? MinAmount { get; set; }                // Amount range filter
-    public decimal? MaxAmount { get; set; }
+    /// <summary>Explicit charity scope — honoured for HQ roles only; charity users are pinned to their own.</summary>
+    public Guid? CharityId { get; set; }
+    public int? BankId { get; set; }
+    public DateTime? DateFrom { get; set; }
+    public DateTime? DateTo { get; set; }
+    /// <summary>"Orphans" (شيكات إيتام) or "Individuals" (شيكات أفراد); null = both.</summary>
+    public string? ChequeType { get; set; }
+    /// <summary>Matches cheque number or beneficiary name.</summary>
+    public string? SearchText { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
 }
 
 /// <summary>
-/// Paged result wrapper for checks
+/// Paged result wrapper for the register.
 /// </summary>
 public class CheckPagedResult<T>
 {
@@ -167,102 +139,75 @@ public class CheckPagedResult<T>
     public int TotalCount { get; set; }
     public int Page { get; set; }
     public int PageSize { get; set; }
-    public int TotalPages => (int)Math.Ceiling((decimal)TotalCount / PageSize);
+    public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((decimal)TotalCount / PageSize) : 0;
 }
 
 /// <summary>
-/// Check status summary (UC-11.10)
+/// UC-CHQ-07 — GET /api/CheckManagement/amount-in-words response.
 /// </summary>
-public class CheckStatusSummaryDto
-{
-    public int TotalChecks { get; set; }
-    public int PendingChecks { get; set; }
-    public int IssuedChecks { get; set; }
-    public int ClearedChecks { get; set; }
-    public int VoidedChecks { get; set; }
-    public decimal TotalAmount { get; set; }
-    public decimal PendingAmount { get; set; }
-    public decimal ClearedAmount { get; set; }
-    public Dictionary<string, decimal> AmountByCurrency { get; set; } = new();
-    public Dictionary<string, int> CountByBank { get; set; } = new();
-}
-
-// ========== DTOs for Specific Use Cases ==========
-
-/// <summary>
-/// Set check amount DTO (UC-11.3)
-/// </summary>
-public class SetCheckAmountDto
+public class AmountInWordsDto
 {
     public decimal Amount { get; set; }
-    public string Currency { get; set; } = "EGP";
-    public string? AmountInWords { get; set; }
+    public string Currency { get; set; } = string.Empty;
+    public string Words { get; set; } = string.Empty;
 }
 
 /// <summary>
-/// Set check date DTO (UC-11.4)
+/// UC-CHQ-09 — GET /api/CheckManagement/report (cheque statement بيان الشيكات).
 /// </summary>
-public class SetCheckDateDto
+public class CheckStatementDto
 {
-    public DateTime CheckDate { get; set; }
-    public DateTime? DueDate { get; set; }
+    public List<CheckListDto> Items { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int TotalPages { get; set; }
+    public Dictionary<string, decimal> TotalByCurrency { get; set; } = new();
+    public DateTime GeneratedOn { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>
-/// Mark check as cleared DTO (UC-11.5)
+/// UC-CHQ-05 — GET /api/LookupManagement/cheque-beneficiaries type-ahead row.
 /// </summary>
-public class MarkCheckClearedDto
+public class ChequeBeneficiaryOptionDto
 {
-    public DateTime ClearanceDate { get; set; } = DateTime.Today;
-    public string? BankReference { get; set; }
-    public string? ClearanceNotes { get; set; }
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? BeneficiaryType { get; set; }
+    public string? Address { get; set; }
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
+    public string? IdNumber { get; set; }
+    public int? BankId { get; set; }
+    public string? AccountNumber { get; set; }
 }
 
 /// <summary>
-/// Void check DTO (UC-11.6)
+/// UC-CHQ-06 — GET /api/LookupManagement/currencies row.
 /// </summary>
-public class VoidCheckDto
+public class CurrencyOptionDto
 {
-    public string VoidReason { get; set; } = string.Empty; // Lost, Stopped, Error, Expired, Other
-    public DateTime VoidDate { get; set; } = DateTime.Today;
-    public string VoidNotes { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
 }
 
 /// <summary>
-/// Reconciliation result (UC-11.9)
+/// UC-CHQ-08 — GET /api/LookupManagement/banks/{id}/cheque-positions response.
+/// Configured=false means the bank has no stationery offsets stored and the caller
+/// should fall back to the default layout (or report nothing to align to).
 /// </summary>
-public class CheckReconciliationDto
+public class BankChequePositionsDto
 {
-    public List<Guid> ReconciledCheckIds { get; set; } = new();
-    public int TotalChecksReconciled { get; set; }
-    public decimal TotalAmountReconciled { get; set; }
-    public int UnreconciledChecks { get; set; }
-    public DateTime ReconciliationDate { get; set; } = DateTime.Today;
-    public string? ReconciliationNotes { get; set; }
-}
-
-/// <summary>
-/// Check report filter (UC-11.10)
-/// </summary>
-public class CheckReportFilterDto
-{
-    public DateTime StartDate { get; set; }
-    public DateTime EndDate { get; set; }
-    public string? CheckStatus { get; set; }
-    public int? FK_BankId { get; set; }
-    public string? Currency { get; set; }
-    public string GroupBy { get; set; } = "Status"; // Status, Bank, Beneficiary
-}
-
-/// <summary>
-/// Check report (UC-11.10)
-/// </summary>
-public class CheckReportDto
-{
-    public CheckStatusSummaryDto Summary { get; set; } = new();
-    public List<CheckListDto> DetailedChecks { get; set; } = new();
-    public List<CheckListDto> ClearedChecks { get; set; } = new();
-    public List<CheckListDto> PendingChecks { get; set; } = new();
-    public List<CheckListDto> VoidChecks { get; set; } = new();
-    public DateTime ReportGeneratedOn { get; set; } = DateTime.UtcNow;
+    public int BankId { get; set; }
+    public string BankName { get; set; } = string.Empty;
+    public bool Configured { get; set; }
+    public decimal? DateX { get; set; }
+    public decimal? DateY { get; set; }
+    public decimal? PayeeX { get; set; }
+    public decimal? PayeeY { get; set; }
+    public decimal? AmountX { get; set; }
+    public decimal? AmountY { get; set; }
+    public decimal? AmountWordsX { get; set; }
+    public decimal? AmountWordsY { get; set; }
 }

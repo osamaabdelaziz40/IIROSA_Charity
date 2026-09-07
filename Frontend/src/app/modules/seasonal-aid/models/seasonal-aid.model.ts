@@ -1,168 +1,280 @@
-export interface SeasonalCampaign {
+import { PagedResponse } from '../../../core/models/common.model';
+
+// Wire contract mirrors of the backend SeasonalAid DTOs (IIROSA.Application/DTOs/SeasonalAid).
+// Property names and casing must match the API exactly — this module previously shipped a
+// parallel set of invented keys (campaignName, orphanCount, distributionStatus, …) that never
+// matched the backend, so every screen silently rendered blanks.
+
+export interface SeasonalAidCampaign {
   id: string;
-  campaignName: string;
-  campaignType: CampaignType;
-  description?: string;
-  startDate: Date;
-  endDate: Date;
+  name: string;
+  campaignType: string;
+  description?: string | null;
+  startDate: string;
+  endDate: string;
   totalBudget: number;
-  budgetCurrency: Currency;
+  budgetCurrency: string;
   perFamilyAllocation: number;
-  country: string;
-  regions: string[];
-  centers: string[];
-  assignedCharityId?: string;
-  assignedCharityName?: string;
-  maximumFamilies?: number;
-  familyType?: FamilyType;
-  ageRangeFrom?: number;
-  ageRangeTo?: number;
+  allocatedBudget: number;
+  distributedBudget: number;
+  remainingBudget: number;
+  countryId?: number | null;
+  countryName?: string | null;
+  regionId?: number | null;
+  regionName?: string | null;
+  centerId?: number | null;
+  centerName?: string | null;
+  charityId?: string | null;
+  charityName?: string | null;
+  maximumFamilies?: number | null;
+  familyType?: string | null;
+  minChildrenAge?: number | null;
+  maxChildrenAge?: number | null;
+  registeredBeneficiariesCount: number;
+  distributedBeneficiariesCount: number;
+  pendingBeneficiariesCount: number;
   isActive: boolean;
   isClosed: boolean;
-  closureDate?: Date;
-  closureNotes?: string;
-  createdDate: Date;
-  createdBy: string;
-  modifiedDate?: Date;
-  modifiedBy?: string;
+  closedDate?: string | null;
+  closureNotes?: string | null;
+  createdOn: string;
+  createdBy?: string | null;
+  updatedOn: string;
+  updatedBy?: string | null;
 }
 
-export enum CampaignType {
-  Ramadan = 'Ramadan',
-  EidAlFitr = 'EidAlFitr',
-  EidAlAdha = 'EidAlAdha',
-  Winter = 'Winter',
-  SchoolSupplies = 'SchoolSupplies',
-  Other = 'Other'
+export interface SeasonalAidCampaignListItem {
+  id: string;
+  name: string;
+  campaignType: string;
+  startDate: string;
+  endDate: string;
+  totalBudget: number;
+  budgetCurrency: string;
+  allocatedBudget: number;
+  distributedBudget: number;
+  registeredBeneficiariesCount: number;
+  distributedBeneficiariesCount: number;
+  isActive: boolean;
+  isClosed: boolean;
+  charityName?: string | null;
+  countryName?: string | null;
+  completionPercentage: number;
 }
 
-export enum Currency {
-  EGP = 'EGP',
-  SAR = 'SAR',
-  USD = 'USD'
+export interface CreateSeasonalAidCampaignRequest {
+  name: string;
+  campaignType: string;
+  description?: string | null;
+  startDate: string;
+  endDate: string;
+  totalBudget: number;
+  budgetCurrency: string;
+  perFamilyAllocation: number;
+  countryId?: number | null;
+  regionId?: number | null;
+  centerId?: number | null;
+  charityId?: string | null;
+  maximumFamilies?: number | null;
+  familyType?: string | null;
+  minChildrenAge?: number | null;
+  maxChildrenAge?: number | null;
+  isActive: boolean;
 }
 
-export enum FamilyType {
-  All = 'All',
-  OrphanFamilies = 'OrphanFamilies',
-  NeedyFamilies = 'NeedyFamilies'
+export interface UpdateSeasonalAidCampaignRequest extends CreateSeasonalAidCampaignRequest {
+  id: string;
 }
 
-export interface CampaignBeneficiary {
+export interface SeasonalAidBeneficiary {
   id: string;
   campaignId: string;
   familyId: string;
   familyCode: string;
-  familyAddress: string;
-  charityId: string;
-  charityName: string;
-  region: string;
-  center: string;
-  orphanCount: number;
-  familyType: string;
-  allocatedAmount: number;
-  distributionStatus: DistributionStatus;
-  registrationDate: Date;
-  registeredBy: string;
+  familyAddress?: string | null;
+  orphansCount: number;
+  familyMembersCount: number;
+  charityName?: string | null;
+  regionName?: string | null;
+  centerName?: string | null;
+  allocationAmount: number;
+  currency: string;
+  isRegistered: boolean;
+  registrationDate: string;
+  registrationNotes?: string | null;
+  isDistributed: boolean;
+  distributionDate?: string | null;
+  distributedAmount: number;
+  receivedBy?: string | null;
+  notes?: string | null;
+  createdOn: string;
 }
 
-export enum DistributionStatus {
-  Pending = 'Pending',
-  Distributed = 'Distributed',
-  Cancelled = 'Cancelled'
-}
-
-export interface AidDistribution {
+export interface SeasonalAidDistribution {
   id: string;
-  campaignBeneficiaryId: string;
-  campaignId: string;
-  familyId: string;
+  beneficiaryId: string;
   familyCode: string;
-  distributionDate: Date;
+  campaignName: string;
+  isDistributed: boolean;
+  distributionDate: string;
   amountDistributed: number;
-  receivedBy: string;
-  notes?: string;
-  signatureUrl?: string;
-  attachmentIds?: string[];
-  distributedBy: string;
-  createdAt: Date;
+  currency: string;
+  receivedBy?: string | null;
+  recipientRelationship?: string | null;
+  notes?: string | null;
+  signatureImageUrl?: string | null;
+  attachmentId?: string | null;
+  distributionMethod?: string | null;
+  distributorName?: string | null;
+  distributorRole?: string | null;
+  createdOn: string;
+  createdBy?: string | null;
 }
 
-export interface CampaignStatistics {
+export interface CreateSeasonalAidDistributionRequest {
+  beneficiaryId: string;
+  distributionDate: string;
+  amountDistributed: number;
+  currency: string;
+  receivedBy: string;
+  recipientRelationship?: string | null;
+  notes?: string | null;
+  signatureImageUrl?: string | null;
+  attachmentId?: string | null;
+  distributionMethod?: string | null;
+  distributorName?: string | null;
+  distributorRole?: string | null;
+}
+
+export interface SeasonalAidCampaignReport {
   campaignId: string;
+  campaignName: string;
+  campaignType: string;
+  startDate: string;
+  endDate: string;
+  description?: string | null;
+  totalBudget: number;
+  budgetCurrency: string;
+  allocatedBudget: number;
+  distributedBudget: number;
+  remainingBudget: number;
+  budgetUtilizationPercentage: number;
   totalBeneficiaries: number;
   distributedBeneficiaries: number;
   pendingBeneficiaries: number;
-  totalBudget: number;
-  allocatedAmount: number;
-  distributedAmount: number;
-  remainingBudget: number;
-  averageDistribution: number;
+  beneficiaryDistributionPercentage: number;
+  beneficiariesByRegion: Record<string, number>;
+  beneficiariesByCharity: Record<string, number>;
+  beneficiariesByFamilyType: Record<string, number>;
+  coveredCountries: string[];
+  coveredRegions: string[];
+  coveredCenters: string[];
+  estimatedIndividualsServed: number;
+  totalOrphansServed: number;
+  totalFamiliesServed: number;
+  distributionDetails: BeneficiaryDistributionDetail[];
+  isActive: boolean;
+  isClosed: boolean;
+  closedDate?: string | null;
+  closureNotes?: string | null;
+  reportGeneratedOn: string;
+  generatedBy: string;
 }
 
-export interface CampaignReport {
-  campaign: SeasonalCampaign;
-  statistics: CampaignStatistics;
-  beneficiariesByRegion: RegionStatistics[];
-  beneficiariesByCharity: CharityStatistics[];
-  beneficiariesByFamilyType: FamilyTypeStatistics[];
-  distributions: AidDistribution[];
-}
-
-export interface RegionStatistics {
-  region: string;
-  totalBeneficiaries: number;
-  distributedBeneficiaries: number;
-  totalAmount: number;
-  distributedAmount: number;
-}
-
-export interface CharityStatistics {
-  charityId: string;
-  charityName: string;
-  totalBeneficiaries: number;
-  distributedBeneficiaries: number;
-  totalAmount: number;
-  distributedAmount: number;
-}
-
-export interface FamilyTypeStatistics {
-  familyType: string;
-  totalBeneficiaries: number;
-  distributedBeneficiaries: number;
-  totalAmount: number;
-  distributedAmount: number;
-}
-
-export interface BeneficiarySelection {
-  familyId: string;
+export interface BeneficiaryDistributionDetail {
+  beneficiaryId: string;
   familyCode: string;
-  familyAddress: string;
-  charityId: string;
-  charityName: string;
-  region: string;
-  center: string;
-  orphanCount: number;
-  familyType: string;
-  isSelected: boolean;
+  familyAddress?: string | null;
+  charityName?: string | null;
+  regionName?: string | null;
+  allocationAmount: number;
+  distributedAmount: number;
+  isDistributed: boolean;
+  distributionDate?: string | null;
+  receivedBy?: string | null;
+  notes?: string | null;
 }
 
-export interface CampaignFilter {
-  campaignName?: string;
-  campaignType?: CampaignType;
-  status?: 'all' | 'active' | 'closed';
-  charityId?: string;
-  startDateFrom?: Date;
-  startDateTo?: Date;
-  endDateFrom?: Date;
-  endDateTo?: Date;
+// UC-PRJ-07 quick add: only familyIds are required; the rest fall back to campaign defaults.
+export interface RegisterBeneficiariesRequest {
+  familyIds: string[];
+  allocationAmount?: number;
+  currency?: string;
+  registrationNotes?: string;
 }
 
-export interface BeneficiaryFilter {
-  charityId?: string;
-  region?: string;
-  center?: string;
-  familyType?: FamilyType;
-  distributionStatus?: DistributionStatus;
+// UC-PRJ-07 full sync: familyIds is the desired final set — empty deselects everything.
+export interface UpdateBeneficiariesRequest {
+  familyIds: string[];
+  allocationAmount?: number;
+  currency?: string;
+  notes?: string;
+}
+
+export interface UpdateBeneficiariesResult {
+  addedCount: number;
+  removedCount: number;
+  totalRegistered: number;
+  maximumFamilies: number;
+}
+
+// UC-PRJ-08: the acting user comes from the token, never from the request.
+export interface SetFamilyReceivedFlagRequest {
+  campaignId: string;
+  isReceived: boolean;
+}
+
+export interface CloseCampaignRequest {
+  closureNotes?: string;
+}
+
+export interface SeasonalAidCampaignFilter {
   searchTerm?: string;
+  campaignType?: string;
+  isActive?: boolean;
+  isClosed?: boolean;
+  countryId?: number;
+  regionId?: number;
+  centerId?: number;
+  charityId?: string;
+  startDateFrom?: string;
+  startDateTo?: string;
+  endDateFrom?: string;
+  endDateTo?: string;
+  pageNumber: number;
+  pageSize: number;
+  sortBy?: string;
+  sortDescending: boolean;
 }
+
+export interface EligibleFamiliesFilter {
+  charityId?: string;
+  regionId?: number;
+  centerId?: number;
+  familyType?: string;
+  minChildrenAge?: number;
+  maxChildrenAge?: number;
+  searchTerm?: string;
+  pageNumber: number;
+  pageSize: number;
+  sortBy?: string;
+  sortDescending: boolean;
+}
+
+export interface SeasonalAidBeneficiaryFilter {
+  isDistributed?: boolean;
+  charityId?: string;
+  regionId?: number;
+  centerId?: number;
+  registrationDateFrom?: string;
+  registrationDateTo?: string;
+  distributionDateFrom?: string;
+  distributionDateTo?: string;
+  searchTerm?: string;
+  pageNumber: number;
+  pageSize: number;
+  sortBy?: string;
+  sortDescending: boolean;
+}
+
+export interface SeasonalAidPagedResult<T> extends PagedResponse<T> {}

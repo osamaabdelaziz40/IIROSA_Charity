@@ -4,16 +4,37 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 import {
-  SeasonalCampaign,
-  CampaignBeneficiary,
-  AidDistribution,
-  CampaignStatistics,
-  CampaignReport,
-  BeneficiarySelection,
-  CampaignFilter,
-  BeneficiaryFilter
+  SeasonalAidCampaign,
+  SeasonalAidCampaignListItem,
+  SeasonalAidCampaignFilter,
+  SeasonalAidBeneficiary,
+  SeasonalAidBeneficiaryFilter,
+  EligibleFamiliesFilter,
+  SeasonalAidDistribution,
+  CreateSeasonalAidDistributionRequest,
+  CreateSeasonalAidCampaignRequest,
+  UpdateSeasonalAidCampaignRequest,
+  SeasonalAidCampaignReport,
+  RegisterBeneficiariesRequest,
+  UpdateBeneficiariesRequest,
+  UpdateBeneficiariesResult,
+  SetFamilyReceivedFlagRequest,
+  CloseCampaignRequest,
+  SeasonalAidPagedResult
 } from '../models/seasonal-aid.model';
 
+interface RegisterBeneficiariesResponse {
+  message: string;
+  registeredCount: number;
+  totalAllocation: number;
+  budgetImpact: number;
+}
+
+/**
+ * Client for /api/SeasonalAid (and the UC-PRJ-08 received-flag route on /api/Families).
+ * Filter objects map 1:1 onto the backend query DTOs, so they are passed straight through
+ * as query params — camelCase on the wire, same names as the DTO properties.
+ */
 @Injectable({
   providedIn: 'root'
 })
@@ -22,124 +43,121 @@ export class SeasonalAidService {
 
   constructor(private http: HttpClient) {}
 
-  // Campaign CRUD Operations
-  getCampaigns(filter?: CampaignFilter): Observable<SeasonalCampaign[]> {
-    let params = new HttpParams();
+  // Campaigns (UC-PRJ-01..05)
 
-    if (filter) {
-      if (filter.campaignName) params = params.append('campaignName', filter.campaignName);
-      if (filter.campaignType) params = params.append('campaignType', filter.campaignType);
-      if (filter.status) params = params.append('status', filter.status);
-      if (filter.charityId) params = params.append('charityId', filter.charityId);
-      if (filter.startDateFrom) params = params.append('startDateFrom', filter.startDateFrom.toISOString());
-      if (filter.startDateTo) params = params.append('startDateTo', filter.startDateTo.toISOString());
-      if (filter.endDateFrom) params = params.append('endDateFrom', filter.endDateFrom.toISOString());
-      if (filter.endDateTo) params = params.append('endDateTo', filter.endDateTo.toISOString());
-    }
-
-    return this.http.get<SeasonalCampaign[]>(`${this.apiUrl}/campaigns`, { params });
+  getCampaigns(filter?: Partial<SeasonalAidCampaignFilter>): Observable<SeasonalAidPagedResult<SeasonalAidCampaignListItem>> {
+    return this.http.get<SeasonalAidPagedResult<SeasonalAidCampaignListItem>>(
+      `${this.apiUrl}/campaigns`, { params: this.buildParams(filter) });
   }
 
-  getCampaignById(id: string): Observable<SeasonalCampaign> {
-    return this.http.get<SeasonalCampaign>(`${this.apiUrl}/campaigns/${id}`);
+  getActiveCampaigns(): Observable<SeasonalAidCampaignListItem[]> {
+    return this.http.get<SeasonalAidCampaignListItem[]>(`${this.apiUrl}/campaigns/active`);
   }
 
-  createCampaign(campaign: SeasonalCampaign): Observable<SeasonalCampaign> {
-    return this.http.post<SeasonalCampaign>(`${this.apiUrl}/campaigns`, campaign);
+  getCampaignById(id: string): Observable<SeasonalAidCampaign> {
+    return this.http.get<SeasonalAidCampaign>(`${this.apiUrl}/campaigns/${id}`);
   }
 
-  updateCampaign(id: string, campaign: SeasonalCampaign): Observable<SeasonalCampaign> {
-    return this.http.put<SeasonalCampaign>(`${this.apiUrl}/campaigns/${id}`, campaign);
+  createCampaign(campaign: CreateSeasonalAidCampaignRequest): Observable<SeasonalAidCampaign> {
+    return this.http.post<SeasonalAidCampaign>(`${this.apiUrl}/campaigns`, campaign);
+  }
+
+  updateCampaign(id: string, campaign: UpdateSeasonalAidCampaignRequest): Observable<SeasonalAidCampaign> {
+    return this.http.put<SeasonalAidCampaign>(`${this.apiUrl}/campaigns/${id}`, campaign);
   }
 
   deleteCampaign(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/campaigns/${id}`);
   }
 
-  closeCampaign(id: string, closureNotes: string): Observable<SeasonalCampaign> {
-    return this.http.post<SeasonalCampaign>(`${this.apiUrl}/campaigns/${id}/close`, { closureNotes });
+  closeCampaign(id: string, closureNotes?: string): Observable<{ message: string }> {
+    const body: CloseCampaignRequest = { closureNotes };
+    return this.http.post<{ message: string }>(`${this.apiUrl}/campaigns/${id}/close`, body);
   }
 
-  // Beneficiary Management
-  getAvailableBeneficiaries(campaignId: string, filter?: BeneficiaryFilter): Observable<BeneficiarySelection[]> {
+  reopenCampaign(id: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/campaigns/${id}/reopen`, {});
+  }
+
+  // Eligible families (UC-PRJ-10 — families not yet registered in the campaign)
+
+  getEligibleFamilies(
+    campaignId: string,
+    filter?: Partial<EligibleFamiliesFilter>
+  ): Observable<SeasonalAidPagedResult<SeasonalAidBeneficiary>> {
+    return this.http.get<SeasonalAidPagedResult<SeasonalAidBeneficiary>>(
+      `${this.apiUrl}/campaigns/${campaignId}/eligible-families`, { params: this.buildParams(filter) });
+  }
+
+  // Beneficiary registration (UC-PRJ-06..09)
+
+  getCampaignBeneficiaries(
+    campaignId: string,
+    filter?: Partial<SeasonalAidBeneficiaryFilter>
+  ): Observable<SeasonalAidPagedResult<SeasonalAidBeneficiary>> {
+    return this.http.get<SeasonalAidPagedResult<SeasonalAidBeneficiary>>(
+      `${this.apiUrl}/campaigns/${campaignId}/beneficiaries`, { params: this.buildParams(filter) });
+  }
+
+  registerBeneficiaries(
+    campaignId: string,
+    request: RegisterBeneficiariesRequest
+  ): Observable<RegisterBeneficiariesResponse> {
+    return this.http.post<RegisterBeneficiariesResponse>(
+      `${this.apiUrl}/campaigns/${campaignId}/beneficiaries`, request);
+  }
+
+  /** Full sync of the campaign's family set (UC-PRJ-07) — familyIds is the desired final set. */
+  updateCampaignBeneficiaries(
+    campaignId: string,
+    request: UpdateBeneficiariesRequest
+  ): Observable<UpdateBeneficiariesResult> {
+    return this.http.put<UpdateBeneficiariesResult>(
+      `${this.apiUrl}/campaigns/${campaignId}/beneficiaries`, request);
+  }
+
+  removeBeneficiary(beneficiaryId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/beneficiaries/${beneficiaryId}`);
+  }
+
+  /** UC-PRJ-08 — confirm/withdraw a family's receipt; lives on /api/Families per the module spec. */
+  setFamilyReceivedFlag(familyId: string, request: SetFamilyReceivedFlagRequest): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(
+      `${environment.apiUrl}/api/Families/${familyId}/received-flag`, request);
+  }
+
+  // Distributions (UC-PRJ-08 record flow)
+
+  recordDistribution(
+    beneficiaryId: string,
+    distribution: CreateSeasonalAidDistributionRequest
+  ): Observable<SeasonalAidDistribution> {
+    return this.http.post<SeasonalAidDistribution>(
+      `${this.apiUrl}/beneficiaries/${beneficiaryId}/distributions`, distribution);
+  }
+
+  recordBulkDistributions(distributions: CreateSeasonalAidDistributionRequest[]): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/distributions/batch`, distributions);
+  }
+
+  // Reports (UC-PRJ-11, UC-PRJ-12) — the report endpoint itself; pdf/excel exports are
+  // server-side NotImplemented, so rendering happens client-side (print + ExcelJS).
+
+  getCampaignReport(campaignId: string): Observable<SeasonalAidCampaignReport> {
+    return this.http.get<SeasonalAidCampaignReport>(`${this.apiUrl}/campaigns/${campaignId}/report`);
+  }
+
+  private buildParams(filter?: Record<string, unknown>): HttpParams {
     let params = new HttpParams();
-
-    if (filter) {
-      if (filter.charityId) params = params.append('charityId', filter.charityId);
-      if (filter.region) params = params.append('region', filter.region);
-      if (filter.center) params = params.append('center', filter.center);
-      if (filter.familyType) params = params.append('familyType', filter.familyType);
-      if (filter.searchTerm) params = params.append('searchTerm', filter.searchTerm);
+    if (!filter) {
+      return params;
     }
-
-    return this.http.get<BeneficiarySelection[]>(`${this.apiUrl}/campaigns/${campaignId}/available-beneficiaries`, { params });
-  }
-
-  getCampaignBeneficiaries(campaignId: string, filter?: BeneficiaryFilter): Observable<CampaignBeneficiary[]> {
-    let params = new HttpParams();
-
-    if (filter) {
-      if (filter.distributionStatus) params = params.append('distributionStatus', filter.distributionStatus);
-      if (filter.charityId) params = params.append('charityId', filter.charityId);
-      if (filter.region) params = params.append('region', filter.region);
-      if (filter.searchTerm) params = params.append('searchTerm', filter.searchTerm);
+    for (const [key, value] of Object.entries(filter)) {
+      if (value === undefined || value === null || value === '') {
+        continue;
+      }
+      params = params.append(key, String(value));
     }
-
-    return this.http.get<CampaignBeneficiary[]>(`${this.apiUrl}/campaigns/${campaignId}/beneficiaries`, { params });
-  }
-
-  registerBeneficiaries(campaignId: string, beneficiaryIds: string[]): Observable<CampaignBeneficiary[]> {
-    return this.http.post<CampaignBeneficiary[]>(`${this.apiUrl}/campaigns/${campaignId}/beneficiaries`, { beneficiaryIds });
-  }
-
-  removeBeneficiary(campaignId: string, beneficiaryId: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/campaigns/${campaignId}/beneficiaries/${beneficiaryId}`);
-  }
-
-  // Distribution Management
-  getCampaignDistributions(campaignId: string): Observable<AidDistribution[]> {
-    return this.http.get<AidDistribution[]>(`${this.apiUrl}/campaigns/${campaignId}/distributions`);
-  }
-
-  recordDistribution(distribution: AidDistribution): Observable<AidDistribution> {
-    return this.http.post<AidDistribution>(`${this.apiUrl}/distributions`, distribution);
-  }
-
-  recordBulkDistributions(distributions: AidDistribution[]): Observable<AidDistribution[]> {
-    return this.http.post<AidDistribution[]>(`${this.apiUrl}/distributions/bulk`, { distributions });
-  }
-
-  updateDistribution(distributionId: string, distribution: AidDistribution): Observable<AidDistribution> {
-    return this.http.put<AidDistribution>(`${this.apiUrl}/distributions/${distributionId}`, distribution);
-  }
-
-  // Statistics and Reports
-  getCampaignStatistics(campaignId: string): Observable<CampaignStatistics> {
-    return this.http.get<CampaignStatistics>(`${this.apiUrl}/campaigns/${campaignId}/statistics`);
-  }
-
-  getCampaignReport(campaignId: string): Observable<CampaignReport> {
-    return this.http.get<CampaignReport>(`${this.apiUrl}/campaigns/${campaignId}/report`);
-  }
-
-  exportCampaignReport(campaignId: string, format: 'pdf' | 'excel'): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/campaigns/${campaignId}/export/${format}`, {
-      responseType: 'blob'
-    });
-  }
-
-  exportCampaignsList(filter?: CampaignFilter): Observable<Blob> {
-    let params = new HttpParams();
-
-    if (filter) {
-      if (filter.campaignType) params = params.append('campaignType', filter.campaignType);
-      if (filter.status) params = params.append('status', filter.status);
-      if (filter.charityId) params = params.append('charityId', filter.charityId);
-    }
-
-    return this.http.get(`${this.apiUrl}/campaigns/export/excel`, {
-      params,
-      responseType: 'blob'
-    });
+    return params;
   }
 }

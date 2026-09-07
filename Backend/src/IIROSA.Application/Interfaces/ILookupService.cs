@@ -1,3 +1,4 @@
+using IIROSA.Application.DTOs.CheckManagement;
 using IIROSA.Application.DTOs.LookupManagement;
 using IIROSA.Domain.Entities.Lookups;
 
@@ -61,6 +62,14 @@ public interface IMissionTypeService : ILookupService<MissionTypeDto, MissionTyp
 {
 }
 
+public interface IMissionInterviewTypeService : ILookupService<MissionInterviewTypeDto, MissionInterviewTypeDto, CreateMissionInterviewTypeDto, UpdateMissionInterviewTypeDto>
+{
+}
+
+public interface IMissionTimeTypeService : ILookupService<MissionTimeTypeDto, MissionTimeTypeDto, CreateMissionTimeTypeDto, UpdateMissionTimeTypeDto>
+{
+}
+
 public interface IProjectTypeService : ILookupService<ProjectTypeDto, ProjectTypeDto, CreateProjectTypeDto, UpdateProjectTypeDto>
 {
 }
@@ -73,6 +82,58 @@ public interface INGOTypeService : ILookupService<NGOTypeDto, NGOTypeDto, Create
 {
 }
 
+public interface IEducationLevelService : ILookupService<EducationLevelDto, EducationLevelDto, CreateEducationLevelDto, UpdateEducationLevelDto>
+{
+}
+
+public interface IHealthStatusService : ILookupService<HealthStatusDto, HealthStatusDto, CreateHealthStatusDto, UpdateHealthStatusDto>
+{
+}
+
+public interface IRefuseReasonService : ILookupService<RefuseReasonDto, RefuseReasonDto, CreateRefuseReasonDto, UpdateRefuseReasonDto>
+{
+}
+
+// Refugee register lookups (epic 7, UC-REF-03) — refugee-form dropdowns
+
+public interface IHouseOwnershipService : ILookupService<HouseOwnershipDto, HouseOwnershipDto, CreateHouseOwnershipDto, UpdateHouseOwnershipDto>
+{
+}
+
+public interface IHouseStatusService : ILookupService<HouseStatusDto, HouseStatusDto, CreateHouseStatusDto, UpdateHouseStatusDto>
+{
+}
+
+public interface IIncomeTypeService : ILookupService<IncomeTypeDto, IncomeTypeDto, CreateIncomeTypeDto, UpdateIncomeTypeDto>
+{
+}
+
+public interface ISocialStatusService : ILookupService<SocialStatusDto, SocialStatusDto, CreateSocialStatusDto, UpdateSocialStatusDto>
+{
+}
+
+public interface IRelationService : ILookupService<RelationDto, RelationDto, CreateRelationDto, UpdateRelationDto>
+{
+}
+
+public interface IReasonOfRelService : ILookupService<ReasonOfRelDto, ReasonOfRelDto, CreateReasonOfRelDto, UpdateReasonOfRelDto>
+{
+}
+
+/// <summary>نوع السكن — shared catalogue (§12.S.2 refugee form)</summary>
+public interface IHousingTypeService : ILookupService<HousingTypeDto, HousingTypeDto, CreateHousingTypeDto, UpdateHousingTypeDto>
+{
+}
+
+/// <summary>Guardian marital status — الحالة الاجتماعية للعائل (UC-SYS-05, epic 19)</summary>
+public interface IMaritalStatusService : ILookupService<MaritalStatusDto, MaritalStatusDto, CreateMaritalStatusDto, UpdateMaritalStatusDto>
+{
+}
+/// <summary>Guardian job / profession — المهنة (UC-SYS-09, epic 19)</summary>
+public interface IJobService : ILookupService<JobDto, JobDto, CreateJobDto, UpdateJobDto>
+{
+}
+
 /// <summary>
 /// Lookup management service for UC-14.5: View All Lookup Tables
 /// </summary>
@@ -81,4 +142,19 @@ public interface ILookupManagementService
     Task<List<LookupTableSummaryDto>> GetAllLookupTablesSummaryAsync();
     Task<byte[]> ExportLookupTableAsync(string tableName, BulkExportDto exportDto);
     Task<BulkImportResultDto> ImportLookupTableAsync(string tableName, BulkImportDto importDto);
+
+    /// <summary>
+    /// UC-CHQ-05 — cheque beneficiary type-ahead for the cheque form (§16.S.2).
+    /// </summary>
+    Task<List<ChequeBeneficiaryOptionDto>> GetChequeBeneficiariesAsync(string? term, int take = 20);
+
+    /// <summary>
+    /// UC-CHQ-06 — the distinct currencies configured on countries, for the cheque form.
+    /// </summary>
+    Task<List<CurrencyOptionDto>> GetCurrenciesAsync();
+
+    /// <summary>
+    /// UC-CHQ-08 — a bank's cheque stationery print offsets (mm from the leaf's top-right).
+    /// </summary>
+    Task<BankChequePositionsDto> GetBankChequePositionsAsync(int bankId);
 }

@@ -76,6 +76,71 @@ public class CreateFamilyDto
     public int? HousingTypeId { get; set; }
 
     /// <summary>
+    /// Register discriminator: Regular | Housing | Refugee (string on the wire, parsed with
+    /// Enum.TryParse in the service — 6-1 convention). Absent ⇒ Regular.
+    /// </summary>
+    [StringLength(20, ErrorMessage = "Family type cannot exceed 20 characters")]
+    public string? FamilyType { get; set; }
+
+    // Refugee register household fields (epic 7, UC-REF-03 §12.S.2) — all optional here;
+    // the CreateRefugeeFamilyValidator enforces the §12.S.2 mandatory flags when FamilyType=Refugee
+
+    /// <summary>
+    /// Governorate / region (المنطقة /المحافظة)
+    /// </summary>
+    public int? RegionId { get; set; }
+
+    /// <summary>
+    /// Center / city (المركز/ المدينة)
+    /// </summary>
+    public int? CenterId { get; set; }
+
+    /// <summary>
+    /// Nearby landmark (بجوار)
+    /// </summary>
+    [StringLength(100, ErrorMessage = "Nearby cannot exceed 100 characters")]
+    public string? NearBy { get; set; }
+
+    /// <summary>
+    /// Street (الشارع)
+    /// </summary>
+    [StringLength(100, ErrorMessage = "Street cannot exceed 100 characters")]
+    public string? Street { get; set; }
+
+    /// <summary>
+    /// Monthly rent (قيمة الإيجار)
+    /// </summary>
+    public decimal? RentAmount { get; set; }
+
+    /// <summary>
+    /// House ownership (ملكية السكن)
+    /// </summary>
+    public int? HouseOwnershipId { get; set; }
+
+    /// <summary>
+    /// House contents status (حالة محتويات السكن)
+    /// </summary>
+    public int? HouseStatusId { get; set; }
+
+    /// <summary>
+    /// Income type (نوع الدخل)
+    /// </summary>
+    public int? IncomeTypeId { get; set; }
+
+    // Housing register allocation (epic 6, UC-HOU-03 §11.S.2 رقم العماره / رقم الشقه) —
+    // mandatory when FamilyType=Housing (CreateHousingFamilyValidator); flat must belong to
+    // the chosen building (enforced in AddNewHousingFamilyAsync)
+    /// <summary>
+    /// Housing building (رقم العماره) — lookup HousingBuilding
+    /// </summary>
+    public int? HousingBuildingId { get; set; }
+
+    /// <summary>
+    /// Housing flat (رقم الشقه) — lookup HousingFlat
+    /// </summary>
+    public int? HousingFlatId { get; set; }
+
+    /// <summary>
     /// Provider Type: Father, Mother, Other
     /// </summary>
     [StringLength(50, ErrorMessage = "Provider type cannot exceed 50 characters")]
@@ -89,16 +154,16 @@ public class CreateFamilyDto
 
     // Provider Information
     /// <summary>
-    /// Father information (mandatory - at minimum Full Name, National ID, Date of Birth required)
+    /// Father information — mandatory for a Regular family (enforced in the service);
+    /// a Refugee family (§12.S.2) has no father/mother sections, so both are nullable.
     /// </summary>
-    [Required(ErrorMessage = "Father information is required")]
-    public CreateFatherDto Father { get; set; } = new();
+    public CreateFatherDto? Father { get; set; }
 
     /// <summary>
-    /// Mother information (mandatory - at minimum Full Name, National ID, Date of Birth required)
+    /// Mother information — mandatory for a Regular family (enforced in the service);
+    /// a Refugee family (§12.S.2) has no father/mother sections, so both are nullable.
     /// </summary>
-    [Required(ErrorMessage = "Mother information is required")]
-    public CreateMotherDto Mother { get; set; } = new();
+    public CreateMotherDto? Mother { get; set; }
 
     /// <summary>
     /// Other provider information (optional, required only if ProviderType is "Other")

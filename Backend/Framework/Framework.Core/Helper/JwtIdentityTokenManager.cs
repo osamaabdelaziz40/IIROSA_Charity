@@ -73,34 +73,30 @@ namespace Framework.Core.Helper
     
         public string? GetCurrentUserName(string token)
         {
-            if(token == null || token == "null" || token == "Bearer null") 
+            // Runs from DbContext constructors with the raw Authorization header, so it must
+            // never throw: current Microsoft.IdentityModel versions make ReadToken throw
+            // IDX12709 ("CanReadToken() returned false") for malformed input instead of
+            // returning null, and one garbage header would 500 every request — including
+            // [AllowAnonymous] ones like login. Only the "name" claim is read here; signature
+            // verification is the JWT middleware's job.
+            if (string.IsNullOrWhiteSpace(token))
+                return null;
+
+            token = token.Replace("Bearer ", "").Trim();
+            var tokenHandler = new JwtSecurityTokenHandler();
+
+            if (!tokenHandler.CanReadToken(token))
+                return null;
+
+            try
+            {
+                var jwtToken = tokenHandler.ReadJwtToken(token);
+                return jwtToken.Claims?.FirstOrDefault(x => x.Type.Equals("name", StringComparison.OrdinalIgnoreCase))?.Value;
+            }
+            catch
             {
                 return null;
             }
-            token = token.Replace("Bearer ", "");
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
-
-            if (jwtToken == null)
-                return null;
-
-            var symmetricKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key ?? string.Empty));
-
-            var validationParameters = new TokenValidationParameters()
-            {
-                RequireExpirationTime = true,
-                ValidateIssuer = true,
-                ValidIssuer = _jwtSettings.Issuer,
-                ValidateAudience = true,
-                ValidAudience = _jwtSettings.Audience,
-                IssuerSigningKey = symmetricKey
-            };
-
-            //var name = jwtToken.Claims?.Where(c => c.Type == ClaimTypes.Name)?.Select(c => c.Value).SingleOrDefault();
-            var name = jwtToken.Claims?.FirstOrDefault(x => x.Type.Equals("name", StringComparison.OrdinalIgnoreCase))?.Value;
-
-            return name;
-        
         }
     }
 }

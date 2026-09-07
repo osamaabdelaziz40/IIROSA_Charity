@@ -3,17 +3,18 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { Observable, Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 
 import { TechnicalSupportService } from '../services/technical-support.service';
 import {
   SupportTicket,
   AddTicketResponseRequest,
-  UpdateTicketStatusRequest,
   MarkTicketSolvedRequest,
-  TicketStatus
+  TicketResponse,
+  LookupOption
 } from '../../../core/models/technical-support.model';
 import { AuthService, User } from '../../../core/services/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
 
 @Component({
@@ -51,19 +52,18 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
   responseForm: FormGroup;
   showResponseForm: boolean = false;
   isInternalNote: boolean = false;
-  responseFile: File | null = null;
 
   // Status update
   updatingStatus: boolean = false;
-  selectedStatus: TicketStatus | '' = '';
+  selectedStatusId: number | null = null;
+
+  // Status lookups (GET /api/SupportTickets/lookups)
+  statuses: LookupOption[] = [];
+  closedStatusId: number | null = null;
 
   // Mark as solved
   showSolveForm: boolean = false;
   solveForm: FormGroup;
-
-  // UI helpers
-  browserInfo: string = '';
-  pageUrl: string = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -71,7 +71,8 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private technicalSupportService: TechnicalSupportService,
     private authService: AuthService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private notification: NotificationService
   ) {
     this.currentUser = this.authService.getCurrentUser();
     this.isAdmin = this.authService.hasAnyRole(['Admin', 'SuperAdmin']);
@@ -84,9 +85,6 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
       resolutionDescription: ['', [Validators.required, Validators.minLength(10)]],
       solutionSteps: ['']
     });
-
-    this.browserInfo = this.technicalSupportService.detectBrowserInfo();
-    this.pageUrl = this.technicalSupportService.getCurrentPageUrl();
   }
 
   ngOnInit(): void {
@@ -97,13 +95,15 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
       this.router.navigate(['/technical-support']);
     }
 
+    this.loadLookups();
+
     // Subscribe to tickets updates
     this.technicalSupportService.ticketsUpdated$
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
-        const ticketId = this.route.snapshot.paramMap.get('id');
-        if (ticketId) {
-          this.loadTicket(ticketId);
+        const currentId = this.route.snapshot.paramMap.get('id');
+        if (currentId) {
+          this.loadTicket(currentId);
         }
       });
   }
@@ -113,19 +113,44 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  loadLookups(): void {
+    this.technicalSupportService.getTicketLookups().subscribe({
+      next: (lookups) => {
+        this.statuses = lookups.statuses ?? [];
+        this.closedStatusId =
+          this.statuses.find(s => s.nameEn === 'Closed' || s.name === 'Closed')?.id ?? null;
+      }
+    });
+  }
+
   loadTicket(id: string): void {
     this.loading = true;
     this.technicalSupportService.getTicketById(id).subscribe({
       next: (ticket: SupportTicket) => {
         this.ticket = ticket;
-        this.isOwner = this.currentUser?.id === ticket.userId;
+        this.isOwner = !!this.currentUser && this.currentUser.id === ticket.createdByUserId;
         this.loading = false;
       },
       error: () => {
         this.loading = false;
+        this.notification.error(this.translate.instant('technicalSupport.messages.operationFailed'));
         this.router.navigate(['/technical-support']);
       }
     });
+  }
+
+  /**
+   * Admins see all responses (public + internal notes); regular users
+   * only see the public responses the API returns for them.
+   */
+  get visibleResponses(): TicketResponse[] {
+    if (!this.ticket) {
+      return [];
+    }
+    if (this.isAdmin) {
+      return this.ticket.responses ?? [];
+    }
+    return this.ticket.publicResponses ?? [];
   }
 
   // Response Management
@@ -133,15 +158,7 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
     this.showResponseForm = !this.showResponseForm;
     if (!this.showResponseForm) {
       this.responseForm.reset();
-      this.responseFile = null;
       this.isInternalNote = false;
-    }
-  }
-
-  onResponseFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.responseFile = input.files[0];
     }
   }
 
@@ -154,8 +171,7 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
 
     const request: AddTicketResponseRequest = {
       responseText: this.responseForm.value.responseText,
-      attachment: this.responseFile || undefined,
-      isInternal: this.isInternalNote
+      isInternalNote: this.isInternalNote
     };
 
     this.technicalSupportService.addTicketResponse(this.ticket.id, request).subscribe({
@@ -163,12 +179,12 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
         this.submitting = false;
         this.showResponseForm = false;
         this.responseForm.reset();
-        this.responseFile = null;
         this.isInternalNote = false;
         this.technicalSupportService.notifyTicketsUpdated();
       },
       error: () => {
         this.submitting = false;
+        this.notification.error(this.translate.instant('technicalSupport.messages.operationFailed'));
       }
     });
   }
@@ -177,25 +193,26 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
   toggleStatusUpdate(): void {
     this.updatingStatus = !this.updatingStatus;
     if (this.updatingStatus && this.ticket) {
-      this.selectedStatus = this.ticket.status;
+      this.selectedStatusId = this.ticket.statusId;
     }
   }
 
   updateTicketStatus(): void {
-    if (!this.ticket || !this.selectedStatus) {
+    if (!this.ticket || this.selectedStatusId === null) {
       return;
     }
 
-    const request: UpdateTicketStatusRequest = {
-      status: this.selectedStatus as TicketStatus
-    };
-
-    this.technicalSupportService.updateTicketStatus(this.ticket.id, request).subscribe({
-      next: () => {
-        this.updatingStatus = false;
-        this.technicalSupportService.notifyTicketsUpdated();
-      }
-    });
+    this.technicalSupportService
+      .updateTicketStatus(this.ticket.id, { statusId: this.selectedStatusId })
+      .subscribe({
+        next: () => {
+          this.updatingStatus = false;
+          this.technicalSupportService.notifyTicketsUpdated();
+        },
+        error: () => {
+          this.notification.error(this.translate.instant('technicalSupport.messages.operationFailed'));
+        }
+      });
   }
 
   // Mark as Solved
@@ -227,67 +244,31 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.submitting = false;
+        this.notification.error(this.translate.instant('technicalSupport.messages.operationFailed'));
       }
     });
   }
 
-  // Close Ticket
+  // Close Ticket — sets the Closed status via the status endpoint
   closeTicket(): void {
-    if (!this.ticket) {
+    if (!this.ticket || this.closedStatusId === null) {
+      // Lookups not loaded — closing is impossible; say so instead of silently doing nothing
+      this.notification.error(this.translate.instant('technicalSupport.messages.operationFailed'));
       return;
     }
 
     if (confirm(this.translate.instant('technicalSupport.messages.confirmClose'))) {
-      this.technicalSupportService.closeTicket(this.ticket.id).subscribe({
-        next: () => {
-          this.technicalSupportService.notifyTicketsUpdated();
-        }
-      });
+      this.technicalSupportService
+        .updateTicketStatus(this.ticket.id, { statusId: this.closedStatusId })
+        .subscribe({
+          next: () => {
+            this.technicalSupportService.notifyTicketsUpdated();
+          },
+          error: () => {
+            this.notification.error(this.translate.instant('technicalSupport.messages.operationFailed'));
+          }
+        });
     }
-  }
-
-  // Assignment
-  assignToUser(userId: string): void {
-    if (!this.ticket) {
-      return;
-    }
-
-    this.technicalSupportService.assignTicket(this.ticket.id, userId).subscribe({
-      next: () => {
-        this.technicalSupportService.notifyTicketsUpdated();
-      }
-    });
-  }
-
-  unassignTicket(): void {
-    if (!this.ticket) {
-      return;
-    }
-
-    this.technicalSupportService.unassignTicket(this.ticket.id).subscribe({
-      next: () => {
-        this.technicalSupportService.notifyTicketsUpdated();
-      }
-    });
-  }
-
-  // File downloads
-  downloadAttachment(fileUrl: string, fileName: string): void {
-    this.technicalSupportService.downloadTicketAttachment(this.ticket!.id, this.extractAttachmentId(fileUrl))
-      .subscribe((blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        window.URL.revokeObjectURL(url);
-      });
-  }
-
-  private extractAttachmentId(fileUrl: string): string {
-    // Extract attachment ID from URL (implementation depends on your API)
-    const parts = fileUrl.split('/');
-    return parts[parts.length - 1];
   }
 
   // Helper methods
@@ -296,50 +277,23 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    return this.isAdmin || this.ticket.userId === this.currentUser.id;
+    return this.isAdmin || this.ticket.createdByUserId === this.currentUser.id;
   }
 
   canPerformActions(): boolean {
     return this.isAdmin;
   }
 
-  getCategoryTranslation(category: string): string {
-    return this.translate.instant(`technicalSupport.categories.${category}`);
+  shortId(id: string): string {
+    return id ? id.substring(0, 8).toUpperCase() : '';
   }
 
-  getPriorityTranslation(priority: string): string {
-    return this.translate.instant(`technicalSupport.priorities.${priority}`);
+  trackByResponseId(index: number, response: TicketResponse): string {
+    return response.id;
   }
 
-  getStatusTranslation(status: TicketStatus): string {
-    return this.translate.instant(`technicalSupport.statuses.${status}`);
-  }
-
-  getPriorityClass(priority: string): string {
-    const priorityLower = priority.toLowerCase();
-    if (priorityLower === 'urgent') return 'badge-danger';
-    if (priorityLower === 'high') return 'badge-warning';
-    if (priorityLower === 'medium') return 'badge-info';
-    return 'badge-secondary';
-  }
-
-  getStatusClass(status: TicketStatus): string {
-    switch (status) {
-      case TicketStatus.Open:
-        return 'badge-primary';
-      case TicketStatus.InProgress:
-        return 'badge-info';
-      case TicketStatus.Resolved:
-        return 'badge-success';
-      case TicketStatus.Closed:
-        return 'badge-secondary';
-      default:
-        return 'badge-light';
-    }
-  }
-
-  getResponseFileName(): string {
-    return this.responseFile?.name || '';
+  trackByLookupId(index: number, option: LookupOption): number {
+    return option.id;
   }
 
   // Form validation

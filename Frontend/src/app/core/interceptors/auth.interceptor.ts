@@ -50,6 +50,20 @@ export class AuthInterceptor implements HttpInterceptor {
           // Token expired or invalid - redirect to login
           this.handle401Error(request);
         }
+
+        // UC-SYS-13 — route to /error only what no screen owns. The middleware-signed 500s
+        // (body carries a traceId) are by definition unhandled: no controller catch block
+        // produced them and no screen-level handler knew the request would fail. Faults the
+        // controllers caught themselves answer with their own { message } bodies WITHOUT a
+        // traceId — their screens already surface those, so navigating would double-handle.
+        // A network-level failure (status 0 — API unreachable) has no body to inspect at all.
+        const body = error.error as { traceId?: string } | null;
+        if (error.status === 0 || (error.status >= 500 && !!body?.traceId)) {
+          this.router.navigate(['/error'], {
+            state: { traceId: body?.traceId ?? null, status: error.status }
+          });
+        }
+
         // A 403 is deliberately NOT handled here. An earlier version navigated to the login
         // screen on every 403, which was wrong: the session is valid, so signing the user out
         // discards a working session and any half-completed form. Worse, it fires for background

@@ -5,210 +5,124 @@ using IIROSA.Domain.Entities.Lookups;
 namespace IIROSA.Domain.Entities;
 
 /// <summary>
-/// Check entity - Represents a general check or payment instrument
-/// Inherits from FullAuditedEntity<Guid>
-/// Implements all use cases UC-11.1 through UC-11.10
-/// All audit fields (CreatedOn, UpdatedOn, CreatedBy, UpdatedBy, DeletedOn, DeletedBy, IsDeleted) are inherited
-/// IMPORTANT: Charity users CANNOT access this module. Only Admin, Super Admin, and Accountant can manage checks.
+/// Check entity — a general cheque issued outside the orphan payment cycle (chapter 16, UC-CHQ).
+/// Inherits from FullAuditedEntity (Guid); all audit fields come from the base class.
+/// Tenancy: every cheque is owned by the charity it was issued for (FK_CharityId); the
+/// application service scopes reads and writes to that charity from the caller's token.
 /// </summary>
 public class Check : FullAuditedEntity
 {
-    // ========== Check Information (UC-11.1) ==========
-
     /// <summary>
-    /// Check number (auto-generated or manual entry)
+    /// Cheque number as printed on the instrument (mandatory, UC-CHQ-02).
+    /// Unique per (number, bank, charity) among live rows — cheque books are per bank account.
     /// </summary>
     public string CheckNumber { get; set; } = string.Empty;
 
     /// <summary>
-    /// Check issue date (required)
+    /// Cheque date تاريخ الشيك (mandatory, UC-CHQ-02).
     /// </summary>
     public DateTime CheckDate { get; set; } = DateTime.Today;
 
     /// <summary>
-    /// Check due date (optional, for post-dated checks)
-    /// </summary>
-    public DateTime? DueDate { get; set; }
-
-    /// <summary>
-    /// Currency (EGP, SAR, USD)
+    /// Currency ISO code driving the amount and the Arabic words conversion (mandatory, UC-CHQ-06).
     /// </summary>
     public string Currency { get; set; } = "EGP";
 
-    // ========== Beneficiary Information (UC-11.2) ==========
+    // ========== Beneficiary (UC-CHQ-05) ==========
 
     /// <summary>
-    /// Beneficiary type (Individual, Company, Charity, Supplier, Employee)
-    /// </summary>
-    public string? BeneficiaryType { get; set; }
-
-    /// <summary>
-    /// Beneficiary name (required)
-    /// </summary>
-    public string BeneficiaryName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Foreign key to ChequeBeneficiary lookup (optional, can be manual entry)
+    /// Optional link to the reusable beneficiary catalogue row this cheque was issued to.
+    /// The name/details below are the snapshot printed on the cheque.
     /// </summary>
     public int? FK_ChequeBeneficiaryId { get; set; }
 
     /// <summary>
-    /// Beneficiary address
+    /// Beneficiary type (Individual, Company, Charity, Supplier, Employee).
     /// </summary>
+    public string? BeneficiaryType { get; set; }
+
+    /// <summary>
+    /// Beneficiary name as printed on the cheque (mandatory, UC-CHQ-02).
+    /// </summary>
+    public string BeneficiaryName { get; set; } = string.Empty;
+
     public string? BeneficiaryAddress { get; set; }
 
-    /// <summary>
-    /// Beneficiary phone
-    /// </summary>
     public string? BeneficiaryPhone { get; set; }
 
-    /// <summary>
-    /// Beneficiary email
-    /// </summary>
     public string? BeneficiaryEmail { get; set; }
 
-    /// <summary>
-    /// Beneficiary ID/Passport number
-    /// </summary>
     public string? BeneficiaryIdNumber { get; set; }
 
-    // ========== Financial Information (UC-11.3) ==========
+    // ========== Financial (UC-CHQ-07) ==========
 
     /// <summary>
-    /// Check amount (required)
+    /// Cheque amount (mandatory, UC-CHQ-02).
     /// </summary>
     public decimal Amount { get; set; }
 
     /// <summary>
-    /// Amount in words (auto-generated or manual)
+    /// Amount in Arabic words تفقيط — generated on save by the service and printed on the cheque face.
     /// </summary>
     public string? AmountInWords { get; set; }
 
-    /// <summary>
-    /// Payment reason (Salary, Supplier Refund, Expense, Other)
-    /// </summary>
-    public string? PaymentReason { get; set; }
+    // ========== Bank ==========
 
     /// <summary>
-    /// Payment description
-    /// </summary>
-    public string? PaymentDescription { get; set; }
-
-    // ========== Bank Information ==========
-
-    /// <summary>
-    /// Foreign key to Bank lookup
+    /// The bank the cheque is drawn on (mandatory, UC-CHQ-02; also drives the print positions, UC-CHQ-08).
     /// </summary>
     public int? FK_BankId { get; set; }
 
-    /// <summary>
-    /// Bank branch (optional)
-    /// </summary>
     public string? BankBranch { get; set; }
 
-    /// <summary>
-    /// Bank account number
-    /// </summary>
     public string? AccountNumber { get; set; }
 
-    // ========== Status Information (UC-11.5, UC-11.6) ==========
+    // ========== Tenancy ==========
 
     /// <summary>
-    /// Check status (Pending, Issued, Cleared, Void)
-    /// Default: Pending
+    /// The charity this cheque was issued for. Stamped server-side from the creating user's
+    /// token; a charity user can only see and affect their own cheques (UC-CHQ-01/03 AC-3).
     /// </summary>
-    public string CheckStatus { get; set; } = "Pending";
+    public Guid? FK_CharityId { get; set; }
+
+    // ========== Screen flags (§16.S.2) ==========
 
     /// <summary>
-    /// Issue date (when check was issued)
+    /// شيك تالف — the cheque was damaged/voided on the paper register.
     /// </summary>
-    public DateTime? IssueDate { get; set; }
+    public bool IsDamaged { get; set; }
 
     /// <summary>
-    /// Clearance date (when check was cleared by bank)
+    /// تم رد الشيك — the cheque was returned by the bank/beneficiary.
     /// </summary>
-    public DateTime? ClearanceDate { get; set; }
+    public bool IsReturned { get; set; }
 
     /// <summary>
-    /// Bank reference for cleared check
+    /// تم الصرف — the cheque was disbursed/cashed.
     /// </summary>
-    public string? BankReference { get; set; }
+    public bool IsDispensed { get; set; }
 
     /// <summary>
-    /// Clearance notes
+    /// Fourth unlabelled checkbox of the legacy add/edit screen (CheckDone).
     /// </summary>
-    public string? ClearanceNotes { get; set; }
+    public bool IsDone { get; set; }
 
     /// <summary>
-    /// Void date (when check was voided)
+    /// Register filter of the statement screen (§16.S.3): شيكات إيتام (Orphans) or شيكات أفراد (Individuals).
+    /// General cheques default to Individuals.
     /// </summary>
-    public DateTime? VoidDate { get; set; }
+    public string ChequeType { get; set; } = "Individuals";
 
     /// <summary>
-    /// Void reason (Lost, Stopped, Error, Expired, Other)
-    /// </summary>
-    public string? VoidReason { get; set; }
-
-    /// <summary>
-    /// Void notes (required when voiding)
-    /// </summary>
-    public string? VoidNotes { get; set; }
-
-    // ========== Approval ==========
-
-    /// <summary>
-    /// Indicates if check requires approval
-    /// </summary>
-    public bool RequiresApproval { get; set; } = false;
-
-    /// <summary>
-    /// User who approved the check
-    /// </summary>
-    public Guid? ApprovedBy { get; set; }
-
-    /// <summary>
-    /// Approval date
-    /// </summary>
-    public DateTime? ApprovalDate { get; set; }
-
-    // ========== Additional Information ==========
-
-    /// <summary>
-    /// Check image or scan
-    /// </summary>
-    public Guid? FK_CheckImageId { get; set; }
-
-    /// <summary>
-    /// Additional notes
+    /// تعليقات — free comment on the cheque.
     /// </summary>
     public string? Notes { get; set; }
 
     // ========== Navigation Properties ==========
 
-    /// <summary>
-    /// Navigation to ChequeBeneficiary lookup
-    /// </summary>
     public virtual ChequeBeneficiary? ChequeBeneficiary { get; set; }
 
-    /// <summary>
-    /// Navigation to Bank lookup
-    /// </summary>
     public virtual Bank? Bank { get; set; }
 
-    // ========== Computed Properties ==========
-
-    /// <summary>
-    /// Indicates if check can be modified (only pending checks)
-    /// </summary>
-    public bool CanModify => CheckStatus == "Pending";
-
-    /// <summary>
-    /// Indicates if check can be marked as cleared (issued checks only)
-    /// </summary>
-    public bool CanBeCleared => CheckStatus == "Issued";
-
-    /// <summary>
-    /// Indicates if check can be voided (pending or issued checks only)
-    /// </summary>
-    public bool CanBeVoided => CheckStatus == "Pending" || CheckStatus == "Issued";
+    public virtual Charity? Charity { get; set; }
 }

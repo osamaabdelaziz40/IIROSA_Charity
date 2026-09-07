@@ -1,479 +1,542 @@
+using AutoMapper;
+using FluentValidation;
+using IIROSA.Application.DTOs.IncomingOutgoing;
+using IIROSA.Application.Interfaces;
+using IIROSA.Domain.Entities;
+using IIROSA.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using IIROSA.Domain.Interfaces;
-using IIROSA.Domain.Entities;
-using IIROSA.Application.Interfaces;
-using IIROSA.Application.DTOs.IncomingOutgoing;
-using AutoMapper;
-using System.Text;
 
 namespace IIROSA.Application.Services;
 
 /// <summary>
-/// Outgoing Letter Service Implementation
-/// Implements use cases UC-12.2, UC-12.3, UC-12.4, UC-12.5, UC-12.6, UC-12.7, UC-12.8, UC-12.11, UC-12.12, UC-12.13
+/// Outgoing Letter Service (epic 16, UC-COR-10…19)
+///
+/// Tenancy mirrors the incoming side: a caller bound to a charity is pinned to it on
+/// every read and write; a head-office caller may narrow with the filter's CharityId.
+///
+/// Serials are allocated per charity + year inside the create transaction (UC-COR-12);
+/// Year derives from the letter date. Orphan reports attach under BR-26 (an orphan's
+/// report rides at most one letter) and BR-27 (the selection is scoped to the letter's
+/// charity) — both refusals surface as «Operation Faild» before any index fires.
 /// </summary>
 public class OutgoingService : IOutgoingService
 {
     private readonly IOutgoingRepository _outgoingRepository;
+    private readonly IOutgoingOrphanReportRepository _orphanReportRepository;
+    private readonly IOutgoingCategoryRepository _categoryRepository;
+    private readonly IDepartmentRepository _departmentRepository;
+    private readonly IIncomingRepository _incomingRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly ILogger<OutgoingService> _logger;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IValidator<CreateOutgoingDto> _createValidator;
+    private readonly IValidator<UpdateOutgoingDto> _updateValidator;
 
     public OutgoingService(
         IOutgoingRepository outgoingRepository,
+        IOutgoingOrphanReportRepository orphanReportRepository,
+        IOutgoingCategoryRepository categoryRepository,
+        IDepartmentRepository departmentRepository,
+        IIncomingRepository incomingRepository,
         IUnitOfWork unitOfWork,
         IMapper mapper,
-        ILogger<OutgoingService> logger)
+        ILogger<OutgoingService> logger,
+        ICurrentUserService currentUser,
+        IValidator<CreateOutgoingDto> createValidator,
+        IValidator<UpdateOutgoingDto> updateValidator)
     {
         _outgoingRepository = outgoingRepository;
+        _orphanReportRepository = orphanReportRepository;
+        _categoryRepository = categoryRepository;
+        _departmentRepository = departmentRepository;
+        _incomingRepository = incomingRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _logger = logger;
+        _currentUser = currentUser;
+        _createValidator = createValidator;
+        _updateValidator = updateValidator;
     }
 
-    #region CRUD Operations
+    // ========== Reads ==========
 
-    public async Task<OutgoingDto> GetByIdAsync(Guid id)
+    /// <summary>Detail read (UC-COR-14). An out-of-scope id returns null, exactly like a missing one.</summary>
+    public async Task<OutgoingDto?> GetByIdAsync(Guid id)
     {
-        var outgoing = await _outgoingRepository.GetByIdAsync(id);
+        var outgoing = await _outgoingRepository.GetWithDetailsAsync(id);
         if (outgoing == null)
-            throw new KeyNotFoundException($"Outgoing letter with ID {id} not found");
+        {
+            _logger.LogWarning("Outgoing letter {OutgoingId} not found", id);
+            return null;
+        }
+
+        if (!IsWithinCallerScope(outgoing))
+        {
+            _logger.LogWarning("Outgoing letter {OutgoingId} is outside the caller's charity scope", id);
+            return null;
+        }
 
         return _mapper.Map<OutgoingDto>(outgoing);
     }
 
-    public async Task<(IEnumerable<OutgoingListDto> Items, int TotalCount)> GetPagedAsync(OutgoingFilterDto filter)
+    /// <summary>The §21.S.4 register read (UC-COR-10 / UC-COR-11) — scope-pinned before it reaches the repository.</summary>
+    public async Task<(IEnumerable<OutgoingListDto> Items, int TotalCount, int Page)> GetPagedAsync(OutgoingFilterDto filter)
     {
-        var (items, totalCount) = await _outgoingRepository.GetPagedAsync(
-            filter.PageNumber,
-            filter.PageSize,
-            filter.SearchTerm,
-            filter.DepartmentId,
-            filter.CategoryId,
-            filter.Year,
-            filter.StartDate,
-            filter.EndDate,
-            filter.CreatedByUserId,
-            filter.HasReply,
-            filter.SortBy,
-            filter.SortOrder);
+        filter ??= new OutgoingFilterDto();
 
-        var listDtos = _mapper.Map<IEnumerable<OutgoingListDto>>(items);
-        return (listDtos, totalCount);
+        ApplyCallerScope(filter);
+
+        var criteria = new OutgoingFilterCriteria
+        {
+            SearchTerm = filter.SearchTerm,
+            Serial = filter.Serial,
+            DepartmentId = filter.DepartmentId,
+            CategoryId = filter.CategoryId,
+            Year = filter.Year,
+            StartDate = filter.StartDate,
+            EndDate = filter.EndDate,
+            HasReply = filter.HasReply,
+            CharityId = filter.CharityId,
+            // Country dimension of tenancy (review P7): pinned from the caller's claims
+            // only — never a client assertion — mirroring MissionService.ApplyCallerScope
+            CountryId = _currentUser.CountryId,
+            SortBy = filter.SortBy,
+            SortOrder = filter.SortOrder
+        };
+
+        var (items, totalCount) = await _outgoingRepository.GetPagedAsync(criteria, filter.PageNumber, filter.PageSize);
+        var dtos = _mapper.Map<List<OutgoingListDto>>(items);
+
+        return (dtos, totalCount, filter.PageNumber);
     }
 
+    // ========== Writes ==========
+
+    /// <summary>
+    /// Register an outgoing letter (UC-COR-13 / §21.S.5). The serial is re-derived inside
+    /// this transaction — per charity + year — and Year derives from the letter date.
+    /// </summary>
     public async Task<OutgoingDto> CreateAsync(CreateOutgoingDto dto)
     {
-        _logger.LogInformation("Creating new outgoing letter: {Subject}", dto.Subject);
+        await _createValidator.ValidateAndThrowAsync(dto);
+        await EnsureReferencesExistAsync(dto.DepartmentId, dto.OutgoingCategoryId, dto.IncomingId);
 
-        // Validate uniqueness
-        if (!await IsOutgoingIdUniqueAsync(dto.OutGoingId))
-        {
-            throw new InvalidOperationException($"Outgoing letter with ID '{dto.OutGoingId}' already exists");
-        }
+        var year = dto.Date!.Value.Year;
+        // A caller with no charity claim creates an HQ-owned (NULL-charity) letter —
+        // deliberate D1 decision (رئاسة المكتب correspondence); the orphan pool offered
+        // to such letters is deliberately all charities' orphans (BR-27 charity pinning
+        // applies to charity-owned letters).
+        var charityId = _currentUser.CharityId;
 
-        // Generate serial number
-        var serial = await GetNextSerialNumberAsync(dto.Fk_DepartmentId, dto.Year);
+        var serial = await _outgoingRepository.GetNextSerialAsync(charityId, year);
+        var serialTxt = serial.ToString("D4");
 
         var outgoing = new Outgoing
         {
-            Subject = dto.Subject,
-            Date = dto.Date ?? DateTime.UtcNow,
-            OutGoingNumber = dto.OutGoingNumber,
-            OutGoingId = dto.OutGoingId,
-            Body = dto.Body,
-            Year = dto.Year ?? DateTime.UtcNow.Year,
-            Fk_DepartmentId = dto.Fk_DepartmentId,
-            UploadedFileId = dto.UploadedFileId,
+            Serial = serial,
+            OutGoingId = serialTxt, // legacy NOT NULL display column — carries the plain serial text
+            Subject = dto.Subject.Trim(),
+            Date = dto.Date,
+            Year = year,
+            Fk_DepartmentId = dto.DepartmentId,
             OutgoingCategoryId = dto.OutgoingCategoryId,
             IncomingId = dto.IncomingId,
-            Serial = serial
+            UploadedFileId = dto.UploadedFileId,
+            FK_CharityId = charityId
         };
 
         await _outgoingRepository.AddAsync(outgoing);
-        await _unitOfWork.SaveChangesAsync();
-
-        _logger.LogInformation("Outgoing letter created successfully with ID: {Id}", outgoing.Id);
-
-        return await GetByIdAsync(outgoing.Id);
-    }
-
-    public async Task<OutgoingDto> UpdateAsync(UpdateOutgoingDto dto)
-    {
-        _logger.LogInformation("Updating outgoing letter: {Id}", dto.Id);
-
-        var outgoing = await _outgoingRepository.GetByIdAsync(dto.Id);
-        if (outgoing == null)
-            throw new KeyNotFoundException($"Outgoing letter with ID {dto.Id} not found");
-
-        // Validate uniqueness
-        if (!await IsOutgoingIdUniqueAsync(dto.OutGoingId, dto.Id))
+        try
         {
-            throw new InvalidOperationException($"Outgoing letter with ID '{dto.OutGoingId}' already exists");
+            await _unitOfWork.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+        {
+            // Serial race backstop (review P6): two concurrent creates can read the same
+            // Max and collide on the unique filtered index — re-derive once inside this
+            // transaction and retry; anything else rethrows.
+            _logger.LogWarning(
+                ex, "Serial collision while registering an outgoing letter for charity {CharityId} year {Year}; re-deriving",
+                charityId, year);
+
+            var retrySerial = await _outgoingRepository.GetNextSerialAsync(charityId, year);
+            outgoing.Serial = retrySerial;
+            outgoing.OutGoingId = retrySerial.ToString("D4");
+
+            _outgoingRepository.Update(outgoing);
+            await _unitOfWork.SaveChangesAsync();
         }
 
-        outgoing.Subject = dto.Subject;
+        _logger.LogInformation(
+            "Outgoing letter {OutgoingId} registered with serial {Serial} by {UserId}",
+            outgoing.Id, serialTxt, _currentUser.UserId);
+
+        return (await GetByIdAsync(outgoing.Id))!;
+    }
+
+    /// <summary>
+    /// Update an outgoing letter (UC-COR-15). The serial, its year and the charity
+    /// ownership are immutable — they anchor the per-charity sequence.
+    /// </summary>
+    public async Task<OutgoingDto> UpdateAsync(Guid id, UpdateOutgoingDto dto)
+    {
+        await _updateValidator.ValidateAndThrowAsync(dto);
+        await EnsureReferencesExistAsync(dto.DepartmentId, dto.OutgoingCategoryId, dto.IncomingId);
+
+        var outgoing = await _outgoingRepository.GetWithDetailsAsync(id);
+        if (outgoing == null || !IsWithinCallerScope(outgoing))
+        {
+            throw new InvalidOperationException($"Outgoing letter {id} not found");
+        }
+
+        outgoing.Subject = dto.Subject.Trim();
         outgoing.Date = dto.Date;
-        outgoing.OutGoingNumber = dto.OutGoingNumber;
-        outgoing.OutGoingId = dto.OutGoingId;
-        outgoing.Body = dto.Body;
-        outgoing.Year = dto.Year;
-        outgoing.Fk_DepartmentId = dto.Fk_DepartmentId;
-        outgoing.UploadedFileId = dto.UploadedFileId;
+        outgoing.Fk_DepartmentId = dto.DepartmentId;
         outgoing.OutgoingCategoryId = dto.OutgoingCategoryId;
         outgoing.IncomingId = dto.IncomingId;
+        outgoing.UploadedFileId = dto.UploadedFileId;
 
         _outgoingRepository.Update(outgoing);
         await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation("Outgoing letter updated successfully: {Id}", outgoing.Id);
+        _logger.LogInformation("Outgoing letter {OutgoingId} updated by {UserId}", id, _currentUser.UserId);
 
-        return await GetByIdAsync(outgoing.Id);
+        return (await GetByIdAsync(id))!;
     }
 
-    public async Task DeleteAsync(Guid id)
+    /// <summary>
+    /// Delete an outgoing letter (UC-COR-16) — soft delete, refused while the letter still
+    /// has incoming replies or attached orphan reports, per the spec's guards.
+    /// </summary>
+    public async Task DeleteAsync(Guid id, Guid? deletedBy)
     {
-        _logger.LogInformation("Deleting outgoing letter: {Id}", id);
+        var outgoing = await _outgoingRepository.GetWithDetailsAsync(id);
+        if (outgoing == null || !IsWithinCallerScope(outgoing))
+        {
+            throw new InvalidOperationException($"Outgoing letter {id} not found");
+        }
 
-        var outgoing = await _outgoingRepository.GetByIdAsync(id);
-        if (outgoing == null)
-            throw new KeyNotFoundException($"Outgoing letter with ID {id} not found");
+        var replies = await _outgoingRepository.CountIncomingRepliesAsync(id);
+        if (replies > 0)
+        {
+            throw new InvalidOperationException(
+                "Operation Faild: the letter has incoming replies and cannot be deleted");
+        }
 
-        _outgoingRepository.Delete(outgoing);
+        var attachedReports = await _orphanReportRepository.GetByOutgoingAsync(id);
+        if (attachedReports.Any())
+        {
+            throw new InvalidOperationException(
+                "Operation Faild: the letter carries orphan reports and cannot be deleted");
+        }
+
+        outgoing.IsDeleted = true;
+        outgoing.DeletedOn = DateTime.UtcNow;
+        outgoing.DeletedBy = deletedBy?.ToString() ?? "System";
+
+        _outgoingRepository.Update(outgoing);
         await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation("Outgoing letter deleted successfully: {Id}", id);
+        _logger.LogInformation("Outgoing letter {OutgoingId} deleted by {DeletedBy}", id, outgoing.DeletedBy);
     }
 
-    #endregion
+    // ========== Catalogues + serials ==========
 
-    #region Import Operations (UC-12.2, UC-12.3, UC-12.4, UC-12.5, UC-12.6)
-
-    public async Task<ImportValidationResultDto> ValidateImportAsync(ImportOutgoingRequestDto request)
+    /// <summary>The §21.S.5 category options (UC-COR-17) — table-backed, bilingual.</summary>
+    public async Task<IEnumerable<OutgoingCategoryOptionDto>> GetAvailableCategoriesAsync()
     {
-        _logger.LogInformation("Validating import file: {FileName}", request.FileName);
+        var categories = await _categoryRepository.GetActiveAsync();
 
-        var result = new ImportValidationResultDto();
-
-        try
+        return categories.Select(c => new OutgoingCategoryOptionDto
         {
-            // Parse file content (simplified - in real implementation use Excel/CSV parser)
-            var rows = ParseImportFile(request.FileContent, request.FileName);
+            Id = c.Id,
+            NameAr = c.NameAr,
+            NameEn = c.NameEn
+        });
+    }
 
-            result.TotalRows = rows.Count;
+    /// <summary>
+    /// The advisory next serial (UC-COR-12). The definitive serial is re-derived inside the
+    /// create transaction — this read only powers the read-only form field.
+    /// </summary>
+    public async Task<NextSerialDto> GetNextSerialAsync(int? year, Guid? charityId)
+    {
+        // Pin, never widen: a caller bound to a charity reads their own sequence — the
+        // charityId query parameter is the HQ caller's narrow, never a client assertion.
+        var effectiveCharity = _currentUser.CharityId ?? charityId;
+        var effectiveYear = year ?? DateTime.UtcNow.Year;
 
-            foreach (var row in rows)
+        var next = await _outgoingRepository.GetNextSerialAsync(effectiveCharity, effectiveYear);
+
+        return new NextSerialDto { Serial = next, SerialTxt = next.ToString("D4") };
+    }
+
+    // ========== Orphan report attachment (UC-COR-18) ==========
+
+    /// <summary>
+    /// The two grids of the §21.S.6 screen: orphans attached to the letter and the letter's
+    /// charity's orphans not attached to any letter (BR-26 + BR-27).
+    /// </summary>
+    public async Task<OutgoingOrphansDto> GetOrphansAsync(Guid outgoingId)
+    {
+        var outgoing = await _outgoingRepository.GetWithDetailsAsync(outgoingId);
+        if (outgoing == null || !IsWithinCallerScope(outgoing))
+        {
+            throw new InvalidOperationException($"Outgoing letter {outgoingId} not found");
+        }
+
+        var links = await _orphanReportRepository.GetByOutgoingAsync(outgoingId);
+        var unattached = await _orphanReportRepository.GetUnattachedOrphansAsync(outgoing.FK_CharityId);
+
+        return new OutgoingOrphansDto
+        {
+            Attached = links.Select(ToOrphanOption).ToList(),
+            Unattached = unattached.Select(ToOrphanOption).ToList()
+        };
+    }
+
+    /// <summary>
+    /// Attach an orphan report (UC-COR-18). BR-26: the orphan must not ride another letter;
+    /// BR-27: the orphan must belong to the letter's charity. The unattached list encodes
+    /// both — membership is the gate.
+    /// </summary>
+    public async Task AttachOrphanAsync(Guid outgoingId, Guid orphanId)
+    {
+        var outgoing = await _outgoingRepository.GetWithDetailsAsync(outgoingId);
+        if (outgoing == null || !IsWithinCallerScope(outgoing))
+        {
+            throw new InvalidOperationException($"Outgoing letter {outgoingId} not found");
+        }
+
+        if (await _orphanReportRepository.IsOrphanAttachedAsync(orphanId))
+        {
+            throw new InvalidOperationException(
+                "Operation Faild: the orphan's report is already attached to another letter");
+        }
+
+        var unattached = await _orphanReportRepository.GetUnattachedOrphansAsync(outgoing.FK_CharityId);
+        if (!unattached.Any(o => o.OrphanId == orphanId))
+        {
+            throw new InvalidOperationException(
+                "Operation Faild: the orphan is outside the letter's charity selection");
+        }
+
+        await _orphanReportRepository.AddAsync(new OutgoingOrphanReport { OutgoingId = outgoingId, OrphanId = orphanId });
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Orphan {OrphanId} attached to outgoing letter {OutgoingId} by {Caller}",
+            orphanId, outgoingId, _currentUser.UserId);
+    }
+
+    /// <summary>Detach an orphan report (UC-COR-18) — soft delete of the link row.</summary>
+    public async Task DetachOrphanAsync(Guid outgoingId, Guid orphanId)
+    {
+        var outgoing = await _outgoingRepository.GetWithDetailsAsync(outgoingId);
+        if (outgoing == null || !IsWithinCallerScope(outgoing))
+        {
+            throw new InvalidOperationException($"Outgoing letter {outgoingId} not found");
+        }
+
+        var link = await _orphanReportRepository.FindByLetterAndOrphanAsync(outgoingId, orphanId);
+        if (link == null)
+        {
+            throw new InvalidOperationException("Operation Faild: the orphan is not attached to this letter");
+        }
+
+        link.IsDeleted = true;
+        link.DeletedOn = DateTime.UtcNow;
+        link.DeletedBy = _currentUser.UserId?.ToString() ?? "System";
+
+        _orphanReportRepository.Update(link);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Orphan {OrphanId} detached from outgoing letter {OutgoingId} by {Caller}",
+            orphanId, outgoingId, _currentUser.UserId);
+    }
+
+    // ========== Orphans-by-outgoing-letter report (UC-COR-19) ==========
+
+    /// <summary>
+    /// The §21.S.7 report: outgoing letters carrying the requested orphan's report. The
+    /// child code (كود اليتيم) is mandatory per the spec — the refusal names it.
+    /// </summary>
+    public async Task<(IEnumerable<OutgoingOrphanReportRowDto> Items, int TotalCount, int Page)> GetOrphanReportAsync(
+        OutgoingOrphanReportFilterDto filter)
+    {
+        filter ??= new OutgoingOrphanReportFilterDto();
+
+        if (string.IsNullOrWhiteSpace(filter.ChildCode))
+        {
+            throw new InvalidOperationException("Operation Faild: orphan code (كود اليتيم) is required");
+        }
+
+        ApplyCallerScope(filter);
+
+        var (rows, totalCount) = await _orphanReportRepository.GetOrphanReportAsync(
+            filter.Serial,
+            filter.Year,
+            filter.CharityId,
+            _currentUser.CountryId, // country pin from claims only (review P7)
+            filter.DateFrom,
+            filter.DateTo,
+            filter.ChildCode.Trim(),
+            filter.PageNumber,
+            filter.PageSize);
+
+        var dtos = rows.Select(r => new OutgoingOrphanReportRowDto
+        {
+            OutgoingId = r.OutgoingId,
+            Serial = r.Serial,
+            Year = r.Year,
+            LetterDate = r.LetterDate,
+            CharityName = r.CharityName,
+            OrphanCount = r.OrphanCount,
+            OrphanAttached = r.OrphanAttached
+        }).ToList();
+
+        return (dtos, totalCount, filter.PageNumber);
+    }
+
+    // ========== Helpers ==========
+
+    /// <summary>
+    /// FK existence checks (§21.S.5 / §21.U.13): a bogus department, category or reply-to
+    /// incoming letter is a field-flagging 400 (ValidationException → the controller's
+    /// errors map), never an FK-constraint 500. The reply-to letter must also sit inside
+    /// the caller's charity when the caller is pinned to one.
+    /// </summary>
+    private async Task EnsureReferencesExistAsync(int? departmentId, int? categoryId, Guid? incomingId)
+    {
+        var failures = new List<FluentValidation.Results.ValidationFailure>();
+
+        if (departmentId.HasValue && await _departmentRepository.GetByIdAsync(departmentId.Value) == null)
+        {
+            failures.Add(new FluentValidation.Results.ValidationFailure(
+                nameof(CreateOutgoingDto.DepartmentId), "Routing department does not exist"));
+        }
+
+        // Existence, not activity (review P10): a letter referencing a category that was
+        // later deactivated must stay editable — the drop-downs serve actives only, the
+        // FK check accepts any existing row.
+        if (categoryId.HasValue && await _categoryRepository.GetByIdAsync(categoryId.Value) == null)
+        {
+            failures.Add(new FluentValidation.Results.ValidationFailure(
+                nameof(CreateOutgoingDto.OutgoingCategoryId), "Outgoing category does not exist"));
+        }
+
+        if (incomingId.HasValue)
+        {
+            var incoming = await _incomingRepository.GetWithDetailsAsync(incomingId.Value);
+            if (incoming == null)
             {
-                var errors = new List<string>();
-
-                // Validate required fields
-                if (string.IsNullOrEmpty(row.GetValueOrDefault("Subject")))
-                    errors.Add("Subject is required");
-
-                if (string.IsNullOrEmpty(row.GetValueOrDefault("OutGoingId")))
-                    errors.Add("OutGoingId is required");
-
-                // Validate business rules
-                var outgoingId = row.GetValueOrDefault("OutGoingId");
-                if (!string.IsNullOrEmpty(outgoingId))
-                {
-                    if (!await IsOutgoingIdUniqueAsync(outgoingId))
-                    {
-                        errors.Add($"OutGoingId '{outgoingId}' already exists");
-                    }
-                }
-
-                if (errors.Any())
-                {
-                    result.InvalidRows++;
-                    result.Errors.AddRange(errors.Select(e => new ValidationErrorDto
-                    {
-                        RowNumber = rows.IndexOf(row) + 1,
-                        FieldName = "Multiple",
-                        ErrorMessage = e,
-                        Severity = "Error"
-                    }));
-                }
-                else
-                {
-                    result.ValidRows++;
-                }
+                failures.Add(new FluentValidation.Results.ValidationFailure(
+                    nameof(CreateOutgoingDto.IncomingId), "The incoming letter being replied to does not exist"));
             }
-
-            _logger.LogInformation("Validation completed: {Valid} valid, {Invalid} invalid", result.ValidRows, result.InvalidRows);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error validating import file");
-            throw;
-        }
-
-        return result;
-    }
-
-    public async Task<ImportResultDto> ImportAsync(ImportOutgoingRequestDto request)
-    {
-        _logger.LogInformation("Importing outgoing letters from file: {FileName}", request.FileName);
-
-        var result = new ImportResultDto
-        {
-            ImportId = Guid.NewGuid(),
-            FileName = request.FileName,
-            ImportDate = DateTime.UtcNow,
-            ImportedBy = "CurrentUser" // TODO: Get from context
-        };
-
-        try
-        {
-            // Validate first if not in validate-only mode
-            if (!request.ValidateOnly)
+            else if (_currentUser.CharityId.HasValue && incoming.FK_CharityId != _currentUser.CharityId.Value)
             {
-                var validationResult = await ValidateImportAsync(request);
-                if (validationResult.InvalidRows > 0 && !request.UpdateExisting)
-                {
-                    throw new InvalidOperationException($"Validation failed with {validationResult.InvalidRows} errors");
-                }
+                failures.Add(new FluentValidation.Results.ValidationFailure(
+                    nameof(CreateOutgoingDto.IncomingId), "The incoming letter being replied to is outside the caller's charity"));
             }
-
-            // Parse file content
-            var rows = ParseImportFile(request.FileContent, request.FileName);
-            result.TotalRows = rows.Count;
-
-            foreach (var row in rows)
-            {
-                try
-                {
-                    var outgoingId = row.GetValueOrDefault("OutGoingId");
-
-                    // Skip if OutGoingId is not provided
-                    if (string.IsNullOrWhiteSpace(outgoingId))
-                    {
-                        result.FailedRows++;
-                        result.Errors.Add(new ValidationErrorDto
-                        {
-                            RowNumber = rows.IndexOf(row) + 1,
-                            FieldName = "OutGoingId",
-                            ErrorMessage = "OutGoingId is required"
-                        });
-                        continue;
-                    }
-
-                    // Check if exists (for update scenario)
-                    var existing = await _outgoingRepository.GetAllAsync();
-                    var existingRecord = existing.FirstOrDefault(x => x.OutGoingId == outgoingId!);
-
-                    if (existingRecord != null && request.UpdateExisting)
-                    {
-                        // Update existing
-                        existingRecord.Subject = row.GetValueOrDefault("Subject") ?? existingRecord.Subject;
-                        existingRecord.Body = row.GetValueOrDefault("Body");
-
-                        _outgoingRepository.Update(existingRecord);
-                        result.SuccessfulRows++;
-                        result.ImportedRecordIds.Add(existingRecord.Id);
-                    }
-                    else if (existingRecord == null && !request.SkipDuplicates)
-                    {
-                        // Create new
-                        var serial = await GetNextSerialNumberAsync(null, null);
-
-                        var outgoing = new Outgoing
-                        {
-                            OutGoingId = outgoingId,
-                            Subject = row.GetValueOrDefault("Subject") ?? string.Empty,
-                            Body = row.GetValueOrDefault("Body"),
-                            OutGoingNumber = row.GetValueOrDefault("OutGoingNumber"),
-                            Date = DateTime.TryParse(row.GetValueOrDefault("Date"), out var d) ? d : DateTime.UtcNow,
-                            Year = int.TryParse(row.GetValueOrDefault("Year"), out var y) ? y : DateTime.UtcNow.Year,
-                            Serial = serial
-                        };
-
-                        await _outgoingRepository.AddAsync(outgoing);
-                        result.SuccessfulRows++;
-                        result.ImportedRecordIds.Add(outgoing.Id);
-                    }
-                    else
-                    {
-                        result.FailedRows++;
-                        result.Errors.Add(new ValidationErrorDto
-                        {
-                            RowNumber = rows.IndexOf(row) + 1,
-                            FieldName = "OutGoingId",
-                            ErrorMessage = "Skipped (duplicate)"
-                        });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    result.FailedRows++;
-                    result.Errors.Add(new ValidationErrorDto
-                    {
-                        RowNumber = rows.IndexOf(row) + 1,
-                        FieldName = "Import",
-                        ErrorMessage = ex.Message
-                    });
-                }
-            }
-
-            await _unitOfWork.SaveChangesAsync();
-
-            _logger.LogInformation("Import completed: {Success} successful, {Failed} failed", result.SuccessfulRows, result.FailedRows);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error importing outgoing letters");
-            throw;
         }
 
-        return result;
-    }
-
-    public async Task<TemplateDownloadDto> DownloadTemplateAsync()
-    {
-        _logger.LogInformation("Generating outgoing letters import template");
-
-        // TODO: Generate actual Excel template
-        var template = new TemplateDownloadDto
+        if (failures.Count > 0)
         {
-            TemplateType = "OutgoingLetters",
-            FileName = $"OutgoingLetters_Template_{DateTime.UtcNow:yyyyMMdd}.xlsx",
-            FileContent = Encoding.UTF8.GetBytes("Template placeholder")
-        };
-
-        return template;
+            throw new ValidationException(failures);
+        }
     }
 
-    #endregion
-
-    #region Export Operations (UC-12.11, UC-12.12, UC-12.13)
-
-    public async Task<ExportResultDto> ExportAsync(ExportOutgoingRequestDto request)
+    private static OrphanOptionDto ToOrphanOption(OutgoingOrphanReport link)
     {
-        _logger.LogInformation("Exporting outgoing letters");
-
-        // TODO: Implement actual export logic with Excel/PDF generation
-        var result = new ExportResultDto
+        var orphan = link.Orphan!;
+        return new OrphanOptionDto
         {
-            ExportId = Guid.NewGuid(),
-            ExportDate = DateTime.UtcNow,
-            ExportedBy = "CurrentUser", // TODO: Get from context
-            FileFormat = request.FileFormat
-        };
-
-        return result;
-    }
-
-    #endregion
-
-    #region Import/Export History (UC-12.7, UC-12.8, UC-12.14)
-
-    public async Task<IEnumerable<ImportHistoryItemDto>> GetImportHistoryAsync()
-    {
-        // TODO: Implement import history tracking
-        return Enumerable.Empty<ImportHistoryItemDto>();
-    }
-
-    public async Task RollbackImportAsync(Guid importId)
-    {
-        _logger.LogInformation("Rolling back import: {ImportId}", importId);
-
-        // TODO: Implement rollback logic
-
-        _logger.LogInformation("Import rolled back successfully: {ImportId}", importId);
-    }
-
-    public async Task<IEnumerable<ExportHistoryItemDto>> GetExportHistoryAsync()
-    {
-        // TODO: Implement export history tracking
-        return Enumerable.Empty<ExportHistoryItemDto>();
-    }
-
-    #endregion
-
-    #region Business Logic
-
-    public async Task<bool> IsOutgoingIdUniqueAsync(string outgoingId, Guid? excludeId = null)
-    {
-        return await _outgoingRepository.IsOutgoingIdUniqueAsync(outgoingId, excludeId);
-    }
-
-    public async Task<int> GetNextSerialNumberAsync(int? departmentId = null, int? year = null)
-    {
-        return await _outgoingRepository.GetNextSerialNumberAsync(departmentId, year);
-    }
-
-    public async Task<Dictionary<int, string>> GetAvailableCategoriesAsync()
-    {
-        // TODO: Get actual categories from database
-        // For now, return common outgoing letter categories
-        return new Dictionary<int, string>
-        {
-            { 1, "Official" },
-            { 2, "Internal" },
-            { 3, "External" },
-            { 4, "Confidential" }
+            OrphanId = orphan.Id,
+            Code = orphan.Code ?? string.Empty,
+            FullName = orphan.FullName ?? string.Empty,
+            GuarantorName = orphan.Family?.HeadOfFamily,
+            Kinship = orphan.Family?.ProviderType
         };
     }
 
-    public async Task<OutgoingDto> CreateChildOutgoingAsync(Guid parentOutgoingId, CreateChildOutgoingDto dto)
+    private static OrphanOptionDto ToOrphanOption(OrphanCandidateRow row)
     {
-        _logger.LogInformation("Creating child outgoing letter for parent: {ParentId}", parentOutgoingId);
-
-        var parent = await _outgoingRepository.GetByIdAsync(parentOutgoingId);
-        if (parent == null)
-            throw new KeyNotFoundException($"Parent outgoing letter with ID {parentOutgoingId} not found");
-
-        var child = new ChildOutGoing
+        return new OrphanOptionDto
         {
-            OutgoingId = parentOutgoingId,
-            Subject = dto.Subject,
-            Date = dto.Date ?? DateTime.UtcNow,
-            Body = dto.Body,
-            Year = dto.Year ?? DateTime.UtcNow.Year,
-            Fk_DepartmentId = dto.Fk_DepartmentId,
-            UploadedFileId = dto.UploadedFileId
+            OrphanId = row.OrphanId,
+            Code = row.Code,
+            FullName = row.FullName,
+            GuarantorName = row.GuarantorName,
+            Kinship = row.Kinship
         };
-
-        // TODO: Add to ChildOutgoingRepository and save
-        // For now, this is a placeholder
-
-        _logger.LogInformation("Child outgoing letter created successfully");
-
-        return await GetByIdAsync(parentOutgoingId); // Return parent for now
     }
 
-    public async Task<IEnumerable<ChildOutGoingDto>> GetChildOutgoingsAsync(Guid parentOutgoingId)
+    /// <summary>
+    /// Pin the caller's charity claim onto the filter — pin, never widen. A head-office
+    /// caller without the claim keeps their explicit CharityId narrow (or sees all).
+    /// </summary>
+    private void ApplyCallerScope(OutgoingFilterDto filter)
     {
-        _logger.LogInformation("Getting child outgoing letters for parent: {ParentId}", parentOutgoingId);
+        var callerCharity = _currentUser.CharityId;
+        if (!callerCharity.HasValue)
+        {
+            return;
+        }
 
-        var parent = await _outgoingRepository.GetByIdAsync(parentOutgoingId);
-        if (parent == null)
-            throw new KeyNotFoundException($"Parent outgoing letter with ID {parentOutgoingId} not found");
+        if (filter.CharityId.HasValue && filter.CharityId.Value != callerCharity.Value)
+        {
+            _logger.LogWarning(
+                "Caller pinned to charity {CallerCharity} requested charity {RequestedCharity}; pinning to {CallerCharity}",
+                callerCharity.Value, filter.CharityId.Value, callerCharity.Value);
+        }
 
-        // TODO: Implement actual ChildOutgoingRepository query
-        // For now, return empty list
-        return Enumerable.Empty<ChildOutGoingDto>();
+        filter.CharityId = callerCharity;
     }
 
-    public async Task<bool> DeleteChildOutgoingAsync(Guid childId)
+    /// <summary>
+    /// Pin the caller's charity claim onto the §21.S.7 report filter (UC-COR-19 overload).
+    /// </summary>
+    private void ApplyCallerScope(OutgoingOrphanReportFilterDto filter)
     {
-        _logger.LogInformation("Deleting child outgoing letter: {ChildId}", childId);
+        var callerCharity = _currentUser.CharityId;
+        if (!callerCharity.HasValue)
+        {
+            return;
+        }
 
-        // TODO: Implement actual delete via ChildOutgoingRepository
-        // For now, return true
-        return await Task.FromResult(true);
+        if (filter.CharityId.HasValue && filter.CharityId.Value != callerCharity.Value)
+        {
+            _logger.LogWarning(
+                "Caller pinned to charity {CallerCharity} requested charity {RequestedCharity}; pinning to {CallerCharity}",
+                callerCharity.Value, filter.CharityId.Value, callerCharity.Value);
+        }
+
+        filter.CharityId = callerCharity;
     }
 
-    #endregion
-
-    #region Helper Methods
-
-    private List<Dictionary<string, string>> ParseImportFile(byte[] fileContent, string fileName)
+    /// <summary>
+    /// Whether the letter is visible to the caller: a charity-pinned caller sees only
+    /// their own charity's letters; a country-pinned caller (no charity claim) sees the
+    /// letters of their country's charities (review P7); a caller with neither claim
+    /// sees everything. NULL-charity (HQ-owned) letters belong to no country and no charity.
+    /// </summary>
+    private bool IsWithinCallerScope(Outgoing outgoing)
     {
-        // TODO: Implement actual Excel/CSV parsing
-        return new List<Dictionary<string, string>>();
-    }
+        var callerCharity = _currentUser.CharityId;
+        if (callerCharity.HasValue)
+        {
+            return outgoing.FK_CharityId == callerCharity.Value;
+        }
 
-    #endregion
+        var callerCountry = _currentUser.CountryId;
+        if (callerCountry.HasValue)
+        {
+            return outgoing.Charity != null && outgoing.Charity.CountryId == callerCountry.Value;
+        }
+
+        return true;
+    }
 }

@@ -99,7 +99,7 @@
             <div class="col-md-6">
               <div class="detail-item">
                 <label>{{ 'officeDevelopmentProjects.officeProjectType' | translate }}</label>
-                <span>{{ project.officeProjectType?.name || '-' }}</span>
+                <span>{{ project.officeProjectTypeName || '-' }}</span>
               </div>
             </div>
           </div>
@@ -211,7 +211,7 @@
             <div class="col-md-6">
               <div class="detail-item">
                 <label>{{ 'officeDevelopmentProjects.assignedCharity' | translate }}</label>
-                <span>{{ project.assignedCharityName || '-' }}</span>
+                <span>{{ project.charityName || '-' }}</span>
               </div>
             </div>
           </div>
@@ -257,29 +257,29 @@
             <div class="col-md-6">
               <div class="detail-item">
                 <label>{{ 'officeDevelopmentProjects.attachedFile' | translate }}</label>
-                <div *ngIf="project.attachedFileName">
+                <div *ngIf="project.document_Attach && project.document_Attach.length > 0">
                   <button
                     class="btn btn-sm btn-outline-primary"
                     (click)="downloadDocument()">
                     <i class="fe fe-download"></i>
-                    {{ project.attachedFileName }}
+                    {{ project.document_Attach[0].fileName }}
                   </button>
                 </div>
-                <span *ngIf="!project.attachedFileName">-</span>
+                <span *ngIf="!project.document_Attach || project.document_Attach.length === 0">-</span>
               </div>
             </div>
             <div class="col-md-6">
               <div class="detail-item">
                 <label>{{ 'officeDevelopmentProjects.projectReportFile' | translate }}</label>
-                <div *ngIf="project.projectReportFileName">
+                <div *ngIf="project.report_Attach && project.report_Attach.length > 0">
                   <button
                     class="btn btn-sm btn-outline-primary"
                     (click)="downloadReport()">
                     <i class="fe fe-download"></i>
-                    {{ project.projectReportFileName }}
+                    {{ project.report_Attach[0].fileName }}
                   </button>
                 </div>
-                <span *ngIf="!project.projectReportFileName">-</span>
+                <span *ngIf="!project.report_Attach || project.report_Attach.length === 0">-</span>
               </div>
             </div>
           </div>
@@ -298,13 +298,13 @@
             <div class="col-md-6">
               <div class="detail-item">
                 <label>{{ 'officeDevelopmentProjects.createdOn' | translate }}</label>
-                <span>{{ formatDate(project.createdAt) }}</span>
+                <span>{{ formatDate(project.createdOn) }}</span>
               </div>
             </div>
             <div class="col-md-6">
               <div class="detail-item">
                 <label>{{ 'officeDevelopmentProjects.modifiedOn' | translate }}</label>
-                <span>{{ formatDate(project.modifiedAt) }}</span>
+                <span>{{ formatDate(project.updatedOn) }}</span>
               </div>
             </div>
           </div>
@@ -318,7 +318,7 @@
             <div class="col-md-6">
               <div class="detail-item">
                 <label>{{ 'common.modifiedBy' | translate }}</label>
-                <span>{{ project.modifiedBy || '-' }}</span>
+                <span>{{ project.updatedBy || '-' }}</span>
               </div>
             </div>
           </div>

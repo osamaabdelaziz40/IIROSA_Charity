@@ -1,381 +1,166 @@
-<div class="orphan-reports-generate">
-  <app-breadcrumb
-    [title]="'orphanReports.generate' | translate"
-    [subtitle]="'orphanReports.generateSubtitle' | translate">
-  </app-breadcrumb>
+<app-page-header [title]="'orphanReports.generate.title' | translate"
+                 [subtitle]="'orphanReports.generate.subtitle' | translate">
+</app-page-header>
 
-  <div class="row">
-    <!-- Filters Section - UC-6.1 -->
-    <div class="col-lg-4">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">
-            <i class="fas fa-filter me-2"></i>
-            <span translate>orphanReports.reportFilters</span>
-          </h5>
+<!-- §14.U.11 criteria -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="mb-0">{{ 'orphanReports.generate.criteria' | translate }}</h6>
+    <button type="button" class="btn btn-outline-primary btn-sm" (click)="exportData()"
+            [disabled]="loading || exporting">
+      <i class="bi bi-file-earmark-excel me-1"></i>{{ 'orphanReports.generate.export' | translate }}
+    </button>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <!-- الجمعية — HQ only (charity callers are server-pinned) -->
+      <div class="col-md-3" *ngIf="isHeadOffice">
+        <label class="form-label" for="charityId">{{ 'orphanReports.generate.charity' | translate }}</label>
+        <select id="charityId" class="form-select" [(ngModel)]="charityId" name="charityId">
+          <option value="">{{ 'common.all' | translate }}</option>
+          <option *ngFor="let charity of charities; trackBy: trackByCharityId"
+                  [ngValue]="charity.id">{{ charity.name }}</option>
+        </select>
+      </div>
+
+      <!-- رقم التقرير -->
+      <div class="col-md-3">
+        <label class="form-label" for="reportNo">{{ 'orphanReports.generate.reportNo' | translate }}</label>
+        <input type="text" class="form-control" id="reportNo" name="reportNo"
+               [(ngModel)]="reportNo"
+               [placeholder]="'orphanReports.generate.reportNoPlaceholder' | translate">
+      </div>
+
+      <!-- أكواد — codes-only output toggle -->
+      <div class="col-md-2 d-flex align-items-end">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="codesOnly" name="codesOnly"
+                 [(ngModel)]="codesOnly">
+          <label class="form-check-label" for="codesOnly">{{ 'orphanReports.generate.codesOnly' | translate }}</label>
         </div>
-        <div class="card-body">
-          <form [formGroup]="reportForm" (ngSubmit)="generateReport()">
-            <!-- Period Section - UC-6.2 -->
-            <div class="section mb-4">
-              <h6 class="section-title text-primary mb-3">
-                <i class="fas fa-calendar me-2"></i>
-                <span translate>orphanReports.period</span>
-              </h6>
+      </div>
 
-              <div class="mb-3">
-                <label class="form-label">{{ 'orphanReports.fromDate' | translate }} *</label>
-                <input type="date" class="form-control" formControlName="fromDate" required>
-              </div>
+      <!-- من تاريخ / إلى تاريخ -->
+      <div class="col-md-2">
+        <label class="form-label" for="dateFrom">{{ 'orphanReports.generate.dateFrom' | translate }}</label>        <input type="date" class="form-control" id="dateFrom" name="dateFrom" [(ngModel)]="dateFrom">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="dateTo">{{ 'orphanReports.generate.dateTo' | translate }}</label>
+        <input type="date" class="form-control" id="dateTo" name="dateTo" [(ngModel)]="dateTo">
+      </div>
 
-              <div class="mb-3">
-                <label class="form-label">{{ 'orphanReports.toDate' | translate }} *</label>
-                <input type="date" class="form-control" formControlName="toDate" required>
-              </div>
-            </div>
-
-            <!-- Filters Section - UC-6.3 through UC-6.5 -->
-            <div class="section mb-4">
-              <h6 class="section-title text-primary mb-3">
-                <i class="fas fa-filter me-2"></i>
-                <span translate>orphanReports.filters</span>
-              </h6>
-
-              <!-- Charity Filter - UC-6.4 (Admin/Super Admin only) -->
-              <div class="mb-3" *ngIf="showCharityFilter">
-                <label class="form-label">{{ 'orphanReports.charity' | translate }}</label>
-                <select class="form-select" formControlName="charityId">
-                  <option value="">{{ 'orphanReports.allCharities' | translate }}</option>
-                  <option *ngFor="let charity of charities" [value]="charity.id">
-                    {{ charity.name }}
-                  </option>
-                </select>
-                <small class="text-muted">{{ 'orphanReports.charityFilterHint' | translate }}</small>
-              </div>
-
-              <!-- Region Filter - UC-6.5 -->
-              <div class="mb-3">
-                <label class="form-label">{{ 'orphanReports.region' | translate }}</label>
-                <select class="form-select" formControlName="regionId">
-                  <option value="">{{ 'orphanReports.allRegions' | translate }}</option>
-                  <option *ngFor="let region of regions" [value]="region.id">
-                    {{ region.name }}
-                  </option>
-                </select>
-              </div>
-
-              <!-- Center Filter -->
-              <div class="mb-3">
-                <label class="form-label">{{ 'orphanReports.center' | translate }}</label>
-                <select class="form-select" formControlName="centerId">
-                  <option value="">{{ 'orphanReports.allCenters' | translate }}</option>
-                  <option *ngFor="let center of centers" [value]="center.id">
-                    {{ center.name }}
-                  </option>
-                </select>
-              </div>
-
-              <!-- Sponsorship Status - UC-6.3 -->
-              <div class="mb-3">
-                <label class="form-label">{{ 'orphanReports.sponsorshipStatus' | translate }}</label>
-                <select class="form-select" formControlName="sponsorshipStatus">
-                  <option *ngFor="let status of sponsorshipStatuses" [value]="status">
-                    {{ getSponsorshipStatusLabel(status) | translate }}
-                  </option>
-                </select>
-              </div>
-
-              <!-- Age Range -->
-              <div class="row">
-                <div class="col-6">
-                  <div class="mb-3">
-                    <label class="form-label">{{ 'orphanReports.ageFrom' | translate }}</label>
-                    <input type="number" class="form-control" formControlName="ageFrom" min="0" max="30">
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="mb-3">
-                    <label class="form-label">{{ 'orphanReports.ageTo' | translate }}</label>
-                    <input type="number" class="form-control" formControlName="ageTo" min="0" max="30">
-                  </div>
-                </div>
-              </div>
-
-              <!-- Gender -->
-              <div class="mb-3">
-                <label class="form-label">{{ 'orphanReports.gender' | translate }}</label>
-                <select class="form-select" formControlName="gender">
-                  <option *ngFor="let gender of genders" [value]="gender">
-                    {{ getGenderLabel(gender) | translate }}
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Report Options - UC-6.6 -->
-            <div class="section mb-4">
-              <h6 class="section-title text-primary mb-3">
-                <i class="fas fa-cog me-2"></i>
-                <span translate>orphanReports.reportOptions</span>
-              </h6>
-
-              <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" formControlName="includeFamilyDetails" id="includeFamilyDetails">
-                <label class="form-check-label" for="includeFamilyDetails">
-                  {{ 'orphanReports.includeFamilyDetails' | translate }}
-                </label>
-              </div>
-
-              <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" formControlName="includeContactInformation" id="includeContactInformation">
-                <label class="form-check-label" for="includeContactInformation">
-                  {{ 'orphanReports.includeContactInformation' | translate }}
-                </label>
-              </div>
-
-              <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" formControlName="includeEducationDetails" id="includeEducationDetails">
-                <label class="form-check-label" for="includeEducationDetails">
-                  {{ 'orphanReports.includeEducationDetails' | translate }}
-                </label>
-              </div>
-
-              <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" formControlName="includeHealthDetails" id="includeHealthDetails">
-                <label class="form-check-label" for="includeHealthDetails">
-                  {{ 'orphanReports.includeHealthDetails' | translate }}
-                </label>
-              </div>
-
-              <div class="form-check mb-2" *ngIf="showGroupByCharity">
-                <input class="form-check-input" type="checkbox" formControlName="groupByCharity" id="groupByCharity">
-                <label class="form-check-label" for="groupByCharity">
-                  {{ 'orphanReports.groupByCharity' | translate }}
-                </label>
-              </div>
-            </div>
-
-            <!-- Actions -->
-            <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-primary" [disabled]="generating">
-                <i class="fas fa-chart-bar me-2" *ngIf="!generating"></i>
-                <i class="fas fa-spinner fa-spin me-2" *ngIf="generating"></i>
-                <span translate>orphanReports.generateReport</span>
-              </button>
-
-              <button type="button" class="btn btn-outline-secondary" (click)="clearFilters()">
-                <i class="fas fa-undo me-2"></i>
-                <span translate>common.clear</span>
-              </button>
-            </div>
-          </form>
-        </div>
+      <div class="col-md-12 text-end">
+        <button type="button" class="btn btn-primary" (click)="generate()" [disabled]="loading">
+          <i class="bi bi-play-fill me-1"></i>{{ 'orphanReports.generate.run' | translate }}
+        </button>
       </div>
     </div>
+  </div>
+</div>
 
-    <!-- Report Results Section - UC-6.1 step 11-12 -->
-    <div class="col-lg-8">
-      <app-loading *ngIf="generating"></app-loading>
+<!-- Results -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="mb-0">
+      {{ 'orphanReports.generate.results' | translate }}
+      <span class="badge bg-secondary ms-2" *ngIf="!loading && totalCount > 0">{{ totalCount }}</span>
+    </h6>
+    <small class="text-muted" *ngIf="!loading && totalCount > rows.length">
+      {{ 'orphanReports.generate.capped' | translate:{ shown: rows.length, total: totalCount } }}
+    </small>
+  </div>
+  <div class="card-body">
+    <app-loading *ngIf="loading" message="{{ 'common.loading' | translate }}"></app-loading>
 
-      <!-- No Results -->
-      <div class="card" *ngIf="!reportResult && !generating">
-        <div class="card-body text-center py-5">
-          <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
-          <h5>{{ 'orphanReports.noReportGenerated' | translate }}</h5>
-          <p class="text-muted">{{ 'orphanReports.noReportGeneratedMessage' | translate }}</p>
-        </div>
+    <ng-container *ngIf="!loading">
+      <app-empty-state *ngIf="rows.length === 0"
+                       [title]="'orphanReports.generate.emptyTitle' | translate"
+                       [description]="'orphanReports.generate.emptyMessage' | translate">
+      </app-empty-state>
+
+      <div class="table-responsive" *ngIf="rows.length > 0">
+        <table class="table table-hover table-sm align-middle">
+          <thead>
+            <tr>
+              <th>#</th>
+              <!-- Review P41 2026-08-24: the body always renders the orphanCode cell —
+                   the header skipped it (14 headers vs 15 cells; 2 vs 3 in codesOnly mode). -->
+              <th>{{ 'orphanReports.generate.columns.orphanCode' | translate }}</th>
+              <ng-container *ngIf="!codesOnly">
+                <th>{{ 'orphanReports.generate.columns.orphanName' | translate }}</th>
+                <th>{{ 'orphanReports.generate.columns.charity' | translate }}</th>
+                <th>{{ 'orphanReports.generate.columns.reportNo' | translate }}</th>
+                <th>{{ 'orphanReports.generate.columns.reportDate' | translate }}</th>
+                <th>{{ 'orphanReports.generate.columns.period' | translate }}</th>
+                <th>{{ 'orphanReports.generate.columns.status' | translate }}</th>
+                <th>{{ 'orphanReports.generate.columns.schoolType' | translate }}</th>
+                <th>{{ 'orphanReports.generate.columns.school' | translate }}</th>
+                <th>{{ 'orphanReports.generate.columns.degree' | translate }}</th>
+                <th>{{ 'orphanReports.generate.columns.educationalLevel' | translate }}</th>
+                <th>{{ 'orphanReports.generate.columns.medicalStatus' | translate }}</th>
+                <th>{{ 'orphanReports.generate.columns.marriageDate' | translate }}</th>
+                <th>{{ 'orphanReports.generate.columns.deathDate' | translate }}</th>
+              </ng-container>
+              <ng-container *ngIf="codesOnly">
+                <th>{{ 'orphanReports.generate.columns.reportNo' | translate }}</th>
+              </ng-container>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of pagedRows; let i = index; trackBy: trackByReportId">
+              <td>{{ serial(i) }}</td>
+              <td class="fw-bold">{{ row.orphanCode || '—' }}</td>
+              <ng-container *ngIf="!codesOnly">
+                <td>{{ row.orphanName || '—' }}</td>
+                <td>{{ row.charityName || '—' }}</td>
+                <td>{{ row.reportNo || '—' }}</td>
+                <!-- Review P52 2026-08-24: null reportDate rendered an empty cell —
+                     the sibling date cells already carry the '—' fallback. -->
+                <td>{{ row.reportDate ? (row.reportDate | date:'yyyy-MM-dd') : '—' }}</td>
+                <td>
+                  <span class="small">
+                    {{ (row.reportPeriodFrom | date:'yyyy-MM-dd') || '—' }} -
+                    {{ (row.reportPeriodTo | date:'yyyy-MM-dd') || '—' }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge"
+                        [ngClass]="row.isAccepted ? 'bg-success' : row.isRefused ? 'bg-danger' : 'bg-warning text-dark'">
+                    {{ 'periodicReports.status.' + (row.reviewStatus || 'pending').toLowerCase() | translate }}
+                  </span>
+                </td>
+                <td>{{ row.schoolType || '—' }}</td>
+                <td>{{ row.school || '—' }}</td>
+                <td>{{ row.educationDegree || '—' }}</td>
+                <td>{{ row.educationalLevelName || '—' }}</td>
+                <td>{{ row.medicalStatus || '—' }}</td>
+                <td>{{ row.marriageDate ? (row.marriageDate | date:'yyyy-MM-dd') : '—' }}</td>
+                <td>{{ row.deathDate ? (row.deathDate | date:'yyyy-MM-dd') : '—' }}</td>
+              </ng-container>
+              <ng-container *ngIf="codesOnly">
+                <td>{{ row.reportNo || '—' }}</td>
+              </ng-container>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <!-- Report Results -->
-      <div class="report-results" *ngIf="reportResult">
-        <!-- Summary Statistics - UC-6.1 step 11 -->
-        <div class="card mb-3">
-          <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">
-              <i class="fas fa-chart-pie me-2"></i>
-              <span translate>orphanReports.summaryStatistics</span>
-            </h5>
-          </div>
-          <div class="card-body">
-            <div class="row text-center">
-              <div class="col-md-3 mb-3">
-                <div class="stat-card">
-                  <h3 class="text-primary">{{ reportResult.summary.totalOrphans }}</h3>
-                  <p class="text-muted mb-0">{{ 'orphanReports.totalOrphans' | translate }}</p>
-                </div>
-              </div>
-              <div class="col-md-3 mb-3">
-                <div class="stat-card">
-                  <h3 class="text-success">{{ reportResult.summary.sponsoredCount }}</h3>
-                  <p class="text-muted mb-0">{{ 'orphanReports.sponsored' | translate }}</p>
-                </div>
-              </div>
-              <div class="col-md-3 mb-3">
-                <div class="stat-card">
-                  <h3 class="text-warning">{{ reportResult.summary.unsponsoredCount }}</h3>
-                  <p class="text-muted mb-0">{{ 'orphanReports.unsponsored' | translate }}</p>
-                </div>
-              </div>
-              <div class="col-md-3 mb-3">
-                <div class="stat-card">
-                  <h3 class="text-info">{{ reportResult.summary.pendingCount }}</h3>
-                  <p class="text-muted mb-0">{{ 'orphanReports.pending' | translate }}</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Additional Stats -->
-            <div class="row text-center mt-3">
-              <div class="col-md-4">
-                <div>
-                  <i class="fas fa-male text-primary me-1"></i>
-                  <strong>{{ reportResult.summary.maleCount }}</strong>
-                  <span class="text-muted">{{ 'orphanReports.male' | translate }}</span>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div>
-                  <i class="fas fa-female text-danger me-1"></i>
-                  <strong>{{ reportResult.summary.femaleCount }}</strong>
-                  <span class="text-muted">{{ 'orphanReports.female' | translate }}</span>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div>
-                  <i class="fas fa-calendar text-info me-1"></i>
-                  <strong>{{ reportResult.metadata.fromDate | date:'mediumDate' }}</strong>
-                  <span class="text-muted"> - </span>
-                  <strong>{{ reportResult.metadata.toDate | date:'mediumDate' }}</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Charity Breakdown - UC-6.1 step 11 (Admin/Super Admin only) -->
-        <div class="card mb-3" *ngIf="showGroupByCharity && reportResult.summary.charityBreakdown">
-          <div class="card-header">
-            <h6 class="mb-0">
-              <i class="fas fa-building me-2"></i>
-              <span translate>orphanReports.charityBreakdown</span>
-            </h6>
-          </div>
-          <div class="card-body">
-            <table class="table table-sm">
-              <thead>
-                <tr>
-                  <th translate>orphanReports.charity</th>
-                  <th translate>orphanReports.totalOrphans</th>
-                  <th translate>orphanReports.sponsored</th>
-                  <th translate>orphanReports.unsponsored</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let breakdown of reportResult.summary.charityBreakdown">
-                  <td>{{ breakdown.charityName }}</td>
-                  <td>{{ breakdown.orphanCount }}</td>
-                  <td class="text-success">{{ breakdown.sponsoredCount }}</td>
-                  <td class="text-warning">{{ breakdown.unsponsoredCount }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Detailed Orphan List - UC-6.1 step 11 -->
-        <div class="card mb-3">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h6 class="mb-0">
-              <i class="fas fa-list me-2"></i>
-              <span translate>orphanReports.detailedList</span>
-              <span class="badge bg-primary ms-2">{{ reportResult.orphans.length }}</span>
-            </h6>
-            <!-- Export Options - UC-6.7 -->
-            <div class="btn-group">
-              <button class="btn btn-sm btn-success" (click)="exportReport('excel')">
-                <i class="fas fa-file-excel me-1"></i>
-                Excel
-              </button>
-              <button class="btn btn-sm btn-danger" (click)="exportReport('pdf')">
-                <i class="fas fa-file-pdf me-1"></i>
-                PDF
-              </button>
-            </div>
-          </div>
-          <div class="card-body p-0">
-            <div class="table-responsive" style="max-height: 500px;">
-              <table class="table table-hover table-striped mb-0">
-                <thead class="sticky-top bg-light">
-                  <tr>
-                    <th translate>orphanReports.orphanCode</th>
-                    <th translate>orphanReports.orphanName</th>
-                    <th *ngIf="reportResult.metadata.includeFamilyDetails" translate>orphanReports.family</th>
-                    <th translate>orphanReports.age</th>
-                    <th translate>orphanReports.gender</th>
-                    <th translate>orphanReports.sponsorshipStatus</th>
-                    <th *ngIf="reportResult.metadata.includeContactInformation" translate>orphanReports.contact</th>
-                    <th *ngIf="reportResult.metadata.includeEducationDetails" translate>orphanReports.education</th>
-                    <th *ngIf="reportResult.metadata.includeHealthDetails" translate>orphanReports.health</th>
-                    <th *ngIf="showCharityFilter" translate>orphanReports.charity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let orphan of reportResult.orphans">
-                    <td>{{ orphan.orphanCode }}</td>
-                    <td>{{ orphan.orphanName }}</td>
-                    <td *ngIf="reportResult.metadata.includeFamilyDetails">
-                      <small>
-                        <div>{{ orphan.fatherName || '-' }}</div>
-                        <div class="text-muted">{{ orphan.familyAddress }}</div>
-                      </small>
-                    </td>
-                    <td>{{ orphan.age || '-' }}</td>
-                    <td>
-                      <span class="badge" [ngClass]="orphan.gender === 'Male' ? 'bg-primary' : 'bg-danger'">
-                        <i [ngClass]="orphan.gender === 'Male' ? 'fas fa-male' : 'fas fa-female'" class="me-1"></i>
-                        {{ orphan.gender | translate }}
-                      </span>
-                    </td>
-                    <td>
-                      <span class="badge" [ngClass]="orphan.sponsorshipStatus === 'Sponsored' ? 'bg-success' : orphan.sponsorshipStatus === 'Unsponsored' ? 'bg-warning' : 'bg-secondary'">
-                        {{ orphan.sponsorshipStatus }}
-                      </span>
-                    </td>
-                    <td *ngIf="reportResult.metadata.includeContactInformation">
-                      <small>
-                        <div>{{ orphan.familyPhone || '-' }}</div>
-                        <div class="text-muted">{{ orphan.orphanPhone || '-' }}</div>
-                      </small>
-                    </td>
-                    <td *ngIf="reportResult.metadata.includeEducationDetails">
-                      <small>
-                        <div>{{ orphan.schoolName || '-' }}</div>
-                        <div class="text-muted">{{ orphan.gradeClass || '-' }}</div>
-                      </small>
-                    </td>
-                    <td *ngIf="reportResult.metadata.includeHealthDetails">
-                      <small>
-                        <div>{{ orphan.healthStatusName || '-' }}</div>
-                        <div class="text-muted">{{ orphan.disabilities || '-' }}</div>
-                      </small>
-                    </td>
-                    <td *ngIf="showCharityFilter">{{ orphan.charityName || '-' }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div class="card-footer text-muted">
-            <small>
-              <i class="fas fa-info-circle me-1"></i>
-              {{ 'orphanReports.generatedOn' | translate }}: {{ reportResult.generatedOn | date:'medium' }}
-              <span class="ms-3" *ngIf="reportResult.metadata.generatedByUserName">
-                {{ 'orphanReports.generatedBy' | translate }}: {{ reportResult.metadata.generatedByUserName }}
-              </span>
-            </small>
-          </div>
-        </div>
-      </div>
-    </div>
+      <!-- Client-side paging over the capped batch -->
+      <nav *ngIf="rows.length > pageSize" aria-label="pagination">
+        <ul class="pagination pagination-sm justify-content-center mb-0">
+          <li class="page-item" [class.disabled]="currentPage === 1">
+            <a class="page-link" href="#" (click)="onPageChange(currentPage - 1); false">&laquo;</a>
+          </li>
+          <!-- Review P51b 2026-08-24: trackBy on the page-number *ngFor. -->
+          <li class="page-item" *ngFor="let page of [].constructor(totalPages); let i = index; trackBy: trackByPageIndex"
+              [class.active]="currentPage === i + 1">
+            <a class="page-link" href="#" (click)="onPageChange(i + 1); false">{{ i + 1 }}</a>
+          </li>
+          <li class="page-item" [class.disabled]="currentPage === totalPages">
+            <a class="page-link" href="#" (click)="onPageChange(currentPage + 1); false">&raquo;</a>
+          </li>
+        </ul>
+      </nav>
+    </ng-container>
   </div>
 </div>

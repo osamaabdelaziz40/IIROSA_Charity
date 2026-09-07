@@ -1,0 +1,6 @@
+/* UC-RPT-39 (§23.U.39 أيتام الأسر بتاريخ) — collapsible family groups; the chevron flips with
+   the collapsed state and the header cursor states the click target. */
+.family-group-header {
+  cursor: pointer;
+  user-select: none;
+}

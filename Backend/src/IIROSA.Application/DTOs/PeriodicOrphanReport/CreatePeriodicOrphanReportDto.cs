@@ -43,6 +43,38 @@ public class CreatePeriodicOrphanReportDto
 
     #endregion
 
+    #region Housing beneficiary (UC-HOU-08, §11.S.4)
+
+    /// <summary>
+    /// §11.U.6 discriminator on the wire: "Child" (default) or "Parent" (the housing
+    /// family's guardian). Absent/null ⇒ the epic-9 regular orphan report, unchanged.
+    /// </summary>
+    public string? ChildOrParent { get; set; }
+
+    /// <summary>
+    /// The housing family the report belongs to (the §11.S.4 route context). Required for
+    /// a guardian (Parent) report; optional for Child — when present the family is
+    /// validated (Housing type, caller scope, child membership) and the link is stamped.
+    /// </summary>
+    public Guid? HousingFamilyId { get; set; }
+
+    /// <summary>
+    /// The UC-HOU-07 picker's beneficiary id. Parent ⇒ the guardian's Provider id
+    /// (resolved to the family server-side); Child ⇒ equals <see cref="OrphanId"/>.
+    /// </summary>
+    public Guid? HousingBeneficiaryId { get; set; }
+
+    /// <summary>§11.S.4 الموافقه علي التقرير — stored as data; the review WORKFLOW endpoints are epic 9 (9-7/9-8).</summary>
+    public bool? IsAccepted { get; set; }
+
+    /// <summary>§11.S.4 رفض التقرير — mutually exclusive with <see cref="IsAccepted"/>.</summary>
+    public bool? IsRefused { get; set; }
+
+    /// <summary>§11.S.4 سبب الرفض — required when <see cref="IsRefused"/> is set (RefuseReasons lookup).</summary>
+    public int? RefuseReasonId { get; set; }
+
+    #endregion
+
     #region Religious & Behavioral Tracking (UC-6.11)
 
     public string? PrayerStatus { get; set; }

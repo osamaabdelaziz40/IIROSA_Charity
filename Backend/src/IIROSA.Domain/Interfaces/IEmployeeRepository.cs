@@ -10,6 +10,8 @@ namespace IIROSA.Domain.Interfaces;
 public interface IEmployeeRepository : IRepository<Employee>
 {
     // Employee-specific queries
+    Task<Employee?> GetByIdWithDepartmentAsync(Guid id);
+    Task<IEnumerable<Employee>> GetAllWithDepartmentAsync();
     Task<Employee?> GetByEmailAsync(string email);
     Task<Employee?> GetByCodeAsync(string code);
     Task<IEnumerable<Employee>> GetByDepartmentAsync(int departmentId);

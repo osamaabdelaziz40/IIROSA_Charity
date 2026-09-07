@@ -33,6 +33,41 @@ public class FamilyDto
     public decimal? MonthlyAssistance { get; set; }
     public string? Notes { get; set; }
 
+    // Refugee register household fields (epic 7, UC-REF-03 §12.S.2) — null on Regular/Housing rows
+
+    /// <summary>
+    /// Register discriminator: Regular | Housing | Refugee
+    /// </summary>
+    public string FamilyType { get; set; } = "Regular";
+
+    public int? RegionId { get; set; }
+    public string? RegionName { get; set; }
+    public int? CenterId { get; set; }
+    public string? CenterName { get; set; }
+    public string? NearBy { get; set; }
+    public string? Street { get; set; }
+    public decimal? RentAmount { get; set; }
+    public int? HouseOwnershipId { get; set; }
+    public string? HouseOwnershipName { get; set; }
+    public int? HouseStatusId { get; set; }
+    public string? HouseStatusName { get; set; }
+    public int? IncomeTypeId { get; set; }
+    public string? IncomeTypeName { get; set; }
+
+    // Housing register allocation (epic 6, §11.S.2) — null on non-housing rows
+    public int? HousingBuildingId { get; set; }
+    public string? HousingBuildingName { get; set; }
+    public int? HousingFlatId { get; set; }
+    public string? HousingFlatName { get; set; }
+
+    /// <summary>
+    /// نصيب الفرد — computed read-only (§12.S.2): MonthlyIncome / FamilyMembersCount; not a column.
+    /// </summary>
+    public decimal? PerMemberShare =>
+        FamilyMembersCount > 0 && MonthlyIncome.HasValue
+            ? Math.Round(MonthlyIncome.Value / FamilyMembersCount, 2)
+            : null;
+
     // Audit fields (inherited from FullAuditedEntity)
     public DateTime CreatedOn { get; set; }
     public string? CreatedBy { get; set; }

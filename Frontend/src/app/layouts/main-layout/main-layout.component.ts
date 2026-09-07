@@ -35,13 +35,15 @@ export class MainLayoutComponent implements OnInit, AfterViewInit {
   canImpersonate = false;
   isSuperAdmin = false;
 
+  // jquery, popper, moment, bootstrap, select2, daterangepicker and
+  // jquery.timepicker are deliberately NOT in this list: they are already
+  // loaded at boot via the "scripts" array in angular.json (bundled into
+  // scripts.js). Re-executing them here replaced window.jQuery and bound a
+  // SECOND set of Bootstrap data-api handlers, so every dropdown click fired
+  // toggle twice — open then instantly closed — and row-action menus never
+  // appeared. Each library must execute exactly once.
   scripts = [
-    'assets/tinydash/js/jquery.min.js',
-    'assets/tinydash/js/popper.min.js',
-    'assets/tinydash/js/moment.min.js',
-    'assets/tinydash/js/bootstrap.min.js',
     'assets/tinydash/js/simplebar.min.js',
-    'assets/tinydash/js/daterangepicker.js',
     'assets/tinydash/js/jquery.stickOnScroll.js',
     'assets/tinydash/js/tinycolor-min.js',
     'assets/tinydash/js/config.js',
@@ -54,13 +56,12 @@ export class MainLayoutComponent implements OnInit, AfterViewInit {
     'assets/tinydash/js/CustomJsCodes/CustomJsCodes1.js',
     'assets/tinydash/js/gauge.min.js',
     'assets/tinydash/js/jquery.sparkline.min.js',
-    'assets/tinydash/js/apexcharts.min.js',
-    'assets/tinydash/js/apexcharts.custom.js',
+    // ApexCharts loads as the npm package via the shared apx-chart wrapper.
+    // This old v3 global copy collided with it (window.ApexCharts got
+    // overwritten mid-session, breaking resize with "t.put is not a function").
     'assets/tinydash/js/jquery.mask.min.js',
-    'assets/tinydash/js/select2.min.js',
     'assets/tinydash/js/jquery.steps.min.js',
     'assets/tinydash/js/jquery.validate.min.js',
-    'assets/tinydash/js/jquery.timepicker.js',
     'assets/tinydash/js/dropzone.min.js',
     'assets/tinydash/js/uppy.min.js',
     'assets/tinydash/js/quill.min.js',

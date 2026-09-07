@@ -1,0 +1,467 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="formTitleKey | translate"
+  [subtitle]="formSubtitleKey | translate"
+  [icon]="'fe fe-home'">
+</app-page-header>
+
+<!-- §12.S.2 — بيانات الأسرة -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">{{ 'families.refugeeSectionFamily' | translate }}</h5>
+  </div>
+  <div class="card-body">
+    <form [formGroup]="familyForm">
+      <div class="row">
+        <!-- الجمعية + الكود — create-time only (HQ-only charity selector, immutable code) -->
+        <div class="col-md-4" *ngIf="isHQ && !editMode">
+          <app-drop-down
+            [fg]="familyForm"
+            fcn="charityId"
+            [label]="'families.refugeeCharity'"
+            [initialData]="charityOptions">
+          </app-drop-down>
+        </div>
+
+        <div class="col-md-4" *ngIf="!editMode">
+          <app-input-text
+            [fg]="familyForm"
+            fcn="code"
+            [label]="'families.refugeeFamilyCode'"
+            [placeholder]="'families.refugeeFamilyCode' | translate">
+          </app-input-text>
+        </div>
+
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="familyForm"
+            fcn="regionId"
+            [label]="'families.refugeeRegion'"
+            [initialData]="regionOptions">
+          </app-drop-down>
+        </div>
+
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="familyForm"
+            fcn="centerId"
+            [label]="'families.refugeeCenter'"
+            [initialData]="centerOptions">
+          </app-drop-down>
+        </div>
+
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="familyForm"
+            fcn="cityVillage"
+            [label]="'families.refugeeCityVillage'">
+          </app-input-text>
+        </div>
+
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="familyForm"
+            fcn="nearBy"
+            [label]="'families.refugeeNearBy'">
+          </app-input-text>
+        </div>
+
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="familyForm"
+            fcn="street"
+            [label]="'families.refugeeStreet'">
+          </app-input-text>
+        </div>
+
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="familyForm"
+            fcn="address"
+            [label]="'families.refugeeAddress'">
+          </app-input-text>
+        </div>
+
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="familyForm"
+            fcn="phoneNumber"
+            [label]="'families.refugeePhone'">
+          </app-input-text>
+        </div>
+
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="familyForm"
+            fcn="houseOwnershipId"
+            [label]="'families.refugeeHouseOwnership'"
+            [initialData]="houseOwnershipOptions">
+          </app-drop-down>
+        </div>
+
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="familyForm"
+            fcn="houseStatusId"
+            [label]="'families.refugeeHouseStatus'"
+            [initialData]="houseStatusOptions">
+          </app-drop-down>
+        </div>
+
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="familyForm"
+            fcn="housingTypeId"
+            [label]="'families.refugeeHousingType'"
+            [initialData]="housingTypeOptions">
+          </app-drop-down>
+        </div>
+
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="familyForm"
+            fcn="incomeTypeId"
+            [label]="'families.refugeeIncomeType'"
+            [initialData]="incomeTypeOptions">
+          </app-drop-down>
+        </div>
+
+        <!-- قيمة الإيجار — §12.S.2-mandatory unconditionally (server enforces it flat) -->
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="familyForm"
+            fcn="rentAmount"
+            type="number"
+            [min]="0.01"
+            [step]="0.01"
+            [label]="'families.refugeeRentAmount'">
+          </app-input-text>
+        </div>
+
+        <div class="col-md-12">
+          <app-input-text
+            [fg]="familyForm"
+            fcn="notes"
+            type="textarea"
+            [rows]="2"
+            [label]="'families.refugeeNotes'">
+          </app-input-text>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- §12.S.2 — اضافة معيل -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">{{ 'families.refugeeSectionProvider' | translate }}</h5>
+  </div>
+  <div class="card-body">
+    <form [formGroup]="providerForm">
+      <div class="row">
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="providerForm"
+            fcn="fullName"
+            [label]="'families.refugeeProviderName'">
+          </app-input-text>
+        </div>
+
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="providerForm"
+            fcn="nationalId"
+            [label]="'families.refugeeProviderNationalId'">
+          </app-input-text>
+        </div>
+
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="providerForm"
+            fcn="dateOfBirth"
+            type="date"
+            [label]="'families.refugeeProviderDOB'">
+          </app-input-text>
+        </div>
+
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="providerForm"
+            fcn="nationalityCountryId"
+            [label]="'families.refugeeProviderNationality'"
+            [initialData]="countryOptions">
+          </app-drop-down>
+        </div>
+
+        <!-- العلاقة (P14) — الاب / الام / علاقة أخرى; the نوعها catalogue select appears
+             only for «علاقة أخرى» -->
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="providerForm"
+            fcn="mainRelation"
+            [label]="'families.refugeeProviderMainRelation'"
+            [initialData]="mainRelationOptions">
+          </app-drop-down>
+        </div>
+
+        <div class="col-md-4" *ngIf="showRelationCatalogue">
+          <app-drop-down
+            [fg]="providerForm"
+            fcn="relationshipToFamily"
+            [label]="'families.refugeeProviderRelation'"
+            [initialData]="relationOptions">
+          </app-drop-down>
+        </div>
+
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="providerForm"
+            fcn="reasonOfRelationId"
+            [label]="'families.refugeeProviderReasonOfRelation'"
+            [initialData]="reasonOfRelationOptions">
+          </app-drop-down>
+        </div>
+
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="providerForm"
+            fcn="phone"
+            [label]="'families.refugeePhone'">
+          </app-input-text>
+        </div>
+
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="providerForm"
+            fcn="job"
+            [label]="'families.refugeeProviderJob'">
+          </app-input-text>
+        </div>
+
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="providerForm"
+            fcn="monthlyIncome"
+            type="number"
+            [min]="0"
+            [step]="0.01"
+            [label]="'families.refugeeProviderMonthlyIncome'">
+          </app-input-text>
+        </div>
+
+        <div class="col-md-12">
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="providerIsAlive" formControlName="isAlive">
+            <label class="form-check-label" for="providerIsAlive">
+              {{ 'families.refugeeProviderIsAlive' | translate }}
+            </label>
+          </div>
+        </div>
+
+        <!-- وفاة المعيل — death fields appear only when the provider is dead -->
+        <ng-container *ngIf="!providerIsAlive">
+          <div class="col-md-6">
+            <app-input-text
+              [fg]="providerForm"
+              fcn="deathDate"
+              type="date"
+              [label]="'families.refugeeProviderDeathDate'">
+            </app-input-text>
+          </div>
+
+          <div class="col-md-6">
+            <app-drop-down
+              [fg]="providerForm"
+              fcn="deathReason"
+              [label]="'families.refugeeProviderDeathReason'"
+              [initialData]="deathReasonOptions">
+            </app-drop-down>
+          </div>
+        </ng-container>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- §12.S.2 — اضافة ابن (staged rows, submitted with the family) -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">{{ 'families.refugeeSectionChildren' | translate }}</h5>
+    <button type="button" class="btn btn-sm btn-primary" (click)="addChildRow()">
+      <i class="fe fe-plus mr-1"></i>
+      {{ 'families.refugeeAddChild' | translate }}
+    </button>
+  </div>
+  <div class="card-body">
+    <form [formGroup]="familyForm">
+      <div formArrayName="orphans">
+        <div class="row align-items-end stage-row" *ngFor="let _ of childrenForm.controls; let i = index; trackBy: trackByRowId">
+          <div class="col-md-2" [formGroupName]="i">
+            <app-input-text
+              [fg]="childGroup(i)"
+              fcn="fullName"
+              [label]="'families.refugeeChildName'">
+            </app-input-text>
+          </div>
+
+          <div class="col-md-2" [formGroupName]="i">
+            <app-input-text
+              [fg]="childGroup(i)"
+              fcn="dateOfBirth"
+              type="date"
+              [label]="'families.refugeeChildDOB'">
+            </app-input-text>
+          </div>
+
+          <div class="col-md-2" [formGroupName]="i">
+            <app-drop-down
+              [fg]="childGroup(i)"
+              fcn="gender"
+              [label]="'families.refugeeChildGender'"
+              [initialData]="genderOptions">
+            </app-drop-down>
+          </div>
+
+          <div class="col-md-2" [formGroupName]="i">
+            <app-input-text
+              [fg]="childGroup(i)"
+              fcn="nationalId"
+              [label]="'families.refugeeChildNationalId'">
+            </app-input-text>
+          </div>
+
+          <div class="col-md-2" [formGroupName]="i">
+            <app-drop-down
+              [fg]="childGroup(i)"
+              fcn="socialStatusId"
+              [label]="'families.refugeeChildSocialStatus'"
+              [initialData]="socialStatusOptions">
+            </app-drop-down>
+          </div>
+
+          <!-- الحالة الصحية (P12) -->
+          <div class="col-md-2" [formGroupName]="i">
+            <app-drop-down
+              [fg]="childGroup(i)"
+              fcn="healthStatusId"
+              [label]="'families.refugeeChildHealthStatus'"
+              [initialData]="healthStatusOptions">
+            </app-drop-down>
+          </div>
+
+          <div class="col-md-12 mt-1 text-left" [formGroupName]="i">
+            <button type="button" class="btn btn-sm btn-danger"
+                    [title]="'common.delete' | translate"
+                    (click)="removeChildRow(i)">
+              <i class="fe fe-trash-2"></i>
+            </button>
+          </div>
+        </div>
+
+        <p class="text-muted mb-0" *ngIf="childrenForm.length === 0">
+          {{ 'families.refugeeNoChildrenStaged' | translate }}
+        </p>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- §12.S.2 — اضافة مرافق (staged rows, submitted with the family) -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">{{ 'families.refugeeSectionCompanions' | translate }}</h5>
+    <button type="button" class="btn btn-sm btn-primary" (click)="addCompanionRow()">
+      <i class="fe fe-plus mr-1"></i>
+      {{ 'families.refugeeAddCompanion' | translate }}
+    </button>
+  </div>
+  <div class="card-body">
+    <form [formGroup]="familyForm">
+      <div formArrayName="relatives">
+        <div class="row align-items-end stage-row" *ngFor="let _ of companionsForm.controls; let i = index; trackBy: trackByRowId">
+          <div class="col-md-2" [formGroupName]="i">
+            <app-input-text
+              [fg]="companionGroup(i)"
+              fcn="fullName"
+              [label]="'families.refugeeCompanionName'">
+            </app-input-text>
+          </div>
+
+          <div class="col-md-2" [formGroupName]="i">
+            <app-input-text
+              [fg]="companionGroup(i)"
+              fcn="nationalId"
+              [label]="'families.refugeeCompanionNationalId'">
+            </app-input-text>
+          </div>
+
+          <div class="col-md-2" [formGroupName]="i">
+            <app-input-text
+              [fg]="companionGroup(i)"
+              fcn="dateOfBirth"
+              type="date"
+              [label]="'families.refugeeCompanionDOB'">
+            </app-input-text>
+          </div>
+
+          <div class="col-md-2" [formGroupName]="i">
+            <app-drop-down
+              [fg]="companionGroup(i)"
+              fcn="gender"
+              [label]="'families.refugeeCompanionGender'"
+              [initialData]="genderOptions">
+            </app-drop-down>
+          </div>
+
+          <!-- الحالة الصحية (P12) -->
+          <div class="col-md-2" [formGroupName]="i">
+            <app-drop-down
+              [fg]="companionGroup(i)"
+              fcn="healthStatusId"
+              [label]="'families.refugeeCompanionHealthStatus'"
+              [initialData]="healthStatusOptions">
+            </app-drop-down>
+          </div>
+
+          <div class="col-md-12 mt-1 text-left" [formGroupName]="i">
+            <button type="button" class="btn btn-sm btn-danger"
+                    [title]="'common.delete' | translate"
+                    (click)="removeCompanionRow(i)">
+              <i class="fe fe-trash-2"></i>
+            </button>
+          </div>
+
+          <!-- صلة القرابة بالأسرة — free text, stored as the relative's notes on the wire.
+               Companion social status has no wire home (Relative has no such column) — gap
+               recorded in the 7-4 story notes, so no dead control is rendered. -->
+          <div class="col-md-11 mt-2" [formGroupName]="i">
+            <app-input-text
+              [fg]="companionGroup(i)"
+              fcn="relationship"
+              [label]="'families.refugeeCompanionRelationship'">
+            </app-input-text>
+          </div>
+        </div>
+
+        <p class="text-muted mb-0" *ngIf="companionsForm.length === 0">
+          {{ 'families.refugeeNoCompanionsStaged' | translate }}
+        </p>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="card">
+  <div class="card-body d-flex justify-content-end">
+    <button type="button" class="btn btn-secondary ml-2 mr-2" (click)="cancel()">
+      {{ 'common.cancel' | translate }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="saving" (click)="save()">
+      <i class="fe fe-save mr-1"></i>
+      {{ 'common.save' | translate }}
+    </button>
+  </div>
+</div>

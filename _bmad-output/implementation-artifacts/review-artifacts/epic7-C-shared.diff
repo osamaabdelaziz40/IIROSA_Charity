@@ -1,0 +1,3966 @@
+diff --git a/Frontend/src/app/core/services/auth.service.ts b/Frontend/src/app/core/services/auth.service.ts
+index 0d62026..4f6e216 100644
+--- a/Frontend/src/app/core/services/auth.service.ts
++++ b/Frontend/src/app/core/services/auth.service.ts
+@@ -63,7 +63,114 @@ const PERMISSION_ROLES: Record<string, string[]> = {
+   'Charities.View': ['SuperAdmin', 'Admin', 'Charity'],
+   'Charities.Create': ['SuperAdmin', 'Admin'],
+   'Charities.Edit': ['SuperAdmin', 'Admin'],
+-  'Charities.Delete': ['SuperAdmin']
++  'Charities.Delete': ['SuperAdmin'],
++  // FamiliesController authorises SuperAdmin,Admin,Charity on every action (including the
++  // refugee child-routes); Create/Edit for HQ callers additionally require an explicit charity.
++  'Families.View': ['SuperAdmin', 'Admin', 'Charity'],
++  'Families.Create': ['SuperAdmin', 'Admin', 'Charity'],
++  'Families.Edit': ['SuperAdmin', 'Admin', 'Charity'],
++  // PUT /api/Families/{id}/charity is HQ-only on the server (SuperAdmin, Admin) — moving a
++  // family between charities is an HQ decision, never the charity's own (UC-FAM-06).
++  'Families.Transfer': ['SuperAdmin', 'Admin'],
++  // POST /api/Families/{familyId}/members/{memberId}/control — the members screen and the
++  // orphan/guardian move commands are HQ corrections too (UC-FAM-07/08, legacy role gate 0/3/4).
++  'Families.Members': ['SuperAdmin', 'Admin'],
++  // GET+POST /api/Families/provider-requests — the guardian-change queue. HQ reviews; a Charity
++  // raises requests and sees its own rows (the server scopes Charity callers to their charity).
++  'Families.ProviderRequests': ['SuperAdmin', 'Admin', 'Charity'],
++  // GET /api/Families/follow-up — UC-FAM-11 register-activity report. HQ sees all (narrowable);
++  // a Charity caller is scoped server-side to its own register's activity.
++  'Families.FollowUp': ['SuperAdmin', 'Admin', 'Charity'],
++
++  // Orphan coding (UC-ORP / epic 8): the coding screens belong to HQ. The shared endpoints are
++  // deliberately wider server-side — GET /api/Families/orphans admits every role (a Charity
++  // caller is pinned to its own register) and code assignment tenancy-checks rather than
++  // role-gates — but both §13 screens are the HQ coding clerk's, so the route/menu hide them
++  // from Charity users. The worklist mode (codingStatus=Pending) is additionally refused
++  // server-side for Charity callers.
++  'OrphanCoding.View': ['SuperAdmin', 'Admin'],
++  'OrphanCoding.Edit': ['SuperAdmin', 'Admin'],
++
++  // OrphanPaymentsController (epic 10, chapter 15): batch CRUD, enrolment and the bank-file
++  // family are the HQ financial set per 00-Overview §4.3 (Accountant/FinancialOfficer = the
++  // WAR Fin. Director / Financial Officer actors); bank files & CSV stay HQ-only. Charity is
++  // admitted on the list/details reads (its rows are item-filtered to its own charity by the
++  // service — 10-7) and on Disburse, the row-action set (stop/print/receipt/cheque —
++  // UC-PAY-09..13, the charity's receipt workflow). The Charity-without-orphanId list guard
++  // on GET /api/OrphanPayments stays a server-side 403 regardless of this map.
++  'OrphanPayments.View': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer', 'Charity'],
++  'OrphanPayments.Create': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer'],
++  'OrphanPayments.Edit': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer'],
++  'OrphanPayments.Delete': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer'],
++  'OrphanPayments.AddOrphans': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer'],
++  'OrphanPayments.Disburse': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer', 'Charity'],
++  'OrphanPayments.BankFile': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer'],
++  'OrphanPayments.Import': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer'],
++
++  // Housing register (UC-HOU): the module's primary actor is the charity user; reads and
++  // writes ride the families surface (GET /api/Families?familyType=Housing and the re-cut
++  // HousingProjectsController), which authorise SuperAdmin,Admin,Charity server-side.
++  'HousingProjects.View': ['SuperAdmin', 'Admin', 'Charity'],
++  'HousingProjects.Create': ['SuperAdmin', 'Admin', 'Charity'],
++  'HousingProjects.Edit': ['SuperAdmin', 'Admin', 'Charity'],
++  'HousingProjects.Delete': ['SuperAdmin'],
++
++  // PeriodicOrphanReportsController (epic 9, UC-ORR): reads are broad (reviewers included),
++  // create/edit is the charity write path, delete is head-office only, review matches the
++  // server-side [Authorize(Roles)] split on the review endpoint.
++  'PeriodicReports.View': ['SuperAdmin', 'Admin', 'Accountant', 'Employee', 'Charity'],
++  'PeriodicReports.Create': ['SuperAdmin', 'Admin', 'Charity'],
++  'PeriodicReports.Edit': ['SuperAdmin', 'Admin', 'Charity'],
++  'PeriodicReports.Delete': ['SuperAdmin', 'Admin'],
++  'PeriodicReports.Review': ['SuperAdmin', 'Admin', 'Accountant', 'Employee'],
++
++  // OfficeProjectManagementController: everything is Admin,SuperAdmin except delete, which is
++  // SuperAdmin only (UC-OFP-05 — the General Director's alone; permission matrix F/F row).
++  'OfficeDevelopmentProjects.View': ['SuperAdmin', 'Admin'],
++  'OfficeDevelopmentProjects.Create': ['SuperAdmin', 'Admin'],
++  'OfficeDevelopmentProjects.Edit': ['SuperAdmin', 'Admin'],
++  'OfficeDevelopmentProjects.Delete': ['SuperAdmin'],
++
++  // SeasonalAidController: campaign management, closure and reports are HQ only; the
++  // family-facing surfaces (eligible families, beneficiary registration, distributions,
++  // receipt confirmation) admit Charity too — the service scopes rows to the caller's charity.
++  'SeasonalAid.View': ['SuperAdmin', 'Admin', 'Charity'],
++  'SeasonalAid.Create': ['SuperAdmin', 'Admin'],
++  'SeasonalAid.Edit': ['SuperAdmin', 'Admin'],
++  'SeasonalAid.ManageBeneficiaries': ['SuperAdmin', 'Admin', 'Charity'],
++  'SeasonalAid.RecordDistribution': ['SuperAdmin', 'Admin', 'Charity'],
++  'SeasonalAid.Reports': ['SuperAdmin', 'Admin'],
++
++  // CheckManagementController: the register, statement and detail reads admit the
++  // financial read roles (FinancialOfficer = Financial Director); issue and edit are
++  // the financial approver set. Charity holds no cheque screen, but the service still
++  // scopes every row to the caller's charity token claim.
++  'GeneralChecks.View': ['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer'],
++  'GeneralChecks.Create': ['SuperAdmin', 'Accountant', 'FinancialOfficer'],
++  'GeneralChecks.Edit': ['SuperAdmin', 'Accountant', 'FinancialOfficer'],
++
++  // MissionManagementController (epic 15): everything is Admin,SuperAdmin except delete,
++  // which is SuperAdmin only (UC-MSN-08 — the General Director's alone).
++  'Missions.View': ['SuperAdmin', 'Admin'],
++  'Missions.Create': ['SuperAdmin', 'Admin'],
++  'Missions.Edit': ['SuperAdmin', 'Admin'],
++  'Missions.Delete': ['SuperAdmin'],
++
++  // IncomingOutgoingController (epic 16): the whole correspondence module is HQ staff —
++  // Admin,SuperAdmin on every action; delete is SuperAdmin only, mirroring the
++  // controller's [Authorize] shapes (UC-COR-01…19). Reads scope to the caller's charity.
++  'IncomingOutgoing.View': ['SuperAdmin', 'Admin'],
++  'IncomingOutgoing.Create': ['SuperAdmin', 'Admin'],
++  'IncomingOutgoing.Edit': ['SuperAdmin', 'Admin'],
++  'IncomingOutgoing.Delete': ['SuperAdmin'],
++
++  // HqTransfersController (epic 17): an HQ module — Fin. Director and Gen. Director map to
++  // Admin/SuperAdmin; reads are country-claim scoped server-side. ManageLimits (UC-TRF-07) is
++  // SuperAdmin-only — the consequential, few-should-do-it write (13-5 precedent).
++  'HqTransfers.View': ['SuperAdmin', 'Admin'],
++  'HqTransfers.Create': ['SuperAdmin', 'Admin'],
++  'HqTransfers.Edit': ['SuperAdmin', 'Admin'],
++  'HqTransfers.ManageLimits': ['SuperAdmin']
+ };
+ 
+ @Injectable({
+@@ -101,7 +208,16 @@ export class AuthService {
+         console.log('User:', response.user);
+ 
+         const user = response.user;
+-        this.setAuthData(response.token, response.refreshToken, response.expiration, user);
++
++        // Only persist a real token. On a failed login the API returns an ApiResponse
++        // without `token`, and localStorage.setItem(key, undefined) stores the literal
++        // string "undefined" — the interceptor then attaches `Bearer undefined` to every
++        // request (login included), which the backend rejects as a malformed JWT.
++        if (response.token) {
++          this.setAuthData(response.token, response.refreshToken, response.expiration, user);
++        } else {
++          this.clearAuthData();
++        }
+ 
+         // Verify token was stored
+         const storedToken = localStorage.getItem('accessToken');
+diff --git a/Frontend/src/app/layouts/main-layout/main-layout.component.html b/Frontend/src/app/layouts/main-layout/main-layout.component.html
+index 744485b..5e1251c 100644
+--- a/Frontend/src/app/layouts/main-layout/main-layout.component.html
++++ b/Frontend/src/app/layouts/main-layout/main-layout.component.html
+@@ -207,7 +207,7 @@
+         </li>
+ 
+         <!-- Office Development Projects (Admin/SuperAdmin only) -->
+-        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
++        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Charity'])"
+             [class.show]="isActive('/office-development-projects')">
+           <a href="#office-development-projects" data-toggle="collapse" aria-expanded="false"
+              class="dropdown-toggle nav-link">
+@@ -232,8 +232,8 @@
+           </ul>
+         </li>
+         
+-        <!-- Housing Projects (Admin/SuperAdmin only) -->
+-        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
++        <!-- Housing Projects (Charity + HQ roles) -->
++        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Charity'])"
+             [class.show]="isActive('/housing-projects')">
+           <a href="#housing-projects" data-toggle="collapse" aria-expanded="false"
+              class="dropdown-toggle nav-link">
+@@ -258,8 +258,8 @@
+           </ul>
+         </li>
+ 
+-        <!-- Seasonal Aid (Admin/SuperAdmin only) -->
+-        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
++        <!-- Seasonal Aid (Charity sees campaigns it is scoped to; creation is HQ only) -->
++        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Charity'])"
+             [class.show]="isActive('/seasonal-aid')">
+           <a href="#seasonal-aid" data-toggle="collapse" aria-expanded="false"
+              class="dropdown-toggle nav-link">
+@@ -276,6 +276,7 @@
+               </a>
+             </li>
+             <li class="nav-item" routerLinkActive="active"
++                *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
+                 [routerLinkActiveOptions]="{ exact: true }">
+               <a class="nav-link pl-3" routerLink="/seasonal-aid/create">
+                 <span class="ml-1 item-text">{{ "IIROSA.addSeasonalAid" |translate }}</span>
+@@ -284,13 +285,13 @@
+           </ul>
+         </li>
+ 
+-         <!-- Incoming & Outgoing Correspondence (Admin/SuperAdmin/Accountant/Employee only, NOT Charity) -->
+-        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Accountant', 'Employee'])"
++         <!-- Incoming & Outgoing Correspondence (Admin/SuperAdmin only — matches the controller's [Authorize]) -->
++        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
+             [class.show]="isActive('/incoming-outgoing')">
+           <a href="#incoming-outgoing" data-toggle="collapse" aria-expanded="false"
+              class="dropdown-toggle nav-link">
+             <i class="fe fe-inbox fe-16"></i>
+-            <span class="ml-3 item-text">{{"IIROSA.importExport" | translate }}</span>
++            <span class="ml-3 item-text">{{"incomingOutgoing.moduleTitle" | translate }}</span>
+           </a>
+           <ul class="collapse list-unstyled pl-4 w-100"
+               [class.show]="isActive('/incoming-outgoing')"
+@@ -309,27 +310,27 @@
+             </li>
+             <li class="nav-item" routerLinkActive="active"
+                 [routerLinkActiveOptions]="{ exact: true }">
+-              <a class="nav-link pl-3" routerLink="/incoming-outgoing/import/incoming">
+-                <span class="ml-1 item-text">{{ "IIROSA.importData" |translate }}</span>
++              <a class="nav-link pl-3" routerLink="/incoming-outgoing/export/incoming">
++                <span class="ml-1 item-text">{{ "incomingOutgoing.attachEmployeesTitle" |translate }}</span>
+               </a>
+             </li>
+             <li class="nav-item" routerLinkActive="active"
+                 [routerLinkActiveOptions]="{ exact: true }">
+-              <a class="nav-link pl-3" routerLink="/incoming-outgoing/export/incoming">
+-                <span class="ml-1 item-text">{{ "IIROSA.exportData" |translate }}</span>
++              <a class="nav-link pl-3" routerLink="/incoming-outgoing/export/outgoing">
++                <span class="ml-1 item-text">{{ "incomingOutgoing.attachOrphansTitle" |translate }}</span>
+               </a>
+             </li>
+             <li class="nav-item" routerLinkActive="active"
+                 [routerLinkActiveOptions]="{ exact: true }">
+-              <a class="nav-link pl-3" routerLink="/incoming-outgoing/history">
+-                <span class="ml-1 item-text">{{ "IIROSA.importExportHistory" |translate }}</span>
++              <a class="nav-link pl-3" routerLink="/incoming-outgoing/export/outgoing-orphans">
++                <span class="ml-1 item-text">{{ "incomingOutgoing.orphansReportTitle" |translate }}</span>
+               </a>
+             </li>
+           </ul>
+         </li>
+         
+-        <!-- Orphan Payments (Admin/SuperAdmin only) -->
+-        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
++        <!-- Orphan Payments (HQ financial set + Charity — list server-refuses Charity without orphanId) -->
++        <li class="nav-item dropdown" *ngIf="hasAnyRole(['SuperAdmin', 'Admin', 'Accountant', 'FinancialOfficer', 'Charity'])"
+             [class.show]="isActive('/orphan-payments')">
+           <a href="#orphan-payments" data-toggle="collapse" aria-expanded="false"
+              class="dropdown-toggle nav-link">
+@@ -355,7 +356,7 @@
+         </li>
+ 
+         <!-- Families -->
+-        <li class="nav-item dropdown" *ngIf="hasPermission('families.view')"
++        <li class="nav-item dropdown" *ngIf="hasPermission('Families.View')"
+             [class.show]="isActive('/families')">
+           <a href="#families" data-toggle="collapse" aria-expanded="false"
+              class="dropdown-toggle nav-link">
+@@ -377,16 +378,65 @@
+                 <span class="ml-1 item-text">{{ "IIROSA.addFamily" |translate }}</span>
+               </a>
+             </li>
++            <!-- Refugee register (UC-REF) -->
++            <li class="nav-item" routerLinkActive="active"
++                [routerLinkActiveOptions]="{ exact: true }">
++              <a class="nav-link pl-3" routerLink="/families/refugees">
++                <span class="ml-1 item-text">{{ "IIROSA.refugeeFamilies" |translate }}</span>
++              </a>
++            </li>
++            <li class="nav-item" routerLinkActive="active"
++                [routerLinkActiveOptions]="{ exact: true }">
++              <a class="nav-link pl-3" routerLink="/families/refugees/create">
++                <span class="ml-1 item-text">{{ "IIROSA.addRefugeeFamily" |translate }}</span>
++              </a>
++            </li>
++            <!-- Orphan coding (UC-ORP / epic 8) — HQ coding clerk -->
++            <li class="nav-item" *ngIf="hasPermission('OrphanCoding.View')" routerLinkActive="active"
++                [routerLinkActiveOptions]="{ exact: true }">
++              <a class="nav-link pl-3" routerLink="/families/orphans/coding">
++                <span class="ml-1 item-text">{{ "orphanCoding.title" | translate }}</span>
++              </a>
++            </li>
++            <li class="nav-item" *ngIf="hasPermission('OrphanCoding.View')" routerLinkActive="active"
++                [routerLinkActiveOptions]="{ exact: true }">
++              <a class="nav-link pl-3" routerLink="/families/orphans/coding/worklist">
++                <span class="ml-1 item-text">{{ "orphanCoding.worklistTitle" | translate }}</span>
++              </a>
++            </li>
++            <!-- Guardian-change review queue (UC-FAM-09) -->
++            <li class="nav-item" *ngIf="hasPermission('Families.ProviderRequests')" routerLinkActive="active"
++                [routerLinkActiveOptions]="{ exact: true }">
++              <a class="nav-link pl-3" routerLink="/families/provider-requests">
++                <span class="ml-1 item-text">{{ "families.providerRequests.title" | translate }}</span>
++              </a>
++            </li>
+           </ul>
+         </li>
+ 
+-        
+-
+-
+-        
++        <!-- Reports (التقارير) — founded by UC-FAM-11; epic 18 extends the section -->
++        <li class="nav-item dropdown" *ngIf="hasPermission('Families.FollowUp')"
++            [class.show]="isActive('/reports')">
++          <a href="#reports" data-toggle="collapse" aria-expanded="false"
++             class="dropdown-toggle nav-link">
++            <i class="fe fe-bar-chart-2 fe-16"></i>
++            <span class="ml-3 item-text">{{ "reports.title" | translate }}</span>
++          </a>
++          <ul class="collapse list-unstyled pl-4 w-100"
++              [class.show]="isActive('/reports')"
++              id="reports">
++            <!-- UC-FAM-11: family follow-up activity (legacy screen name kept verbatim) -->
++            <li class="nav-item" routerLinkActive="active"
++                [routerLinkActiveOptions]="{ exact: true }">
++              <a class="nav-link pl-3" routerLink="/reports/family-orphans">
++                <span class="ml-1 item-text">{{ "families.followUp.title" | translate }}</span>
++              </a>
++            </li>
++          </ul>
++        </li>
+ 
+-        <!-- General Checks (Admin/SuperAdmin/Accountant only) -->
+-        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Accountant'])"
++        <!-- General Cheques (financial roles; issue/edit is the approver subset) -->
++        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Accountant', 'FinancialOfficer'])"
+             [class.show]="isActive('/general-checks')">
+           <a href="#general-checks" data-toggle="collapse" aria-expanded="false"
+              class="dropdown-toggle nav-link">
+@@ -402,16 +452,17 @@
+                 <span class="ml-1 item-text">{{ "generalChecks.manageChecks" |translate }}</span>
+               </a>
+             </li>
+-            <li class="nav-item" routerLinkActive="active"
++            <li class="nav-item" *ngIf="hasAnyRole(['SuperAdmin', 'Accountant', 'FinancialOfficer'])"
++                routerLinkActive="active"
+                 [routerLinkActiveOptions]="{ exact: true }">
+               <a class="nav-link pl-3" routerLink="/general-checks/create">
+-                <span class="ml-1 item-text">{{ "generalChecks.createCheck" |translate }}</span>
++                <span class="ml-1 item-text">{{ "generalChecks.addCheck" |translate }}</span>
+               </a>
+             </li>
+             <li class="nav-item" routerLinkActive="active"
+                 [routerLinkActiveOptions]="{ exact: true }">
+-              <a class="nav-link pl-3" routerLink="/general-checks/reconcile">
+-                <span class="ml-1 item-text">{{ "generalChecks.reconciliation" |translate }}</span>
++              <a class="nav-link pl-3" routerLink="/general-checks/statement">
++                <span class="ml-1 item-text">{{ "generalChecks.statement" |translate }}</span>
+               </a>
+             </li>
+           </ul>
+@@ -422,7 +473,7 @@
+        
+ 
+         <!-- Missions (Admin/SuperAdmin only) -->
+-        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
++        <li class="nav-item dropdown" *ngIf="hasAnyRole(['Admin', 'SuperAdmin', 'Charity'])"
+             [class.show]="isActive('/missions')">
+           <a href="#missions" data-toggle="collapse" aria-expanded="false"
+              class="dropdown-toggle nav-link">
+@@ -443,12 +494,51 @@
+               <a class="nav-link pl-3" routerLink="/missions/create">
+                 <span class="ml-1 item-text">{{ "IIROSA.addMission" |translate }}</span>
+               </a>
+-            </li>   
++            </li>
++          </ul>
++        </li>
++
++        <!-- Periodic Orphan Reports (epic 9, UC-ORR) -->
++        <li class="nav-item dropdown" *ngIf="hasPermission('PeriodicReports.View')"
++            [class.show]="isActive('/periodic-orphan-reports')">
++          <a href="#periodic-orphan-reports" data-toggle="collapse" aria-expanded="false"
++             class="dropdown-toggle nav-link">
++            <i class="fe fe-file-text fe-16"></i>
++            <span class="ml-3 item-text">{{ "IIROSA.periodicOrphanReports" | translate }}</span>
++          </a>
++          <ul class="collapse list-unstyled pl-4 w-100"
++              [class.show]="isActive('/periodic-orphan-reports')"
++              id="periodic-orphan-reports">
++            <li class="nav-item" routerLinkActive="active"
++                [routerLinkActiveOptions]="{ exact: true }">
++              <a class="nav-link pl-3" routerLink="/periodic-orphan-reports">
++                <span class="ml-1 item-text">{{ "periodicReports.sidebar.allReports" | translate }}</span>
++              </a>
++            </li>
++          </ul>
++        </li>
++
++
++        <!-- HQ Financial Transfers (Admin/SuperAdmin only) -->
++        <li class="nav-item dropdown" *ngIf="hasPermission('HqTransfers.View')"
++            [class.show]="isActive('/hq-transfers')">
++          <a href="#hq-transfers" data-toggle="collapse" aria-expanded="false"
++             class="dropdown-toggle nav-link">
++            <i class="fe fe-dollar-sign fe-16"></i>
++            <span class="ml-3 item-text">{{"hqTransfers.title" | translate }}</span>
++          </a>
++          <ul class="collapse list-unstyled pl-4 w-100"
++              [class.show]="isActive('/hq-transfers')"
++              id="hq-transfers">
++            <li class="nav-item" routerLinkActive="active"
++                [routerLinkActiveOptions]="{ exact: true }">
++              <a class="nav-link pl-3" routerLink="/hq-transfers">
++                <span class="ml-1 item-text">{{ "hqTransfers.title" |translate }}</span>
++              </a>
++            </li>
+           </ul>
+         </li>
+-        
+ 
+-        
+         <!-- Technical Support (All Users) -->
+         <li class="nav-item dropdown" [class.show]="isActive('/technical-support')">
+           <a href="#technical-support" data-toggle="collapse" aria-expanded="false"
+diff --git a/Frontend/src/app/layouts/main-layout/main-layout.component.ts b/Frontend/src/app/layouts/main-layout/main-layout.component.ts
+index 22257c9..b0d31ee 100644
+--- a/Frontend/src/app/layouts/main-layout/main-layout.component.ts
++++ b/Frontend/src/app/layouts/main-layout/main-layout.component.ts
+@@ -54,8 +54,9 @@ export class MainLayoutComponent implements OnInit, AfterViewInit {
+     'assets/tinydash/js/CustomJsCodes/CustomJsCodes1.js',
+     'assets/tinydash/js/gauge.min.js',
+     'assets/tinydash/js/jquery.sparkline.min.js',
+-    'assets/tinydash/js/apexcharts.min.js',
+-    'assets/tinydash/js/apexcharts.custom.js',
++    // ApexCharts loads as the npm package via the shared apx-chart wrapper.
++    // This old v3 global copy collided with it (window.ApexCharts got
++    // overwritten mid-session, breaking resize with "t.put is not a function").
+     'assets/tinydash/js/jquery.mask.min.js',
+     'assets/tinydash/js/select2.min.js',
+     'assets/tinydash/js/jquery.steps.min.js',
+diff --git a/Frontend/src/app/modules/lookup-management/models/lookup.model.ts b/Frontend/src/app/modules/lookup-management/models/lookup.model.ts
+index 8d6da31..dd33710 100644
+--- a/Frontend/src/app/modules/lookup-management/models/lookup.model.ts
++++ b/Frontend/src/app/modules/lookup-management/models/lookup.model.ts
+@@ -49,6 +49,8 @@ export interface CountryDto extends LookupDto {
+   flagIcon?: string;
+   regionCount?: number;
+   centerCount?: number;
++  /** UC-TRF-06/07 per-country transfer ceiling — null/absent = unlimited */
++  maxTransferAmount?: number | null;
+ }
+ 
+ export interface CreateCountryDto {
+diff --git a/Frontend/src/app/modules/lookup-management/services/lookup-management.service.ts b/Frontend/src/app/modules/lookup-management/services/lookup-management.service.ts
+index 0c4408e..df7e58c 100644
+--- a/Frontend/src/app/modules/lookup-management/services/lookup-management.service.ts
++++ b/Frontend/src/app/modules/lookup-management/services/lookup-management.service.ts
+@@ -24,7 +24,8 @@ import {
+   LookupTableSummaryDto,
+   BulkExportDto,
+   BulkImportDto,
+-  BulkImportResultDto
++  BulkImportResultDto,
++  LookupDto
+ } from '../models/lookup.model';
+ 
+ @Injectable({
+@@ -354,6 +355,113 @@ export class LookupManagementService {
+     );
+   }
+ 
++  // ==================== HOUSING CATALOGUE (UC-HOU-05) ====================
++
++  /**
++   * Housing buildings (UC-HOU-05) — active-only catalogue feeding the §11.S.2
++   * رقم العماره drop-down on the housing family form. Organisation-owned rows
++   * (HQ catalogue, no per-charity scoping).
++   */
++  getHousingBuildings(): Observable<LookupDto[]> {
++    return this.http.get<LookupDto[]>(`${this.apiUrl}/housing-buildings`, {
++      headers: this.getHeaders()
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  /**
++   * Flats of one building (UC-HOU-05) — the §11.S.2 رقم الشقه drop-down, repopulated
++   * on building change. `buildingId` is required by the endpoint (400 when absent).
++   */
++  getHousingFlats(buildingId: number): Observable<LookupDto[]> {
++    let params = new HttpParams().set('buildingId', buildingId.toString());
++    return this.http.get<LookupDto[]>(`${this.apiUrl}/housing-flats`, {
++      headers: this.getHeaders(),
++      params
++    }).pipe(
++      catchError(this.handleError)
++    );
++  }
++
++  // ==================== §11.S.2 FORM CATALOGUE (UC-HOU-03) ====================
++  // Read-only getters feeding the housing-family register form drop-downs. The endpoints
++  // (added for the epic-7 refugee form) return the bare active-item list — not the paged
++  // CRUD surface above — so these mirror the getHousingBuildings shape: Observable<LookupDto[]>.
++
++  /** المؤهل الدراسى — GET education-levels */
++  getEducationLevels(): Observable<LookupDto[]> {
++    return this.http.get<LookupDto[]>(`${this.apiUrl}/education-levels`, {
++      headers: this.getHeaders()
++    }).pipe(catchError(this.handleError));
++  }
++
++  /** أسباب رفض التقرير الدوري — GET refuse-reasons (UC-ORR-08 mandatory refusal catalogue) */
++  getRefuseReasons(): Observable<LookupDto[]> {
++    return this.http.get<LookupDto[]>(`${this.apiUrl}/refuse-reasons`, {
++      headers: this.getHeaders()
++    }).pipe(catchError(this.handleError));
++  }
++
++  /** الحالة الصحية — GET health-statuses */
++  getHealthStatuses(): Observable<LookupDto[]> {
++    return this.http.get<LookupDto[]>(`${this.apiUrl}/health-statuses`, {
++      headers: this.getHeaders()
++    }).pipe(catchError(this.handleError));
++  }
++
++  /** نوع الدخل — GET income-types */
++  getIncomeTypes(): Observable<LookupDto[]> {
++    return this.http.get<LookupDto[]>(`${this.apiUrl}/income-types`, {
++      headers: this.getHeaders()
++    }).pipe(catchError(this.handleError));
++  }
++
++  /** الحالة الاجتماعية — GET social-statuses */
++  getSocialStatuses(): Observable<LookupDto[]> {
++    return this.http.get<LookupDto[]>(`${this.apiUrl}/social-statuses`, {
++      headers: this.getHeaders()
++    }).pipe(catchError(this.handleError));
++  }
++
++  /** نوع العلاقة — GET relations */
++  getRelations(): Observable<LookupDto[]> {
++    return this.http.get<LookupDto[]>(`${this.apiUrl}/relations`, {
++      headers: this.getHeaders()
++    }).pipe(catchError(this.handleError));
++  }
++
++  /** سبب العلاقة — GET reasons-of-relation */
++  getReasonsOfRelation(): Observable<LookupDto[]> {
++    return this.http.get<LookupDto[]>(`${this.apiUrl}/reasons-of-relation`, {
++      headers: this.getHeaders()
++    }).pipe(catchError(this.handleError));
++  }
++
++  // ==================== §12.S.2 REFUGEE FORM CATALOGUE (UC-REF-03) ====================
++  // Same bare active-item list shape as the §11.S.2 getters above.
++
++  /** ملكية السكن — GET house-ownerships */
++  getHouseOwnerships(): Observable<LookupDto[]> {
++    return this.http.get<LookupDto[]>(`${this.apiUrl}/house-ownerships`, {
++      headers: this.getHeaders()
++    }).pipe(catchError(this.handleError));
++  }
++
++  /** حالة محتويات السكن — GET house-statuses */
++  getHouseStatuses(): Observable<LookupDto[]> {
++    return this.http.get<LookupDto[]>(`${this.apiUrl}/house-statuses`, {
++      headers: this.getHeaders()
++    }).pipe(catchError(this.handleError));
++  }
++
++  /** نوع السكن — shared catalogue (§12.S.2 refugee form) */
++  getHousingTypes(): Observable<LookupDto[]> {
++    return this.http.get<LookupDto[]>(`${this.apiUrl}/housing-types`, {
++      headers: this.getHeaders()
++    }).pipe(catchError(this.handleError));
++  }
++
+   // ==================== ERROR HANDLING ====================
+ 
+   private handleError(error: any): Observable<never> {
+diff --git a/Frontend/src/assets/i18n/ar.json b/Frontend/src/assets/i18n/ar.json
+index d51f239..5b29893 100644
+--- a/Frontend/src/assets/i18n/ar.json
++++ b/Frontend/src/assets/i18n/ar.json
+@@ -12,6 +12,7 @@
+     "export": "تصدير",
+     "import": "استيراد",
+     "print": "طباعة",
++    "metaInformation": "بيانات السجل",
+     "view": "عرض",
+     "details": "التفاصيل",
+     "back": "رجوع",
+@@ -21,6 +22,7 @@
+     "confirm": "تأكيد",
+     "yes": "نعم",
+     "no": "لا",
++    "notAssigned": "غير معيّن",
+     "loading": "جاري التحميل...",
+     "noData": "لا توجد بيانات",
+     "success": "نجاح",
+@@ -180,7 +182,21 @@
+     "editProfile": "تعديل الملف الشخصي",
+     "assignRole": "تعيين دور",
+     "permissions": "الصلاحيات",
+-    "manageEmployees": "إدارة الموظفين"
++    "manageEmployees": "إدارة الموظفين",
++    "accountInformation": "بيانات حساب الدخول",
++    "password": "كلمة المرور",
++    "emailPlaceholder": "name@example.com",
++    "emailLoginHint": "يُستخدم هذا البريد الإلكتروني كاسم لتسجيل الدخول",
++    "codeAutoHint": "يُولَّد تلقائياً إذا تُرك فارغاً",
++    "departmentsLoadFailed": "تعذر تحميل قائمة الأقسام",
++    "rolesLoadFailed": "تعذر تحميل قائمة الأدوار",
++    "employeeLoadFailed": "تعذر تحميل بيانات الموظفين",
++    "employeeCreateFailed": "تعذر إنشاء الموظف",
++    "employeeUpdateFailed": "تعذر تحديث الموظف",
++    "employees": "الموظفين",
++    "loginAccount": "حساب الدخول",
++    "hasAccount": "مرتبط بحساب دخول",
++    "noAccount": "بدون حساب دخول"
+   },
+   "charities": {
+     "title": "الجمعيات",
+@@ -335,6 +351,22 @@
+     "updateSuccess": "تم تحديث الجمعية بنجاح",
+     "updateFailed": "فشل تحديث الجمعية"
+   },
++  "reports": {
++    "title": "التقارير",
++    "print": {
++      "printTracking": "طباعة كشف المتابعة",
++      "printGuardians": "كشوف تعريف المعيلين",
++      "printWidows": "كشوف تعريف الأرامل",
++      "familyCode": "كود الأسرة",
++      "familyCodePlaceholder": "اتركه فارغاً لطباعة كل الأسر",
++      "titleTracking": "كشف متابعة تحديث الأسر",
++      "titleGuardians": "كشوف تعريف المعيلين",
++      "titleWidows": "كشوف تعريف الأرامل",
++      "generatedOn": "تاريخ الإنشاء",
++      "failed": "تعذر إنتاج الكشف",
++      "popupBlocked": "يرجى السماح بالنوافذ المنبثقة لإتمام الطباعة"
++    }
++  },
+   "families": {
+     "title": "الأسر",
+     "manageFamilies": "إدارة الأسر",
+@@ -389,6 +421,96 @@
+     "familyInfo": "معلومات الأسرة",
+     "searchPlaceholder": "البحث برمز الأسرة أو العنوان أو اسم الوالدين...",
+     "noFamiliesFound": "لم يتم العثور على أسر",
++    "refugeeTitle": "الأسر اللاجئة",
++    "refugeeSubtitle": "إدارة سجل الأسر اللاجئة",
++    "refugeeNoFamilies": "لم يتم العثور على أسر لاجئة",
++    "refugeeCharity": "الجمعية",
++    "refugeeAllCharities": "كافة الجهات",
++    "refugeeSearchPlaceholder": "بحث...",
++    "refugeeSearchType": "البحث عن طريق",
++    "refugeeSearch": "بحث",
++    "refugeeSerial": "الرقم",
++    "refugeeFatherName": "إسم الأب",
++    "refugeeMotherName": "إسم الأم",
++    "refugeeChildren": "الأبناء",
++    "refugeePhones": "الهواتف",
++    "refugeeFamilyCode": "كود العائله",
++    "refugeeSearchTypeFather": "إسم الاب",
++    "refugeeSearchTypeMother": "إسم الام",
++    "refugeeSearchTypeOrphan": "إسم اليتيم",
++    "refugeeSearchTypeProvider": "إسم المعيل",
++    "refugeeSearchTypeNationalId": "الرقم القومي",
++    "refugeeSearchTypeOrphanCode": "كود اليتيم",
++    "refugeeSearchTypePhone": "الهاتف",
++    "refugeeAddFamily": "تسجيل أسرة لاجئة",
++    "refugeeFormTitle": "تسجيل أسرة لاجئة",
++    "refugeeFormSubtitle": "تسجيل أسرة لاجئة جديدة مع المعيل والأبناء والمرافقين",
++    "refugeeFormIncomplete": "يرجى استكمال الحقول المطلوبة",
++    "refugeeFormSaved": "تم تسجيل الأسرة اللاجئة بنجاح",
++    "refugeeFormSaveFailed": "فشل حفظ الأسرة اللاجئة",
++    "refugeeGenderMale": "ذكر",
++    "refugeeGenderFemale": "انثى",
++    "refugeeDeathNatural": "طبيعية",
++    "refugeeDeathIllness": "مرض",
++    "refugeeDeathAccident": "حادث",
++    "refugeeSectionFamily": "بيانات الأسرة",
++    "refugeeSectionProvider": "اضافة معيل",
++    "refugeeSectionChildren": "الأبناء",
++    "refugeeSectionCompanions": "المرافقون",
++    "refugeeRegion": "المنطقة",
++    "refugeeCenter": "المركز/ المدينة",
++    "refugeeCityVillage": "المدينة/القرية",
++    "refugeeNearBy": "الشارع القريب",
++    "refugeeStreet": "الشارع",
++    "refugeeAddress": "العنوان",
++    "refugeePhone": "رقم الجوال",
++    "refugeeHouseOwnership": "ملكية السكن",
++    "refugeeHouseStatus": "حالة السكن",
++    "refugeeHousingType": "نوع السكن",
++    "refugeeIncomeType": "مصدر الدخل",
++    "refugeeRentAmount": "قيمة الإيجار",
++    "refugeeNotes": "ملاحظات",
++    "refugeeProviderName": "اسم المعيل",
++    "refugeeProviderNationalId": "الرقم القومي",
++    "refugeeProviderDOB": "تاريخ الميلاد",
++    "refugeeProviderNationality": "الجنسية",
++    "refugeeProviderRelation": "صلة القرابة",
++    "refugeeProviderReasonOfRelation": "سبب الصلة",
++    "refugeeProviderJob": "الوظيفة",
++    "refugeeProviderMonthlyIncome": "الدخل الشهري",
++    "refugeeProviderIsAlive": "على قيد الحياة",
++    "refugeeProviderDeathDate": "تاريخ الوفاة",
++    "refugeeProviderDeathReason": "سبب الوفاة",
++    "refugeeChildName": "اسم الابن",
++    "refugeeChildDOB": "تاريخ الميلاد",
++    "refugeeChildGender": "النوع",
++    "refugeeChildNationalId": "الرقم القومي",
++    "refugeeChildSocialStatus": "الحالة الاجتماعية",
++    "refugeeCompanionName": "اسم المرافق",
++    "refugeeCompanionNationalId": "الرقم القومي",
++    "refugeeCompanionDOB": "تاريخ الميلاد",
++    "refugeeCompanionGender": "النوع",
++    "refugeeCompanionSocialStatus": "الحالة الاجتماعية",
++    "refugeeCompanionRelationship": "صلة القرابة بالأسرة",
++    "refugeeAddChild": "اضافة ابن",
++    "refugeeAddCompanion": "اضافة مرافق",
++    "refugeeNoChildrenStaged": "لم تتم إضافة أبناء بعد",
++    "refugeeNoCompanionsStaged": "لم تتم إضافة مرافقين بعد",
++    "refugeeEditTitle": "تعديل أسرة لاجئة",
++    "refugeeEditSubtitle": "تعديل بيانات الأسرة المسجلة في سجل اللاجئين",
++    "refugeeDetailTitle": "بيانات أسرة لاجئة",
++    "refugeeDetailSubtitle": "العرض التفصيلي لملف الأسرة في سجل اللاجئين",
++    "refugeeDetailLoadFailed": "تعذر تحميل بيانات الأسرة",
++    "refugeeHeadOfFamily": "إسم الأسرة",
++    "refugeeEditMembers": "تعديل اعضاء الاسرة",
++    "refugeeChequeSection": "الشيكات والحوافظ",
++    "refugeeChequeBatch": "إسم الدفعة",
++    "refugeeChequeNumber": "رقم الشيك/الحوالة",
++    "refugeeChequeDate": "تاريخ الشيك/الحوالة",
++    "refugeeChequeAmount": "المبلغ",
++    "refugeeChequeDelivered": "تم التسليم",
++    "refugeeChequeReceiver": "إسم المعيل المستلم",
++    "refugeeChequeEmpty": "لا توجد شيكات صادرة لهذه الأسرة حتى الآن",
+     "noFatherAdded": "لم يتم إضافة أب لهذه الأسرة",
+     "noMotherAdded": "لم يتم إضافة أم لهذه الأسرة",
+     "noProviderAdded": "لم يتم إضافة مقدم دعم لهذه الأسرة",
+@@ -396,6 +518,134 @@
+     "confirmActivate": "هل أنت متأكد من تفعيل هذه الأسرة؟",
+     "confirmDeactivate": "هل أنت متأكد من تعطيل هذه الأسرة؟",
+     "confirmDelete": "هل أنت متأكد من حذف الأسرة \"{{code}}\"؟",
++    "transfer": "نقل",
++    "transferTitle": "نقل الأسرة لجمعية أخرى",
++    "transferCurrentCharity": "الجمعية الحالية",
++    "transferTargetCharity": "اختر الجمعية",
++    "transferSelectCharity": "-- اختر الجمعية --",
++    "transferReason": "سبب النقل",
++    "transferReasonPlaceholder": "سبب النقل (اختياري)",
++    "transferConfirmButton": "نقل الأسرة",
++    "transferConfirm": "هل أنت متأكد من نقل الأسرة \"{{code}}\" إلى \"{{charity}}\"؟",
++    "transferSuccess": "تم نقل الأسرة بنجاح",
++    "transferFailed": "فشل نقل الأسرة",
++    "transferLoadCharitiesFailed": "فشل تحميل قائمة الجمعيات",
++    "transferCharityRequired": "يرجى اختيار الجمعية",
++    "members": {
++      "title": "أعضاء الأسرة",
++      "familyCode": "كود الأسرة",
++      "backToFamily": "العودة إلى ملف الأسرة",
++      "gridTitle": "أعضاء الأسرة",
++      "colName": "الاسم",
++      "colNationalId": "الرقم القومى",
++      "colRelation": "الصفة",
++      "colCode": "الكود",
++      "colActions": "عمليات",
++      "relationOrphan": "يتيم",
++      "relationProvider": "العائل",
++      "relationFather": "الاب",
++      "relationMother": "الام",
++      "noMembers": "لا يوجد أعضاء في هذه الأسرة",
++      "manageMembers": "تعديل اعضاء الاسرة",
++      "move": "نقل",
++      "moveTitle": "هل انت متاكد من نقل ؟",
++      "moveMemberName": "العضو",
++      "targetFamilyCode": "كود الاسرة",
++      "targetFamilyCodePlaceholder": "كود الأسرة الهدف (اختياري)",
++      "targetFamilyCodeHint": "اتركه فارغاً لفصل العضو إلى أسرة جديدة تحت نفس الجمعية",
++      "justification": "سبب النقل",
++      "justificationPlaceholder": "اذكر سبب نقل العضو",
++      "justificationHint": "مطلوب عند الفصل إلى أسرة جديدة، ويُسجل في ملاحظات اليتيم",
++      "cancel": "إلغاء",
++      "confirmMove": "تم",
++      "newHoldingFamily": "أسرة جديدة",
++      "moveConfirm": "هل أنت متأكد من نقل \"{{name}}\" إلى \"{{target}}\"؟",
++      "moveSuccess": "تم نقل \"{{name}}\" بنجاح",
++      "moveFailed": "فشل نقل العضو",
++      "loadFailed": "فشل تحميل بيانات الأسرة",
++      "codeOrJustificationRequired": "يرجى إدخال كود الأسرة الهدف أو سبب النقل",
++      "removeLink": "حذف كفالة العائل",
++      "removeLinkTitle": "حذف كفالة العائل",
++      "removeLinkHint": "سيتم حذف كفالة العائل",
++      "removeLinkComment": "التعليق",
++      "removeLinkCommentPlaceholder": "سبب الحذف (اختياري)",
++      "removeLinkCommentHint": "يُسجل التعليق مع سجل الحذف",
++      "removeLinkConfirm": "هل انت متاكد من حذف كفالة \"{{name}}\" ؟",
++      "confirmRemoveLink": "تم",
++      "removeLinkSuccess": "تم حذف كفالة \"{{name}}\" بنجاح",
++      "removeLinkFailed": "فشل حذف كفالة العائل"
++    },
++    "providerRequests": {
++      "title": "طلبات تعديل العائل",
++      "subtitle": "مراجعة طلبات تعديل العائل الواردة من الجمعيات",
++      "gridTitle": "قائمة الطلبات",
++      "statusFilter": "الحالة",
++      "charityFilter": "الجمعية",
++      "allCharities": "كل الجمعيات",
++      "statusPending": "قيد الانتظار",
++      "statusApproved": "تمت الموافقة",
++      "statusRejected": "مرفوض",
++      "colCharity": "الجمعيه",
++      "colOrphanCode": "كود اليتيم",
++      "colOrphanName": "اسم اليتيم كامل",
++      "colMotherName": "اسم الام",
++      "colOldGuardian": "العائل الحالى",
++      "colNewGuardian": "اسم المعيل الجديد",
++      "colRelationship": "صله القرابه",
++      "colNationalId": "الرقم القومي",
++      "colDate": "تاريخ التعديل",
++      "colReason": "سبب التعديل",
++      "colApprove": "موافقه",
++      "approvePending": "موافقة أو رفض الطلب",
++      "noRequests": "لا توجد طلبات",
++      "loadFailed": "تعذر تحميل الطلبات",
++      "raiseAction": "طلب تعديل العائل",
++      "raiseTitle": "طلب تعديل العائل",
++      "raiseHint": "سيتم رفع الطلب إلى مسئول المكتب لمراجعته والموافقة عليه قبل تغيير العائل",
++      "newGuardianPlaceholder": "اسم المعيل الجديد",
++      "nationalIdPlaceholder": "الرقم القومي للمعيل الجديد",
++      "relationshipPlaceholder": "صله القرابه بالأسرة",
++      "reasonPlaceholder": "سبب تعديل العائل",
++      "allFieldsRequired": "يرجى استكمال جميع بيانات الطلب",
++      "raiseSuccess": "تم اضافه الطلب بنجاح . انتظر موافه مسئول المكتب",
++      "raiseFailed": "تعذر رفع الطلب",
++      "decisionTitle": "اعتماد تعديل العائل",
++      "decisionHint": "طلب تعديل عائل الأسرة {{family}}: من «{{old}}» إلى «{{new}}» — الرقم القومي {{nationalId}}",
++      "decisionChoice": "القرار",
++      "choiceApprove": "موافقة",
++      "choiceReject": "رفض",
++      "rejectionReason": "سبب الرفض",
++      "rejectionReasonPlaceholder": "اذكر سبب رفض الطلب",
++      "reasonRequired": "سبب الرفض مطلوب عند رفض الطلب",
++      "submitDecision": "تم",
++      "confirmApprove": "هل توافق على تعديل عائل الأسرة {{family}} إلى {{guardian}}؟ سيتم تحديث ملف الأسرة فوراً",
++      "confirmReject": "هل ترفض تعديل عائل الأسرة {{family}} إلى {{guardian}}؟",
++      "approveSuccess": "تمت الموافقة على الطلب وتحديث عائل الأسرة",
++      "rejectSuccess": "تم رفض الطلب",
++      "decideFailed": "تعذر تسجيل القرار"
++    },
++    "followUp": {
++      "title": "متابعة إدخالات الأسر",
++      "subtitle": "ما تم إدخاله أو تعديله في ملفات الأسر بتاريخ معين",
++      "gridTitle": "نتائج المتابعة",
++      "dateFilter": "التاريخ",
++      "charityFilter": "الجمعية",
++      "allCharities": "كل الجمعيات",
++      "run": "عرض",
++      "runHint": "اختر التاريخ ثم اضغط عرض لعرض حركة الإدخالات",
++      "colCode": "كود الأسرة",
++      "colHead": "رب الأسرة",
++      "colCharity": "الجمعية",
++      "colKind": "نوع الحركة",
++      "colChangedBy": "المستخدم",
++      "colChangedOn": "تاريخ الحركة",
++      "colOrphansTouched": "أيتام متأثرون",
++      "kindCreated": "إدخال جديد",
++      "kindUpdated": "تعديل",
++      "noActivity": "لا توجد حركة إدخالات في هذا التاريخ",
++      "dateRequired": "يرجى اختيار تاريخ التقرير",
++      "loadFailed": "تعذر تحميل بيانات المتابعة"
++    },
+     "activateSuccess": "تم تفعيل الأسرة بنجاح",
+     "deactivateSuccess": "تم تعطيل الأسرة بنجاح",
+     "activateFailed": "فشل تفعيل الأسرة",
+@@ -505,11 +755,19 @@
+     "paymentPeriodFrom": "فترة الدفع من",
+     "paymentPeriodTo": "فترة الدفع إلى",
+     "groupDate": "تاريخ المجموعة",
++    "paymentDate": "تاريخ بدء التوزيع",
++    "uploadDate": "تاريخ الرفع",
++    "groupNotFound": "لم يتم العثور على دفعة الدفع المطلوبة.",
++    "backToList": "العودة إلى القائمة",
++    "amount": "المبلغ",
++    "batchNumberAutoHint": "يتم توليد رقم الدفعة تلقائيًا عند الحفظ إذا تُرك فارغًا",
++    "orphansAddedResult": "تمت إضافة {{added}} يتيم — تم تخطي {{skipped}} (موجودون بالفعل في الدفعة)",
+     "exchangeRate": "سعر الصرف",
+     "exchangeRatePlaceholder": "أدخل سعر الصرف (مثال: 0.21)",
+     "exchangeRateHelp": "يستخدم لحسابات التقارير فقط",
+     "exchangeRateHelpText": "السعر المستخدم لتحويل المبالغ في التقارير",
+     "exchangeRateLocked": "سعر الصرف مقفل ولا يمكن تعديله",
++    "exchangeRateLockedError": "لا يمكن حفظ التعديلات: سعر الصرف مقفل (عدم خصم النسبه). قم بإلغاء القفل أولاً.",
+     "currency": "العملة",
+     "dontRemoveRate": "قفل سعر الصرف",
+     "dontRemoveRateHelp": "يمنع التغييرات العرضية لسعر الصرف",
+@@ -555,6 +813,10 @@
+     "markAsUploadedConfirm": "هل أنت متأكد من تحديد هذه المجموعة كمرفوعة؟ سيمنع هذا المزيد من التعديلات.",
+     "unmarkAsUploadedConfirm": "هل أنت متأكد من إلغاء تحديد هذه المجموعة كمرفوعة؟ سيؤدي هذا إلى السماح بالتعديلات مرة أخرى.",
+     "deleteGroupConfirm": "هل أنت متأكد من حذف مجموعة المدفوعات هذه؟ لا يمكن التراجع عن هذا الإجراء.",
++    "deleteGroupTitle": "حذف الدفعة",
++    "deleteGroupSuccess": "تم حذف الدفعة بنجاح",
++    "deleteDisbursedError": "لا يمكن حذف دفعة تحتوي على صفوف تم صرفها (مستلمة أو محوّلة أو بشيك صادر).",
++    "deleteReferencedError": "لا يمكن حذف دفعة مشار إليها في تقارير دورية لليتيم.",
+     "generateBatchNumber": "إنشاء رقم مجموعة",
+     "addBatchNumber": "إضافة رقم مجموعة",
+     "batchNumberPlaceholder": "أدخل رقم المجموعة (اختياري)",
+@@ -616,7 +878,6 @@
+     "isActive": "نشط",
+     "createdDate": "تاريخ الإنشاء",
+     "modifiedDate": "تاريخ التعديل",
+-    "roles": "الأدوار",
+     "role": "دور",
+     "manageRoles": "إدارة الأدوار",
+     "manageClaims": "إدارة المطالبات",
+@@ -637,7 +898,6 @@
+     "name": "الاسم",
+     "description": "الوصف",
+     "userCount": "عدد المستخدمين",
+-    "permissions": "الصلاحيات",
+     "systemRole": "دور النظام",
+     "systemRoles": "أدوار النظام",
+     "customRoles": "أدوار مخصصة",
+@@ -656,7 +916,7 @@
+     "availableRoles": "الأدوار المتاحة",
+     "assignedRoles": "الأدوار المعينة",
+     "selectedRoles": "الأدوار المحددة",
+-    "atLeastOneRole": "يجب تعيين دور واحد على الأقل",
++    "atLeastOneRole": "يجب تحديد دور واحد على الأقل",
+     "rolesAssigned": "تم تعيين الأدوار بنجاح",
+     "failedToAssignRoles": "فشل تعيين الأدوار",
+     "userCreated": "تم إنشاء المستخدم بنجاح",
+@@ -673,8 +933,6 @@
+     "confirmRoleDeletion": "هل أنت متأكد من حذف هذا الدور؟",
+     "entries": "سجلات",
+     "selectRoles": "اختر الأدوار",
+-    "noRolesAvailable": "لا توجد أدوار متاحة",
+-    "atLeastOneRole": "يجب تحديد دور واحد على الأقل",
+     "emailRequired": "البريد الإلكتروني مطلوب",
+     "emailInvalid": "عنوان بريد إلكتروني غير صالح",
+     "phoneOptional": "رقم الهاتف اختياري",
+@@ -732,9 +990,12 @@
+     "selectAnOption": "اختر خياراً",
+     "fixErrors": "الرجاء إصلاح الأخطاء قبل الإرسال",
+     "nameTaken": "هذا الاسم مستخدم بالفعل لجمعية أخرى",
++    "emailTaken": "هذا البريد الإلكتروني مستخدم بالفعل",
++    "weakPassword": "كلمة المرور ضعيفة — استخدم 8 أحرف على الأقل مع أرقام ورموز",
+     "invalid": "قيمة غير صالحة",
+     "fileTooLarge": "حجم الملف يتجاوز الحد الأقصى المسموح به من 10 ميغابايت",
+-    "invalidFileType": "نوع الملف غير مسموح به. فقط الصور وملفات PDF ووثائق Word مسموحة."
++    "invalidFileType": "نوع الملف غير مسموح به. فقط الصور وملفات PDF ووثائق Word مسموحة.",
++    "invalidFormat": "صيغة غير صالحة"
+   },
+   "errors": {
+     "serverError": "حدث خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.",
+@@ -815,7 +1076,6 @@
+     "myMissions": "مهامي",
+     "manageMissions": "إدارة المهام",
+     "missionTarget": "هدف المهمة",
+-    "missionDetails": "تفاصيل المهمة",
+     "details": "التفاصيل",
+     "missionType": "نوع المهمة",
+     "missionTimeType": "نوع توقيت المهمة",
+@@ -905,7 +1165,122 @@
+     "myMissionsDescription": "عرض وإدارة المهام المسندة إليك",
+     "allMissionsDescription": "عرض وإدارة جميع المهام",
+     "dateFrom": "من تاريخ",
+-    "dateTo": "إلى تاريخ"
++    "dateTo": "إلى تاريخ",
++    "serial": "رقم المأمورية",
++    "charity": "الجمعية",
++    "allCharities": "كافة الجهات",
++    "search": "بحث",
++    "result": "النتيجة",
++    "invalidDateRange": "تاريخ البداية يجب أن يكون قبل تاريخ النهاية أو مساوياً له",
++    "missionInterviewType": "نوع المقابلة",
++    "selectMissionInterviewType": "اختر نوع المقابلة",
++    "organizingEntity": "اسم الجهة المنظمة",
++    "assignedUserEmail": "البريد الإلكتروني",
++    "fixValidationErrors": "يرجى تصحيح الأخطاء في النموذج قبل الحفظ",
++    "createFailed": "فشل إنشاء المأمورية",
++    "updateFailed": "فشل تحديث المأمورية",
++    "deleteFailed": "فشل حذف المأمورية",
++    "confirmDelete": "هل أنت متأكد من حذف هذه المأمورية؟ لا يمكن التراجع عن هذا الإجراء.",
++    "registerResult": "تسجيل نتيجة المأمورية",
++    "missionContext": "بيانات المأمورية",
++    "missionFindings": "بيانات المأمورية والنتائج",
++    "missionOutcome": "حالة تنفيذ المأمورية",
++    "missionCompleted": "إتمام المأمورية",
++    "missionNotCompleted": "عدم إتمام المأمورية",
++    "reason": "السبب",
++    "enterReason": "أدخل سبب/نتيجة المأمورية",
++    "completionRequired": "يجب تحديد حالة إتمام المأمورية",
++    "resultRegistered": "تم تسجيل نتيجة المأمورية بنجاح",
++    "registerFailed": "فشل تسجيل نتيجة المأمورية",
++    "resultAlreadyRegistered": "تم تسجيل نتيجة هذه المأمورية بالفعل",
++    "catalogueLoadFailed": "فشل تحميل إحدى القوائم — يرجى إعادة تحميل الصفحة"
++  },
++  "hqTransfers": {
++    "title": "الحوالات المالية",
++    "description": "قائمة الحوالات المالية الصادرة من الإدارة المالية",
++    "serial": "الرقم",
++    "operationNumber": "رقم العملية",
++    "finYear": "السنة المالية",
++    "paymentNumber": "رقم الدفعة",
++    "dateFrom": "من تاريخ",
++    "dateTo": "الى تاريخ",
++    "amountOfPayment": "مبلغ الدفعة",
++    "statement": "البيان",
++    "beneficiariesNumber": "عدد المستفيدين",
++    "transactionNumber": "رقم المعاملة",
++    "transactionDate": "تاريخ المعاملة",
++    "country": "الدولة",
++    "department": "الإدارة",
++    "addTransfer": "إضافة حوالة",
++    "viewTransfer": "عرض الحوالة",
++    "editTransfer": "تعديل الحوالة",
++    "noTransfersFound": "لم يتم العثور على حوالات",
++    "loadFailed": "فشل تحميل الحوالات المالية",
++    "classification": "التصنيف",
++    "operationInfo": "بيانات العملية",
++    "period": "الفترة",
++    "financials": "البيانات المالية",
++    "transactionInfo": "بيانات المعاملة",
++    "selectCountry": "اختر الدولة",
++    "selectDepartment": "اختر الإدارة",
++    "selectPaymentNumber": "اختر رقم الدفعة",
++    "payment1": "الدفعة الأولى",
++    "payment2": "الدفعة الثانية",
++    "payment3": "الدفعة الثالثة",
++    "payment4": "الدفعة الرابعة",
++    "enterOperationNumber": "أدخل رقم العملية",
++    "enterFinYear": "أدخل السنة المالية",
++    "enterAmountOfPayment": "أدخل مبلغ الدفعة",
++    "enterStatement": "أدخل البيان",
++    "enterBeneficiariesNumber": "أدخل عدد المستفيدين",
++    "enterTransactionNumber": "أدخل رقم المعاملة",
++    "transferCreated": "تم إضافة الحوالة بنجاح",
++    "createFailed": "فشل إضافة الحوالة",
++    "fixValidationErrors": "يرجى تصحيح أخطاء التحقق قبل الحفظ",
++    "catalogueLoadFailed": "فشل تحميل قوائم البيانات",
++    "retryLoad": "إعادة المحاولة",
++    "maxAmountLimit": "الحد الأعلى للحوالة لهذا البلد: {{value}}",
++    "noMaxAmountLimit": "لا يوجد حد أعلى مضبوط لهذا البلد",
++    "amountExceedsLimit": "مبلغ الدفعة يتجاوز الحد الأعلى للحوالة المضبوط لهذا البلد",
++    "maxAmounts": {
++      "title": "ضبط الحدود العليا للحوالات",
++      "hint": "القيمة الفارغة تعني عدم وجود حد أعلى — غير محدود",
++      "serial": "الرقم",
++      "country": "البلد",
++      "value": "قيمة الحوالة",
++      "enterValue": "أدخل الحد الأعلى",
++      "noLimit": "لا يوجد حد مضبوط",
++      "invalidAmount": "يجب أن تكون القيمة أكبر من صفر",
++      "saved": "تم حفظ الحد الأعلى بنجاح",
++      "saveFailed": "فشل حفظ الحد الأعلى",
++      "loadFailed": "فشل تحميل قائمة البلدان",
++      "noPermission": "لا تملك صلاحية ضبط الحدود العليا",
++      "manageLimits": "ضبط الحدود العليا"
++    },
++    "details": {
++      "title": "تفاصيل الحوالة",
++      "transferNumber": "رقم الحوالة",
++      "amount": "مبلغ الحوالة",
++      "estimatedTransferDate": "التاريخ المتوقع للتحويل",
++      "isExecuted": "مصير الحوالة",
++      "selectState": "اختر المصير",
++      "executed": "تم التنفيذ",
++      "notExecuted": "لم ينفذ",
++      "executionDate": "تاريخ التنفيذ",
++      "arrivalDate": "تاريخ وصول الحوالة",
++      "arrivalAmount": "مبلغ الوصول",
++      "addLine": "تفاصيل",
++      "noLines": "لا توجد تفاصيل لهذه الحوالة",
++      "invalidAmount": "يجب أن يكون مبلغ الحوالة أكبر من صفر",
++      "failedOperation": "بيانات التنفيذ والوصول تُدخل فقط عندما يكون مصير الحوالة «تم التنفيذ»",
++      "lineSaved": "تم حفظ التفصيل بنجاح",
++      "lineSaveFailed": "فشل حفظ التفصيل",
++      "loadFailed": "فشل تحميل تفاصيل الحوالة"
++    },
++    "backToList": "رجوع إلى القائمة",
++    "transferNotFound": "الحوالة المطلوبة غير موجودة",
++    "transferUpdated": "تم تعديل الحوالة بنجاح",
++    "updateFailed": "فشل تعديل الحوالة"
+   },
+   "shared": {
+     "welcome": "مرحبا",
+@@ -930,6 +1305,11 @@
+     "nGOs": "الجمعيات",
+     "allNGOs": "جميع الجمعيات",
+     "addNGO": "إضافة جمعية",
++    "families": "الأسر",
++    "allFamilies": "جميع الأسر",
++    "addFamily": "إضافة أسرة",
++    "refugeeFamilies": "الأسر اللاجئة",
++    "addRefugeeFamily": "إضافة أسرة لاجئة",
+     "devProjects": "مشاريع التنمية",
+     "officeProjects": "مشاريع المكتب",
+     "allOfficeProjects": "جميع مشاريع المكتب",
+@@ -949,6 +1329,7 @@
+     "mission": "المهام",
+     "allMission": "جميع المهام",
+     "addMission": "إضافة مهمة",
++    "periodicOrphanReports": "التقارير الدورية للأيتام",
+     "customerSupport": "خدمة العملاء",
+     "allCustomerSupport": "جميع خدمة العملاء",
+     "addCustomerSupport": "إضافة خدمة عملاء",
+@@ -981,6 +1362,7 @@
+     "charityAssignment": "تعيين الجمعية",
+     "documents": "المستندات",
+     "status": "الحالة",
++    "serial": "الرقم",
+     "projectName": "اسم المشروع",
+     "projectHint": "وصف المشروع",
+     "projectDate": "تاريخ المشروع",
+@@ -1194,155 +1576,287 @@
+     "unlimited": "غير محدود",
+     "allTypes": "جميع الأنواع",
+     "allRegions": "جميع المناطق",
+-    "all": "الكل"
++    "all": "الكل",
++    "inactive": "غير نشط",
++    "distributedLabel": "موزّع",
++    "distributedOn": "تاريخ التوزيع",
++    "region": "المنطقة",
++    "center": "المركز",
++    "eligibleFamilies": "الأسر المتاحة للمشروع",
++    "families": "أسرة",
++    "familyMembers": "عدد أفراد الأسرة",
++    "searchFamiliesPlaceholder": "ابحث برقم الأسرة أو العنوان...",
++    "campaignDetails": "تفاصيل الحملة",
++    "campaignCreated": "تم إنشاء الحملة بنجاح",
++    "campaignCreateFailed": "فشل إنشاء الحملة",
++    "campaignUpdated": "تم تحديث الحملة بنجاح",
++    "campaignUpdateFailed": "فشل تحديث الحملة",
++    "campaignLoadFailed": "فشل تحميل الحملة",
++    "campaignClosed": "تم إغلاق الحملة بنجاح",
++    "campaignCloseFailed": "فشل إغلاق الحملة",
++    "closureNotesPrompt": "أدخل ملاحظات الإغلاق (اختياري):",
++    "beneficiariesUpdated": "تمت إضافة {added} أسرة — الإجمالي المسجل {total}",
++    "beneficiariesUpdateFailed": "فشل تحديث المستفيدين",
++    "beneficiaryRemoved": "تم إزالة الأسرة من الحملة",
++    "beneficiaryRemoveFailed": "فشل إزالة الأسرة",
++    "removeBeneficiaryConfirm": "هل أنت متأكد من إزالة الأسرة {code} من الحملة؟",
++    "confirmReceived": "تأكيد استلام الأسرة للمساعدة",
++    "receivedFlagConfirmed": "تم تأكيد استلام الأسرة للمساعدة",
++    "receivedFlagWithdrawn": "تم إلغاء تأكيد الاستلام",
++    "receivedFlagFailed": "فشل تحديث حالة الاستلام",
++    "distributionRecorded": "تم تسجيل التوزيع بنجاح",
++    "distributionRecordFailed": "فشل تسجيل التوزيع",
++    "recipientRelationship": "صلة المستلم بالأسرة",
++    "recipientRelationshipPlaceholder": "الأب، الأم، الوصي...",
++    "distributionMethod": "طريقة التوزيع",
++    "distributionMethodPlaceholder": "نقدي، تحويل بنكي، عيني...",
++    "printReceipt": "طباعة إيذون الاستلام",
++    "distributionReceipt": "إيذون استلام مساعدة موسمية",
++    "distributionReceiptSub": "يُستكمل هذا الإيذون عند تسليم المساعدة للأسرة",
++    "recipientSignature": "توقيع المستلم",
++    "distributorSignature": "توقيع الموزّع",
++    "printBlocked": "يرجى السماح بالنوافذ المنبثقة لطباعة الإيذون",
++    "campaignReport": "تقرير الحملة",
++    "generatedOn": "تاريخ إنشاء التقرير",
++    "distributionRate": "نسبة التوزيع",
++    "budgetUtilization": "نسبة استخدام الميزانية",
++    "byRegion": "التوزيع حسب المنطقة",
++    "byCharity": "التوزيع حسب الجمعية",
++    "byFamilyType": "التوزيع حسب نوع الأسرة",
++    "distributionDetails": "تفاصيل التوزيع",
++    "totalBeneficiaries": "إجمالي المستفيدين",
++    "budget": "الميزانية",
++    "totalBudgetPlaceholder": "أدخل إجمالي الميزانية",
++    "perFamilyAllocationPlaceholder": "المبلغ المخصص لكل أسرة",
++    "maximumFamiliesPlaceholder": "الحد الأقصى لعدد الأسر",
++    "ageRangeFromPlaceholder": "من (سنوات)",
++    "ageRangeToPlaceholder": "إلى (سنوات)"
+   },
+   "housingProjects": {
+-    "title": "مشاريع الإسكان",
+-    "subtitle": "إدارة مشاريع البناء والترميم السكني",
+-    "addProject": "إضافة مشروع إسكان",
+-    "editProject": "تعديل مشروع الإسكان",
+-    "projectDetails": "تفاصيل مشروع الإسكان",
+-    "fillProjectDetails": "قم بملء تفاصيل مشروع الإسكان",
+-    "basicInformation": "المعلومات الأساسية",
+-    "location": "الموقع",
+-    "specifications": "المواصفات",
+-    "financialInformation": "المعلومات المالية",
+-    "beneficiaryAssignment": "تعيين المستفيدين",
+-    "status": "الحالة",
+-    "projectName": "اسم المشروع",
+-    "projectNamePlaceholder": "أدخل اسم المشروع",
+-    "projectDescription": "وصف المشروع",
+-    "projectDescriptionPlaceholder": "أدخل وصف المشروع",
+-    "projectType": "نوع المشروع",
+-    "projectTypes": {
+-      "NewConstruction": "بناء جديد",
+-      "Renovation": "ترميم",
+-      "Repair": "إصلاح",
+-      "Expansion": "توسيع"
++    "title": "قائمة الأسر الساكنة",
++    "subtitle": "سجل الأسر الساكنة بمباني المؤسسة",
++    "addFamily": "إضافة أسرة ساكنة",
++    "editFamily": "تعديل بيانات الأسرة",
++    "familyDetails": "بيانات الأسرة الساكنة",
++    "reports": {
++      "title": "التقارير الدورية",
++      "subtitle": "التقارير الدورية لمستفيدي أسرة الإسكان",
++      "filters": {
++        "childNameSearch": "اسم الابن",
++        "childNameSearchPlaceholder": "ابحث باسم الابن لاختيار المستفيد...",
++        "beneficiaryType": "يخص",
++        "child": "الابن",
++        "parent": "ولي الأمر",
++        "code": "الكود",
++        "codePlaceholder": "كود الابن"
++      },
++      "summary": {
++        "nationalId": "الرقم القومي",
++        "type": "النوع",
++        "age": "العمر"
++      },
++      "codeNotFound": "لا يوجد مستفيد بهذا الكود",
++      "columns": {
++        "reportNo": "رقم التقرير",
++        "reportDate": "التاريخ",
++        "isAccepted": "تم الاعتماد",
++        "approvalDate": "تاريخ الاعتماد"
++      },
++      "commands": {
++        "add": "إضافة تقرير دوري",
++        "edit": "تعديل التقرير",
++        "delete": "حذف التقرير",
++        "print": "طباعة التقرير",
++        "printDisabled": "تتاح الطباعة ضمن قصص التقارير",
++        "addEditDisabled": "يتاح بعد تنفيذ إضافة/تعديل التقرير"
++      },
++      "beneficiary": "المستفيد",
++      "guardian": "ولي الأمر",
++      "empty": "لا توجد تقارير دورية لهذا المستفيد",
++      "noBeneficiary": "لا يوجد مستفيد مطابق",
++      "charityOutOfScope": "الأسرة لا تتبع الجمعية المختارة",
++      "messages": {
++        "familyLoadFailed": "تعذر تحميل بيانات الأسرة",
++        "loadFailed": "تعذر تحميل التقارير الدورية",
++        "deleted": "تم حذف التقرير الدوري",
++        "deleteFailed": "تعذر حذف التقرير الدوري"
++      }
+     },
+-    "startDate": "تاريخ البدء",
+-    "expectedEndDate": "تاريخ الانتهاء المتوقع",
+-    "actualEndDate": "تاريخ الانتهاء الفعلي",
+-    "country": "الدولة",
+-    "region": "المنطقة",
+-    "center": "المركز",
+-    "address": "العنوان",
+-    "addressPlaceholder": "أدخل عنوان الشارع",
+-    "village": "القرية",
+-    "villagePlaceholder": "أدخل اسم القرية",
+-    "gpsCoordinates": "إحداثيات GPS",
+-    "gpsCoordinatesPlaceholder": "أدخل إحداثيات GPS (خط العرض، خط الطول)",
+-    "housingType": "نوع السكن",
+-    "housingTypes": {
+-      "Apartment": "شقة",
+-      "Villa": "فيلا",
+-      "House": "منزل",
+-      "Room": "غرفة"
++    "loadFailed": "تعذر تحميل قائمة الأسر الساكنة",
++    "empty": "لا توجد أسر ساكنة مسجلة",
++    "filters": {
++      "charity": "الجمعية",
++      "allCharities": "كافة الجهات",
++      "searchType": "البحث عن طريق",
++      "searchValue": "البحث",
++      "searchPlaceholder": "أدخل قيمة البحث..."
+     },
+-    "numberOfUnits": "عدد الوحدات",
+-    "numberOfUnitsPlaceholder": "أدخل عدد الوحدات",
+-    "areaPerUnit": "مساحة الوحدة (م²)",
+-    "areaPerUnitPlaceholder": "أدخل مساحة الوحدة",
+-    "totalArea": "المساحة الإجمالية (م²)",
+-    "totalAreaPlaceholder": "أدخل المساحة الإجمالية",
+-    "floorsPerUnit": "عدد الطوابق للوحدة",
+-    "floorsPerUnitPlaceholder": "أدخل عدد الطوابق لكل وحدة",
+-    "roomsPerUnit": "عدد الغرف للوحدة",
+-    "roomsPerUnitPlaceholder": "أدخل عدد الغرف لكل وحدة",
+-    "constructionMaterial": "مادة البناء",
+-    "constructionMaterialPlaceholder": "أدخل نوع مادة البناء",
+-    "totalBudget": "الميزانية الإجمالية",
+-    "totalBudgetPlaceholder": "أدخل الميزانية الإجمالية",
+-    "budgetCurrency": "عملة الميزانية",
+-    "donorName": "اسم المتبرع",
+-    "donorNamePlaceholder": "أدخل اسم المتبرع",
+-    "fundingSource": "مصدر التمويل",
+-    "fundingSourcePlaceholder": "أدخل مصدر التمويل",
+-    "contractorName": "اسم المقاول",
+-    "contractorNamePlaceholder": "أدخل اسم المقاول",
+-    "supervisorName": "اسم المشرف",
+-    "supervisorNamePlaceholder": "أدخل اسم المشرف",
+-    "finalCost": "التكلفة النهائية",
+-    "finalCostPlaceholder": "أدخل التكلفة النهائية",
+-    "assignedCharity": "الجمعية المعينة",
+-    "assignedFamily": "الأسرة المعينة",
+-    "charityFilterNote": "حدد جمعية لتصفية الأسر المتاحة",
+-    "selectCharityFirst": "الرجاء تحديد جمعية أولاً",
+-    "projectStatus": "حالة المشروع",
+-    "projectStatuses": {
+-      "Planning": "التخطيط",
+-      "InProgress": "قيد التنفيذ",
+-      "Completed": "مكتمل",
+-      "OnHold": "معلق"
++    "searchTypes": {
++      "father": "إسم الأب",
++      "mother": "إسم الأم",
++      "student": "إسم الطالب الابن",
++      "nationalId": "الرقم القومي",
++      "code": "كود الطالب الابن",
++      "phone": "الهاتف"
+     },
+-    "completionPercentage": "نسبة الإنجاز",
+-    "currentStage": "المرحلة الحالية",
+-    "projectStages": {
+-      "Foundation": "الأساسات",
+-      "Structure": "الهيكل",
+-      "Finishing": "الإنهاء",
+-      "Completed": "مكتمل"
++    "columns": {
++      "serial": "الرقم",
++      "fatherName": "إسم الأب",
++      "motherName": "إسم الأم",
++      "children": "الأبناء",
++      "phones": "الهواتف",
++      "familyCode": "كود العائله",
++      "charity": "الجمعية"
+     },
+-    "updateProgress": "تحديث التقدم",
+-    "markCompleted": "وضع علامة مكتمل",
+-    "markProjectCompleted": "وضع علامة المشروع كمكتمل",
+-    "confirmComplete": "تأكيد الإنجاز",
+-    "completionWarning": "سيؤدي هذا الإجراء إلى وضع علامة المشروع كمكتمل. لا يمكن التراجع عن هذا الإجراء.",
+-    "completionNotes": "ملاحظات الإنجاز",
+-    "completionNotesPlaceholder": "أدخل ملاحظات الإنجاز",
+-    "progressNotes": "ملاحظات التقدم",
+-    "progressNotesPlaceholder": "أدخل ملاحظات التقدم",
+-    "notes": "ملاحظات",
+-    "notesPlaceholder": "أدخل ملاحظات إضافية",
+-    "description": "الوصف",
+-    "dateRange": "نطاق التاريخ",
+-    "dateFrom": "من تاريخ",
+-    "dateTo": "إلى تاريخ",
+-    "searchPlaceholder": "البحث باسم المشروع...",
+-    "noProjects": "لم يتم العثور على مشاريع إسكان",
+-    "createSuccess": "تم إنشاء مشروع الإسكان بنجاح",
+-    "updateSuccess": "تم تحديث مشروع الإسكان بنجاح",
+-    "deleteSuccess": "تم حذف مشروع الإسكان بنجاح",
+-    "deleteConfirmTitle": "حذف مشروع الإسكان",
+-    "deleteConfirmMessage": "هل أنت متأكد من حذف مشروع الإسكان هذا؟ لا يمكن التراجع عن هذا الإجراء.",
+-    "progressUpdated": "تم تحديث تقدم المشروع بنجاح",
+-    "projectCompleted": "تم وضع علامة المشروع كمكتمل بنجاح",
+-    "exportSuccess": "تم تصدير مشاريع الإسكان بنجاح",
+-    "errors": {
+-      "loadFailed": "فشل في تحميل مشروع الإسكان",
+-      "createFailed": "فشل في إنشاء مشروع الإسكان",
+-      "updateFailed": "فشل في تحديث مشروع الإسكان",
+-      "deleteFailed": "فشل في حذف مشروع الإسكان",
+-      "updateProgressFailed": "فشل في تحديث تقدم المشروع",
+-      "completeProjectFailed": "فشل في وضع علامة المشروع كمكتمل",
+-      "exportFailed": "فشل في تصدير مشاريع الإسكان",
+-      "invalidProjectId": "معرف مشروع الإسكان غير صالح"
++    "actions": {
++      "view": "عرض بيانات الأسرة",
++      "add": "إضافة أسرة ساكنة"
++    },
++    "form": {
++      "sections": {
++        "family": "بيانات الأسرة",
++        "phones": "بيانات الاتصال",
++        "guardian": "اضافة معيل",
++        "child": "اضافة ابن",
++        "childrenTable": "الأبناء المسجلون"
++      },
++      "charity": "الجمعية",
++      "familyCode": "رقم القيد",
++      "familyCodePlaceholder": "يُولد تلقائياً إن تُرك فارغاً",
++      "cityVillage": "القرية / الحي",
++      "region": "المنطقة /المحافظة",
++      "center": "المركز/ المدينة",
++      "nearBy": "بجوار",
++      "street": "الشارع",
++      "address": "العنوان التفصيلى",
++      "rentAmount": "قيمة الإيجار",
++      "incomeType": "نوع الدخل",
++      "notes": "ملاحظات الباحث",
++      "building": "رقم العماره",
++      "flat": "رقم الشقه",
++      "headOfFamily": "رب الأسرة",
++      "phone": "رقم الهاتف",
++      "ownershipLocked": "الجمعية ورقم القيد غير قابلين للتعديل",
++      "computed": {
++        "childrenCount": "عدد الأبناء",
++        "totalIncome": "الدخل الكلى",
++        "perMemberShare": "نصيب الفرد"
++      },
++      "phones": {
++        "number": "الرقم",
++        "belongsTo": "يخص من",
++        "isDefault": "الافتراضي؟",
++        "add": "إضافة رقم"
++      },
++      "mainRelation": {
++        "father": "الاب",
++        "mother": "الام"
++      },
++      "gender": {
++        "male": "ذكر",
++        "female": "انثى"
++      },
++      "phoneBelongsTo": {
++        "mother": "الام",
++        "father": "الاب",
++        "maternalUncle": "خال",
++        "maternalAunt": "خالة",
++        "paternalUncle": "عم",
++        "paternalAunt": "عمة",
++        "brother": "أخ",
++        "sister": "أخت",
++        "grandfather": "جد",
++        "grandmother": "جدة",
++        "relative": "قريب",
++        "relativeF": "قريبة",
++        "other": "غير ذلك",
++        "self": "نفسه"
++      },
++      "guardian": {
++        "reason": "السبب",
++        "relationType": "نوعها",
++        "mainRelation": "العلاقة",
++        "firstName": "الاسم الأول",
++        "secondName": "الاسم الثانى",
++        "thirdName": "الاسم الثالث",
++        "fourthName": "الاسم الرباعي",
++        "familyName": "اسم العائلة",
++        "nationality": "الجنسية",
++        "birthDate": "تاريخ الميلاد",
++        "nationalId": "الرقم القومي",
++        "job": "نوع العمل",
++        "phone": "الهاتف",
++        "monthlyIncome": "الدخل الشهري",
++        "educationLevel": "المؤهل الدراسى",
++        "socialStatus": "الحالة الاجتماعية",
++        "healthStatus": "الحالة الصحية",
++        "flags": "حالات الرعاية",
++        "widowSponsorship": "كفالة الأرملة",
++        "anotherSponsor": "جهة كفالة أخرى",
++        "motherIsMar": "الأم متزوجة",
++        "isCaring": "يقوم بالرعاية",
++        "confirm": "تم",
++        "saved": "تم تسجيل المعيل"
++      },
++      "child": {
++        "birthDate": "تاريخ الميلاد",
++        "nationalId": "الرقم القومى",
++        "fullName": "الاسم الأول",
++        "gender": "النوع",
++        "age": "السن",
++        "healthStatus": "الحالة الصحية",
++        "socialStatus": "الحالة الاجتماعية",
++        "educationStage": "المرحلة الدراسية",
++        "gradeClass": "الصف الدراسي",
++        "profession": "نوعية العمل",
++        "department": "القسم",
++        "faculty": "الكلية",
++        "school": "الموسسة التعليمية",
++        "notes": "ملاحظات",
++        "add": "اضافة",
++        "update": "تحديث"
++      },
++      "childrenTable": {
++        "name": "الاسم",
++        "birthDate": "تاريخ الميلاد",
++        "nationalId": "الرقم القومى",
++        "gender": "النوع"
++      },
++      "actions": {
++        "save": "حفظ"
++      },
++      "messages": {
++        "fixErrors": "الرجاء إكمال الحقول المطلوبة",
++        "guardianSaved": "تم تسجيل بيانات المعيل",
++        "created": "تم تسجيل الأسرة الساكنة ({{code}})",
++        "updated": "تم تحديث بيانات الأسرة الساكنة",
++        "createFailed": "تعذر تسجيل الأسرة الساكنة",
++        "loadFailed": "تعذر تحميل بيانات الأسرة الساكنة",
++        "nationalIdTooLong": "الرقم القومى لا يزيد عن 14 رقماً"
++      }
++    },
++    "detail": {
++      "noChildren": "لا يوجد أبناء مسجلون",
++      "messages": {
++        "loadFailed": "تعذر تحميل بيانات الأسرة الساكنة"
++      }
+     }
+   },
+   "generalChecks": {
+     "title": "الشيكات العامة",
+-    "manageChecks": "إدارة الشيكات وأدوات الدفع",
++    "subtitle": "إدارة الشيكات العامة",
++    "manageChecks": "إدارة الشيكات",
+     "addCheck": "إضافة شيك",
+     "editCheck": "تعديل شيك",
+-    "deleteCheck": "حذف شيك",
+     "checkDetails": "تفاصيل الشيك",
+-    "viewCheckList": "عرض قائمة الشيكات",
+-    "reconcileChecks": "مطابقة الشيكات",
+-    "generateReport": "إنشاء تقرير",
+     "checkInformation": "معلومات الشيك",
+     "beneficiaryInformation": "معلومات المستفيد",
+     "financialInformation": "المعلومات المالية",
+-    "bankInformation": "معلومات البنك",
+-    "statusInformation": "معلومات الحالة",
++    "flags": "الحالات",
++    "serial": "الرقم",
+     "checkNumber": "رقم الشيك",
+     "checkDate": "تاريخ الشيك",
+-    "dueDate": "تاريخ الاستحقاق",
+     "currency": "العملة",
+-    "currencies": {
+-      "EGP": "الجنيه المصري (EGP)",
+-      "SAR": "الريال السعودي (SAR)",
+-      "USD": "الدولار الأمريكي (USD)"
+-    },
+     "beneficiaryType": "نوع المستفيد",
+     "beneficiaryTypes": {
+       "Individual": "فرد",
+@@ -1352,109 +1866,42 @@
+       "Employee": "موظف"
+     },
+     "beneficiaryName": "اسم المستفيد",
+-    "beneficiaryId": "معرف المستفيد",
+     "beneficiaryAddress": "عنوان المستفيد",
+     "beneficiaryPhone": "هاتف المستفيد",
+-    "beneficiaryEmail": "بريد المستفيد الإلكتروني",
+     "idPassportNumber": "رقم الهوية/جواز السفر",
+     "amount": "المبلغ",
+     "amountInWords": "المبلغ بالكلمات",
+-    "paymentReason": "سبب الدفع",
+-    "paymentReasons": {
+-      "Salary": "راتب",
+-      "SupplierRefund": "رد المورد",
+-      "Expense": "مصروف",
+-      "Other": "أخرى"
+-    },
+-    "paymentDescription": "وصف الدفع",
++    "amountInWordsAutoGenerated": "يتم إنشاؤه تلقائياً ما لم تقم بتعديله",
+     "bank": "البنك",
+     "branch": "الفرع",
+     "accountNumber": "رقم الحساب",
+-    "checkStatus": "حالة الشيك",
+-    "checkStatuses": {
+-      "Pending": "معلق",
+-      "Issued": "صادر",
+-      "Cleared": "مصروف",
+-      "Void": "ملغي"
+-    },
+-    "issueDate": "تاريخ الإصدار",
+-    "clearanceDate": "تاريخ الصرف",
+-    "bankReference": "مرجع البنك",
+-    "clearanceNotes": "ملاحظات الصرف",
+-    "voidReason": "سبب الإلغاء",
+-    "voidReasons": {
+-      "Lost": "مفقود",
+-      "Stopped": "متوقف",
+-      "Error": "خطأ",
+-      "Expired": "منتهي الصلاحية",
+-      "Other": "أخرى"
+-    },
+-    "voidDate": "تاريخ الإلغاء",
+-    "voidNotes": "ملاحظات الإلغاء",
+-    "markAsCleared": "تعيين كمصروف",
+-    "voidCheck": "إلغاء الشيك",
+-    "requiresApproval": "يتطلب موافقة",
+-    "approvedBy": "وافق عليه",
+-    "saveToLookup": "حفظ في الجدول المرجعي",
+-    "reconciliation": "مطابقة الشيكات",
+-    "unreconciledChecks": "الشيكات غير المطابقة",
+-    "bankStatementImport": "استيراد كشف حساب البنك",
+-    "manualMatching": "المطابقة اليدوية",
+-    "enterBankReference": "أدخل مرجع البنك",
+-    "confirmMatch": "تأكيد المطابقة",
+-    "reconciliationSummary": "ملخص المطابقة",
+-    "totalChecksReconciled": "إجمالي الشيكات المطابقة",
+-    "totalAmount": "المبلغ الإجمالي",
+-    "reconcileSuccess": "تمت مطابقة الشيكات بنجاح",
+-    "reportOptions": "خيارات التقرير",
+-    "reportPeriod": "فترة التقرير",
+-    "groupBy": "تجميع حسب",
+-    "groupByOptions": {
+-      "Status": "الحالة",
+-      "Bank": "البنك",
+-      "Beneficiary": "المستفيد"
++    "charity": "الجمعية",
++    "allCharities": "كافة الجهات",
++    "chequeType": "نوع الشيكات",
++    "chequeTypes": {
++      "All": "كل الشيكات",
++      "Orphans": "شيكات إيتام",
++      "Individuals": "شيكات أفراد"
+     },
+-    "summaryStatistics": "الإحصائيات الملخصة",
+-    "totalChecks": "إجمالي الشيكات",
+-    "clearedChecks": "الشيكات المصروفة",
+-    "pendingChecks": "الشيكات المعلقة",
+-    "voidChecks": "الشيكات الملغاة",
+-    "detailedCheckList": "قائمة الشيكات التفصيلية",
+-    "generate": "إنشاء",
+-    "export": "تصدير",
++    "isDamaged": "شيك تالف",
++    "isReturned": "تم رد الشيك",
++    "isDispensed": "تم الصرف",
++    "isDone": "CheckDone",
++    "comment": "تعليقات",
++    "statement": "بيان الشيكات",
++    "search": "بحث",
+     "print": "طباعة",
+-    "searchPlaceholder": "البحث برقم الشيك أو المستفيد...",
++    "printEgyptian": "طباعة مصري",
++    "save": "حفظ",
++    "dateFrom": "من تاريخ",
++    "dateTo": "إلى تاريخ",
++    "total": "الإجمالي",
++    "totalChecks": "إجمالي الشيكات",
++    "generatedOn": "تاريخ الإنشاء",
+     "noChecksFound": "لم يتم العثور على شيكات",
+-    "allBanks": "جميع البنوك",
+-    "allCurrencies": "جميع العملات",
+-    "allStatuses": "جميع الحالات",
+-    "filters": "الفلاتر",
+-    "clearFilters": "مسح الفلاتر",
+-    "applyFilters": "تطبيق الفلاتر",
+-    "exportToExcel": "تصدير إلى Excel",
+-    "exportSuccess": "تم تصدير الشيكات بنجاح",
+-    "exportFailed": "فشل تصدير الشيكات",
+-    "checkCreated": "تم إنشاء الشيك بنجاح",
+-    "checkUpdated": "تم تحديث الشيك بنجاح",
+-    "checkDeleted": "تم حذف الشيك بنجاح",
+-    "checkCleared": "تم تحديد الشيك كمصروف",
+-    "checkVoided": "تم إلغاء الشيك بنجاح",
+-    "confirmDelete": "هل أنت متأكد من حذف هذا الشيك؟",
+-    "confirmClear": "هل أنت متأكد من تعيين هذا الشيك كمصروف؟",
+-    "confirmVoid": "هل أنت متأكد من إلغاء هذا الشيك؟ لا يمكن التراجع عن هذا الإجراء.",
+-    "cannotEditCleared": "لا يمكن تعديل الشيك المصروف",
+-    "cannotEditVoided": "لا يمكن تعديل الشيك الملغي",
+-    "cannotVoidCleared": "لا يمكن إلغاء الشيك المصروف",
+     "enterCheckNumber": "أدخل رقم الشيك",
+     "enterBeneficiaryName": "أدخل اسم المستفيد",
+     "enterAmount": "أدخل المبلغ",
+-    "enterPaymentDescription": "أدخل وصف الدفع",
+-    "enterVoidNotes": "أدخل ملاحظات الإلغاء (مطلوب)",
+-    "selectBeneficiaryType": "اختر نوع المستفيد",
+-    "selectCurrency": "اختر العملة",
+-    "selectPaymentReason": "اختر سبب الدفع",
+-    "selectBank": "اختر البنك",
+-    "selectVoidReason": "اختر سبب الإلغاء",
+     "checkNumberRequired": "رقم الشيك مطلوب",
+     "checkDateRequired": "تاريخ الشيك مطلوب",
+     "beneficiaryNameRequired": "اسم المستفيد مطلوب",
+@@ -1462,28 +1909,13 @@
+     "amountMustBePositive": "يجب أن يكون المبلغ رقماً موجباً",
+     "currencyRequired": "العملة مطلوبة",
+     "bankRequired": "البنك مطلوب",
+-    "voidNotesRequired": "ملاحظات الإلغاء مطلوبة",
+-    "invalidDateRange": "يجب أن يكون تاريخ الاستحقاق بعد تاريخ الشيك",
+-    "auditTrail": "سجل التدقيق",
+-    "createdOn": "تم الإنشاء في",
+-    "modifiedOn": "تم التعديل في",
+-    "noAuditInformation": "لا توجد معلومات تدقيق متاحة",
+-    "accessDenied": "تم رفض الوصول",
+-    "adminOnlyModule": "هذه الوحدة متاحة فقط للمشرفين ومشرفي المستوى الأعلى والمحاسبين",
+-    "unauthorizedAccess": "لست مخولاً للوصول إلى هذه الوحدة",
+-    "uploadCheckImage": "رفع صورة الشيك",
+-    "checkImage": "صورة الشيك",
+-    "viewImage": "عرض الصورة",
+-    "removeImage": "إزالة الصورة",
+-    "amountInWordsAutoGenerated": "سيتم إنشاء المبلغ بالكلمات تلقائياً",
+-    "fromLookup": "من الجدول المرجعي",
+-    "newEntry": "إدخال جديد",
+-    "saveBeneficiary": "حفظ المستفيد",
+-    "beneficiarySaved": "تم حفظ المستفيد بنجاح",
+-    "beneficiaryLinked": "تم ربط المستفيد بالشيك"
++    "checkCreated": "تم إنشاء الشيك بنجاح",
++    "checkUpdated": "تم تحديث الشيك بنجاح",
++    "saveFailed": "فشل حفظ الشيك",
++    "loadFailed": "فشل تحميل البيانات"
+   },
+-  
+   "incomingOutgoing": {
++    "moduleTitle": "الوارد والصادر",
+     "title": "المراسلات الواردة والصادرة",
+     "subtitle": "إدارة المراسلات الواردة والصادرة",
+     "incomingLetters": "المراسلات الواردة",
+@@ -1492,179 +1924,89 @@
+     "manageOutgoingLetters": "إدارة المراسلات الصادرة",
+     "addIncomingLetter": "إضافة مراسلة واردة",
+     "addOutgoingLetter": "إضافة مراسلة صادرة",
+-    "importLetters": "استيراد المراسلات",
+-    "exportLetters": "تصدير المراسلات",
+-    "importIncoming": "استيراد المراسلات الواردة",
+-    "importOutgoing": "استيراد المراسلات الصادرة",
+-    "exportIncoming": "تصدير المراسلات الواردة",
+-    "exportOutgoing": "تصدير المراسلات الصادرة",
+-    "importWizardSubtitle": "استيراد المراسلات من ملفات Excel أو CSV",
+-    "exportWizardSubtitle": "تصدير المراسلات إلى Excel أو PDF أو CSV",
+-    "history": "السجل",
+-    "importExportHistory": "سجل الاستيراد والتصدير",
++    "editIncomingLetter": "تعديل المراسلة الواردة",
++    "editOutgoingLetter": "تعديل المراسلة الصادرة",
++    "fillIncomingLetterDetails": "املأ تفاصيل المراسلة الواردة أدناه",
++    "fillOutgoingLetterDetails": "املأ تفاصيل المراسلة الصادرة أدناه",
++    "incomingLetterDetails": "تفاصيل المراسلة الواردة",
++    "outgoingLetterDetails": "تفاصيل المراسلة الصادرة",
++    "viewIncomingLetterDetails": "عرض تفاصيل المراسلة الواردة",
++    "viewOutgoingLetterDetails": "عرض تفاصيل المراسلة الصادرة",
++    "incomingLetter": "مراسلة واردة",
++    "outgoingLetter": "مراسلة صادرة",
++    "letterInformation": "معلومات المعاملة",
+     "serial": "مسلسل",
+     "subject": "الموضوع",
+-    "date": "التاريخ",
+-    "body": "النص",
+-    "letterNumber": "رقم المعاملة",
+-    "letterDate": "تاريخ المعاملة",
+-    "incomingId": "رقم الوارد",
+-    "incomingNumber": "رقم داخلي",
+-    "outgoingId": "رقم الصادر",
+-    "outGoingNumber": "رقم داخلي",
+-    "year": "السنة",
+-    "status": "الحالة",
+-    "statusReceived": "مستلم",
+-    "statusProcessing": "قيد المعالجة",
+-    "statusCompleted": "مكتمل",
+-    "statusClosed": "مغلق",
+-    "statusPending": "معلق",
+-    "department": "الإدارة",
+-    "category": "الفئة",
+-    "official": "رسمي",
+-    "internal": "داخلي",
+-    "external": "خارجي",
+-    "letterDescription": "الوصف",
+-    "hasReply": "له رد",
+-    "createdBy": "أنشأ بواسطة",
+-    "createdOn": "تاريخ الإنشاء",
+-    "modifiedBy": "عدل بواسطة",
+-    "modifiedOn": "تاريخ التعديل",
+-    "uploadFile": "رفع ملف",
+-    "selectFile": "اختر ملف للاستيراد",
+-    "supportedFormats": "الصيغ المدعومة",
+-    "browseFiles": "تصفح الملفات",
+-    "downloadTemplate": "تنزيل القالب",
+-    "mapFields": "ربط الحقول",
+-    "fileColumns": "أعمدة الملف",
+-    "systemFields": "حقول النظام",
+-    "sample": "عينة",
+-    "requiredFieldsMissing": "حقول مطلوبة مفقودة",
+-    "skipDuplicates": "تخطي التكرارات",
+-    "skipDuplicatesDesc": "تخطي الصفوف ذات أرقام أو معرفات المعاملة المكررة",
+-    "updateExisting": "تحديث السجلات الموجودة",
+-    "updateExistingDesc": "تحديث السجلات الموجودة مسبقاً في النظام",
+-    "validateOnly": "التحقق فقط",
+-    "validateOnlyDesc": "التحقق من البيانات بدون استيراد (وضع المعاينة)",
+-    "importOptions": "خيارات الاستيراد",
+-    "validateData": "التحقق من البيانات",
+-    "validatingData": "جاري التحقق من البيانات",
+-    "validationSummary": "ملخص التحقق",
+-    "totalRows": "إجمالي الصفوف",
+-    "validRows": "الصفوف الصحيحة",
+-    "invalidRows": "الصفوف الخاطئة",
+-    "errorsFound": "أخطاء موجودة",
+-    "warnings": "تحذيرات",
+-    "row": "الصف",
+-    "moreErrors": "أخطاء إضافية",
+-    "startImport": "بدء الاستيراد",
+-    "importing": "جاري الاستيراد",
+-    "importSuccess": "تم الاستيراد بنجاح",
+-    "importPartial": "اكتمل الاستيراد جزئياً",
+-    "recordsImported": "سجل مستورد بنجاح",
+-    "failedRecords": "سجلات فشلت",
+-    "viewHistory": "عرض السجل",
+-    "filters": "الفلاتر",
+-    "startDate": "تاريخ البدء",
+-    "endDate": "تاريخ الانتهاء",
+-    "clear": "مسح",
+-    "fieldsToExport": "الحقول المراد تصديرها",
+-    "formatOptions": "خيارات التنسيق",
+-    "fileFormat": "تنسيق الملف",
+-    "language": "اللغة",
+-    "arabic": "العربية",
+-    "english": "الإنجليزية",
+-    "both": "كلاهما",
+-    "sortBy": "ترتيب حسب",
+-    "sortOrder": "ترتيب",
+-    "ascending": "تصاعدي",
+-    "descending": "تنازلي",
+-    "includeAttachments": "تضمين المرفقات",
+-    "includeAttachmentsDesc": "تضمين الملفات المرفقة في التصدير (يزيد حجم الملف)",
+-    "generateExport": "إنشاء التصدير",
+-    "importType": "نوع الاستيراد",
+-    "fileName": "اسم الملف",
+-    "importDate": "تاريخ الاستيراد",
+-    "importedBy": "استورد بواسطة",
+-    "successfulRows": "ناجح",
+-    "failedRows": "فشل",
+-    "exportType": "نوع التصدير",
+-    "exportDate": "تاريخ التصدير",
+-    "exportedBy": "صدر بواسطة",
+-    "recordCount": "عدد السجلات",
+-    "fileSize": "حجم الملف",
+-    "filtersApplied": "الفلاتر المطبقة",
+-    "rollback": "تراجع",
+-    "rollbackConfirm": "هل أنت متأكد من تراجع هذا الاستيراد؟ سيتم حذف جميع السجلات المستوردة.",
+-    "searchPlaceholder": "البحث بالموضوع أو المسلسل...",
+-    "clearFilters": "مسح الفلاتر",
+-    "noLettersFound": "لم يتم العثور على مراسلات",
+-    "subject": "الموضوع",
+     "subjectPlaceholder": "أدخل موضوع المعاملة",
+-    "incomingId": "رقم الوارد",
+-    "incomingIdPlaceholder": "أدخل رقم الوارد",
+-    "incomingNumber": "رقم داخلي",
+-    "incomingNumberPlaceholder": "أدخل الرقم الداخلي",
+-    "outGoingId": "رقم الصادر",
+-    "outGoingIdPlaceholder": "أدخل رقم الصادر",
+-    "outGoingNumber": "رقم داخلي",
+-    "outGoingNumberPlaceholder": "أدخل الرقم الداخلي",
++    "date": "تاريخ الاستلام",
+     "letterNumber": "رقم المعاملة",
+     "letterNumberPlaceholder": "أدخل رقم المعاملة الرسمي",
+     "letterDate": "تاريخ المعاملة",
+-    "date": "تاريخ الاستلام",
+     "year": "السنة",
+-    "yearPlaceholder": "أدخل السنة المالية",
+-    "body": "نص المعاملة",
+-    "bodyPlaceholder": "أدخل محتوى المعاملة",
+-    "letterDescription": "الوصف",
+-    "letterDescriptionPlaceholder": "أدخل وصفاً مختصراً",
+     "department": "الإدارة",
+     "selectDepartment": "اختر الإدارة",
+-    "category": "الفئة",
+-    "selectCategory": "اختر الفئة",
+-    "categoryOfficial": "رسمي",
+-    "categoryInternal": "داخلي",
+-    "categoryExternal": "خارجي",
+-    "replyToIncoming": "رد على مراسلة واردة",
+-    "selectIncomingLetter": "اختر مراسلة واردة",
+-    "replyToOutgoing": "رد على مراسلة صادرة",
+-    "selectOutgoingLetter": "اختر مراسلة صادرة",
++    "category": "تصنيف موضوع الصادر",
++    "assignedEmployee": "الموظف المسؤول",
++    "selectEmployee": "اختر الموظف المسؤول",
++    "charity": "الجمعية",
++    "allCharities": "كافة الجهات",
++    "letterDescription": "الوصف",
++    "letterDescriptionPlaceholder": "أدخل وصفاً مختصراً",
+     "attachedFile": "ملف مرفق",
+-    "fillIncomingLetterDetails": "املأ تفاصيل المراسلة الواردة أدناه",
+-    "fillOutgoingLetterDetails": "املأ تفاصيل المراسلة الصادرة أدناه",
+-    "incomingLetterDetails": "تفاصيل المراسلة الواردة",
+-    "outgoingLetterDetails": "تفاصيل المراسلة الصادرة",
+-    "editIncomingLetter": "تعديل المراسلة الواردة",
+-    "editOutgoingLetter": "تعديل المراسلة الصادرة",
+-    "viewIncomingLetterDetails": "عرض تفاصيل المراسلة الواردة",
+-    "viewOutgoingLetterDetails": "عرض تفاصيل المراسلة الصادرة",
+-    "letterInformation": "معلومات المعاملة",
+-    "metaInformation": "المعلومات الوصفية",
+-    "followUpLetters": "معاملات المتابعة",
+-    "confirmDelete": "هل أنت متأكد من حذف المعاملة \"{{subject}}\"؟",
++    "startDate": "تاريخ من",
++    "endDate": "تاريخ إلى",
++    "replyToIncoming": "رداً على خطاب وارد",
++    "replyToOutgoing": "رداً على خطاب صادر",
++    "selectLetter": "خطاب الوارد",
++    "selectOutgoingLetter": "خطاب الصادر",
++    "replied": "تم الرد",
++    "notReplied": "لم يتم الرد",
++    "extractPage": "استخراج الصفحة",
++    "extractAll": "استخراج الكل",
++    "nothingToExport": "لا توجد بيانات للتصدير",
++    "exportFailed": "فشل تصدير الملف",
++    "searchPlaceholder": "البحث بالموضوع أو المسلسل...",
++    "noLettersFound": "لم يتم العثور على مراسلات",
++    "letterNotFound": "المعاملة غير موجودة",
+     "loadLetterFailed": "فشل تحميل تفاصيل المعاملة",
+     "fixValidationErrors": "يرجى تصحيح أخطاء التحقق قبل الإرسال",
+     "createSuccess": "تم إنشاء المعاملة بنجاح",
+     "createFailed": "فشل إنشاء المعاملة",
+     "updateSuccess": "تم تحديث المعاملة بنجاح",
+     "updateFailed": "فشل تحديث المعاملة",
+-    "deleteSuccess": "تم حذف المعاملة بنجاح",
++    "letterDeleted": "تم حذف المعاملة بنجاح",
+     "deleteFailed": "فشل حذف المعاملة",
+-    "letterNotFound": "المعاملة غير موجودة",
+-    "importHistory": "سجل الاستيراد",
+-    "exportHistory": "سجل التصدير",
+-    "importComplete": "اكتمل الاستيراد",
+-    "newImport": "استيراد جديد",
+-    "newExport": "تصدير جديد",
+-    "noImportHistory": "لا يوجد سجل استيراد",
+-    "noExportHistory": "لا يوجد سجل تصدير",
+-    "downloadErrors": "تنزيل سجل الأخطاء",
+-    "download": "تنزيل",
+-    "operationDetails": "تفاصيل العملية",
+-    "viewDetails": "عرض التفاصيل",
+-    "allTypes": "جميع الأنواع",
+-    "type": "النوع"
++    "deleteConfirm": "هل أنت متأكد من حذف المعاملة \"{{subject}}\"؟",
++    "attachEmployeesTitle": "ربط الموظفين بخطاب وارد",
++    "attachEmployeesSubtitle": "اختر خطاب الوارد ثم اربط الموظفين المعنيين به",
++    "unattachedEmployees": "الموظفون غير المرتبطين",
++    "attachedEmployees": "الموظفون المرتبطون",
++    "employeeName": "إسم الموظف",
++    "noEmployees": "لا يوجد موظفون",
++    "addToLetter": "إضافة الى الخطاب",
++    "selectLetterFirst": "اختر خطاباً أولاً لعرض القوائم",
++    "pendingChanges": "تغييرات غير محفوظة",
++    "changesSaved": "تم حفظ التغييرات بنجاح",
++    "saveFailed": "فشل حفظ التغييرات",
++    "attachOrphansTitle": "ربط تقارير الأيتام بخطاب صادر",
++    "attachOrphansSubtitle": "اختر خطاب الصادر ثم اربط تقارير الأيتام به",
++    "unattachedOrphans": "الأيتام غير المرتبطين",
++    "attachedOrphans": "تقارير الأيتام المرتبطة",
++    "orphanName": "إسم اليتيم",
++    "orphanCode": "كود اليتيم",
++    "orphanCodePlaceholder": "أدخل كود اليتيم",
++    "guarantorName": "اسم المعيل",
++    "kinship": "صلة القرابة",
++    "noOrphans": "لا يوجد أيتام",
++    "noAttachedOrphans": "لا توجد تقارير أيتام مرتبطة",
++    "orphansReportTitle": "تقرير الأيتام حسب خطاب الصادر",
++    "orphansReportSubtitle": "حدد كود اليتيم ثم اعرض الخطابات الصادرة المرتبطة به",
++    "childCodeRequired": "Operation Faild: كود اليتيم مطلوب لتشغيل التقرير",
++    "reportFailed": "فشل تشغيل التقرير",
++    "noReportRows": "لا توجد نتائج مطابقة",
++    "reportNotRun": "أدخل كود اليتيم واضغط بحث لتشغيل التقرير",
++    "orphansCount": "عدد الأيتام",
++    "orphanAttached": "اليتيم مضاف للتقرير"
+   },
+   "importsEdges": {
+     "selectImportType": "اختر نوع الاستيراد",
+@@ -1737,7 +2079,6 @@
+     "selected": "محدد",
+     "formatTitle": "اختر التنسيق والتصدير",
+     "selectFormat": "اختر تنسيق التصدير",
+-    "generateExport": "إنشاء التصدير",
+     "exportSummary": "ملخص التصدير",
+     "records": "السجلات",
+     "fields": "الحقول",
+@@ -1772,6 +2113,7 @@
+   },
+   "technicalSupport": {
+     "title": "الدعم الفني",
++    "ticketTitle": "العنوان",
+     "supportCenter": "مركز الدعم",
+     "myTickets": "تذاكري",
+     "allTickets": "جميع التذاكر",
+@@ -1781,7 +2123,6 @@
+     "editTicket": "تعديل التذكرة",
+     "deleteTicket": "حذف التذكرة",
+     "ticketId": "رقم التذكرة",
+-    "title": "العنوان",
+     "category": "الفئة",
+     "priority": "الأولوية",
+     "status": "الحالة",
+@@ -1853,7 +2194,8 @@
+       "confirmClose": "هل أنت متأكد من إغلاق هذه التذكرة؟",
+       "confirmSolve": "هل أنت متأكد من تحديد هذه التذكرة كمتم الحل؟",
+       "noResponses": "لا توجد ردود بعد",
+-      "internalNoteWarning": "هذه الملاحظة مرئية فقط للمسؤولين"
++      "internalNoteWarning": "هذه الملاحظة مرئية فقط للمسؤولين",
++      "operationFailed": "فشلت العملية. حاول مرة أخرى."
+     },
+     "statistics": {
+       "totalTickets": "إجمالي التذاكر",
+@@ -1895,7 +2237,16 @@
+       "topTicketCreators": "أكثر منشئي التذاكر",
+       "exportReport": "تصدير التقرير",
+       "printReport": "طباعة التقرير",
+-      "configureMessage": "قم بتكوين خيارات التقرير وانقر فوق إنشاء تقرير لعرض الإحصائيات"
++      "configureMessage": "قم بتكوين خيارات التقرير وانقر فوق إنشاء تقرير لعرض الإحصائيات",
++      "openTickets": "التذاكر المفتوحة",
++      "inProgressTickets": "التذاكر قيد التنفيذ",
++      "resolvedTickets": "التذاكر المحلولة",
++      "closedTickets": "التذاكر المغلقة",
++      "slaBreached": "التذاكر التي تجاوزت مدة الاتفاقية",
++      "ticketsByStatus": "التذاكر حسب الحالة",
++      "ticketsByPriority": "التذاكر حسب الأولوية",
++      "ticketsByCreator": "التذاكر حسب المنشئ",
++      "ticketsInPeriod": "التذاكر خلال الفترة"
+     },
+     "placeholders": {
+       "userAction": "ماذا كنت تفعل عند حدوث المشكلة؟",
+@@ -1915,5 +2266,270 @@
+     "REFRESHING_SESSION": "جاري تحديث جلستك...",
+     "LOGOUT": "تسجيل الخروج",
+     "EXTEND_SESSION": "تمديد الجلسة"
++  },
++  "orphanCoding": {
++    "title": "تكويد الأيتام",
++    "subtitle": "البحث عن اليتيم بالاسم أو الكود وإسناد كود الكفالة",
++    "worklistTitle": "قائمة تكويد الأيتام",
++    "worklistSubtitle": "الأيتام غير المكودين — إسناد كود الكفالة",
++    "worklistLoadFailed": "تعذر تحميل قائمة التكويد",
++    "charity": "الجمعية",
++    "allCharities": "كل الجمعيات",
++    "orphanName": "اسم اليتيم",
++    "orphanNamePlaceholder": "اكتب 3 أحرف على الأقل للبحث",
++    "code": "الكود",
++    "codePlaceholder": "كود الكفالة",
++    "search": "بحث",
++    "close": "غلق",
++    "serial": "الرقم",
++    "fatherName": "اسم الأب",
++    "motherName": "اسم الأم",
++    "editCode": "تعديل الكود",
++    "saveCode": "حفظ الكود",
++    "cancelCode": "إلغاء",
++    "select": "تم",
++    "codeAvailable": "الكود متاح",
++    "codeTaken": "الكود مستخدم من قبل",
++    "codeHeldBy": "مسجل باسم",
++    "codeRequired": "أدخل الكود أولاً",
++    "codeSaved": "تم حفظ الكود بنجاح",
++    "codeSaveFailed": "تعذر حفظ الكود",
++    "noResults": "لا توجد نتائج",
++    "enterNameOrCode": "أدخل اسم اليتيم أو الكود",
++    "searchFailed": "تعذر البحث",
++    "paymentHistory": "سجل الصرف",
++    "historyLoadFailed": "تعذر تحميل سجل الصرف",
++    "detailsLoadFailed": "تعذر تحميل تفاصيل المجموعة",
++    "batchNo": "رقم الدفعة",
++    "allBatches": "كل الدفعات",
++    "groupName": "اسم المجموعة",
++    "periodFrom": "الفترة من",
++    "periodTo": "الفترة إلى",
++    "groupDate": "تاريخ المجموعة",
++    "uploaded": "مرفوعة",
++    "uploadedYes": "نعم",
++    "uploadedNo": "لا",
++    "viewDetails": "التفاصيل",
++    "batchDetails": "تفاصيل الدفعة",
++    "backToHistory": "عودة للسجل",
++    "currency": "العملة",
++    "exchangeRate": "سعر الصرف",
++    "displayOrder": "الترتيب",
++    "notes": "ملاحظات",
++    "noHistory": "لا توجد مدفوعات سابقة لهذا اليتيم",
++    "phoneDuplicate": "رقم الهاتف مسجل مسبقاً",
++    "phoneHeldBy": "الرقم مسجل لـ",
++    "phoneChecking": "جاري التحقق من الرقم",
++    "phoneAvailable": "الرقم غير مستخدم",
++    "holder_family": "الأسرة",
++    "holder_father": "الأب",
++    "holder_mother": "الأم",
++    "holder_provider": "المعيل",
++    "holder_orphan": "اليتيم",
++    "reasons": {
++      "charityNotFound": "الجمعية غير موجودة",
++      "charityLocked": "الجمعية مقفلة من قبل المقر الرئيسي",
++      "charityAddDisabled": "الإضافة معطلة لهذه الجمعية",
++      "charityInactive": "هذه الجمعية غير نشطة",
++      "familyNotFound": "الأسرة غير موجودة أو خارج النطاق",
++      "familyInactive": "هذه الأسرة غير نشطة",
++      "nationalIdRegistered": "يوجد يتيم مسجل بهذا الرقم القومي"
++    }
++  },
++  "periodicReports": {
++    "title": "التقارير الدورية للأيتام",
++    "subtitle": "سجل التقارير الدورية المقدمة عن الأيتام",
++    "createReport": "إضافة تقرير دوري",
++    "editReport": "تعديل التقرير الدوري",
++    "reportDetails": "تفاصيل التقرير الدوري",
++    "reviewReport": "مراجعة التقرير",
++    "sidebar": {
++      "allReports": "جميع التقارير الدورية"
++    },
++    "breadcrumb": {
++      "list": "التقارير الدورية",
++      "create": "إضافة تقرير",
++      "details": "تفاصيل التقرير",
++      "edit": "تعديل التقرير",
++      "review": "مراجعة التقرير"
++    },
++    "filters": {
++      "charity": "الجمعية",
++      "allCharities": "كافة الجهات",
++      "dateFrom": "من تاريخ",
++      "dateTo": "الي تاريخ",
++      "orphanCode": "كود اليتيم",
++      "orphanName": "اسم اليتيم",
++      "codesOnly": "أكواد",
++      "search": "بحث",
++      "status": "حالة الاعتماد",
++      "all": "الكل"
++    },
++    "columns": {
++      "serial": "الرقم",
++      "reportNo": "رقم التقرير",
++      "orphanCode": "كود اليتيم",
++      "reportDate": "التاريخ",
++      "approved": "تم الاعتماد",
++      "approvedDate": "تاريخ الاعتماد"
++    },
++    "status": {
++      "pending": "قيد الانتظار",
++      "approved": "معتمد",
++      "rejected": "مرفوض",
++      "accepted": "معتمد",
++      "refused": "مرفوض"
++    },
++    "empty": {
++      "title": "لا توجد تقارير",
++      "message": "لم يتم تسجيل أي تقرير دوري مطابق لعوامل التصفية الحالية"
++    },
++    "lookup": {
++      "code": "كود اليتيم",
++      "placeholder": "أدخل كود الكفالة ثم اضغط استدعاء",
++      "submit": "استدعاء",
++      "orphanName": "اسم اليتيم",
++      "age": "العمر",
++      "charity": "الجمعية",
++      "familyReference": "مرجع العائلة",
++      "guardian": "المعيل",
++      "reportsCount": "التقارير المسجلة",
++      "pending": "قيد المراجعة",
++      "unknownOrphan": "لا يوجد يتيم بهذا الكود ضمن نطاق جمعيتك — لا يمكن إنشاء تقرير عليه"
++    },
++    "form": {
++      "sections": {
++        "basicInfo": "البيانات الأساسية",
++        "religious": "الالتزام الديني والسلوك",
++        "quran": "حفظ القرآن الكريم",
++        "health": "الحالة الصحية والطبية",
++        "personalDevelopment": "الأنشطة والتطور الشخصي",
++        "education": "الحالة التعليمية",
++        "lifeEvents": "أحداث الحياة",
++        "attachments": "الملفات المطلوبة"
++      },
++      "orphan": "اليتيم",
++      "reportDate": "تاريخ التقرير",
++      "reportPeriodFrom": "الفترة من",
++      "reportPeriodTo": "الفترة إلى",
++      "reportNo": "رقم التقرير",
++      "prayerStatus": "الالتزام بالصلاة",
++      "mannersStatus": "الأخلاق والسلوك",
++      "hadeethStatus": "حفظ الأحاديث",
++      "quranParts": "الأجزاء المحفوظة",
++      "quranVerses": "الآيات المحفوظة",
++      "medicalStatus": "الحالة الصحية",
++      "disease": "نوع المرض",
++      "diseaseDescription": "تفاصيل المرض",
++      "disability": "نوع الإعاقة",
++      "disabilityDescription": "تفاصيل الإعاقة",
++      "hobby": "الهوايات",
++      "course": "اسم الدورة",
++      "sportName": "اسم الرياضة",
++      "achievement": "الإنجازات",
++      "wish": "الأمنيات",
++      "orphanMessage": "رسالة اليتيم",
++      "educationalLevel": "المرحلة الدراسية",
++      "selectLevel": "— اختر المرحلة —",
++      "school": "اسم المؤسسة التعليمية",
++      "grade": "الصف الدراسي",
++      "schoolType": "نوع التعليم",
++      "faculty": "الكلية",
++      "department": "القسم",
++      "specialization": "التخصص",
++      "isOrphanStudent": "طلب كفالة طالب",
++      "dropOut": "ترك الدراسة",
++      "annualFeeForStudy": "الرسوم الدراسية السنوية",
++      "studyingYears": "سنوات الدراسة",
++      "restStudyingYears": "السنوات الدراسية المتبقية",
++      "graduationYear": "سنة التخرج",
++      "married": "تزوج",
++      "marriageDate": "تاريخ الزواج",
++      "dead": "توفى",
++      "deathDate": "تاريخ الوفاة",
++      "missingDocuments": "مستندات ناقصة",
++      "missingDocumentsName": "أسماء المستندات الناقصة",
++      "orphanImage": "صورة اليتيم",
++      "orphanCertificateImage": "قيد/شهادة الطالب",
++      "medicalReportImage": "صورة التقرير الطبي",
++      "orphanDeadImage": "شهادة وفاة",
++      "orphanMarriageImage": "عقد الزواج",
++      "uploadFailed": "فشل رفع الملف — حاول مرة أخرى",
++      "savedSuccessfully": "تم حفظ التقرير بنجاح",
++      "saveFailed": "فشل حفظ التقرير"
++    },
++    "untitledReport": "تقرير دوري بدون رقم",
++    "reviewState": "حالة الاعتماد",
++    "reviewedOn": "تاريخ الاعتماد",
++    "refuseReason": "سبب الرفض",
++    "reviewComments": "ملاحظات الاعتماد",
++    "noLifeEvents": "لا توجد أحداث حياتية أو تطوير ذاتي مسجلة في هذا التقرير",
++    "auditTrail": "سجل المتابعة",
++    "createdBy": "أنشئ بواسطة",
++    "createdOn": "تاريخ الإنشاء",
++    "updatedBy": "آخر تحديث بواسطة",
++    "updatedOn": "تاريخ آخر تحديث",
++    "deleteConfirm": "هل أنت متأكد من حذف هذا التقرير؟",
++    "deletedSuccessfully": "تم حذف التقرير بنجاح",
++    "deleteFailed": "تعذر حذف التقرير",
++    "attachmentDownloadFailed": "تعذر تحميل المرفق",
++    "cannotEditOldReport": "لا يمكن تعديل تقرير قديم",
++    "deleteTitle": "حذف التقرير",
++    "orphanInformation": "بيانات اليتيم",
++    "orphanCode": "كود اليتيم",
++    "orphanName": "اسم اليتيم",
++    "charity": "الجمعية",
++    "reportDate": "تاريخ التقرير",
++    "reportNo": "رقم التقرير",
++    "reportPeriod": "الفترة المشمولة",
++    "religiousBehavioral": "الحالة الدينية والسلوكية",
++    "quranEducation": "تحفيظ القرآن",
++    "healthMedical": "الحالة الصحية والطبية",
++    "educationDetails": "الحالة التعليمية",
++    "lifeEvents": "الأحداث الحياتية",
++    "personalDevelopment": "التطوير الذاتي",
++    "attachments": "الملفات المطلوبة",
++    "deceased": "متوفى",
++    "yes": "نعم",
++    "sport": "الرياضة",
++    "medicalReport": "التقرير الطبي",
++    "certificate": "الشهادة",
++    "orphanPhoto": "صورة اليتيم",
++    "reviewActions": "إجراءات الاعتماد",
++    "reviewDecision": "القرار",
++    "approveReport": "اعتماد التقرير",
++    "rejectReport": "رفض التقرير",
++    "selectReason": "اختر السبب",
++    "refuseReasonPlaceholder": "أو اكتب سبب الرفض...",
++    "reviewCommentsPlaceholder": "ملاحظات إضافية (اختياري)...",
++    "refuseReasonRequired": "سبب الرفض مطلوب",
++    "prayerStatus": "الالتزام بالصلاة",
++    "mannersStatus": "الأخلاق والسلوك",
++    "hadeethStatus": "حفظ الأحاديث",
++    "quranParts": "الأجزاء المحفوظة",
++    "quranVerses": "الآيات المحفوظة",
++    "medicalStatus": "الحالة الصحية",
++    "disease": "نوع المرض",
++    "disability": "نوع الإعاقة",
++    "disabilityDescription": "تفاصيل الإعاقة",
++    "diseaseDescription": "تفاصيل المرض",
++    "educationalLevel": "المرحلة الدراسية",
++    "school": "اسم المؤسسة التعليمية",
++    "grade": "الصف الدراسي",
++    "isOrphanStudent": "طلب كفالة طالب",
++    "dropOut": "ترك الدراسة",
++    "married": "تزوج",
++    "hobby": "الهوايات",
++    "achievement": "الإنجازات",
++    "orphanMessage": "رسالة اليتيم",
++    "review": {
++      "approvedSuccessfully": "تم اعتماد التقرير بنجاح",
++      "rejectedSuccessfully": "تم رفض التقرير بنجاح",
++      "submitFailed": "تعذر تسجيل قرار الاعتماد",
++      "alreadyReviewed": "تم الاعتماد مسبقاً — لا يمكن إعادة القرار؛ يعاد فتح التقرير عبر تعديل الجمعية وإعادة الإرسال."
++    }
++  },
++  "periodicReviews": {
++    "reviewedBy": "المعتمِد"
+   }
+ }
+diff --git a/Frontend/src/assets/i18n/en.json b/Frontend/src/assets/i18n/en.json
+index b2034da..ff157a4 100644
+--- a/Frontend/src/assets/i18n/en.json
++++ b/Frontend/src/assets/i18n/en.json
+@@ -12,6 +12,7 @@
+     "export": "Export",
+     "import": "Import",
+     "print": "Print",
++    "metaInformation": "Record information",
+     "view": "View",
+     "details": "Details",
+     "back": "Back",
+@@ -21,6 +22,7 @@
+     "confirm": "Confirm",
+     "yes": "Yes",
+     "no": "No",
++    "notAssigned": "Not assigned",
+     "loading": "Loading...",
+     "noData": "No data available",
+     "success": "Success",
+@@ -149,7 +151,37 @@
+     "notes": "Notes",
+     "personalInformation": "Personal Information",
+     "employmentInformation": "Employment Information",
+-    "manageEmployees": "Manage Employees"
++    "manageEmployees": "Manage Employees",
++    "accountInformation": "Login Account",
++    "password": "Password",
++    "emailPlaceholder": "name@example.com",
++    "emailLoginHint": "This email address is the login name for the account",
++    "codeAutoHint": "Generated automatically when left blank",
++    "departmentsLoadFailed": "Could not load departments",
++    "rolesLoadFailed": "Could not load roles",
++    "employeeLoadFailed": "Could not load employees",
++    "employeeCreateFailed": "Could not create the employee",
++    "employeeUpdateFailed": "Could not update the employee",
++    "confirmEmployeeDeletion": "Are you sure you want to delete this employee?",
++    "confirmEmployeeDeactivation": "Are you sure you want to deactivate this employee?",
++    "confirmEmployeeActivation": "Are you sure you want to activate this employee?",
++    "confirmPasswordReset": "Are you sure you want to reset this employee's password?",
++    "employeeCreated": "Employee created successfully",
++    "employeeUpdated": "Employee updated successfully",
++    "employeeDeleted": "Employee deleted successfully",
++    "employeeDeactivated": "Employee deactivated successfully",
++    "employeeActivated": "Employee activated successfully",
++    "passwordReset": "Password reset successfully",
++    "noEmployeesFound": "No employees found",
++    "searchPlaceholder": "Search by name or email",
++    "allDepartments": "All Departments",
++    "allRoles": "All Roles",
++    "allStatus": "All Statuses",
++    "roles": "Role",
++    "employees": "Employees",
++    "loginAccount": "Login Account",
++    "hasAccount": "Has a login account",
++    "noAccount": "No login account"
+   },
+   "charities": {
+     "title": "Charities",
+@@ -306,6 +338,22 @@
+     "updateSuccess": "Charity updated successfully",
+     "updateFailed": "Failed to update charity"
+   },
++  "reports": {
++    "title": "Reports",
++    "print": {
++      "printTracking": "Print the tracking sheet",
++      "printGuardians": "Guardian identification sheets",
++      "printWidows": "Widow identification sheets",
++      "familyCode": "Family code",
++      "familyCodePlaceholder": "Leave empty to print all families",
++      "titleTracking": "Family update tracking sheet",
++      "titleGuardians": "Guardian identification sheets",
++      "titleWidows": "Widow identification sheets",
++      "generatedOn": "Generated on",
++      "failed": "The sheet could not be produced",
++      "popupBlocked": "Allow pop-up windows to complete printing"
++    }
++  },
+   "families": {
+     "title": "Families",
+     "manageFamilies": "Manage Families",
+@@ -360,6 +408,96 @@
+     "familyInfo": "Family Information",
+     "searchPlaceholder": "Search by family code, address, or parent name...",
+     "noFamiliesFound": "No families found",
++    "refugeeTitle": "Refugee Families",
++    "refugeeSubtitle": "Manage the refugee family register",
++    "refugeeNoFamilies": "No refugee families found",
++    "refugeeCharity": "Charity",
++    "refugeeAllCharities": "All Charities",
++    "refugeeSearchPlaceholder": "Search...",
++    "refugeeSearchType": "Search By",
++    "refugeeSearch": "Search",
++    "refugeeSerial": "No.",
++    "refugeeFatherName": "Father Name",
++    "refugeeMotherName": "Mother Name",
++    "refugeeChildren": "Children",
++    "refugeePhones": "Phones",
++    "refugeeFamilyCode": "Family Code",
++    "refugeeSearchTypeFather": "Father Name",
++    "refugeeSearchTypeMother": "Mother Name",
++    "refugeeSearchTypeOrphan": "Orphan Name",
++    "refugeeSearchTypeProvider": "Provider Name",
++    "refugeeSearchTypeNationalId": "National ID",
++    "refugeeSearchTypeOrphanCode": "Orphan Code",
++    "refugeeSearchTypePhone": "Phone",
++    "refugeeAddFamily": "Register Refugee Family",
++    "refugeeFormTitle": "Register Refugee Family",
++    "refugeeFormSubtitle": "Register a refugee family with its provider, children and companions",
++    "refugeeFormIncomplete": "Please complete the required fields",
++    "refugeeFormSaved": "Refugee family registered successfully",
++    "refugeeFormSaveFailed": "Failed to save the refugee family",
++    "refugeeGenderMale": "Male",
++    "refugeeGenderFemale": "Female",
++    "refugeeDeathNatural": "Natural",
++    "refugeeDeathIllness": "Illness",
++    "refugeeDeathAccident": "Accident",
++    "refugeeSectionFamily": "Family Data",
++    "refugeeSectionProvider": "Add Provider",
++    "refugeeSectionChildren": "Children",
++    "refugeeSectionCompanions": "Companions",
++    "refugeeRegion": "Region",
++    "refugeeCenter": "Center / City",
++    "refugeeCityVillage": "City / Village",
++    "refugeeNearBy": "Nearby Street",
++    "refugeeStreet": "Street",
++    "refugeeAddress": "Address",
++    "refugeePhone": "Phone Number",
++    "refugeeHouseOwnership": "House Ownership",
++    "refugeeHouseStatus": "House Status",
++    "refugeeHousingType": "Housing Type",
++    "refugeeIncomeType": "Income Source",
++    "refugeeRentAmount": "Rent Amount",
++    "refugeeNotes": "Notes",
++    "refugeeProviderName": "Provider Name",
++    "refugeeProviderNationalId": "National ID",
++    "refugeeProviderDOB": "Date of Birth",
++    "refugeeProviderNationality": "Nationality",
++    "refugeeProviderRelation": "Relation to Family",
++    "refugeeProviderReasonOfRelation": "Reason of Relation",
++    "refugeeProviderJob": "Job",
++    "refugeeProviderMonthlyIncome": "Monthly Income",
++    "refugeeProviderIsAlive": "Alive",
++    "refugeeProviderDeathDate": "Death Date",
++    "refugeeProviderDeathReason": "Death Reason",
++    "refugeeChildName": "Child Name",
++    "refugeeChildDOB": "Date of Birth",
++    "refugeeChildGender": "Gender",
++    "refugeeChildNationalId": "National ID",
++    "refugeeChildSocialStatus": "Social Status",
++    "refugeeCompanionName": "Companion Name",
++    "refugeeCompanionNationalId": "National ID",
++    "refugeeCompanionDOB": "Date of Birth",
++    "refugeeCompanionGender": "Gender",
++    "refugeeCompanionSocialStatus": "Social Status",
++    "refugeeCompanionRelationship": "Relation to the Family",
++    "refugeeAddChild": "Add Child",
++    "refugeeAddCompanion": "Add Companion",
++    "refugeeNoChildrenStaged": "No children added yet",
++    "refugeeNoCompanionsStaged": "No companions added yet",
++    "refugeeEditTitle": "Edit Refugee Family",
++    "refugeeEditSubtitle": "Edit a family registered on the refugee register",
++    "refugeeDetailTitle": "Refugee Family File",
++    "refugeeDetailSubtitle": "Detailed view of the family's refugee register file",
++    "refugeeDetailLoadFailed": "Could not load the family's data",
++    "refugeeHeadOfFamily": "Family Name",
++    "refugeeEditMembers": "Edit Family Members",
++    "refugeeChequeSection": "Cheques & Transfers",
++    "refugeeChequeBatch": "Batch Name",
++    "refugeeChequeNumber": "Cheque/Transfer No.",
++    "refugeeChequeDate": "Cheque/Transfer Date",
++    "refugeeChequeAmount": "Amount",
++    "refugeeChequeDelivered": "Delivered",
++    "refugeeChequeReceiver": "Receiving Provider Name",
++    "refugeeChequeEmpty": "No cheques issued for this family yet",
+     "noFatherAdded": "No father added to this family",
+     "noMotherAdded": "No mother added to this family",
+     "noProviderAdded": "No provider added to this family",
+@@ -367,6 +505,134 @@
+     "confirmActivate": "Are you sure you want to activate this family?",
+     "confirmDeactivate": "Are you sure you want to deactivate this family?",
+     "confirmDelete": "Are you sure you want to delete family \"{{code}}\"?",
++    "transfer": "Transfer",
++    "transferTitle": "Transfer family to another charity",
++    "transferCurrentCharity": "Current charity",
++    "transferTargetCharity": "Receiving charity",
++    "transferSelectCharity": "-- select charity --",
++    "transferReason": "Transfer reason",
++    "transferReasonPlaceholder": "Reason (optional)",
++    "transferConfirmButton": "Transfer family",
++    "transferConfirm": "Transfer family \"{{code}}\" to \"{{charity}}\"?",
++    "transferSuccess": "Family transferred successfully",
++    "transferFailed": "Failed to transfer family",
++    "transferLoadCharitiesFailed": "Failed to load charities",
++    "transferCharityRequired": "Please select a charity",
++    "members": {
++      "title": "Family Members",
++      "familyCode": "Family code",
++      "backToFamily": "Back to family file",
++      "gridTitle": "Family members",
++      "colName": "Name",
++      "colNationalId": "National ID",
++      "colRelation": "Relation",
++      "colCode": "Code",
++      "colActions": "Actions",
++      "relationOrphan": "Orphan",
++      "relationProvider": "Guardian",
++      "relationFather": "Father",
++      "relationMother": "Mother",
++      "noMembers": "This family has no members",
++      "manageMembers": "Manage family members",
++      "move": "Move",
++      "moveTitle": "Are you sure you want to move this member?",
++      "moveMemberName": "Member",
++      "targetFamilyCode": "Family code",
++      "targetFamilyCodePlaceholder": "Target family code (optional)",
++      "targetFamilyCodeHint": "Leave empty to detach the member into a new holding family under the same charity",
++      "justification": "Justification",
++      "justificationPlaceholder": "State why the member is being moved",
++      "justificationHint": "Required when detaching; recorded on the orphan's notes",
++      "cancel": "Cancel",
++      "confirmMove": "Confirm",
++      "newHoldingFamily": "a new holding family",
++      "moveConfirm": "Move \"{{name}}\" to \"{{target}}\"?",
++      "moveSuccess": "\"{{name}}\" moved successfully",
++      "moveFailed": "Failed to move member",
++      "loadFailed": "Failed to load family data",
++      "codeOrJustificationRequired": "Enter a target family code or a justification",
++      "removeLink": "Remove guardian link",
++      "removeLinkTitle": "Remove guardian's sponsorship link",
++      "removeLinkHint": "The sponsorship link will be removed for",
++      "removeLinkComment": "Comment",
++      "removeLinkCommentPlaceholder": "Reason for the removal (optional)",
++      "removeLinkCommentHint": "The comment is recorded with the removal",
++      "removeLinkConfirm": "Remove \"{{name}}\"'s sponsorship link?",
++      "confirmRemoveLink": "Confirm",
++      "removeLinkSuccess": "Sponsorship link removed for \"{{name}}\"",
++      "removeLinkFailed": "Failed to remove the guardian's sponsorship link"
++    },
++    "providerRequests": {
++      "title": "Guardian-Change Requests",
++      "subtitle": "Review guardian-change requests raised by the charities",
++      "gridTitle": "Requests",
++      "statusFilter": "Status",
++      "charityFilter": "Charity",
++      "allCharities": "All charities",
++      "statusPending": "Pending",
++      "statusApproved": "Approved",
++      "statusRejected": "Rejected",
++      "colCharity": "Charity",
++      "colOrphanCode": "Orphan code",
++      "colOrphanName": "Orphan full name",
++      "colMotherName": "Mother name",
++      "colOldGuardian": "Current guardian",
++      "colNewGuardian": "New guardian",
++      "colRelationship": "Relationship",
++      "colNationalId": "National ID",
++      "colDate": "Request date",
++      "colReason": "Reason",
++      "colApprove": "Approve",
++      "approvePending": "Approve or refuse the request",
++      "noRequests": "No requests",
++      "loadFailed": "Could not load the requests",
++      "raiseAction": "Request a guardian change",
++      "raiseTitle": "Request a guardian change",
++      "raiseHint": "The request goes to the head office for review and approval before the guardian changes",
++      "newGuardianPlaceholder": "New guardian's name",
++      "nationalIdPlaceholder": "New guardian's national ID",
++      "relationshipPlaceholder": "Relationship to the family",
++      "reasonPlaceholder": "Reason for the change",
++      "allFieldsRequired": "Please complete all request fields",
++      "raiseSuccess": "Request added — awaiting the head office decision",
++      "raiseFailed": "Could not raise the request",
++      "decisionTitle": "Approve guardian change",
++      "decisionHint": "Family {{family}} guardian change: from \"{{old}}\" to \"{{new}}\" — national ID {{nationalId}}",
++      "decisionChoice": "Decision",
++      "choiceApprove": "Approve",
++      "choiceReject": "Refuse",
++      "rejectionReason": "Rejection reason",
++      "rejectionReasonPlaceholder": "State why the request is refused",
++      "reasonRequired": "A rejection reason is required when refusing",
++      "submitDecision": "Done",
++      "confirmApprove": "Approve changing family {{family}}'s guardian to {{guardian}}? The family file is updated immediately",
++      "confirmReject": "Refuse changing family {{family}}'s guardian to {{guardian}}?",
++      "approveSuccess": "Request approved and the family guardian updated",
++      "rejectSuccess": "Request refused",
++      "decideFailed": "Could not record the decision"
++    },
++    "followUp": {
++      "title": "Family Follow-Up",
++      "subtitle": "What was entered or updated on the family files for a given date",
++      "gridTitle": "Follow-Up Results",
++      "dateFilter": "Date",
++      "charityFilter": "Charity",
++      "allCharities": "All charities",
++      "run": "Run",
++      "runHint": "Pick a date and press Run to list the register activity",
++      "colCode": "Family code",
++      "colHead": "Head of family",
++      "colCharity": "Charity",
++      "colKind": "Change kind",
++      "colChangedBy": "Changed by",
++      "colChangedOn": "Changed on",
++      "colOrphansTouched": "Orphans touched",
++      "kindCreated": "Created",
++      "kindUpdated": "Updated",
++      "noActivity": "No register activity on this date",
++      "dateRequired": "Please pick a report date",
++      "loadFailed": "Could not load the follow-up activity"
++    },
+     "activateSuccess": "Family activated successfully",
+     "deactivateSuccess": "Family deactivated successfully",
+     "activateFailed": "Failed to activate family",
+@@ -496,11 +762,19 @@
+     "paymentPeriodFrom": "Payment Period From",
+     "paymentPeriodTo": "Payment Period To",
+     "groupDate": "Group Date",
++    "paymentDate": "Distribution Start Date",
++    "uploadDate": "Upload Date",
++    "groupNotFound": "The requested payment batch was not found.",
++    "backToList": "Back to List",
++    "amount": "Amount",
++    "batchNumberAutoHint": "Leave blank to auto-generate the batch number on save",
++    "orphansAddedResult": "Added {{added}} orphans — skipped {{skipped}} (already in the batch)",
+     "exchangeRate": "Exchange Rate",
+     "exchangeRatePlaceholder": "Enter exchange rate (e.g., 0.21)",
+     "exchangeRateHelp": "Used for reporting calculations only",
+     "exchangeRateHelpText": "Rate used for converting amounts in reports",
+     "exchangeRateLocked": "Exchange rate is locked and cannot be modified",
++    "exchangeRateLockedError": "Cannot save: the exchange rate is locked. Unlock it first.",
+     "currency": "Currency",
+     "dontRemoveRate": "Lock Exchange Rate",
+     "dontRemoveRateHelp": "Prevents accidental changes to the exchange rate",
+@@ -546,6 +820,10 @@
+     "markAsUploadedConfirm": "Are you sure you want to mark this group as uploaded? This will prevent further modifications.",
+     "unmarkAsUploadedConfirm": "Are you sure you want to unmark this group as uploaded? This will allow modifications again.",
+     "deleteGroupConfirm": "Are you sure you want to delete this payment group? This action cannot be undone.",
++    "deleteGroupTitle": "Delete Batch",
++    "deleteGroupSuccess": "Payment batch deleted successfully",
++    "deleteDisbursedError": "Cannot delete a batch with disbursed rows (received, transferred or cheque-issued).",
++    "deleteReferencedError": "Cannot delete a batch referenced by periodic orphan reports.",
+     "generateBatchNumber": "Generate Batch Number",
+     "addBatchNumber": "Add Batch Number",
+     "batchNumberPlaceholder": "Enter batch number (optional)",
+@@ -614,7 +892,6 @@
+     "isActive": "Is Active",
+     "createdDate": "Created Date",
+     "modifiedDate": "Modified Date",
+-    "roles": "Roles",
+     "manageRoles": "Manage Roles",
+     "manageClaims": "Manage Claims",
+     "managePermissions": "Manage Permissions",
+@@ -634,7 +911,6 @@
+     "name": "Name",
+     "description": "Description",
+     "userCount": "User Count",
+-    "permissions": "Permissions",
+     "systemRole": "System Role",
+     "noRolesFound": "No roles found",
+     "noUsersFound": "No users found",
+@@ -648,7 +924,6 @@
+     "roleDeleted": "Role deleted successfully",
+     "passwordReset": "Password reset successfully",
+     "roleAssignment": "Role Assignment",
+-    "assignRoles": "Assign Roles",
+     "availableRoles": "Available Roles",
+     "assignedRoles": "Assigned Roles",
+     "confirmPasswordReset": "Are you sure you want to reset this user's password?",
+@@ -712,12 +987,16 @@
+     "phoneInvalid": "Invalid phone number",
+     "nationalIdInvalid": "Invalid National ID",
+     "completionPercentageRange": "Completion percentage must be between 0 and 100",
++    "fixErrors": "Please fix the errors before submitting",
+     "looksGood": "Looks good!",
+     "selectAnOption": "Select an option",
+     "nameTaken": "This name is already used by another charity",
++    "emailTaken": "This email address is already in use",
++    "weakPassword": "Password is too weak — use at least 8 characters with numbers and symbols",
+     "invalid": "Invalid value",
+     "fileTooLarge": "File size exceeds the maximum allowed size of 10MB",
+-    "invalidFileType": "File type is not allowed. Only images, PDF, and Word documents are accepted."
++    "invalidFileType": "File type is not allowed. Only images, PDF, and Word documents are accepted.",
++    "invalidFormat": "Invalid format"
+   },
+   "errors": {
+     "serverError": "Server error occurred. Please try again later.",
+@@ -798,7 +1077,6 @@
+     "myMissions": "My Missions",
+     "manageMissions": "Manage Missions",
+     "missionTarget": "Mission Target",
+-    "missionDetails": "Mission Details",
+     "details": "Details",
+     "missionType": "Mission Type",
+     "missionTimeType": "Mission Time Type",
+@@ -888,7 +1166,122 @@
+     "myMissionsDescription": "View and manage missions assigned to you",
+     "allMissionsDescription": "View and manage all missions",
+     "dateFrom": "Date From",
+-    "dateTo": "Date To"
++    "dateTo": "Date To",
++    "serial": "Serial",
++    "charity": "Charity",
++    "allCharities": "All charities",
++    "search": "Search",
++    "result": "Result",
++    "invalidDateRange": "The start date must be before or equal to the end date",
++    "missionInterviewType": "Interview Type",
++    "selectMissionInterviewType": "Select interview type",
++    "organizingEntity": "Organizing Entity",
++    "assignedUserEmail": "Email",
++    "fixValidationErrors": "Please correct the form errors before saving",
++    "createFailed": "Failed to create the mission",
++    "updateFailed": "Failed to update the mission",
++    "deleteFailed": "Failed to delete the mission",
++    "confirmDelete": "Are you sure you want to delete this mission? This action cannot be undone.",
++    "registerResult": "Register Mission Result",
++    "missionContext": "Mission Data",
++    "missionFindings": "Mission Data & Findings",
++    "missionOutcome": "Mission Outcome",
++    "missionCompleted": "Mission completed",
++    "missionNotCompleted": "Mission not completed",
++    "reason": "Reason",
++    "enterReason": "Enter the mission reason/result",
++    "completionRequired": "The mission outcome must be selected",
++    "resultRegistered": "Mission result registered successfully",
++    "registerFailed": "Failed to register the mission result",
++    "resultAlreadyRegistered": "A result has already been registered for this mission",
++    "catalogueLoadFailed": "Failed to load one of the lookup lists — please reload the page"
++  },
++  "hqTransfers": {
++    "title": "Financial Transfers",
++    "description": "Financial transfers issued by the HQ Financial Department",
++    "serial": "No.",
++    "operationNumber": "Operation No.",
++    "finYear": "Fiscal Year",
++    "paymentNumber": "Payment No.",
++    "dateFrom": "From Date",
++    "dateTo": "To Date",
++    "amountOfPayment": "Payment Amount",
++    "statement": "Statement",
++    "beneficiariesNumber": "Beneficiaries",
++    "transactionNumber": "Transaction No.",
++    "transactionDate": "Transaction Date",
++    "country": "Country",
++    "department": "Department",
++    "addTransfer": "Add Transfer",
++    "viewTransfer": "View Transfer",
++    "editTransfer": "Edit Transfer",
++    "noTransfersFound": "No transfers found",
++    "loadFailed": "Failed to load financial transfers",
++    "classification": "Classification",
++    "operationInfo": "Operation Information",
++    "period": "Period",
++    "financials": "Financials",
++    "transactionInfo": "Transaction Information",
++    "selectCountry": "Select country",
++    "selectDepartment": "Select department",
++    "selectPaymentNumber": "Select payment number",
++    "payment1": "First payment",
++    "payment2": "Second payment",
++    "payment3": "Third payment",
++    "payment4": "Fourth payment",
++    "enterOperationNumber": "Enter operation number",
++    "enterFinYear": "Enter fiscal year",
++    "enterAmountOfPayment": "Enter payment amount",
++    "enterStatement": "Enter statement",
++    "enterBeneficiariesNumber": "Enter beneficiaries number",
++    "enterTransactionNumber": "Enter transaction number",
++    "transferCreated": "Transfer created successfully",
++    "createFailed": "Failed to create transfer",
++    "fixValidationErrors": "Please fix validation errors before saving",
++    "catalogueLoadFailed": "Failed to load lookup data",
++    "retryLoad": "Retry",
++    "maxAmountLimit": "Transfer ceiling for this country: {{value}}",
++    "noMaxAmountLimit": "No transfer ceiling configured for this country",
++    "amountExceedsLimit": "The payment amount exceeds the transfer ceiling configured for this country",
++    "maxAmounts": {
++      "title": "Transfer Ceilings",
++      "hint": "An empty value means no ceiling — unlimited",
++      "serial": "No.",
++      "country": "Country",
++      "value": "Transfer ceiling",
++      "enterValue": "Enter the ceiling",
++      "noLimit": "No ceiling configured",
++      "invalidAmount": "The value must be greater than zero",
++      "saved": "Ceiling saved successfully",
++      "saveFailed": "Failed to save the ceiling",
++      "loadFailed": "Failed to load the country list",
++      "noPermission": "You do not have permission to set transfer ceilings",
++      "manageLimits": "Manage ceilings"
++    },
++    "details": {
++      "title": "Transfer Details",
++      "transferNumber": "Transfer No.",
++      "amount": "Transfer Amount",
++      "estimatedTransferDate": "Estimated Transfer Date",
++      "isExecuted": "Transfer Status",
++      "selectState": "Select status",
++      "executed": "Executed",
++      "notExecuted": "Not Executed",
++      "executionDate": "Execution Date",
++      "arrivalDate": "Arrival Date",
++      "arrivalAmount": "Arrival Amount",
++      "addLine": "Details",
++      "noLines": "No detail lines for this transfer",
++      "invalidAmount": "The transfer amount must be greater than zero",
++      "failedOperation": "Execution and arrival data can only be entered when the transfer status is «Executed»",
++      "lineSaved": "Detail line saved successfully",
++      "lineSaveFailed": "Failed to save the detail line",
++      "loadFailed": "Failed to load the transfer details"
++    },
++    "backToList": "Back to list",
++    "transferNotFound": "The requested transfer was not found",
++    "transferUpdated": "Transfer updated successfully",
++    "updateFailed": "Failed to update transfer"
+   },
+   "shared": {
+     "welcome": "Welcome",
+@@ -916,6 +1309,8 @@
+     "families": "Families",
+     "allFamilies": "All Families",
+     "addFamily": "Add Family",
++    "refugeeFamilies": "Refugee Families",
++    "addRefugeeFamily": "Add Refugee Family",
+     "devProjects": "Development Projects",
+     "officeProjects": "Office Projects",
+     "allOfficeProjects": "All Office Projects",
+@@ -935,6 +1330,7 @@
+     "mission": "Missions",
+     "allMission": "All Missions",
+     "addMission": "Add Mission",
++    "periodicOrphanReports": "Periodic Orphan Reports",
+     "customerSupport": "Customer Support",
+     "allCustomerSupport": "All Customer Support",
+     "addCustomerSupport": "Add Customer Support",
+@@ -967,6 +1363,7 @@
+     "charityAssignment": "Charity Assignment",
+     "documents": "Documents",
+     "status": "Status",
++    "serial": "#",
+     "projectName": "Project Name",
+     "projectHint": "Project Description",
+     "projectDate": "Project Date",
+@@ -1180,156 +1577,287 @@
+     "unlimited": "Unlimited",
+     "allTypes": "All Types",
+     "allRegions": "All Regions",
+-    "all": "All"
++    "all": "All",
++    "inactive": "Inactive",
++    "distributedLabel": "distributed",
++    "distributedOn": "Distributed On",
++    "region": "Region",
++    "center": "Center",
++    "eligibleFamilies": "Eligible Families",
++    "families": "families",
++    "familyMembers": "Family Members",
++    "searchFamiliesPlaceholder": "Search by family code or address...",
++    "campaignDetails": "Campaign Details",
++    "campaignCreated": "Campaign created successfully",
++    "campaignCreateFailed": "Failed to create campaign",
++    "campaignUpdated": "Campaign updated successfully",
++    "campaignUpdateFailed": "Failed to update campaign",
++    "campaignLoadFailed": "Failed to load campaign",
++    "campaignClosed": "Campaign closed successfully",
++    "campaignCloseFailed": "Failed to close campaign",
++    "closureNotesPrompt": "Enter closure notes (optional):",
++    "beneficiariesUpdated": "Added {added} families — {total} now registered",
++    "beneficiariesUpdateFailed": "Failed to update beneficiaries",
++    "beneficiaryRemoved": "Family removed from the campaign",
++    "beneficiaryRemoveFailed": "Failed to remove family",
++    "removeBeneficiaryConfirm": "Remove family {code} from the campaign?",
++    "confirmReceived": "Confirm the family received the assistance",
++    "receivedFlagConfirmed": "Family receipt confirmed",
++    "receivedFlagWithdrawn": "Receipt confirmation withdrawn",
++    "receivedFlagFailed": "Failed to update receipt status",
++    "distributionRecorded": "Distribution recorded successfully",
++    "distributionRecordFailed": "Failed to record distribution",
++    "recipientRelationship": "Recipient Relationship",
++    "recipientRelationshipPlaceholder": "Father, Mother, Guardian...",
++    "distributionMethod": "Distribution Method",
++    "distributionMethodPlaceholder": "Cash, Bank Transfer, In-Kind...",
++    "printReceipt": "Print Receipt",
++    "distributionReceipt": "Seasonal Aid Receipt",
++    "distributionReceiptSub": "To be completed when the assistance is delivered to the family",
++    "recipientSignature": "Recipient Signature",
++    "distributorSignature": "Distributor Signature",
++    "printBlocked": "Allow pop-up windows to print the receipt",
++    "campaignReport": "Campaign Report",
++    "generatedOn": "Report Generated On",
++    "distributionRate": "Distribution Rate",
++    "budgetUtilization": "Budget Utilization",
++    "byRegion": "By Region",
++    "byCharity": "By Charity",
++    "byFamilyType": "By Family Type",
++    "distributionDetails": "Distribution Details",
++    "totalBeneficiaries": "Total Beneficiaries",
++    "budget": "Budget",
++    "totalBudgetPlaceholder": "Enter total budget",
++    "perFamilyAllocationPlaceholder": "Allocation per family",
++    "maximumFamiliesPlaceholder": "Maximum number of families",
++    "ageRangeFromPlaceholder": "From (years)",
++    "ageRangeToPlaceholder": "To (years)"
+   },
+   "housingProjects": {
+-    "title": "Housing Projects",
+-    "subtitle": "Manage housing construction and renovation projects",
+-    "addProject": "Add Housing Project",
+-    "editProject": "Edit Housing Project",
+-    "projectDetails": "Housing Project Details",
+-    "fillProjectDetails": "Fill in the housing project details",
+-    "basicInformation": "Basic Information",
+-    "location": "Location",
+-    "specifications": "Specifications",
+-    "financialInformation": "Financial Information",
+-    "beneficiaryAssignment": "Beneficiary Assignment",
+-    "status": "Status",
+-    "projectName": "Project Name",
+-    "projectNamePlaceholder": "Enter project name",
+-    "projectDescription": "Project Description",
+-    "projectDescriptionPlaceholder": "Enter project description",
+-    "projectType": "Project Type",
+-    "projectTypes": {
+-      "NewConstruction": "New Construction",
+-      "Renovation": "Renovation",
+-      "Repair": "Repair",
+-      "Expansion": "Expansion"
++    "title": "Housing Families",
++    "subtitle": "Register of families housed in organisation-owned buildings",
++    "addFamily": "Add Housing Family",
++    "editFamily": "Edit Housing Family",
++    "familyDetails": "Housing Family Details",
++    "reports": {
++      "title": "Periodic Reports",
++      "subtitle": "Periodic reports of the housing family's beneficiaries",
++      "filters": {
++        "childNameSearch": "Child name",
++        "childNameSearchPlaceholder": "Search a child's name to pick the beneficiary...",
++        "beneficiaryType": "Beneficiary",
++        "child": "Child",
++        "parent": "Guardian",
++        "code": "Code",
++        "codePlaceholder": "Child code"
++      },
++      "summary": {
++        "nationalId": "National ID",
++        "type": "Type",
++        "age": "Age"
++      },
++      "codeNotFound": "No beneficiary matches this code",
++      "columns": {
++        "reportNo": "Report No.",
++        "reportDate": "Date",
++        "isAccepted": "Accepted",
++        "approvalDate": "Approval Date"
++      },
++      "commands": {
++        "add": "Add periodic report",
++        "edit": "Edit report",
++        "delete": "Delete report",
++        "print": "Print report",
++        "printDisabled": "Printing arrives with the reporting stories",
++        "addEditDisabled": "Arrives with the add/edit report story"
++      },
++      "beneficiary": "Beneficiary",
++      "guardian": "Guardian",
++      "empty": "No periodic reports for this beneficiary",
++      "noBeneficiary": "No matching beneficiary",
++      "charityOutOfScope": "The family does not belong to the selected charity",
++      "messages": {
++        "familyLoadFailed": "Failed to load the housing family",
++        "loadFailed": "Failed to load periodic reports",
++        "deleted": "Periodic report deleted",
++        "deleteFailed": "Failed to delete the periodic report"
++      }
+     },
+-    "startDate": "Start Date",
+-    "expectedEndDate": "Expected End Date",
+-    "actualEndDate": "Actual End Date",
+-    "country": "Country",
+-    "region": "Region",
+-    "center": "Center",
+-    "address": "Address",
+-    "addressPlaceholder": "Enter street address",
+-    "village": "Village",
+-    "villagePlaceholder": "Enter village name",
+-    "gpsCoordinates": "GPS Coordinates",
+-    "gpsCoordinatesPlaceholder": "Enter GPS coordinates (lat, lng)",
+-    "housingType": "Housing Type",
+-    "housingTypes": {
+-      "Apartment": "Apartment",
+-      "Villa": "Villa",
+-      "House": "House",
+-      "Room": "Room"
++    "loadFailed": "Failed to load housing families",
++    "empty": "No housing families registered",
++    "filters": {
++      "charity": "Charity",
++      "allCharities": "All Charities",
++      "searchType": "Search By",
++      "searchValue": "Search",
++      "searchPlaceholder": "Enter search value..."
+     },
+-    "numberOfUnits": "Number of Units",
+-    "numberOfUnitsPlaceholder": "Enter number of units",
+-    "areaPerUnit": "Area per Unit (m²)",
+-    "areaPerUnitPlaceholder": "Enter area per unit",
+-    "totalArea": "Total Area (m²)",
+-    "totalAreaPlaceholder": "Enter total area",
+-    "floorsPerUnit": "Floors per Unit",
+-    "floorsPerUnitPlaceholder": "Enter number of floors per unit",
+-    "roomsPerUnit": "Rooms per Unit",
+-    "roomsPerUnitPlaceholder": "Enter number of rooms per unit",
+-    "constructionMaterial": "Construction Material",
+-    "constructionMaterialPlaceholder": "Enter construction material type",
+-    "totalBudget": "Total Budget",
+-    "totalBudgetPlaceholder": "Enter total budget",
+-    "budgetCurrency": "Budget Currency",
+-    "donorName": "Donor Name",
+-    "donorNamePlaceholder": "Enter donor name",
+-    "fundingSource": "Funding Source",
+-    "fundingSourcePlaceholder": "Enter funding source",
+-    "contractorName": "Contractor Name",
+-    "contractorNamePlaceholder": "Enter contractor name",
+-    "supervisorName": "Supervisor Name",
+-    "supervisorNamePlaceholder": "Enter supervisor name",
+-    "finalCost": "Final Cost",
+-    "finalCostPlaceholder": "Enter final cost",
+-    "assignedCharity": "Assigned Charity",
+-    "assignedFamily": "Assigned Family",
+-    "charityFilterNote": "Select a charity to filter available families",
+-    "selectCharityFirst": "Please select a charity first",
+-    "projectStatus": "Project Status",
+-    "projectStatuses": {
+-      "Planning": "Planning",
+-      "InProgress": "In Progress",
+-      "Completed": "Completed",
+-      "OnHold": "On Hold"
++    "searchTypes": {
++      "father": "Father Name",
++      "mother": "Mother Name",
++      "student": "Student (Son) Name",
++      "nationalId": "National ID",
++      "code": "Student Code",
++      "phone": "Phone"
+     },
+-    "completionPercentage": "Completion Percentage",
+-    "currentStage": "Current Stage",
+-    "projectStages": {
+-      "Foundation": "Foundation",
+-      "Structure": "Structure",
+-      "Finishing": "Finishing",
+-      "Completed": "Completed"
++    "columns": {
++      "serial": "No.",
++      "fatherName": "Father Name",
++      "motherName": "Mother Name",
++      "children": "Children",
++      "phones": "Phones",
++      "familyCode": "Family Code",
++      "charity": "Charity"
+     },
+-    "updateProgress": "Update Progress",
+-    "markCompleted": "Mark as Completed",
+-    "markProjectCompleted": "Mark Project as Completed",
+-    "confirmComplete": "Confirm Completion",
+-    "completionWarning": "This action will mark the project as completed. You cannot undo this action.",
+-    "completionNotes": "Completion Notes",
+-    "completionNotesPlaceholder": "Enter completion notes",
+-    "progressNotes": "Progress Notes",
+-    "progressNotesPlaceholder": "Enter progress notes",
+-    "notes": "Notes",
+-    "notesPlaceholder": "Enter additional notes",
+-    "description": "Description",
+-    "dateRange": "Date Range",
+-    "dateFrom": "Date From",
+-    "dateTo": "Date To",
+-    "searchPlaceholder": "Search by project name...",
+-    "noProjects": "No housing projects found",
+-    "createSuccess": "Housing project created successfully",
+-    "updateSuccess": "Housing project updated successfully",
+-    "deleteSuccess": "Housing project deleted successfully",
+-    "deleteConfirmTitle": "Delete Housing Project",
+-    "deleteConfirmMessage": "Are you sure you want to delete this housing project? This action cannot be undone.",
+-    "progressUpdated": "Project progress updated successfully",
+-    "projectCompleted": "Project marked as completed successfully",
+-    "exportSuccess": "Housing projects exported successfully",
+-    "errors": {
+-      "loadFailed": "Failed to load housing project",
+-      "createFailed": "Failed to create housing project",
+-      "updateFailed": "Failed to update housing project",
+-      "deleteFailed": "Failed to delete housing project",
+-      "updateProgressFailed": "Failed to update project progress",
+-      "completeProjectFailed": "Failed to mark project as completed",
+-      "exportFailed": "Failed to export housing projects",
+-      "invalidProjectId": "Invalid housing project ID"
++    "actions": {
++      "view": "View family record",
++      "add": "Add housing family"
++    },
++    "form": {
++      "sections": {
++        "family": "Family data",
++        "phones": "Contact numbers",
++        "guardian": "Add guardian",
++        "child": "Add child",
++        "childrenTable": "Registered children"
++      },
++      "charity": "Charity",
++      "familyCode": "Register code",
++      "familyCodePlaceholder": "Auto-generated when left empty",
++      "cityVillage": "Village / Quarter",
++      "region": "Region / Governorate",
++      "center": "Center / City",
++      "nearBy": "Nearby landmark",
++      "street": "Street",
++      "address": "Detailed address",
++      "rentAmount": "Rent amount",
++      "incomeType": "Income type",
++      "notes": "Researcher notes",
++      "building": "Building No.",
++      "flat": "Flat No.",
++      "headOfFamily": "Head of family",
++      "phone": "Phone number",
++      "ownershipLocked": "Charity and register code cannot be changed",
++      "computed": {
++        "childrenCount": "Children count",
++        "totalIncome": "Total income",
++        "perMemberShare": "Share per member"
++      },
++      "phones": {
++        "number": "Number",
++        "belongsTo": "Belongs to",
++        "isDefault": "Default?",
++        "add": "Add number"
++      },
++      "mainRelation": {
++        "father": "Father",
++        "mother": "Mother"
++      },
++      "gender": {
++        "male": "Male",
++        "female": "Female"
++      },
++      "phoneBelongsTo": {
++        "mother": "Mother",
++        "father": "Father",
++        "maternalUncle": "Maternal uncle",
++        "maternalAunt": "Maternal aunt",
++        "paternalUncle": "Paternal uncle",
++        "paternalAunt": "Paternal aunt",
++        "brother": "Brother",
++        "sister": "Sister",
++        "grandfather": "Grandfather",
++        "grandmother": "Grandmother",
++        "relative": "Relative (M)",
++        "relativeF": "Relative (F)",
++        "other": "Other",
++        "self": "Himself/Herself"
++      },
++      "guardian": {
++        "reason": "Reason",
++        "relationType": "Relation kind",
++        "mainRelation": "Relation",
++        "firstName": "First name",
++        "secondName": "Second name",
++        "thirdName": "Third name",
++        "fourthName": "Fourth name",
++        "familyName": "Family name",
++        "nationality": "Nationality",
++        "birthDate": "Date of birth",
++        "nationalId": "National ID",
++        "job": "Occupation",
++        "phone": "Phone",
++        "monthlyIncome": "Monthly income",
++        "educationLevel": "Education level",
++        "socialStatus": "Social status",
++        "healthStatus": "Health status",
++        "flags": "Care flags",
++        "widowSponsorship": "Widow sponsorship",
++        "anotherSponsor": "Another sponsor",
++        "motherIsMar": "Mother is married",
++        "isCaring": "Is the carer",
++        "confirm": "Done",
++        "saved": "Guardian captured"
++      },
++      "child": {
++        "birthDate": "Date of birth",
++        "nationalId": "National ID",
++        "fullName": "First name",
++        "gender": "Gender",
++        "age": "Age",
++        "healthStatus": "Health status",
++        "socialStatus": "Social status",
++        "educationStage": "Education stage",
++        "gradeClass": "Grade / class",
++        "profession": "Occupation",
++        "department": "Department",
++        "faculty": "Faculty",
++        "school": "Educational institution",
++        "notes": "Notes",
++        "add": "Add",
++        "update": "Update"
++      },
++      "childrenTable": {
++        "name": "Name",
++        "birthDate": "Date of birth",
++        "nationalId": "National ID",
++        "gender": "Gender"
++      },
++      "actions": {
++        "save": "Save"
++      },
++      "messages": {
++        "fixErrors": "Please complete the required fields",
++        "guardianSaved": "Guardian data captured",
++        "created": "Housing family registered ({{code}})",
++        "updated": "Housing family updated",
++        "createFailed": "Failed to register the housing family",
++        "loadFailed": "Failed to load the housing family",
++        "nationalIdTooLong": "National ID must not exceed 14 digits"
++      }
++    },
++    "detail": {
++      "noChildren": "No children registered",
++      "messages": {
++        "loadFailed": "Failed to load the housing family"
++      }
+     }
+   },
+   "generalChecks": {
+-    "title": "General Checks",
+-    "manageChecks": "Manage Checks and Payment Instruments",
+-    "addCheck": "Add Check",
+-    "createCheck": "Create Check",
+-    "editCheck": "Edit Check",
+-    "deleteCheck": "Delete Check",
+-    "checkDetails": "Check Details",
+-    "viewCheckList": "View Check List",
+-    "reconcileChecks": "Reconcile Checks",
+-    "generateReport": "Generate Report",
+-    "checkInformation": "Check Information",
++    "title": "General Cheques",
++    "subtitle": "General cheques management",
++    "manageChecks": "Manage Cheques",
++    "addCheck": "Add Cheque",
++    "editCheck": "Edit Cheque",
++    "checkDetails": "Cheque Details",
++    "checkInformation": "Cheque Information",
+     "beneficiaryInformation": "Beneficiary Information",
+     "financialInformation": "Financial Information",
+-    "bankInformation": "Bank Information",
+-    "statusInformation": "Status Information",
+-    "checkNumber": "Check Number",
+-    "checkDate": "Check Date",
+-    "dueDate": "Due Date",
++    "flags": "Flags",
++    "serial": "No.",
++    "checkNumber": "Cheque Number",
++    "checkDate": "Cheque Date",
+     "currency": "Currency",
+-    "currencies": {
+-      "EGP": "Egyptian Pound (EGP)",
+-      "SAR": "Saudi Riyal (SAR)",
+-      "USD": "US Dollar (USD)"
+-    },
+     "beneficiaryType": "Beneficiary Type",
+     "beneficiaryTypes": {
+       "Individual": "Individual",
+@@ -1339,323 +1867,147 @@
+       "Employee": "Employee"
+     },
+     "beneficiaryName": "Beneficiary Name",
+-    "beneficiaryId": "Beneficiary ID",
+     "beneficiaryAddress": "Beneficiary Address",
+     "beneficiaryPhone": "Beneficiary Phone",
+-    "beneficiaryEmail": "Beneficiary Email",
+     "idPassportNumber": "ID/Passport Number",
+     "amount": "Amount",
+     "amountInWords": "Amount in Words",
+-    "paymentReason": "Payment Reason",
+-    "paymentReasons": {
+-      "Salary": "Salary",
+-      "SupplierRefund": "Supplier Refund",
+-      "Expense": "Expense",
+-      "Other": "Other"
+-    },
+-    "paymentDescription": "Payment Description",
++    "amountInWordsAutoGenerated": "generated automatically unless edited",
+     "bank": "Bank",
+     "branch": "Branch",
+     "accountNumber": "Account Number",
+-    "checkStatus": "Check Status",
+-    "checkStatuses": {
+-      "Pending": "Pending",
+-      "Issued": "Issued",
+-      "Cleared": "Cleared",
+-      "Void": "Void"
+-    },
+-    "issueDate": "Issue Date",
+-    "clearanceDate": "Clearance Date",
+-    "bankReference": "Bank Reference",
+-    "clearanceNotes": "Clearance Notes",
+-    "voidReason": "Void Reason",
+-    "voidReasons": {
+-      "Lost": "Lost",
+-      "Stopped": "Stopped",
+-      "Error": "Error",
+-      "Expired": "Expired",
+-      "Other": "Other"
+-    },
+-    "voidDate": "Void Date",
+-    "voidNotes": "Void Notes",
+-    "markAsCleared": "Mark as Cleared",
+-    "voidCheck": "Void Check",
+-    "requiresApproval": "Requires Approval",
+-    "approvedBy": "Approved By",
+-    "saveToLookup": "Save to Lookup",
+-    "reconciliation": "Check Reconciliation",
+-    "unreconciledChecks": "Unreconciled Checks",
+-    "bankStatementImport": "Import Bank Statement",
+-    "manualMatching": "Manual Matching",
+-    "enterBankReference": "Enter Bank Reference",
+-    "confirmMatch": "Confirm Match",
+-    "reconciliationSummary": "Reconciliation Summary",
+-    "totalChecksReconciled": "Total Checks Reconciled",
+-    "totalAmount": "Total Amount",
+-    "reconcileSuccess": "Checks reconciled successfully",
+-    "reportOptions": "Report Options",
+-    "reportPeriod": "Report Period",
+-    "groupBy": "Group By",
+-    "groupByOptions": {
+-      "Status": "Status",
+-      "Bank": "Bank",
+-      "Beneficiary": "Beneficiary"
++    "charity": "Charity",
++    "allCharities": "All Charities",
++    "chequeType": "Cheque Type",
++    "chequeTypes": {
++      "All": "All Cheques",
++      "Orphans": "Orphan Cheques",
++      "Individuals": "Individuals Cheques"
+     },
+-    "summaryStatistics": "Summary Statistics",
+-    "totalChecks": "Total Checks",
+-    "clearedChecks": "Cleared Checks",
+-    "pendingChecks": "Pending Checks",
+-    "voidChecks": "Void Checks",
+-    "detailedCheckList": "Detailed Check List",
+-    "generate": "Generate",
+-    "export": "Export",
++    "isDamaged": "Damaged Cheque",
++    "isReturned": "Returned Cheque",
++    "isDispensed": "Dispensed",
++    "isDone": "CheckDone",
++    "comment": "Comments",
++    "statement": "Cheque Statement",
++    "search": "Search",
+     "print": "Print",
+-    "searchPlaceholder": "Search by check number or beneficiary...",
+-    "noChecksFound": "No checks found",
+-    "allBanks": "All Banks",
+-    "allCurrencies": "All Currencies",
+-    "allStatuses": "All Statuses",
+-    "filters": "Filters",
+-    "clearFilters": "Clear Filters",
+-    "applyFilters": "Apply Filters",
+-    "exportToExcel": "Export to Excel",
+-    "exportSuccess": "Checks exported successfully",
+-    "exportFailed": "Failed to export checks",
+-    "checkCreated": "Check created successfully",
+-    "checkUpdated": "Check updated successfully",
+-    "checkDeleted": "Check deleted successfully",
+-    "checkCleared": "Check marked as cleared",
+-    "checkVoided": "Check voided successfully",
+-    "confirmDelete": "Are you sure you want to delete this check?",
+-    "confirmClear": "Are you sure you want to mark this check as cleared?",
+-    "confirmVoid": "Are you sure you want to void this check? This action cannot be undone.",
+-    "cannotEditCleared": "Cannot edit cleared check",
+-    "cannotEditVoided": "Cannot edit voided check",
+-    "cannotVoidCleared": "Cannot void a cleared check",
+-    "enterCheckNumber": "Enter check number",
++    "printEgyptian": "Print (Egyptian)",
++    "save": "Save",
++    "dateFrom": "From Date",
++    "dateTo": "To Date",
++    "total": "Total",
++    "totalChecks": "Total Cheques",
++    "generatedOn": "Generated On",
++    "noChecksFound": "No cheques found",
++    "enterCheckNumber": "Enter cheque number",
+     "enterBeneficiaryName": "Enter beneficiary name",
+     "enterAmount": "Enter amount",
+-    "enterPaymentDescription": "Enter payment description",
+-    "enterVoidNotes": "Enter void notes (required)",
+-    "selectBeneficiaryType": "Select beneficiary type",
+-    "selectCurrency": "Select currency",
+-    "selectPaymentReason": "Select payment reason",
+-    "selectBank": "Select bank",
+-    "selectVoidReason": "Select void reason",
+-    "checkNumberRequired": "Check number is required",
+-    "checkDateRequired": "Check date is required",
++    "checkNumberRequired": "Cheque number is required",
++    "checkDateRequired": "Cheque date is required",
+     "beneficiaryNameRequired": "Beneficiary name is required",
+     "amountRequired": "Amount is required",
+     "amountMustBePositive": "Amount must be a positive number",
+     "currencyRequired": "Currency is required",
+     "bankRequired": "Bank is required",
+-    "voidNotesRequired": "Void notes are required",
+-    "invalidDateRange": "Due date must be after check date",
+-    "auditTrail": "Audit Trail",
+-    "createdOn": "Created On",
+-    "modifiedOn": "Modified On",
+-    "noAuditInformation": "No audit information available",
+-    "accessDenied": "Access Denied",
+-    "adminOnlyModule": "This module is accessible only by Admin, Super Admin, and Accountant users",
+-    "unauthorizedAccess": "You are not authorized to access this module",
+-    "uploadCheckImage": "Upload Check Image",
+-    "checkImage": "Check Image",
+-    "viewImage": "View Image",
+-    "removeImage": "Remove Image",
+-    "amountInWordsAutoGenerated": "Amount in words will be auto-generated",
+-    "fromLookup": "From Lookup",
+-    "newEntry": "New Entry",
+-    "saveBeneficiary": "Save Beneficiary",
+-    "beneficiarySaved": "Beneficiary saved successfully",
+-    "beneficiaryLinked": "Beneficiary linked to check"
+-  },
+-  "validation": {
+-    "required": "This field is required",
+-    "completionPercentageRange": "Completion percentage must be between 0 and 100",
+-    "fixErrors": "Please fix the errors before submitting"
++    "checkCreated": "Cheque created successfully",
++    "checkUpdated": "Cheque updated successfully",
++    "saveFailed": "Failed to save the cheque",
++    "loadFailed": "Failed to load data"
+   },
+   "incomingOutgoing": {
++    "moduleTitle": "Incoming & Outgoing",
+     "title": "Incoming & Outgoing Correspondence",
+-    "subtitle": "Manage incoming and outgoing correspondence letters",
++    "subtitle": "Manage incoming and outgoing correspondence",
+     "incomingLetters": "Incoming Letters",
+     "outgoingLetters": "Outgoing Letters",
+-    "manageIncomingLetters": "Manage Incoming Letters",
+-    "manageOutgoingLetters": "Manage Outgoing Letters",
++    "manageIncomingLetters": "Manage incoming letters",
++    "manageOutgoingLetters": "Manage outgoing letters",
+     "addIncomingLetter": "Add Incoming Letter",
+     "addOutgoingLetter": "Add Outgoing Letter",
+-    "importLetters": "Import Letters",
+-    "exportLetters": "Export Letters",
+-    "importIncoming": "Import Incoming Letters",
+-    "importOutgoing": "Import Outgoing Letters",
+-    "exportIncoming": "Export Incoming Letters",
+-    "exportOutgoing": "Export Outgoing Letters",
+-    "importWizardSubtitle": "Import letters from Excel or CSV files",
+-    "exportWizardSubtitle": "Export letters to Excel, PDF, or CSV",
+-    "history": "History",
+-    "importExportHistory": "Import & Export History",
++    "editIncomingLetter": "Edit Incoming Letter",
++    "editOutgoingLetter": "Edit Outgoing Letter",
++    "fillIncomingLetterDetails": "Fill in the incoming letter details below",
++    "fillOutgoingLetterDetails": "Fill in the outgoing letter details below",
++    "incomingLetterDetails": "Incoming Letter Details",
++    "outgoingLetterDetails": "Outgoing Letter Details",
++    "viewIncomingLetterDetails": "View incoming letter details",
++    "viewOutgoingLetterDetails": "View outgoing letter details",
++    "incomingLetter": "Incoming letter",
++    "outgoingLetter": "Outgoing letter",
++    "letterInformation": "Letter Information",
+     "serial": "Serial",
+     "subject": "Subject",
+-    "date": "Date",
+-    "body": "Body",
++    "subjectPlaceholder": "Enter the letter subject",
++    "date": "Received Date",
+     "letterNumber": "Letter Number",
++    "letterNumberPlaceholder": "Enter the official letter number",
+     "letterDate": "Letter Date",
+-    "incomingId": "Incoming ID",
+-    "incomingNumber": "Internal Number",
+-    "outgoingId": "Outgoing ID",
+-    "outGoingNumber": "Internal Number",
+     "year": "Year",
+-    "status": "Status",
+-    "statusReceived": "Received",
+-    "statusProcessing": "Processing",
+-    "statusCompleted": "Completed",
+-    "statusClosed": "Closed",
+-    "statusPending": "Pending",
+     "department": "Department",
+-    "category": "Category",
+-    "official": "Official",
+-    "internal": "Internal",
+-    "external": "External",
++    "selectDepartment": "Select department",
++    "category": "Outgoing Category",
++    "assignedEmployee": "Responsible Employee",
++    "selectEmployee": "Select the responsible employee",
++    "charity": "Charity",
++    "allCharities": "All charities",
+     "letterDescription": "Description",
+-    "hasReply": "Has Reply",
+-    "createdBy": "Created By",
+-    "createdOn": "Created On",
+-    "modifiedBy": "Modified By",
+-    "modifiedOn": "Modified On",
+-    "uploadFile": "Upload File",
+-    "selectFile": "Select File to Import",
+-    "supportedFormats": "Supported formats",
+-    "browseFiles": "Browse Files",
+-    "downloadTemplate": "Download Template",
+-    "mapFields": "Map Fields",
+-    "fileColumns": "File Columns",
+-    "systemFields": "System Fields",
+-    "sample": "Sample",
+-    "requiredFieldsMissing": "Required fields missing",
+-    "skipDuplicates": "Skip Duplicates",
+-    "skipDuplicatesDesc": "Skip rows with duplicate letter numbers or IDs",
+-    "updateExisting": "Update Existing Records",
+-    "updateExistingDesc": "Update records that already exist in the system",
+-    "validateOnly": "Validate Only",
+-    "validateOnlyDesc": "Validate data without importing (preview mode)",
+-    "importOptions": "Import Options",
+-    "validateData": "Validate Data",
+-    "validatingData": "Validating data",
+-    "validationSummary": "Validation Summary",
+-    "totalRows": "Total Rows",
+-    "validRows": "Valid Rows",
+-    "invalidRows": "Invalid Rows",
+-    "errorsFound": "Errors Found",
+-    "warnings": "Warnings",
+-    "row": "Row",
+-    "moreErrors": "more errors",
+-    "startImport": "Start Import",
+-    "importing": "Importing",
+-    "importSuccess": "Import Successful",
+-    "importPartial": "Import Partially Completed",
+-    "recordsImported": "records imported successfully",
+-    "failedRecords": "Failed Records",
+-    "viewHistory": "View History",
+-    "filters": "Filters",
+-    "startDate": "Start Date",
+-    "endDate": "End Date",
+-    "clear": "Clear",
+-    "fieldsToExport": "Fields to Export",
+-    "formatOptions": "Format Options",
+-    "fileFormat": "File Format",
+-    "language": "Language",
+-    "arabic": "Arabic",
+-    "english": "English",
+-    "both": "Both",
+-    "sortBy": "Sort By",
+-    "sortOrder": "Sort Order",
+-    "ascending": "Ascending",
+-    "descending": "Descending",
+-    "includeAttachments": "Include Attachments",
+-    "includeAttachmentsDesc": "Embed attached files in the export (increases file size)",
+-    "generateExport": "Generate Export",
+-    "importType": "Import Type",
+-    "fileName": "File Name",
+-    "importDate": "Import Date",
+-    "importedBy": "Imported By",
+-    "successfulRows": "Successful",
+-    "failedRows": "Failed",
+-    "exportType": "Export Type",
+-    "exportDate": "Export Date",
+-    "exportedBy": "Exported By",
+-    "recordCount": "Record Count",
+-    "fileSize": "File Size",
+-    "filtersApplied": "Filters Applied",
+-    "rollback": "Rollback",
+-    "rollbackConfirm": "Are you sure you want to rollback this import? This will soft-delete all imported records.",
++    "letterDescriptionPlaceholder": "Enter a brief description",
++    "attachedFile": "Attached File",
++    "startDate": "Date from",
++    "endDate": "Date to",
++    "replyToIncoming": "In reply to incoming letter",
++    "replyToOutgoing": "In reply to outgoing letter",
++    "selectLetter": "Incoming letter",
++    "selectOutgoingLetter": "Outgoing letter",
++    "replied": "Replied",
++    "notReplied": "Not replied",
++    "extractPage": "Extract page",
++    "extractAll": "Extract all",
++    "nothingToExport": "Nothing to export",
++    "exportFailed": "Failed to export the file",
+     "searchPlaceholder": "Search by subject or serial...",
+-    "clearFilters": "Clear Filters",
+     "noLettersFound": "No letters found",
+-    "subject": "Subject",
+-    "subjectPlaceholder": "Enter letter subject",
+-    "incomingId": "Incoming ID",
+-    "incomingIdPlaceholder": "Enter incoming ID",
+-    "incomingNumber": "Internal Number",
+-    "incomingNumberPlaceholder": "Enter internal number",
+-    "outGoingId": "Outgoing ID",
+-    "outGoingIdPlaceholder": "Enter outgoing ID",
+-    "outGoingNumber": "Internal Number",
+-    "outGoingNumberPlaceholder": "Enter internal number",
+-    "letterNumber": "Letter Number",
+-    "letterNumberPlaceholder": "Enter official letter number",
+-    "letterDate": "Letter Date",
+-    "date": "Date Received",
+-    "year": "Year",
+-    "yearPlaceholder": "Enter fiscal year",
+-    "body": "Letter Body",
+-    "bodyPlaceholder": "Enter letter content",
+-    "letterDescription": "Description",
+-    "letterDescriptionPlaceholder": "Enter brief description",
+-    "department": "Department",
+-    "selectDepartment": "Select department",
+-    "category": "Category",
+-    "selectCategory": "Select category",
+-    "categoryOfficial": "Official",
+-    "categoryInternal": "Internal",
+-    "categoryExternal": "External",
+-    "replyToIncoming": "Reply To Incoming Letter",
+-    "selectIncomingLetter": "Select incoming letter",
+-    "replyToOutgoing": "Reply To Outgoing Letter",
+-    "selectOutgoingLetter": "Select outgoing letter",
+-    "attachedFile": "Attached File",
+-    "fillIncomingLetterDetails": "Fill in the incoming letter details below",
+-    "fillOutgoingLetterDetails": "Fill in the outgoing letter details below",
+-    "incomingLetterDetails": "Incoming Letter Details",
+-    "outgoingLetterDetails": "Outgoing Letter Details",
+-    "editIncomingLetter": "Edit Incoming Letter",
+-    "editOutgoingLetter": "Edit Outgoing Letter",
+-    "viewIncomingLetterDetails": "View Incoming Letter Details",
+-    "viewOutgoingLetterDetails": "View Outgoing Letter Details",
+-    "letterInformation": "Letter Information",
+-    "metaInformation": "Meta Information",
+-    "followUpLetters": "Follow-up Letters",
+-    "confirmDelete": "Are you sure you want to delete letter \"{{subject}}\"?",
++    "letterNotFound": "Letter not found",
+     "loadLetterFailed": "Failed to load letter details",
+     "fixValidationErrors": "Please fix the validation errors before submitting",
+     "createSuccess": "Letter created successfully",
+     "createFailed": "Failed to create letter",
+     "updateSuccess": "Letter updated successfully",
+     "updateFailed": "Failed to update letter",
+-    "deleteSuccess": "Letter deleted successfully",
++    "letterDeleted": "Letter deleted successfully",
+     "deleteFailed": "Failed to delete letter",
+-    "letterNotFound": "Letter not found",
+-    "importHistory": "Import History",
+-    "exportHistory": "Export History",
+-    "importComplete": "Import Complete",
+-    "newImport": "New Import",
+-    "newExport": "New Export",
+-    "noImportHistory": "No import history available",
+-    "noExportHistory": "No export history available",
+-    "downloadErrors": "Download Error Log",
+-    "download": "Download",
+-    "operationDetails": "Operation Details",
+-    "viewDetails": "View Details",
+-    "allTypes": "All Types",
+-    "type": "Type"
++    "deleteConfirm": "Are you sure you want to delete letter \"{{subject}}\"?",
++    "attachEmployeesTitle": "Attach Employees to Incoming Letter",
++    "attachEmployeesSubtitle": "Choose the incoming letter, then attach the employees it concerns",
++    "unattachedEmployees": "Unattached Employees",
++    "attachedEmployees": "Attached Employees",
++    "employeeName": "Employee Name",
++    "noEmployees": "No employees",
++    "addToLetter": "Add to letter",
++    "selectLetterFirst": "Select a letter to load the lists",
++    "pendingChanges": "Unsaved changes",
++    "changesSaved": "Changes saved successfully",
++    "saveFailed": "Failed to save changes",
++    "attachOrphansTitle": "Attach Orphan Reports to Outgoing Letter",
++    "attachOrphansSubtitle": "Choose the outgoing letter, then attach the orphan reports it carries",
++    "unattachedOrphans": "Unattached Orphans",
++    "attachedOrphans": "Attached Orphan Reports",
++    "orphanName": "Orphan Name",
++    "orphanCode": "Orphan Code",
++    "orphanCodePlaceholder": "Enter the orphan code",
++    "guarantorName": "Guarantor Name",
++    "kinship": "Kinship",
++    "noOrphans": "No orphans",
++    "noAttachedOrphans": "No orphan reports attached",
++    "orphansReportTitle": "Orphans by Outgoing Letter Report",
++    "orphansReportSubtitle": "Enter the orphan code, then list the outgoing letters carrying it",
++    "childCodeRequired": "Operation Faild: the orphan code is required to run the report",
++    "reportFailed": "Failed to run the report",
++    "noReportRows": "No matching results",
++    "reportNotRun": "Enter the orphan code and press search to run the report",
++    "orphansCount": "Orphans Count",
++    "orphanAttached": "Orphan attached to report"
+   },
+   "importsEdges": {
+     "selectImportType": "Select Import Type",
+@@ -1728,7 +2080,6 @@
+     "selected": "Selected",
+     "formatTitle": "Select Format & Export",
+     "selectFormat": "Select Export Format",
+-    "generateExport": "Generate Export",
+     "exportSummary": "Export Summary",
+     "records": "Records",
+     "fields": "Fields",
+@@ -1763,6 +2114,7 @@
+   },
+   "technicalSupport": {
+     "title": "Technical Support",
++    "ticketTitle": "Title",
+     "supportCenter": "Support Center",
+     "myTickets": "My Tickets",
+     "allTickets": "All Tickets",
+@@ -1772,7 +2124,6 @@
+     "editTicket": "Edit Ticket",
+     "deleteTicket": "Delete Ticket",
+     "ticketId": "Ticket ID",
+-    "title": "Title",
+     "category": "Category",
+     "priority": "Priority",
+     "status": "Status",
+@@ -1844,7 +2195,8 @@
+       "confirmClose": "Are you sure you want to close this ticket?",
+       "confirmSolve": "Are you sure you want to mark this ticket as solved?",
+       "noResponses": "No responses yet",
+-      "internalNoteWarning": "This note is only visible to administrators"
++      "internalNoteWarning": "This note is only visible to administrators",
++      "operationFailed": "The operation failed. Please try again."
+     },
+     "statistics": {
+       "totalTickets": "Total Tickets",
+@@ -1886,7 +2238,16 @@
+       "topTicketCreators": "Top Ticket Creators",
+       "exportReport": "Export Report",
+       "printReport": "Print Report",
+-      "configureMessage": "Configure the report options and click Generate Report to view statistics"
++      "configureMessage": "Configure the report options and click Generate Report to view statistics",
++      "openTickets": "Open Tickets",
++      "inProgressTickets": "In-Progress Tickets",
++      "resolvedTickets": "Resolved Tickets",
++      "closedTickets": "Closed Tickets",
++      "slaBreached": "SLA-Breached Tickets",
++      "ticketsByStatus": "Tickets by Status",
++      "ticketsByPriority": "Tickets by Priority",
++      "ticketsByCreator": "Tickets by Creator",
++      "ticketsInPeriod": "Tickets in the Period"
+     },
+     "placeholders": {
+       "userAction": "What were you doing when the issue occurred?",
+@@ -1906,5 +2267,270 @@
+     "REFRESHING_SESSION": "Refreshing your session...",
+     "LOGOUT": "Logout",
+     "EXTEND_SESSION": "Extend Session"
++  },
++  "orphanCoding": {
++    "title": "Orphan Coding",
++    "subtitle": "Find an orphan by name or code and assign the sponsorship code",
++    "worklistTitle": "Orphan Coding Worklist",
++    "worklistSubtitle": "Uncoded orphans — assign the sponsorship code",
++    "worklistLoadFailed": "Failed to load the coding worklist",
++    "charity": "Charity",
++    "allCharities": "All Charities",
++    "orphanName": "Orphan Name",
++    "orphanNamePlaceholder": "Type at least 3 characters to search",
++    "code": "Code",
++    "codePlaceholder": "Sponsorship code",
++    "search": "Search",
++    "close": "Close",
++    "serial": "No.",
++    "fatherName": "Father Name",
++    "motherName": "Mother Name",
++    "editCode": "Edit Code",
++    "saveCode": "Save Code",
++    "cancelCode": "Cancel",
++    "select": "Done",
++    "codeAvailable": "Code is available",
++    "codeTaken": "Code is already in use",
++    "codeHeldBy": "Registered to",
++    "codeRequired": "Enter a code first",
++    "codeSaved": "Code saved successfully",
++    "codeSaveFailed": "Failed to save the code",
++    "noResults": "No results",
++    "enterNameOrCode": "Enter an orphan name or a code",
++    "searchFailed": "Search failed",
++    "paymentHistory": "Payment History",
++    "historyLoadFailed": "Failed to load the payment history",
++    "detailsLoadFailed": "Failed to load the group details",
++    "batchNo": "Batch No.",
++    "allBatches": "All Batches",
++    "groupName": "Group Name",
++    "periodFrom": "Period From",
++    "periodTo": "Period To",
++    "groupDate": "Group Date",
++    "uploaded": "Uploaded",
++    "uploadedYes": "Yes",
++    "uploadedNo": "No",
++    "viewDetails": "Details",
++    "batchDetails": "Batch Details",
++    "backToHistory": "Back to History",
++    "currency": "Currency",
++    "exchangeRate": "Exchange Rate",
++    "displayOrder": "Order",
++    "notes": "Notes",
++    "noHistory": "No previous payments for this orphan",
++    "phoneDuplicate": "Phone number is already registered",
++    "phoneHeldBy": "Number registered to",
++    "phoneChecking": "Checking the number",
++    "phoneAvailable": "Number is not in use",
++    "holder_family": "family",
++    "holder_father": "father",
++    "holder_mother": "mother",
++    "holder_provider": "provider",
++    "holder_orphan": "orphan",
++    "reasons": {
++      "charityNotFound": "Charity not found",
++      "charityLocked": "This charity is locked by head office",
++      "charityAddDisabled": "Adding is disabled for this charity",
++      "charityInactive": "This charity is inactive",
++      "familyNotFound": "Family not found or out of scope",
++      "familyInactive": "This family is inactive",
++      "nationalIdRegistered": "An orphan with this national ID is already registered"
++    }
++  },
++  "periodicReports": {
++    "title": "Periodic Orphan Reports",
++    "subtitle": "Register of recurring status reports filed for each orphan",
++    "createReport": "Add Periodic Report",
++    "editReport": "Edit Periodic Report",
++    "reportDetails": "Periodic Report Details",
++    "reviewReport": "Review Report",
++    "sidebar": {
++      "allReports": "All Periodic Reports"
++    },
++    "breadcrumb": {
++      "list": "Periodic Reports",
++      "create": "Add Report",
++      "details": "Report Details",
++      "edit": "Edit Report",
++      "review": "Review Report"
++    },
++    "filters": {
++      "charity": "Charity",
++      "allCharities": "All Charities",
++      "dateFrom": "From Date",
++      "dateTo": "To Date",
++      "orphanCode": "Orphan Code",
++      "orphanName": "Orphan Name",
++      "codesOnly": "Codes",
++      "search": "Search",
++      "status": "Review status",
++      "all": "All"
++    },
++    "columns": {
++      "serial": "No.",
++      "reportNo": "Report No.",
++      "orphanCode": "Orphan Code",
++      "reportDate": "Date",
++      "approved": "Approved",
++      "approvedDate": "Approval Date"
++    },
++    "status": {
++      "pending": "Pending",
++      "approved": "Approved",
++      "rejected": "Rejected",
++      "accepted": "Accepted",
++      "refused": "Refused"
++    },
++    "empty": {
++      "title": "No reports",
++      "message": "No periodic report matches the current filters"
++    },
++    "lookup": {
++      "code": "Orphan code",
++      "placeholder": "Enter the sponsorship code, then press Look up",
++      "submit": "Look up",
++      "orphanName": "Orphan name",
++      "age": "Age",
++      "charity": "Charity",
++      "familyReference": "Family reference",
++      "guardian": "Guardian",
++      "reportsCount": "Registered reports",
++      "pending": "pending review",
++      "unknownOrphan": "No orphan found with this code within your charity scope — a report cannot be created against it"
++    },
++    "form": {
++      "sections": {
++        "basicInfo": "Basic information",
++        "religious": "Religious commitment & behaviour",
++        "quran": "Quran memorisation",
++        "health": "Health & medical status",
++        "personalDevelopment": "Activities & personal development",
++        "education": "Education status",
++        "lifeEvents": "Life events",
++        "attachments": "Required files"
++      },
++      "orphan": "Orphan",
++      "reportDate": "Report date",
++      "reportPeriodFrom": "Period from",
++      "reportPeriodTo": "Period to",
++      "reportNo": "Report no.",
++      "prayerStatus": "Prayer commitment",
++      "mannersStatus": "Manners & behaviour",
++      "hadeethStatus": "Hadeeth memorisation",
++      "quranParts": "Parts memorised",
++      "quranVerses": "Verses memorised",
++      "medicalStatus": "Medical status",
++      "disease": "Disease type",
++      "diseaseDescription": "Disease details",
++      "disability": "Disability type",
++      "disabilityDescription": "Disability details",
++      "hobby": "Hobbies",
++      "course": "Course name",
++      "sportName": "Sport name",
++      "achievement": "Achievements",
++      "wish": "Wishes",
++      "orphanMessage": "Orphan's message",
++      "educationalLevel": "Educational level",
++      "selectLevel": "— select level —",
++      "school": "School name",
++      "grade": "Grade/class",
++      "schoolType": "School type",
++      "faculty": "Faculty",
++      "department": "Department",
++      "specialization": "Specialization",
++      "isOrphanStudent": "Student-sponsorship request",
++      "dropOut": "Dropped out",
++      "annualFeeForStudy": "Annual study fee",
++      "studyingYears": "Studying years",
++      "restStudyingYears": "Remaining studying years",
++      "graduationYear": "Graduation year",
++      "married": "Married",
++      "marriageDate": "Marriage date",
++      "dead": "Deceased",
++      "deathDate": "Death date",
++      "missingDocuments": "Missing documents",
++      "missingDocumentsName": "Missing document names",
++      "orphanImage": "Orphan photo",
++      "orphanCertificateImage": "Student registration/certificate",
++      "medicalReportImage": "Medical report image",
++      "orphanDeadImage": "Death certificate",
++      "orphanMarriageImage": "Marriage contract",
++      "uploadFailed": "File upload failed — try again",
++      "savedSuccessfully": "Report saved successfully",
++      "saveFailed": "Failed to save the report"
++    },
++    "untitledReport": "Untitled periodic report",
++    "reviewState": "Review state",
++    "reviewedOn": "Reviewed on",
++    "refuseReason": "Refusal reason",
++    "reviewComments": "Review comments",
++    "noLifeEvents": "No life events or personal development recorded in this report",
++    "auditTrail": "Audit trail",
++    "createdBy": "Created by",
++    "createdOn": "Created on",
++    "updatedBy": "Updated by",
++    "updatedOn": "Updated on",
++    "deleteConfirm": "Are you sure you want to delete this report?",
++    "deletedSuccessfully": "Report deleted successfully",
++    "deleteFailed": "Failed to delete the report",
++    "attachmentDownloadFailed": "Failed to download the attachment",
++    "cannotEditOldReport": "You can not update old report",
++    "deleteTitle": "Delete report",
++    "orphanInformation": "Orphan information",
++    "orphanCode": "Orphan code",
++    "orphanName": "Orphan name",
++    "charity": "Charity",
++    "reportDate": "Report date",
++    "reportNo": "Report no.",
++    "reportPeriod": "Report period",
++    "religiousBehavioral": "Religious & behavioural status",
++    "quranEducation": "Quran education",
++    "healthMedical": "Health & medical status",
++    "educationDetails": "Education details",
++    "lifeEvents": "Life events",
++    "personalDevelopment": "Personal development",
++    "attachments": "Required documents",
++    "deceased": "Deceased",
++    "yes": "Yes",
++    "sport": "Sport",
++    "medicalReport": "Medical report",
++    "certificate": "Certificate",
++    "orphanPhoto": "Orphan photo",
++    "reviewActions": "Review actions",
++    "reviewDecision": "Decision",
++    "approveReport": "Accept report",
++    "rejectReport": "Reject report",
++    "selectReason": "Select a reason",
++    "refuseReasonPlaceholder": "Or type the refusal reason...",
++    "reviewCommentsPlaceholder": "Additional comments (optional)...",
++    "refuseReasonRequired": "A refusal reason is required",
++    "prayerStatus": "Prayer commitment",
++    "mannersStatus": "Manners & behaviour",
++    "hadeethStatus": "Hadeeth memorisation",
++    "quranParts": "Parts memorised",
++    "quranVerses": "Verses memorised",
++    "medicalStatus": "Medical status",
++    "disease": "Disease type",
++    "disability": "Disability type",
++    "disabilityDescription": "Disability details",
++    "diseaseDescription": "Disease details",
++    "educationalLevel": "Educational level",
++    "school": "School name",
++    "grade": "Grade/class",
++    "isOrphanStudent": "Student-sponsorship request",
++    "dropOut": "Dropped out",
++    "married": "Married",
++    "hobby": "Hobbies",
++    "achievement": "Achievements",
++    "orphanMessage": "Orphan's message",
++    "review": {
++      "approvedSuccessfully": "Report accepted successfully",
++      "rejectedSuccessfully": "Report rejected successfully",
++      "submitFailed": "Failed to submit the review decision",
++      "alreadyReviewed": "Already reviewed — the decision cannot be repeated; the report reopens through the charity edit-and-resubmit path."
++    }
++  },
++  "periodicReviews": {
++    "reviewedBy": "Reviewed by"
+   }
+ }

@@ -462,7 +462,9 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
         // For new attachments with temp IDs, send only the necessary fields
         if (attachment.isNew || (attachment.id && attachment.id.startsWith('temp_'))) {
           return {
-            id: null, // Don't send temp IDs to backend
+            // No `id` key at all: the backend's AttachmentDto.Id is a non-nullable Guid and the
+            // JSON binder rejects `null` for it (400 on the whole request). A missing property
+            // binds to Guid.Empty; the service assigns the real id on save.
             fileName: attachment.fileName,
             contentType: attachment.contentType,
             size: attachment.size,
@@ -475,8 +477,7 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
           };
         }
         // For existing attachments, send as-is but ensure proper types
-        return {
-          id: attachment.id || null,
+        const existing: any = {
           fileName: attachment.fileName,
           contentType: attachment.contentType,
           size: attachment.size,
@@ -484,6 +485,11 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
           filePath: attachment.filePath,
           isNew: false // Explicit boolean for existing attachments
         };
+        // Include the id only when it is a real server id — never `null`.
+        if (attachment.id && !attachment.id.startsWith('temp_')) {
+          existing.id = attachment.id;
+        }
+        return existing;
       });
   }
 
@@ -512,17 +518,17 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
       projectHint: formValue.projectHint || undefined,
       projectDate: formValue.projectDate,
       projectEndDate: formValue.projectEndDate || undefined,
-      fk_OfficeProjectTypeId: formValue.officeProjectTypeId,
-      fk_CountryId: formValue.countryId,
-      fk_RegionId: formValue.regionId,
-      fk_CenterId: formValue.centerId,
+      officeProjectTypeId: formValue.officeProjectTypeId,
+      countryId: formValue.countryId,
+      regionId: formValue.regionId,
+      centerId: formValue.centerId,
       villageName: formValue.villageName || undefined,
       projectCostEGP: formValue.projectCostEGP || undefined,
       projectCostSAR: formValue.projectCostSAR || undefined,
       donorName: formValue.donorName || undefined,
       beneficiariesCount: formValue.beneficiariesCount || undefined,
       beneficiariesType: formValue.beneficiariesType,
-      fk_CharityId: formValue.assignedCharityId || undefined,
+      charityId: formValue.assignedCharityId || undefined,
       isFinished: formValue.isFinished || false,
       notes: formValue.notes || undefined,
       // Send transformed attachment lists to backend

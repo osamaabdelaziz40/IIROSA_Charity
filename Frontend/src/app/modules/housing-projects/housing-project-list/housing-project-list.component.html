@@ -2,129 +2,68 @@
 
 <app-page-header
   [title]="'housingProjects.title' | translate"
-  [subtitle]="'housingProjects.manageProjects' | translate"
+  [subtitle]="'housingProjects.subtitle' | translate"
   [icon]="'fe fe-home'"
   [actions]="pageActions">
 </app-page-header>
 
-<div class="card">
+<!-- §11.S.1 filters: الجمعية · البحث عن طريق · searchValue -->
+<div class="card shadow mb-4">
   <div class="card-body">
-    <!-- Filters using shared components -->
     <form [formGroup]="filterForm">
       <div class="row mb-3">
-        <!-- Search -->
-        <div class="col-md-3">
-          <app-input-text
-            [fg]="filterForm"
-            fcn="searchValue"
-            [label]="'common.search'"
-            [placeholder]="'housingProjects.searchPlaceholder' | translate">
-          </app-input-text>
-        </div>
-
-        <!-- Country -->
-        <div class="col-md-2">
+        <!-- الجمعية — HQ roles only; charity callers are pinned server-side -->
+        <div class="col-md-3" *ngIf="isHQ">
           <app-drop-down
             [fg]="filterForm"
-            fcn="countryId"
-            [label]="'charities.country'"
-            [initialData]="allCountries"
+            fcn="charityId"
+            [label]="'housingProjects.filters.charity'"
+            [initialData]="charityOptions"
             [hasDefaultValue]="true"
-            (onDropDownChanged)="onCountryDropDownChanged($event)">
+            (onDropDownChanged)="onCharityChanged()">
           </app-drop-down>
         </div>
 
-        <!-- Region -->
-        <div class="col-md-2">
-          <app-drop-down
-            [fg]="filterForm"
-            fcn="regionId"
-            [label]="'charities.region'"
-            [initialData]="filteredRegions"
-            [hasDefaultValue]="true"
-            [disabled]="!filterForm.get('countryId')?.value"
-            (onDropDownChanged)="onRegionDropDownChanged($event)">
-          </app-drop-down>
-        </div>
-
-        <!-- Center -->
-        <div class="col-md-2">
-          <app-drop-down
-            [fg]="filterForm"
-            fcn="centerId"
-            [label]="'charities.center'"
-            [initialData]="filteredCenters"
-            [hasDefaultValue]="true"
-            [disabled]="!filterForm.get('regionId')?.value"
-            (onDropDownChanged)="onCenterDropDownChanged($event)">
-          </app-drop-down>
-        </div>
-
-        <!-- Project Type -->
+        <!-- البحث عن طريق — typed search selector (UC-HOU-02) -->
         <div class="col-md-3">
           <app-drop-down
             [fg]="filterForm"
-            fcn="projectType"
-            [label]="'housingProjects.projectType'"
-            [initialData]="projectTypeOptions"
-            [hasDefaultValue]="true"
-            (onDropDownChanged)="onProjectTypeDropDownChanged($event)">
+            fcn="searchType"
+            [label]="'housingProjects.filters.searchType'"
+            [initialData]="searchTypeOptions"
+            [hasDefaultValue]="true">
           </app-drop-down>
+        </div>
+
+        <!-- searchValue -->
+        <div class="col-md-4">
+          <div class="form-group">
+            <label>{{ 'housingProjects.filters.searchValue' | translate }}</label>
+            <input type="text" class="form-control" formControlName="searchValue"
+                   [placeholder]="'housingProjects.filters.searchPlaceholder' | translate"
+                   (keyup.enter)="onSearch()">
+          </div>
         </div>
       </div>
 
-      <div class="row mb-3">
-        <!-- Project Status -->
-        <div class="col-md-3">
-          <app-drop-down
-            [fg]="filterForm"
-            fcn="projectStatus"
-            [label]="'housingProjects.projectStatus'"
-            [initialData]="statusOptions"
-            [hasDefaultValue]="true"
-            (onDropDownChanged)="onProjectStatusDropDownChanged($event)">
-          </app-drop-down>
-        </div>
-
-        <!-- Date From -->
-        <div class="col-md-3">
-          <app-input-text
-            [fg]="filterForm"
-            fcn="dateFrom"
-            [label]="'housingProjects.dateFrom'"
-            type="date">
-          </app-input-text>
-        </div>
-
-        <!-- Date To -->
-        <div class="col-md-3">
-          <app-input-text
-            [fg]="filterForm"
-            fcn="dateTo"
-            [label]="'housingProjects.dateTo'"
-            type="date">
-          </app-input-text>
-        </div>
-
-        <!-- Search Button -->
-        <div class="col-md-3 d-flex align-items-end">
-          <button type="button" class="btn btn-primary w-100" (click)="onSearch()">
+      <div class="row">
+        <div class="col-12">
+          <button class="btn btn-primary" type="button" (click)="onSearch()">
             <i class="fe fe-search mr-1"></i>
             {{ 'common.search' | translate }}
           </button>
-        </div>
-      </div>
-
-      <div class="row mb-3" *ngIf="hasActiveFilters()">
-        <div class="col-12">
-          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+          <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary ml-2" type="button" (click)="clearFilters()">
             <i class="fe fe-x mr-1"></i>
             {{ 'common.clearFilters' | translate }}
           </button>
         </div>
       </div>
     </form>
+  </div>
+</div>
 
+<div class="card shadow mb-4">
+  <div class="card-body">
     <!-- Loading State -->
     <div *ngIf="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status">
@@ -132,113 +71,59 @@
       </div>
     </div>
 
-    <!-- Projects Table -->
+    <!-- §11.S.1 grid: الرقم · إسم الأب · إسم الأم · الأبناء · الهواتف · كود العائله · الجمعية -->
     <div *ngIf="!loading" class="table-responsive">
       <table class="table table-hover table-striped">
         <thead>
           <tr>
-            <th>{{ 'housingProjects.projectName' | translate }}</th>
-            <th>{{ 'housingProjects.projectType' | translate }}</th>
-            <th>{{ 'housingProjects.location' | translate }}</th>
-            <th>{{ 'housingProjects.assignedCharity' | translate }}</th>
-            <th>{{ 'housingProjects.assignedFamily' | translate }}</th>
-            <th>{{ 'housingProjects.projectStatus' | translate }}</th>
-            <th>{{ 'housingProjects.completion' | translate }}</th>
-            <th>{{ 'housingProjects.startDate' | translate }}</th>
-            <th>{{ 'housingProjects.budget' | translate }}</th>
+            <th>{{ 'housingProjects.columns.serial' | translate }}</th>
+            <th>{{ 'housingProjects.columns.fatherName' | translate }}</th>
+            <th>{{ 'housingProjects.columns.motherName' | translate }}</th>
+            <th>{{ 'housingProjects.columns.children' | translate }}</th>
+            <th>{{ 'housingProjects.columns.phones' | translate }}</th>
+            <th>{{ 'housingProjects.columns.familyCode' | translate }}</th>
+            <th>{{ 'housingProjects.columns.charity' | translate }}</th>
             <th>{{ 'common.actions' | translate }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let project of housingProjects; trackBy: trackByProjectId">
-            <td>
-              <a [routerLink]="['/housing-projects', project.id]" class="text-primary">
-                <strong>{{ project.projectName }}</strong>
-              </a>
-              <div *ngIf="project.projectDescription" class="small text-muted">{{ project.projectDescription }}</div>
-            </td>
-            <td>{{ getProjectTypeName(project.projectType) | translate }}</td>
-            <td>
-              <div>{{ project.regionName || '-' }}</div>
-              <div *ngIf="project.centerName" class="small text-muted">{{ project.centerName }}</div>
-            </td>
-            <td>{{ project.assignedCharityName || '-' }}</td>
-            <td>{{ project.assignedFamilyName || '-' }}</td>
-            <td>
-              <span [class]="'badge ' + getStatusBadgeClass(project.projectStatus)">
-                {{ getProjectStatusName(project.projectStatus) | translate }}
-              </span>
-            </td>
-            <td>
-              <div class="progress" style="height: 6px;">
-                <div
-                  class="progress-bar"
-                  role="progressbar"
-                  [style.width.%]="project.completionPercentage"
-                  [ngClass]="{
-                    'bg-primary': project.completionPercentage < 100,
-                    'bg-success': project.completionPercentage === 100
-                  }">
-                </div>
-              </div>
-              <div class="small text-muted">{{ project.completionPercentage }}%</div>
-            </td>
-            <td>{{ project.startDate | date:'mediumDate' }}</td>
-            <td>
-              <div>{{ project.totalBudget || 0 | number }}</div>
-              <div *ngIf="project.budgetCurrency" class="small text-muted">{{ project.budgetCurrency }}</div>
-            </td>
+          <tr *ngFor="let family of families; let i = index; trackBy: trackByFamilyId">
+            <!-- الرقم — continuous across pages -->
+            <td>{{ rowSerial(i) }}</td>
+            <!-- إسم الأب -->
+            <td>{{ family.fatherName || '-' }}</td>
+            <!-- إسم الأم -->
+            <td>{{ family.motherName || '-' }}</td>
+            <!-- الأبناء -->
+            <td>{{ family.orphansCount }}</td>
+            <!-- الهواتف -->
+            <td>{{ family.phoneNumber || '-' }}</td>
+            <!-- كود العائله -->
+            <td><strong>{{ family.code }}</strong></td>
+            <!-- الجمعية -->
+            <td>{{ family.charityName || '-' }}</td>
+            <!-- الاجراءات -->
             <td>
               <div class="btn-group">
                 <button
                   type="button"
                   class="btn btn-sm btn-light"
-                  [title]="'common.view' | translate"
-                  [routerLink]="['/housing-projects', project.id]">
+                  [title]="'housingProjects.actions.view' | translate"
+                  (click)="viewFamily(family.id)">
                   <i class="fe fe-eye"></i>
                 </button>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-light"
-                  [title]="'common.edit' | translate"
-                  [routerLink]="['/housing-projects', project.id, 'edit']">
-                  <i class="fe fe-edit"></i>
-                </button>
-                <div class="dropdown">
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-light dropdown-toggle"
-                    data-toggle="dropdown">
-                    <i class="fe fe-more-vertical"></i>
-                  </button>
-                  <div class="dropdown-menu dropdown-menu-right">
-                    <a
-                      class="dropdown-item"
-                      href="javascript:void(0)"
-                      (click)="deleteProject(project)">
-                      <i class="fe fe-trash mr-2 text-danger"></i>
-                      {{ 'common.delete' | translate }}
-                    </a>
-                  </div>
-                </div>
               </div>
             </td>
           </tr>
-
-          <!-- Empty State -->
-          <tr *ngIf="housingProjects.length === 0">
-            <td colspan="10" class="text-center py-5">
-              <div class="empty-state">
-                <i class="fe fe-home fe-3x text-muted mb-3"></i>
-                <p class="text-muted">{{ 'housingProjects.noProjects' | translate }}</p>
-              </div>
+          <tr *ngIf="!loading && families.length === 0">
+            <td colspan="8" class="text-center text-muted py-4">
+              {{ 'housingProjects.empty' | translate }}
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Pagination -->
     <app-pagination
       [currentPage]="currentPage"
       [pageSize]="pageSize"

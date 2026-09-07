@@ -1,156 +1,165 @@
+// Wire model for /api/SupportTickets (SupportTicketDto / SupportTicketDetailDto / SupportTicketListDto).
+// Field names match the API JSON exactly — camelCase mirrors of the C# DTOs.
 export interface SupportTicket {
   id: string;
   title: string;
-  message: string;
-  category: TicketCategory;
-  priority: TicketPriority;
-  status: TicketStatus;
-  isSolved: boolean;
-  userId: string;
-  userName?: string;
-  userEmail?: string;
-  userRole?: string;
-  assignedTo?: string;
-  assignedToName?: string;
-  attachedFile?: string;
-  attachedFileName?: string;
+  message?: string;
+
+  // Lookup ids + localized names
+  categoryId: number;
+  categoryName?: string;
+  priorityId: number;
+  priorityName?: string;
+  statusId: number;
+  statusName?: string;
+  priorityColor?: string;
+  statusColor?: string;
+
+  // Resolution
+  isSolved?: boolean;
+  resolutionDescription?: string;
+  resolvedOn?: string;
+  resolvedBy?: string;
+
+  // System information
   browserInfo?: string;
   pageUrl?: string;
   userAction?: string;
-  createdDate: string;
-  lastUpdated: string;
-  resolutionDescription?: string;
-  resolutionDate?: string;
+
+  // Assignment
+  assignedTo?: string;
+  assignedToName?: string;
+
+  // Creator
+  createdByUserId?: string;
+  createdByUserName?: string;
+  createdByEmail?: string;
+
+  // Attachment
+  attachmentFileName?: string;
+  attachmentFilePath?: string;
+  attachmentFileSize?: number;
+
+  // Audit
+  createdOn: string;
+  updatedOn: string;
+
+  responseCount?: number;
   responses?: TicketResponse[];
+  publicResponses?: TicketResponse[];
+  internalNotes?: TicketResponse[];
 }
 
 export interface TicketResponse {
   id: string;
   ticketId: string;
   responseText: string;
-  respondedBy: string;
-  respondedByName?: string;
-  responseDate: string;
-  attachment?: string;
-  attachmentName?: string;
-  isInternal: boolean;
-}
-
-export interface TicketAttachment {
-  id: string;
-  ticketId: string;
-  fileName: string;
-  fileUrl: string;
-  fileSize: number;
-  uploadedBy: string;
-  uploadedDate: string;
-  description?: string;
+  isInternalNote: boolean;
+  respondedByUserId: string;
+  responderName?: string;
+  responderEmail?: string;
+  attachmentFileName?: string;
+  attachmentFilePath?: string;
+  attachmentFileSize?: number;
+  createdOn: string;
 }
 
 export interface CreateTicketRequest {
   title: string;
   message: string;
-  category: TicketCategory;
-  priority: TicketPriority;
-  attachedFile?: File;
+  categoryId: number;
+  priorityId: number;
   browserInfo?: string;
   pageUrl?: string;
   userAction?: string;
 }
 
+export interface UpdateTicketRequest {
+  id: string;
+  title: string;
+  message: string;
+  categoryId: number;
+  priorityId: number;
+  /** Optional — omit to leave the ticket's status unchanged on the server. */
+  statusId?: number;
+}
+
 export interface UpdateTicketStatusRequest {
-  status: TicketStatus;
-  note?: string;
+  statusId: number;
+  statusNote?: string;
 }
 
 export interface MarkTicketSolvedRequest {
   resolutionDescription: string;
   solutionSteps?: string;
-  attachment?: File;
 }
 
 export interface AddTicketResponseRequest {
   responseText: string;
-  attachment?: File;
-  isInternal: boolean;
+  isInternalNote: boolean;
 }
 
+// Query params of SupportTicketFilterDto, camelCase as the API binds them.
 export interface TicketSearchRequest {
   pageNumber?: number;
   pageSize?: number;
   searchTerm?: string;
-  category?: TicketCategory;
-  priority?: TicketPriority;
-  status?: TicketStatus;
+  categoryId?: number;
+  priorityId?: number;
+  statusId?: number;
   isSolved?: boolean;
-  userId?: string;
   assignedTo?: string;
+  createdByUserId?: string;
   startDate?: string;
   endDate?: string;
   sortBy?: string;
-  sortDescending?: boolean;
+  sortDirection?: string;
 }
 
-export interface TicketListResponse {
-  tickets: SupportTicket[];
-  totalRecords: number;
-  pageNumber: number;
-  pageSize: number;
-  totalPages: number;
-  hasPrevious: boolean;
-  hasNext: boolean;
+// GET /api/SupportTickets/lookups → TicketLookupsDto
+export interface LookupOption {
+  id: number;
+  name: string;
+  nameAr?: string;
+  nameEn?: string;
+  isActive?: boolean;
 }
 
+export interface TicketLookups {
+  categories: LookupOption[];
+  priorities: LookupOption[];
+  statuses: LookupOption[];
+}
+
+// POST /api/SupportTickets/report → SupportTicketReportDto
 export interface SupportReportRequest {
   startDate: string;
   endDate: string;
-  groupBy?: ReportGroupBy;
-  includeCategories?: boolean;
-  includeUsers?: boolean;
 }
 
 export interface SupportReport {
-  summaryStatistics: ReportSummary;
-  performanceMetrics: ReportPerformance;
-  userStatistics: ReportUserStats[];
-  trendAnalysis: ReportTrend[];
+  startDate: string;
+  endDate: string;
+  totalTickets: number;
+  solvedTickets: number;
+  unsolvedTickets: number;
+  openTickets: number;
+  inProgressTickets: number;
+  resolvedTickets: number;
+  closedTickets: number;
+  ticketsByStatus: Record<string, number>;
+  ticketsByPriority: Record<string, number>;
+  ticketsByCategory: Record<string, number>;
+  ticketsByCreator: Record<string, number>;
+  averageResolutionTimeHours: number;
+  // Newtonsoft camelCase keeps a trailing acronym uppercase (…WithinSLA → …WithinSLA)
+  ticketsResolvedWithinSLA: number;
+  ticketsBreachedSLA: number;
   tickets: SupportTicket[];
 }
 
-export interface ReportSummary {
-  totalTickets: number;
-  ticketsByStatus: Record<TicketStatus, number>;
-  ticketsByPriority: Record<TicketPriority, number>;
-  ticketsByCategory: Record<TicketCategory, number>;
-  solvedVsUnsolved: {
-    solved: number;
-    unsolved: number;
-  };
-}
-
-export interface ReportPerformance {
-  averageResolutionTime: number; // in hours
-  ticketsResolvedWithinSLA: number;
-  ticketsOpenedVsClosed: {
-    opened: number;
-    closed: number;
-  };
-}
-
-export interface ReportUserStats {
-  userId: string;
-  userName: string;
-  ticketCount: number;
-  solvedCount: number;
-}
-
-export interface ReportTrend {
-  date: string;
-  ticketsOpened: number;
-  ticketsClosed: number;
-  resolutionTime?: number;
-}
-
+// Enum mirrors of the seeded lookup tables (labels come from the lookups endpoint,
+// which returns the localized NameAr ?? NameEn).
 export enum TicketCategory {
   Technical = 'Technical',
   Access = 'Access',
@@ -172,11 +181,4 @@ export enum TicketStatus {
   InProgress = 'InProgress',
   Resolved = 'Resolved',
   Closed = 'Closed'
-}
-
-export enum ReportGroupBy {
-  Category = 'Category',
-  Status = 'Status',
-  User = 'User',
-  Priority = 'Priority'
 }

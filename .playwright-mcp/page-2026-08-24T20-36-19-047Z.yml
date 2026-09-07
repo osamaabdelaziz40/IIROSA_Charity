@@ -1,0 +1,17 @@
+- generic [ref=f9e7]:
+  - button "English " [ref=f9e10] [cursor=pointer]
+  - generic [ref=f9e12]:
+    - link [ref=f9e13] [cursor=pointer]:
+      - /url: "#"
+    - heading "Sign in" [level=1] [ref=f9e19]
+    - generic [ref=f9e20]:
+      - generic [ref=f9e21]: Email address
+      - textbox "Email address" [active] [ref=f9e22]
+    - generic [ref=f9e23]:
+      - generic [ref=f9e24]: Password
+      - textbox "Password" [ref=f9e25]
+    - generic [ref=f9e27]:
+      - checkbox "Stay logged in" [ref=f9e28]
+      - text: Stay logged in
+    - button "Let me in" [ref=f9e29] [cursor=pointer]
+    - paragraph [ref=f9e30]: © 2025 IIROSA

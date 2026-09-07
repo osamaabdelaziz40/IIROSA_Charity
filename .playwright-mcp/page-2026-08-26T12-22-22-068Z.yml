@@ -1,0 +1,277 @@
+- generic [ref=f9e5]:
+  - navigation [ref=f9e6]:
+    - button "" [ref=f9e7] [cursor=pointer]
+    - list [ref=f9e9]:
+      - listitem [ref=f9e10]:
+        - link "English " [ref=f9e11] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f9e12]: 
+          - text: English 
+      - listitem [ref=f9e13]:
+        - link "" [ref=f9e14] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f9e16]:
+        - link "" [ref=f9e17] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f9e20]:
+        - button [ref=f9e21] [cursor=pointer]:
+          - generic [ref=f9e22]:
+            - text: Welcome System Admin
+            - img "..." [ref=f9e23]
+          - text: 
+  - complementary [ref=f9e24]:
+    - generic [ref=f9e29]:
+      - text: 
+      - navigation [ref=f9e30]:
+        - link [ref=f9e32] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f9e33]
+        - paragraph [ref=f9e34]: Website Elements
+        - list [ref=f9e35]:
+          - listitem [ref=f9e36]:
+            - link " Home Page (current) " [ref=f9e37] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f9e38]: 
+              - generic [ref=f9e39]: Home Page
+              - generic [ref=f9e40]: (current)
+              - text: 
+            - list [ref=f9e41]:
+              - listitem [ref=f9e42]:
+                - link "Home" [ref=f9e43] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f9e44]:
+            - link " Users " [ref=f9e45] [cursor=pointer]:
+              - /url: "#user-management"
+              - generic [ref=f9e46]: 
+              - generic [ref=f9e47]: Users
+              - text: 
+          - listitem [ref=f9e48]:
+            - link " Employees " [ref=f9e49] [cursor=pointer]:
+              - /url: "#employees"
+              - generic [ref=f9e50]: 
+              - generic [ref=f9e51]: Employees
+              - text: 
+          - listitem [ref=f9e52]:
+            - link " NGOs " [ref=f9e53] [cursor=pointer]:
+              - /url: "#charities"
+              - generic [ref=f9e54]: 
+              - generic [ref=f9e55]: NGOs
+              - text: 
+          - listitem [ref=f9e56]:
+            - link " Office Projects " [ref=f9e57] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f9e58]: 
+              - generic [ref=f9e59]: Office Projects
+              - text: 
+          - listitem [ref=f9e60]:
+            - link " Housing Projects " [ref=f9e61] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f9e62]: 
+              - generic [ref=f9e63]: Housing Projects
+              - text: 
+          - listitem [ref=f9e64]:
+            - link " Seasonal Aid " [ref=f9e65] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f9e66]: 
+              - generic [ref=f9e67]: Seasonal Aid
+              - text: 
+          - listitem [ref=f9e68]:
+            - link " Incoming & Outgoing " [ref=f9e69] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f9e70]: 
+              - generic [ref=f9e71]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=f9e72]:
+            - link " Orphan Payments " [ref=f9e73] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f9e74]: 
+              - generic [ref=f9e75]: Orphan Payments
+              - text: 
+          - listitem [ref=f9e76]:
+            - link " Families " [ref=f9e77] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f9e78]: 
+              - generic [ref=f9e79]: Families
+              - text: 
+          - listitem [ref=f9e80]:
+            - link " Reports " [ref=f9e81] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f9e82]: 
+              - generic [ref=f9e83]: Reports
+              - text: 
+          - listitem [ref=f9e84]:
+            - link " General Cheques " [ref=f9e85] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f9e86]: 
+              - generic [ref=f9e87]: General Cheques
+              - text: 
+          - listitem [ref=f9e88]:
+            - link " Missions " [ref=f9e89] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f9e90]: 
+              - generic [ref=f9e91]: Missions
+              - text: 
+          - listitem [ref=f9e92]:
+            - link " Periodic Orphan Reports " [ref=f9e93] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f9e94]: 
+              - generic [ref=f9e95]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=f9e96]:
+            - link " Financial Transfers " [ref=f9e97] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f9e98]: 
+              - generic [ref=f9e99]: Financial Transfers
+              - text: 
+          - listitem [ref=f9e100]:
+            - link " Technical Support " [ref=f9e101] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f9e102]: 
+              - generic [ref=f9e103]: Technical Support
+              - text: 
+          - listitem [ref=f9e104]:
+            - link " Lookup Management " [ref=f9e105] [cursor=pointer]:
+              - /url: "#lookup-management"
+              - generic [ref=f9e106]: 
+              - generic [ref=f9e107]: Lookup Management
+              - text: 
+            - list [ref=f9e108]:
+              - listitem [ref=f9e109]:
+                - link "All Lookups" [ref=f9e110] [cursor=pointer]:
+                  - /url: "#/lookup-management"
+              - listitem [ref=f9e111]:
+                - link "Add Lookup" [ref=f9e112] [cursor=pointer]:
+                  - /url: "#/lookup-management/create"
+  - main [ref=f9e113]:
+    - generic [ref=f9e118]:
+      - generic [ref=f9e119]:
+        - heading "All Lookup Tables" [level=2] [ref=f9e121]
+        - button "Refresh" [ref=f9e123] [cursor=pointer]:
+          - generic [ref=f9e124]: 
+          - text: Refresh
+      - generic [ref=f9e125]:
+        - generic [ref=f9e127]:
+          - generic [ref=f9e128]:
+            - generic [ref=f9e129]: 
+            - generic [ref=f9e131]:
+              - strong [ref=f9e132]: أنواع المشاريع - Project Types
+              - paragraph [ref=f9e133]: "Total Items: 1"
+              - paragraph [ref=f9e134]:
+                - generic [ref=f9e135]: Jun 2, 2026
+          - generic [ref=f9e137]:
+            - generic [ref=f9e138]: 1 Active · 0 Inactive
+            - generic [ref=f9e142]:
+              - button "Action " [ref=f9e143] [cursor=pointer]:
+                - generic [ref=f9e144]: Action
+                - text: 
+              - text:  
+        - generic [ref=f9e146]:
+          - generic [ref=f9e147]:
+            - generic [ref=f9e148]: 
+            - generic [ref=f9e150]:
+              - strong [ref=f9e151]: المراكز - Centers
+              - paragraph [ref=f9e152]: "Total Items: 304"
+              - paragraph [ref=f9e153]:
+                - generic [ref=f9e154]: May 4, 2026
+          - generic [ref=f9e156]:
+            - generic [ref=f9e157]: 304 Active · 0 Inactive
+            - generic [ref=f9e161]:
+              - button "Action " [ref=f9e162] [cursor=pointer]:
+                - generic [ref=f9e163]: Action
+                - text: 
+              - text:  
+        - generic [ref=f9e165]:
+          - generic [ref=f9e166]:
+            - generic [ref=f9e167]: 
+            - generic [ref=f9e169]:
+              - strong [ref=f9e170]: أنواع المهام - Mission Types
+              - paragraph [ref=f9e171]: "Total Items: 3"
+              - paragraph [ref=f9e172]:
+                - generic [ref=f9e173]: May 4, 2026
+          - generic [ref=f9e175]:
+            - generic [ref=f9e176]: 3 Active · 0 Inactive
+            - generic [ref=f9e180]:
+              - button "Action " [ref=f9e181] [cursor=pointer]:
+                - generic [ref=f9e182]: Action
+                - text: 
+              - text:  
+        - generic [ref=f9e184]:
+          - generic [ref=f9e185]:
+            - generic [ref=f9e186]: 
+            - generic [ref=f9e188]:
+              - strong [ref=f9e189]: الأقسام - Departments
+              - paragraph [ref=f9e190]: "Total Items: 18"
+              - paragraph [ref=f9e191]:
+                - generic [ref=f9e192]: May 4, 2026
+          - generic [ref=f9e194]:
+            - generic [ref=f9e195]: 18 Active · 0 Inactive
+            - generic [ref=f9e199]:
+              - button "Action " [ref=f9e200] [cursor=pointer]:
+                - generic [ref=f9e201]: Action
+                - text: 
+              - text:  
+        - generic [ref=f9e203]:
+          - generic [ref=f9e204]:
+            - generic [ref=f9e205]: 
+            - generic [ref=f9e207]:
+              - strong [ref=f9e208]: أنواع الجمعيات - NGO Types
+              - paragraph [ref=f9e209]: "Total Items: 3"
+              - paragraph [ref=f9e210]:
+                - generic [ref=f9e211]: May 4, 2026
+          - generic [ref=f9e213]:
+            - generic [ref=f9e214]: 3 Active · 0 Inactive
+            - generic [ref=f9e218]:
+              - button "Action " [ref=f9e219] [cursor=pointer]:
+                - generic [ref=f9e220]: Action
+                - text: 
+              - text:  
+        - generic [ref=f9e222]:
+          - generic [ref=f9e223]:
+            - generic [ref=f9e224]: 
+            - generic [ref=f9e226]:
+              - strong [ref=f9e227]: البنوك - Banks
+              - paragraph [ref=f9e228]: "Total Items: 15"
+              - paragraph [ref=f9e229]:
+                - generic [ref=f9e230]: May 4, 2026
+          - generic [ref=f9e232]:
+            - generic [ref=f9e233]: 15 Active · 0 Inactive
+            - generic [ref=f9e237]:
+              - button "Action " [ref=f9e238] [cursor=pointer]:
+                - generic [ref=f9e239]: Action
+                - text: 
+              - text:  
+        - generic [ref=f9e241]:
+          - generic [ref=f9e242]:
+            - generic [ref=f9e243]: 
+            - generic [ref=f9e245]:
+              - strong [ref=f9e246]: المناطق - Regions
+              - paragraph [ref=f9e247]: "Total Items: 28"
+              - paragraph [ref=f9e248]:
+                - generic [ref=f9e249]: May 4, 2026
+          - generic [ref=f9e251]:
+            - generic [ref=f9e252]: 28 Active · 0 Inactive
+            - generic [ref=f9e256]:
+              - button "Action " [ref=f9e257] [cursor=pointer]:
+                - generic [ref=f9e258]: Action
+                - text: 
+              - text:  
+        - generic [ref=f9e260]:
+          - generic [ref=f9e261]:
+            - generic [ref=f9e262]: 
+            - generic [ref=f9e264]:
+              - strong [ref=f9e265]: البلدان - Countries
+              - paragraph [ref=f9e266]: "Total Items: 25"
+              - paragraph [ref=f9e267]:
+                - generic [ref=f9e268]: May 4, 2026
+          - generic [ref=f9e270]:
+            - generic [ref=f9e271]: 25 Active · 0 Inactive
+            - generic [ref=f9e275]:
+              - button "Action " [ref=f9e276] [cursor=pointer]:
+                - generic [ref=f9e277]: Action
+                - text: 
+              - text:  
+      - generic [ref=f9e278]: Showing 1 to 8 of 8
+  - contentinfo [ref=f9e280]:
+    - generic [ref=f9e282]:
+      - paragraph [ref=f9e284]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f9e286]: Version 1.0.0

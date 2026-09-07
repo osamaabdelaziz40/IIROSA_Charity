@@ -1,171 +1,91 @@
-<div class="page-header">
-  <div class="row align-items-center">
-    <div class="col-6">
-      <h3 class="page-title">{{ 'lookupManagement.title' | translate }}</h3>
-      <nav aria-label="breadcrumb" class="mt-2">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a routerLink="/dashboard">{{ 'dashboard.title' | translate }}</a></li>
-          <li class="breadcrumb-item active" aria-current="page">{{ 'lookupManagement.title' | translate }}</li>
-        </ol>
-      </nav>
-    </div>
-  </div>
-</div>
+<!-- Lookup Tables Overview (UC-14.5) — TinyDash contacts-grid layout -->
+<div class="container-fluid">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <!-- Page title header -->
+      <div class="row align-items-center my-4">
+        <div class="col">
+          <h2 class="h3 mb-0 page-title">{{ 'lookupManagement.allLookupTables' | translate }}</h2>
+        </div>
+        <div class="col-auto">
+          <button type="button" class="btn btn-secondary" (click)="loadLookupTablesSummary()" [disabled]="loading">
+            <span class="fe fe-refresh-cw fe-12 mr-2"></span>{{ 'common.refresh' | translate }}
+          </button>
+        </div>
+      </div>
 
-<!-- Loading State -->
-<div *ngIf="loading" class="text-center py-5">
-  <div class="spinner-border text-primary" role="status">
-    <span class="sr-only">{{ 'common.loading' | translate }}</span>
-  </div>
-</div>
+      <!-- Loading State -->
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">{{ 'common.loading' | translate }}</span>
+        </div>
+      </div>
 
-<!-- Lookup Tables Overview (UC-14.5) -->
-<div *ngIf="!loading" class="lookup-tables-overview">
-  <div class="card">
-    <div class="card-header">
-      <h4 class="card-title">{{ 'lookupManagement.allLookupTables' | translate }}</h4>
-    </div>
-    <div class="card-body">
-      <!-- Tables Grid -->
-      <div class="row" *ngIf="lookupTables.length > 0; else noDataTemplate">
-        <div class="col-md-6 col-lg-4 mb-4" *ngFor="let table of lookupTables">
-          <div class="lookup-table-card" [class]="'card-clickable'" (click)="navigateToTable(table.tableName)">
-            <div class="card-body">
-              <div class="d-flex align-items-center mb-3">
-                <div class="table-icon me-3">
-                  <i [class]="getTableIcon(table.tableName)"></i>
+      <ng-container *ngIf="!loading">
+        <!-- Tables Grid -->
+        <div class="row" *ngIf="lookupTables.length > 0; else noDataTemplate">
+          <div class="col-md-3" *ngFor="let table of pagedTables; let i = index; trackBy: trackByTableName">
+            <div class="card shadow mb-4" (click)="navigateToTable(table.tableName)">
+              <div class="card-body text-center">
+                <div class="circle circle-lg mt-3 mb-2 text-white {{ getIconColorClass(i) }}">
+                  <i class="{{ getTableIcon(table.tableName) }} fe-24 align-self-center"></i>
                 </div>
-                <div class="flex-grow-1">
-                  <h5 class="card-title mb-1">{{ table.tableDisplayName }}</h5>
-                  <p class="card-text text-muted mb-0">
-                    <small>{{ 'lookupManagement.totalItems' | translate }}: {{ table.itemCount }}</small>
+                <div class="card-text my-2">
+                  <strong class="card-title my-0 d-block">{{ table.tableDisplayName }}</strong>
+                  <p class="small text-muted mb-0">{{ 'lookupManagement.totalItems' | translate }}: {{ table.itemCount }}</p>
+                  <p class="small mb-0" *ngIf="table.lastModified">
+                    <span class="badge badge-light text-muted">{{ table.lastModified | date:'mediumDate' }}</span>
                   </p>
                 </div>
               </div>
-
-              <div class="table-stats">
-                <div class="row text-center">
-                  <div class="col-4">
-                    <div class="stat-item active">
-                      <div class="stat-value">{{ table.activeItems }}</div>
-                      <div class="stat-label">{{ 'lookupManagement.active' | translate }}</div>
-                    </div>
+              <div class="card-footer">
+                <div class="row align-items-center justify-content-between">
+                  <div class="col-auto">
+                    <small>
+                      <span class="dot dot-lg {{ getStatusDotClass(table) }} mr-1"></span>
+                      {{ table.activeItems }} {{ 'lookupManagement.active' | translate }} ·
+                      {{ table.inactiveItems }} {{ 'lookupManagement.inactive' | translate }}
+                    </small>
                   </div>
-                  <div class="col-4">
-                    <div class="stat-item inactive">
-                      <div class="stat-value">{{ table.inactiveItems }}</div>
-                      <div class="stat-label">{{ 'lookupManagement.inactive' | translate }}</div>
-                    </div>
-                  </div>
-                  <div class="col-4">
-                    <div class="stat-item">
-                      <div class="stat-value text-success">
-                        <i class="fe fe-check-circle"></i>
+                  <div class="col-auto">
+                    <div class="file-action">
+                      <button type="button" class="btn btn-link dropdown-toggle more-vertical p-0 text-muted mx-auto" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" (click)="$event.stopPropagation()">
+                        <span class="text-muted sr-only">Action</span>
+                      </button>
+                      <div class="dropdown-menu dropdown-menu-right m-2">
+                        <a class="dropdown-item" href="javascript:void(0)" (click)="navigateToTable(table.tableName); $event.stopPropagation()">
+                          <i class="fe fe-list fe-12 mr-4"></i>{{ 'lookupManagement.viewItems' | translate }}
+                        </a>
+                        <a class="dropdown-item" href="javascript:void(0)" (click)="exportLookupTable(table.tableName); $event.stopPropagation()">
+                          <i class="fe fe-download fe-12 mr-4"></i>{{ 'lookupManagement.exportTable' | translate }}
+                        </a>
                       </div>
-                      <div class="stat-label">{{ 'common.status' | translate }}</div>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="table-actions mt-3">
-                <div class="d-flex justify-content-between align-items-center">
-                  <small class="text-muted">
-                    <i class="fe fe-calendar"></i>
-                    {{ table.lastModified | date:'mediumDate' }}
-                  </small>
-                  <div class="action-buttons">
-                    <button class="btn btn-sm btn-outline-primary"
-                            [title]="'lookupManagement.viewItems' | translate"
-                            (click)="navigateToTable(table.tableName); $event.stopPropagation()">
-                      <i class="fe fe-list"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-success"
-                            [title]="'lookupManagement.exportTable' | translate"
-                            (click)="exportLookupTable(table.tableName); $event.stopPropagation()">
-                      <i class="fe fe-download"></i>
-                    </button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Empty State -->
-      <ng-template #noDataTemplate>
-        <div class="empty-state text-center py-5" *ngIf="lookupTables.length === 0">
-          <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
-          <p class="text-muted">{{ 'lookupManagement.noTablesFound' | translate }}</p>
-        </div>
-      </ng-template>
+        <!-- Empty State -->
+        <ng-template #noDataTemplate>
+          <div class="card shadow mb-4">
+            <div class="card-body text-center empty-state py-5">
+              <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+              <p class="text-muted mb-0">{{ 'lookupManagement.noTablesFound' | translate }}</p>
+            </div>
+          </div>
+        </ng-template>
+
+        <!-- Pagination -->
+        <app-pagination
+          [currentPage]="currentPage"
+          [pageSize]="pageSize"
+          [totalCount]="lookupTables.length"
+          (pageChange)="onPageChange($event)">
+        </app-pagination>
+      </ng-container>
     </div>
   </div>
 </div>
-
-<style>
-.lookup-tables-overview {
-  .lookup-table-card {
-    border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    transition: all 0.3s ease;
-    height: 100%;
-
-    &.card-clickable {
-      cursor: pointer;
-
-      &:hover {
-        border-color: var(--primary);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        transform: translateY(-2px);
-      }
-    }
-
-    .table-icon {
-      width: 48px;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: rgba(var(--primary-rgb), 0.1);
-      border-radius: 0.5rem;
-      font-size: 1.5rem;
-      color: var(--primary);
-    }
-
-    .table-stats {
-      .stat-item {
-        padding: 0.5rem 0;
-
-        &.active .stat-value {
-          color: var(--success);
-        }
-
-        &.inactive .stat-value {
-          color: var(--warning);
-        }
-
-        .stat-value {
-          font-size: 1.25rem;
-          font-weight: 600;
-        }
-
-        .stat-label {
-          font-size: 0.75rem;
-          text-transform: uppercase;
-          color: var(--text-muted);
-        }
-      }
-    }
-
-    .table-actions {
-      .action-buttons {
-        .btn {
-          margin-left: 0.25rem;
-        }
-      }
-    }
-  }
-}
-</style>

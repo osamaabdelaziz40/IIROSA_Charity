@@ -25,6 +25,9 @@ public class UpdateSupportTicketDto
     [Required(ErrorMessage = "Priority is required")]
     public int PriorityId { get; set; }
 
-    [Required(ErrorMessage = "Status is required")]
-    public int StatusId { get; set; }
+    /// <summary>
+    /// Optional — when null the ticket's status is left unchanged. The edit form has no status
+    /// control; requiring a snapshot here silently reverted concurrent status changes.
+    /// </summary>
+    public int? StatusId { get; set; }
 }

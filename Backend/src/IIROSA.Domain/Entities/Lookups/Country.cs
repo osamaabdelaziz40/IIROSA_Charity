@@ -31,6 +31,29 @@ public class Country : LookupEntity
     /// </summary>
     public string? FlagIcon { get; set; }
 
+    /// <summary>
+    /// Maximum HQ transfer amount for this destination country (UC-TRF-06/07).
+    /// NULL = unlimited — never treat NULL as zero. The column is written only through
+    /// 17-7's max-amount endpoint, not through the country CRUD.
+    /// </summary>
+    public decimal? MaxTransferAmount { get; set; }
+
+    // ========== National-ID validation rules (UC-SYS-11, epic 19) ==========
+    // Optional per country: NULL means the country sets no NID format rule and NID inputs
+    // stay free-form. These are UX pre-validation only — server-side controls (19-12
+    // uniqueness, service validators) remain authoritative.
+
+    /// <summary>
+    /// Regex the country's national id must match (e.g. Egyptian 14-digit numeric "^\d{14}$").
+    /// NULL = no pattern rule.
+    /// </summary>
+    public string? NationalIdPattern { get; set; }
+
+    /// <summary>
+    /// Exact length of the country's national id (e.g. 14 for Egypt). NULL = no length rule.
+    /// </summary>
+    public int? NationalIdLength { get; set; }
+
     // Navigation properties
     public virtual ICollection<Region> Regions { get; set; } = new List<Region>();
     public virtual ICollection<Center> Centers { get; set; } = new List<Center>();

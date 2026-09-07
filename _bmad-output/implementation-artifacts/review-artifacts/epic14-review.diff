@@ -1,0 +1,3820 @@
+diff --git a/Backend/src/IIROSA.Api/Controllers/SupportTicketsController.cs b/Backend/src/IIROSA.Api/Controllers/SupportTicketsController.cs
+index 5544e76..06c1889 100644
+--- a/Backend/src/IIROSA.Api/Controllers/SupportTicketsController.cs
++++ b/Backend/src/IIROSA.Api/Controllers/SupportTicketsController.cs
+@@ -114,6 +114,71 @@ public class SupportTicketsController : ControllerBase
+         }
+     }
+ 
++    /// <summary>
++    /// Update a support ticket (UC-CST-04: Update a support ticket تعديل الطلب)
++    /// Admin/Super Admin only
++    /// </summary>
++    [HttpPut("{id}")]
++    [Authorize(Roles = "SuperAdmin,Admin")]
++    [ProducesResponseType(typeof(SupportTicketDto), StatusCodes.Status200OK)]
++    [ProducesResponseType(StatusCodes.Status400BadRequest)]
++    [ProducesResponseType(StatusCodes.Status404NotFound)]
++    public async Task<ActionResult<SupportTicketDto>> UpdateTicket(Guid id, [FromBody] UpdateSupportTicketDto dto)
++    {
++        try
++        {
++            if (id != dto.Id)
++            {
++                return BadRequest(new { message = "ID mismatch" });
++            }
++
++            var userId = GetCurrentUserId();
++            if (string.IsNullOrEmpty(userId))
++            {
++                return Unauthorized(new { message = "User not found" });
++            }
++
++            var updated = await _ticketService.UpdateTicketAsync(dto, userId);
++            return Ok(updated);
++        }
++        catch (KeyNotFoundException ex)
++        {
++            return NotFound(new { message = ex.Message });
++        }
++        catch (FluentValidation.ValidationException ex)
++        {
++            var errors = ex.Errors
++                .GroupBy(f => f.PropertyName)
++                .ToDictionary(g => g.Key, g => string.Join("; ", g.Select(f => f.ErrorMessage)));
++            return BadRequest(new { message = "Validation failed", errors });
++        }
++        catch (Exception ex)
++        {
++            _logger.LogError(ex, "Error updating ticket: {Id}", id);
++            return StatusCode(500, new { message = "Error updating ticket", error = ex.Message });
++        }
++    }
++
++    /// <summary>
++    /// Get ticket lookups (categories, priorities, statuses) for the ticket form selects.
++    /// Available to all authenticated users — the create form needs it too.
++    /// </summary>
++    [HttpGet("lookups")]
++    [ProducesResponseType(typeof(TicketLookupsDto), StatusCodes.Status200OK)]
++    public async Task<ActionResult<TicketLookupsDto>> GetTicketLookups()
++    {
++        try
++        {
++            var lookups = await _ticketService.GetTicketLookupsAsync();
++            return Ok(lookups);
++        }
++        catch (Exception ex)
++        {
++            _logger.LogError(ex, "Error retrieving ticket lookups");
++            return StatusCode(500, new { message = "Error retrieving ticket lookups", error = ex.Message });
++        }
++    }
++
+     /// <summary>
+     /// Get my tickets (UC-13.3: View My Tickets)
+     /// Available to all authenticated users
+diff --git a/Backend/src/IIROSA.Application/Interfaces/ISupportTicketService.cs b/Backend/src/IIROSA.Application/Interfaces/ISupportTicketService.cs
+index 42fddc3..fcf159e 100644
+--- a/Backend/src/IIROSA.Application/Interfaces/ISupportTicketService.cs
++++ b/Backend/src/IIROSA.Application/Interfaces/ISupportTicketService.cs
+@@ -14,6 +14,12 @@ public interface ISupportTicketService
+     // UC-13.2: Attach File to Ticket (handled as update)
+     Task<SupportTicketDto> AttachFileToTicketAsync(Guid ticketId, string fileName, string filePath, long fileSize);
+ 
++    // UC-CST-04: Update Support Ticket (Admin/Super Admin only)
++    Task<SupportTicketDto> UpdateTicketAsync(UpdateSupportTicketDto dto, string userId);
++
++    // Ticket form lookups (categories, priorities, statuses)
++    Task<TicketLookupsDto> GetTicketLookupsAsync();
++
+     // UC-13.3: View My Tickets
+     Task<(IEnumerable<SupportTicketListDto> Items, int TotalCount)> GetMyTicketsAsync(string userId, SupportTicketFilterDto filter);
+ 
+diff --git a/Backend/src/IIROSA.Application/Services/SupportTicketService.cs b/Backend/src/IIROSA.Application/Services/SupportTicketService.cs
+index 27fe382..04331b0 100644
+--- a/Backend/src/IIROSA.Application/Services/SupportTicketService.cs
++++ b/Backend/src/IIROSA.Application/Services/SupportTicketService.cs
+@@ -1,10 +1,12 @@
+ using Microsoft.EntityFrameworkCore;
+ using Microsoft.Extensions.Logging;
+ using IIROSA.Application.DTOs.TechnicalSupport;
++using IIROSA.Application.DTOs.LookupManagement;
+ using IIROSA.Application.Interfaces;
+ using IIROSA.Domain.Entities.TechnicalSupport;
+ using IIROSA.Domain.Interfaces;
+ using AutoMapper;
++using FluentValidation;
+ 
+ namespace IIROSA.Application.Services;
+ 
+@@ -16,22 +18,28 @@ public class SupportTicketService : ISupportTicketService
+ {
+     private readonly ISupportTicketRepository _ticketRepository;
+     private readonly ITicketResponseRepository _responseRepository;
++    private readonly ISupportTicketLookupRepository _lookupRepository;
+     private readonly IUnitOfWork _unitOfWork;
+     private readonly IMapper _mapper;
+     private readonly ILogger<SupportTicketService> _logger;
++    private readonly IValidator<UpdateSupportTicketDto> _updateValidator;
+ 
+     public SupportTicketService(
+         ISupportTicketRepository ticketRepository,
+         ITicketResponseRepository responseRepository,
++        ISupportTicketLookupRepository lookupRepository,
+         IUnitOfWork unitOfWork,
+         IMapper mapper,
+-        ILogger<SupportTicketService> logger)
++        ILogger<SupportTicketService> logger,
++        IValidator<UpdateSupportTicketDto> updateValidator)
+     {
+         _ticketRepository = ticketRepository;
+         _responseRepository = responseRepository;
++        _lookupRepository = lookupRepository;
+         _unitOfWork = unitOfWork;
+         _mapper = mapper;
+         _logger = logger;
++        _updateValidator = updateValidator;
+     }
+ 
+     // UC-13.1: Create Support Ticket
+@@ -85,6 +93,46 @@ public class SupportTicketService : ISupportTicketService
+         return await GetTicketWithDetailsAsync(ticket.Id);
+     }
+ 
++    // UC-CST-04: Update Support Ticket (Admin/Super Admin only)
++    public async Task<SupportTicketDto> UpdateTicketAsync(UpdateSupportTicketDto dto, string userId)
++    {
++        _logger.LogInformation("Updating ticket {TicketId} by user {UserId}", dto.Id, userId);
++
++        await _updateValidator.ValidateAndThrowAsync(dto);
++
++        var ticket = await _ticketRepository.GetByIdAsync(dto.Id);
++        if (ticket == null)
++            throw new KeyNotFoundException($"Ticket with ID {dto.Id} not found");
++
++        ticket.Title = dto.Title;
++        ticket.Message = dto.Message;
++        ticket.CategoryId = dto.CategoryId;
++        ticket.PriorityId = dto.PriorityId;
++        ticket.StatusId = dto.StatusId;
++
++        _ticketRepository.Update(ticket);
++        await _unitOfWork.SaveChangesAsync();
++
++        _logger.LogInformation("Ticket {TicketId} updated successfully", dto.Id);
++
++        return await GetTicketWithDetailsAsync(ticket.Id);
++    }
++
++    // Ticket form lookups (categories, priorities, statuses)
++    public async Task<TicketLookupsDto> GetTicketLookupsAsync()
++    {
++        var categories = await _lookupRepository.GetCategoriesAsync();
++        var priorities = await _lookupRepository.GetPrioritiesAsync();
++        var statuses = await _lookupRepository.GetStatusesAsync();
++
++        return new TicketLookupsDto
++        {
++            Categories = _mapper.Map<IEnumerable<LookupDto>>(categories),
++            Priorities = _mapper.Map<IEnumerable<LookupDto>>(priorities),
++            Statuses = _mapper.Map<IEnumerable<LookupDto>>(statuses)
++        };
++    }
++
+     // UC-13.3: View My Tickets
+     public async Task<(IEnumerable<SupportTicketListDto> Items, int TotalCount)> GetMyTicketsAsync(string userId, SupportTicketFilterDto filter)
+     {
+diff --git a/Backend/src/IIROSA.Infrastructure/Extensions/ServiceCollectionExtensions.cs b/Backend/src/IIROSA.Infrastructure/Extensions/ServiceCollectionExtensions.cs
+index dc95c03..8d3701c 100644
+--- a/Backend/src/IIROSA.Infrastructure/Extensions/ServiceCollectionExtensions.cs
++++ b/Backend/src/IIROSA.Infrastructure/Extensions/ServiceCollectionExtensions.cs
+@@ -207,6 +207,7 @@ public static class ServiceCollectionExtensions
+         // Technical Support repositories (UC-13.1 through UC-13.10)
+         services.AddScoped<IIROSA.Domain.Interfaces.ISupportTicketRepository, IIROSA.Infrastructure.Data.Repository.SupportTicketRepository>();
+         services.AddScoped<IIROSA.Domain.Interfaces.ITicketResponseRepository, IIROSA.Infrastructure.Data.Repository.TicketResponseRepository>();
++        services.AddScoped<IIROSA.Domain.Interfaces.ISupportTicketLookupRepository, IIROSA.Infrastructure.Data.Repository.SupportTicketLookupRepository>();
+ 
+         // Incoming & Outgoing Correspondence Repositories (UC-12.1 through UC-12.14)
+         services.AddScoped<IIROSA.Domain.Interfaces.IIncomingRepository, IIROSA.Infrastructure.Data.Repository.IncomingRepository>();
+diff --git a/Frontend/src/app/core/models/technical-support.model.ts b/Frontend/src/app/core/models/technical-support.model.ts
+index 9cc719e..5c0fd05 100644
+--- a/Frontend/src/app/core/models/technical-support.model.ts
++++ b/Frontend/src/app/core/models/technical-support.model.ts
+@@ -1,156 +1,164 @@
++// Wire model for /api/SupportTickets (SupportTicketDto / SupportTicketDetailDto / SupportTicketListDto).
++// Field names match the API JSON exactly — camelCase mirrors of the C# DTOs.
+ export interface SupportTicket {
+   id: string;
+   title: string;
+-  message: string;
+-  category: TicketCategory;
+-  priority: TicketPriority;
+-  status: TicketStatus;
+-  isSolved: boolean;
+-  userId: string;
+-  userName?: string;
+-  userEmail?: string;
+-  userRole?: string;
+-  assignedTo?: string;
+-  assignedToName?: string;
+-  attachedFile?: string;
+-  attachedFileName?: string;
++  message?: string;
++
++  // Lookup ids + localized names
++  categoryId: number;
++  categoryName?: string;
++  priorityId: number;
++  priorityName?: string;
++  statusId: number;
++  statusName?: string;
++  priorityColor?: string;
++  statusColor?: string;
++
++  // Resolution
++  isSolved?: boolean;
++  resolutionDescription?: string;
++  resolvedOn?: string;
++  resolvedBy?: string;
++
++  // System information
+   browserInfo?: string;
+   pageUrl?: string;
+   userAction?: string;
+-  createdDate: string;
+-  lastUpdated: string;
+-  resolutionDescription?: string;
+-  resolutionDate?: string;
++
++  // Assignment
++  assignedTo?: string;
++  assignedToName?: string;
++
++  // Creator
++  createdByUserId?: string;
++  createdByUserName?: string;
++  createdByEmail?: string;
++
++  // Attachment
++  attachmentFileName?: string;
++  attachmentFilePath?: string;
++  attachmentFileSize?: number;
++
++  // Audit
++  createdOn: string;
++  updatedOn: string;
++
++  responseCount?: number;
+   responses?: TicketResponse[];
++  publicResponses?: TicketResponse[];
++  internalNotes?: TicketResponse[];
+ }
+ 
+ export interface TicketResponse {
+   id: string;
+   ticketId: string;
+   responseText: string;
+-  respondedBy: string;
+-  respondedByName?: string;
+-  responseDate: string;
+-  attachment?: string;
+-  attachmentName?: string;
+-  isInternal: boolean;
+-}
+-
+-export interface TicketAttachment {
+-  id: string;
+-  ticketId: string;
+-  fileName: string;
+-  fileUrl: string;
+-  fileSize: number;
+-  uploadedBy: string;
+-  uploadedDate: string;
+-  description?: string;
++  isInternalNote: boolean;
++  respondedByUserId: string;
++  responderName?: string;
++  responderEmail?: string;
++  attachmentFileName?: string;
++  attachmentFilePath?: string;
++  attachmentFileSize?: number;
++  createdOn: string;
+ }
+ 
+ export interface CreateTicketRequest {
+   title: string;
+   message: string;
+-  category: TicketCategory;
+-  priority: TicketPriority;
+-  attachedFile?: File;
++  categoryId: number;
++  priorityId: number;
+   browserInfo?: string;
+   pageUrl?: string;
+   userAction?: string;
+ }
+ 
++export interface UpdateTicketRequest {
++  id: string;
++  title: string;
++  message: string;
++  categoryId: number;
++  priorityId: number;
++  statusId: number;
++}
++
+ export interface UpdateTicketStatusRequest {
+-  status: TicketStatus;
+-  note?: string;
++  statusId: number;
++  statusNote?: string;
+ }
+ 
+ export interface MarkTicketSolvedRequest {
+   resolutionDescription: string;
+   solutionSteps?: string;
+-  attachment?: File;
+ }
+ 
+ export interface AddTicketResponseRequest {
+   responseText: string;
+-  attachment?: File;
+-  isInternal: boolean;
++  isInternalNote: boolean;
+ }
+ 
++// Query params of SupportTicketFilterDto, camelCase as the API binds them.
+ export interface TicketSearchRequest {
+   pageNumber?: number;
+   pageSize?: number;
+   searchTerm?: string;
+-  category?: TicketCategory;
+-  priority?: TicketPriority;
+-  status?: TicketStatus;
++  categoryId?: number;
++  priorityId?: number;
++  statusId?: number;
+   isSolved?: boolean;
+-  userId?: string;
+   assignedTo?: string;
++  createdByUserId?: string;
+   startDate?: string;
+   endDate?: string;
+   sortBy?: string;
+-  sortDescending?: boolean;
++  sortDirection?: string;
+ }
+ 
+-export interface TicketListResponse {
+-  tickets: SupportTicket[];
+-  totalRecords: number;
+-  pageNumber: number;
+-  pageSize: number;
+-  totalPages: number;
+-  hasPrevious: boolean;
+-  hasNext: boolean;
++// GET /api/SupportTickets/lookups → TicketLookupsDto
++export interface LookupOption {
++  id: number;
++  name: string;
++  nameAr?: string;
++  nameEn?: string;
++  isActive?: boolean;
++}
++
++export interface TicketLookups {
++  categories: LookupOption[];
++  priorities: LookupOption[];
++  statuses: LookupOption[];
+ }
+ 
++// POST /api/SupportTickets/report → SupportTicketReportDto
+ export interface SupportReportRequest {
+   startDate: string;
+   endDate: string;
+-  groupBy?: ReportGroupBy;
+-  includeCategories?: boolean;
+-  includeUsers?: boolean;
+ }
+ 
+ export interface SupportReport {
+-  summaryStatistics: ReportSummary;
+-  performanceMetrics: ReportPerformance;
+-  userStatistics: ReportUserStats[];
+-  trendAnalysis: ReportTrend[];
+-  tickets: SupportTicket[];
+-}
+-
+-export interface ReportSummary {
++  startDate: string;
++  endDate: string;
+   totalTickets: number;
+-  ticketsByStatus: Record<TicketStatus, number>;
+-  ticketsByPriority: Record<TicketPriority, number>;
+-  ticketsByCategory: Record<TicketCategory, number>;
+-  solvedVsUnsolved: {
+-    solved: number;
+-    unsolved: number;
+-  };
+-}
+-
+-export interface ReportPerformance {
+-  averageResolutionTime: number; // in hours
++  solvedTickets: number;
++  unsolvedTickets: number;
++  openTickets: number;
++  inProgressTickets: number;
++  resolvedTickets: number;
++  closedTickets: number;
++  ticketsByStatus: Record<string, number>;
++  ticketsByPriority: Record<string, number>;
++  ticketsByCategory: Record<string, number>;
++  ticketsByCreator: Record<string, number>;
++  averageResolutionTimeHours: number;
++  // Newtonsoft camelCase keeps a trailing acronym uppercase (…WithinSLA → …WithinSLA)
+   ticketsResolvedWithinSLA: number;
+-  ticketsOpenedVsClosed: {
+-    opened: number;
+-    closed: number;
+-  };
+-}
+-
+-export interface ReportUserStats {
+-  userId: string;
+-  userName: string;
+-  ticketCount: number;
+-  solvedCount: number;
+-}
+-
+-export interface ReportTrend {
+-  date: string;
+-  ticketsOpened: number;
+-  ticketsClosed: number;
+-  resolutionTime?: number;
++  ticketsBreachedSLA: number;
++  tickets: SupportTicket[];
+ }
+ 
++// Enum mirrors of the seeded lookup tables (labels come from the lookups endpoint,
++// which returns the localized NameAr ?? NameEn).
+ export enum TicketCategory {
+   Technical = 'Technical',
+   Access = 'Access',
+@@ -173,10 +181,3 @@ export enum TicketStatus {
+   Resolved = 'Resolved',
+   Closed = 'Closed'
+ }
+-
+-export enum ReportGroupBy {
+-  Category = 'Category',
+-  Status = 'Status',
+-  User = 'User',
+-  Priority = 'Priority'
+-}
+diff --git a/Frontend/src/app/modules/technical-support/services/technical-support.service.ts b/Frontend/src/app/modules/technical-support/services/technical-support.service.ts
+index 88b02f3..ec413db 100644
+--- a/Frontend/src/app/modules/technical-support/services/technical-support.service.ts
++++ b/Frontend/src/app/modules/technical-support/services/technical-support.service.ts
+@@ -1,24 +1,31 @@
+ import { Injectable } from '@angular/core';
+-import { Observable, BehaviorSubject } from 'rxjs';
++import { Observable, BehaviorSubject, map } from 'rxjs';
+ import { ApiService } from '../../../core/services/api.service';
+ import {
+   SupportTicket,
+   CreateTicketRequest,
++  UpdateTicketRequest,
+   UpdateTicketStatusRequest,
+   MarkTicketSolvedRequest,
+   AddTicketResponseRequest,
++  TicketResponse,
+   TicketSearchRequest,
+-  TicketListResponse,
++  TicketLookups,
+   SupportReportRequest,
+   SupportReport
+ } from '../../../core/models/technical-support.model';
+-import { ApiResponse, PagedResponse } from '../../../core/models/common.model';
++import { PagedResponse } from '../../../core/models/common.model';
+ 
++/**
++ * Technical Support service — wired to the real SupportTicketsController
++ * (route api/SupportTickets). Responses are bare DTOs; the controller does not
++ * use the ApiResponse envelope, so never read `.value` off a response here.
++ */
+ @Injectable({
+   providedIn: 'root'
+ })
+ export class TechnicalSupportService {
+-  private readonly endpoint = '/api/technicalsupport';
++  private readonly endpoint = '/api/SupportTickets';
+   private ticketsUpdated = new BehaviorSubject<number>(0);
+   ticketsUpdated$ = this.ticketsUpdated.asObservable();
+ 
+@@ -30,176 +37,109 @@ export class TechnicalSupportService {
+ 
+   // Ticket CRUD Operations
+   getMyTickets(search: TicketSearchRequest): Observable<PagedResponse<SupportTicket>> {
+-    return this.api.get(`${this.endpoint}/mytickets`, search);
++    return this.api
++      .get<any>(`${this.endpoint}/my-tickets`, search)
++      .pipe(map(res => this.toPagedResponse(res, search)));
+   }
+ 
+   getAllTickets(search: TicketSearchRequest): Observable<PagedResponse<SupportTicket>> {
+-    return this.api.get(`${this.endpoint}`, search);
++    return this.api
++      .get<any>(`${this.endpoint}/all-tickets`, search)
++      .pipe(map(res => this.toPagedResponse(res, search)));
+   }
+ 
+   getTicketById(id: string): Observable<SupportTicket> {
+-    return this.api.get(`${this.endpoint}/${id}`);
++    return this.api.get<SupportTicket>(`${this.endpoint}/${id}`);
+   }
+ 
+-  createTicket(request: CreateTicketRequest): Observable<ApiResponse<SupportTicket>> {
+-    const formData = this.createTicketFormData(request);
+-    return this.api.post(`${this.endpoint}`, formData);
++  createTicket(request: CreateTicketRequest): Observable<SupportTicket> {
++    return this.api.post<SupportTicket>(`${this.endpoint}`, request);
+   }
+ 
+-  updateTicketStatus(
+-    id: string,
+-    request: UpdateTicketStatusRequest
+-  ): Observable<ApiResponse<SupportTicket>> {
+-    return this.api.patch(`${this.endpoint}/${id}/status`, request);
+-  }
+-
+-  markTicketAsSolved(
+-    id: string,
+-    request: MarkTicketSolvedRequest
+-  ): Observable<ApiResponse<SupportTicket>> {
+-    const formData = this.createSolvedFormData(request);
+-    return this.api.patch(`${this.endpoint}/${id}/solve`, formData);
++  updateTicket(id: string, request: UpdateTicketRequest): Observable<SupportTicket> {
++    return this.api.put<SupportTicket>(`${this.endpoint}/${id}`, request);
+   }
+ 
+-  closeTicket(id: string): Observable<ApiResponse<SupportTicket>> {
+-    return this.api.patch(`${this.endpoint}/${id}/close`, {});
++  deleteTicket(id: string): Observable<void> {
++    return this.api.delete<void>(`${this.endpoint}/${id}`);
+   }
+ 
+-  deleteTicket(id: string): Observable<ApiResponse<boolean>> {
+-    return this.api.delete(`${this.endpoint}/${id}`);
++  // Ticket form lookups
++  getTicketLookups(): Observable<TicketLookups> {
++    return this.api.get<TicketLookups>(`${this.endpoint}/lookups`);
+   }
+ 
+-  // Ticket Responses
+-  addTicketResponse(
++  // Status / resolution management
++  updateTicketStatus(
+     id: string,
+-    request: AddTicketResponseRequest
+-  ): Observable<ApiResponse<SupportTicket>> {
+-    const formData = this.createResponseFormData(request);
+-    return this.api.post(`${this.endpoint}/${id}/responses`, formData);
+-  }
+-
+-  getTicketResponses(id: string): Observable<any> {
+-    return this.api.get(`${this.endpoint}/${id}/responses`);
+-  }
+-
+-  deleteTicketResponse(ticketId: string, responseId: string): Observable<ApiResponse<boolean>> {
+-    return this.api.delete(`${this.endpoint}/${ticketId}/responses/${responseId}`);
+-  }
+-
+-  // Ticket Attachments
+-  uploadTicketAttachment(ticketId: string, file: File, description?: string): Observable<any> {
+-    const formData = new FormData();
+-    formData.append('file', file);
+-    if (description) {
+-      formData.append('description', description);
+-    }
+-    return this.api.post(`${this.endpoint}/${ticketId}/attachments`, formData);
+-  }
+-
+-  downloadTicketAttachment(ticketId: string, attachmentId: string): Observable<Blob> {
+-    return this.api.download(`${this.endpoint}/${ticketId}/attachments/${attachmentId}`);
+-  }
+-
+-  deleteTicketAttachment(ticketId: string, attachmentId: string): Observable<ApiResponse<boolean>> {
+-    return this.api.delete(`${this.endpoint}/${ticketId}/attachments/${attachmentId}`);
+-  }
+-
+-  // Ticket Assignment
+-  assignTicket(ticketId: string, userId: string): Observable<ApiResponse<SupportTicket>> {
+-    return this.api.post(`${this.endpoint}/${ticketId}/assign`, { userId });
+-  }
+-
+-  unassignTicket(ticketId: string): Observable<ApiResponse<SupportTicket>> {
+-    return this.api.post(`${this.endpoint}/${ticketId}/unassign`, {});
+-  }
+-
+-  // Search and Filter
+-  searchTickets(search: TicketSearchRequest): Observable<PagedResponse<SupportTicket>> {
+-    return this.api.get(`${this.endpoint}/search`, search);
+-  }
+-
+-  getTicketCategories(): Observable<string[]> {
+-    return this.api.get(`${this.endpoint}/categories`);
++    request: UpdateTicketStatusRequest
++  ): Observable<{ message: string }> {
++    return this.api.put<{ message: string }>(`${this.endpoint}/${id}/status`, {
++      ticketId: id,
++      statusId: request.statusId,
++      statusNote: request.statusNote
++    });
+   }
+ 
+-  getTicketPriorities(): Observable<string[]> {
+-    return this.api.get(`${this.endpoint}/priorities`);
++  markTicketAsSolved(
++    id: string,
++    request: MarkTicketSolvedRequest
++  ): Observable<{ message: string }> {
++    return this.api.post<{ message: string }>(`${this.endpoint}/${id}/mark-solved`, {
++      ticketId: id,
++      resolutionDescription: request.resolutionDescription,
++      solutionSteps: request.solutionSteps
++    });
+   }
+ 
+-  getTicketStatuses(): Observable<string[]> {
+-    return this.api.get(`${this.endpoint}/statuses`);
++  // Ticket Responses
++  addTicketResponse(id: string, request: AddTicketResponseRequest): Observable<TicketResponse> {
++    return this.api.post<TicketResponse>(`${this.endpoint}/${id}/responses`, {
++      ticketId: id,
++      responseText: request.responseText,
++      isInternalNote: request.isInternalNote
++    });
+   }
+ 
+   // Reports
+   generateReport(request: SupportReportRequest): Observable<SupportReport> {
+-    return this.api.post(`${this.endpoint}/reports`, request);
+-  }
+-
+-  exportTicketsToExcel(search: TicketSearchRequest): Observable<Blob> {
+-    return this.api.getBlob(`${this.endpoint}/export/excel`, search);
+-  }
+-
+-  exportTicketsToPDF(search: TicketSearchRequest): Observable<Blob> {
+-    return this.api.getBlob(`${this.endpoint}/export/pdf`, search);
++    return this.api.post<SupportReport>(`${this.endpoint}/report`, request);
+   }
+ 
+   // Statistics
+-  getTicketStatistics(): Observable<any> {
+-    return this.api.get(`${this.endpoint}/statistics`);
+-  }
+-
+-  getMyTicketStatistics(): Observable<any> {
+-    return this.api.get(`${this.endpoint}/mytickets/statistics`);
+-  }
+-
+-  // Helper Methods
+-  private createTicketFormData(request: CreateTicketRequest): FormData {
+-    const formData = new FormData();
+-    formData.append('title', request.title);
+-    formData.append('message', request.message);
+-    formData.append('category', request.category);
+-    formData.append('priority', request.priority);
+-
+-    if (request.attachedFile) {
+-      formData.append('attachedFile', request.attachedFile);
+-    }
+-    if (request.browserInfo) {
+-      formData.append('browserInfo', request.browserInfo);
+-    }
+-    if (request.pageUrl) {
+-      formData.append('pageUrl', request.pageUrl);
+-    }
+-    if (request.userAction) {
+-      formData.append('userAction', request.userAction);
+-    }
+-
+-    return formData;
+-  }
+-
+-  private createSolvedFormData(request: MarkTicketSolvedRequest): FormData {
+-    const formData = new FormData();
+-    formData.append('resolutionDescription', request.resolutionDescription);
+-
+-    if (request.solutionSteps) {
+-      formData.append('solutionSteps', request.solutionSteps);
+-    }
+-    if (request.attachment) {
+-      formData.append('attachment', request.attachment);
+-    }
+-
+-    return formData;
+-  }
+-
+-  private createResponseFormData(request: AddTicketResponseRequest): FormData {
+-    const formData = new FormData();
+-    formData.append('responseText', request.responseText);
+-    formData.append('isInternal', request.isInternal.toString());
+-
+-    if (request.attachment) {
+-      formData.append('attachment', request.attachment);
+-    }
+-
+-    return formData;
++  getMyTicketsCount(): Observable<number> {
++    return this.api.get<number>(`${this.endpoint}/my-tickets/count`);
++  }
++
++  getAllTicketsCount(): Observable<number> {
++    return this.api.get<number>(`${this.endpoint}/all-tickets/count`);
++  }
++
++  getUnsolvedTicketsCount(): Observable<number> {
++    return this.api.get<number>(`${this.endpoint}/unsolved/count`);
++  }
++
++  /**
++   * The list endpoints return Ok(new { result.Items, result.TotalCount }),
++   * which serializes as { items: [...], totalCount: N } (Newtonsoft camelCase).
++   */
++  private toPagedResponse(
++    payload: { items?: SupportTicket[]; totalCount?: number } | null,
++    search: TicketSearchRequest
++  ): PagedResponse<SupportTicket> {
++    const items = payload?.items ?? [];
++    const totalCount = payload?.totalCount ?? 0;
++    const pageNumber = search?.pageNumber ?? 1;
++    const pageSize = search?.pageSize ?? 10;
++    return {
++      items,
++      totalCount,
++      pageNumber,
++      pageSize,
++      totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
++      hasPrevious: pageNumber > 1,
++      hasNext: pageNumber * pageSize < totalCount
++    };
+   }
+ 
+   // Browser Information Detection
+diff --git a/Frontend/src/app/modules/technical-support/support-report/support-report.component.html b/Frontend/src/app/modules/technical-support/support-report/support-report.component.html
+index b71c7c7..71ed446 100644
+--- a/Frontend/src/app/modules/technical-support/support-report/support-report.component.html
++++ b/Frontend/src/app/modules/technical-support/support-report/support-report.component.html
+@@ -59,51 +59,6 @@
+               required>
+           </div>
+ 
+-          <!-- Group By -->
+-          <div class="form-group">
+-            <label for="groupBy">
+-              {{ 'technicalSupport.reports.groupBy' | translate }}
+-            </label>
+-            <select
+-              class="form-control"
+-              id="groupBy"
+-              [(ngModel)]="reportRequest.groupBy"
+-              name="groupBy">
+-              <option *ngFor="let option of groupByOptions" [value]="option.value">
+-                {{ option.label | translate }}
+-              </option>
+-            </select>
+-          </div>
+-
+-          <!-- Include Options -->
+-          <div class="form-group">
+-            <div class="custom-control custom-checkbox">
+-              <input
+-                type="checkbox"
+-                class="custom-control-input"
+-                id="includeCategories"
+-                [(ngModel)]="reportRequest.includeCategories"
+-                name="includeCategories">
+-              <label class="custom-control-label" for="includeCategories">
+-                {{ 'technicalSupport.reports.includeCategories' | translate }}
+-              </label>
+-            </div>
+-          </div>
+-
+-          <div class="form-group">
+-            <div class="custom-control custom-checkbox">
+-              <input
+-                type="checkbox"
+-                class="custom-control-input"
+-                id="includeUsers"
+-                [(ngModel)]="reportRequest.includeUsers"
+-                name="includeUsers">
+-              <label class="custom-control-label" for="includeUsers">
+-                {{ 'technicalSupport.reports.includeUsers' | translate }}
+-              </label>
+-            </div>
+-          </div>
+-
+           <!-- Actions -->
+           <div class="form-actions">
+             <button
+@@ -148,7 +103,7 @@
+               {{ 'technicalSupport.reports.title' | translate }}
+             </h4>
+             <small class="text-muted">
+-              {{ reportRequest.startDate }} - {{ reportRequest.endDate }}
++              {{ report.startDate | date:'mediumDate' }} - {{ report.endDate | date:'mediumDate' }}
+             </small>
+           </div>
+           <div class="col-auto">
+@@ -177,29 +132,56 @@
+           <div class="row">
+             <div class="col-md-3">
+               <div class="stat-card">
+-                <div class="stat-value">{{ report.summaryStatistics.totalTickets }}</div>
++                <div class="stat-value">{{ report.totalTickets }}</div>
+                 <div class="stat-label">{{ 'technicalSupport.statistics.totalTickets' | translate }}</div>
+               </div>
+             </div>
+             <div class="col-md-3">
+               <div class="stat-card">
+-                <div class="stat-value text-success">{{ report.summaryStatistics.solvedVsUnsolved.solved }}</div>
++                <div class="stat-value text-success">{{ report.solvedTickets }}</div>
+                 <div class="stat-label">{{ 'technicalSupport.statistics.solvedTickets' | translate }}</div>
+               </div>
+             </div>
+             <div class="col-md-3">
+               <div class="stat-card">
+-                <div class="stat-value text-warning">{{ report.summaryStatistics.solvedVsUnsolved.unsolved }}</div>
++                <div class="stat-value text-warning">{{ report.unsolvedTickets }}</div>
+                 <div class="stat-label">{{ 'technicalSupport.statistics.unsolvedTickets' | translate }}</div>
+               </div>
+             </div>
+             <div class="col-md-3">
+               <div class="stat-card">
+-                <div class="stat-value">{{ formatDuration(report.performanceMetrics.averageResolutionTime) }}</div>
++                <div class="stat-value">{{ formatDuration(report.averageResolutionTimeHours) }}</div>
+                 <div class="stat-label">{{ 'technicalSupport.reports.averageResolutionTime' | translate }}</div>
+               </div>
+             </div>
+           </div>
++
++          <div class="row mt-3">
++            <div class="col-md-3">
++              <div class="stat-card">
++                <div class="stat-value">{{ report.openTickets }}</div>
++                <div class="stat-label">{{ 'technicalSupport.reports.openTickets' | translate }}</div>
++              </div>
++            </div>
++            <div class="col-md-3">
++              <div class="stat-card">
++                <div class="stat-value">{{ report.inProgressTickets }}</div>
++                <div class="stat-label">{{ 'technicalSupport.reports.inProgressTickets' | translate }}</div>
++              </div>
++            </div>
++            <div class="col-md-3">
++              <div class="stat-card">
++                <div class="stat-value">{{ report.resolvedTickets }}</div>
++                <div class="stat-label">{{ 'technicalSupport.reports.resolvedTickets' | translate }}</div>
++              </div>
++            </div>
++            <div class="col-md-3">
++              <div class="stat-card">
++                <div class="stat-value">{{ report.closedTickets }}</div>
++                <div class="stat-label">{{ 'technicalSupport.reports.closedTickets' | translate }}</div>
++              </div>
++            </div>
++          </div>
+         </div>
+ 
+         <!-- Performance Metrics -->
+@@ -209,17 +191,13 @@
+             <div class="col-md-6">
+               <div class="progress-item mb-3">
+                 <div class="d-flex justify-content-between mb-1">
+-                  <span>{{ 'technicalSupport.reports.ticketsOpenedVsClosed' | translate }}</span>
+-                  <span>
+-                    {{ report.performanceMetrics.ticketsOpenedVsClosed.opened }}
+-                    /
+-                    {{ report.performanceMetrics.ticketsOpenedVsClosed.closed }}
+-                  </span>
++                  <span>{{ 'technicalSupport.reports.ticketsWithinSLA' | translate }}</span>
++                  <span>{{ report.ticketsResolvedWithinSLA }}</span>
+                 </div>
+                 <div class="progress">
+                   <div
+-                    class="progress-bar bg-success"
+-                    [style.width.%]="getPercentage(report.performanceMetrics.ticketsOpenedVsClosed.closed, report.performanceMetrics.ticketsOpenedVsClosed.opened)">
++                    class="progress-bar bg-info"
++                    [style.width.%]="getPercentage(report.ticketsResolvedWithinSLA, report.totalTickets)">
+                   </div>
+                 </div>
+               </div>
+@@ -227,13 +205,13 @@
+             <div class="col-md-6">
+               <div class="progress-item mb-3">
+                 <div class="d-flex justify-content-between mb-1">
+-                  <span>{{ 'technicalSupport.reports.ticketsWithinSLA' | translate }}</span>
+-                  <span>{{ report.performanceMetrics.ticketsResolvedWithinSLA }}</span>
++                  <span>{{ 'technicalSupport.reports.slaBreached' | translate }}</span>
++                  <span>{{ report.ticketsBreachedSLA }}</span>
+                 </div>
+                 <div class="progress">
+                   <div
+-                    class="progress-bar bg-info"
+-                    [style.width.%]="getPercentage(report.performanceMetrics.ticketsResolvedWithinSLA, report.summaryStatistics.totalTickets)">
++                    class="progress-bar bg-danger"
++                    [style.width.%]="getPercentage(report.ticketsBreachedSLA, report.totalTickets)">
+                   </div>
+                 </div>
+               </div>
+@@ -241,34 +219,57 @@
+           </div>
+         </div>
+ 
+-        <!-- User Statistics -->
+-        <div class="report-section mb-4" *ngIf="reportRequest.includeUsers">
+-          <h5>{{ 'technicalSupport.reports.userStatistics' | translate }}</h5>
++        <!-- Tickets by Status -->
++        <div class="report-section mb-4" *ngIf="toEntries(report.ticketsByStatus).length > 0">
++          <h5>{{ 'technicalSupport.reports.ticketsByStatus' | translate }}</h5>
+           <div class="table-responsive">
+             <table class="table table-sm">
+-              <thead>
+-                <tr>
+-                  <th>{{ 'technicalSupport.createdBy' | translate }}</th>
+-                  <th class="text-right">{{ 'technicalSupport.statistics.totalTickets' | translate }}</th>
+-                  <th class="text-right">{{ 'technicalSupport.statistics.solvedTickets' | translate }}</th>
++              <tbody>
++                <tr *ngFor="let item of toEntries(report.ticketsByStatus)">
++                  <td>{{ item.key }}</td>
++                  <td class="text-right">{{ item.value }}</td>
++                  <td style="width: 40%">
++                    <div class="progress">
++                      <div
++                        class="progress-bar bg-primary"
++                        [style.width.%]="getPercentage(item.value, report.totalTickets)">
++                      </div>
++                    </div>
++                  </td>
+                 </tr>
+-              </thead>
++              </tbody>
++            </table>
++          </div>
++        </div>
++
++        <!-- Tickets by Priority -->
++        <div class="report-section mb-4" *ngIf="toEntries(report.ticketsByPriority).length > 0">
++          <h5>{{ 'technicalSupport.reports.ticketsByPriority' | translate }}</h5>
++          <div class="table-responsive">
++            <table class="table table-sm">
+               <tbody>
+-                <tr *ngFor="let userStat of report.userStatistics">
+-                  <td>{{ userStat.userName }}</td>
+-                  <td class="text-right">{{ userStat.ticketCount }}</td>
+-                  <td class="text-right">{{ userStat.solvedCount }}</td>
++                <tr *ngFor="let item of toEntries(report.ticketsByPriority)">
++                  <td>{{ item.key }}</td>
++                  <td class="text-right">{{ item.value }}</td>
++                  <td style="width: 40%">
++                    <div class="progress">
++                      <div
++                        class="progress-bar bg-warning"
++                        [style.width.%]="getPercentage(item.value, report.totalTickets)">
++                      </div>
++                    </div>
++                  </td>
+                 </tr>
+               </tbody>
+             </table>
+           </div>
+         </div>
+ 
+-        <!-- Category Statistics -->
+-        <div class="report-section" *ngIf="reportRequest.includeCategories">
++        <!-- Tickets by Category -->
++        <div class="report-section mb-4" *ngIf="toEntries(report.ticketsByCategory).length > 0">
+           <h5>{{ 'technicalSupport.statistics.ticketsByCategory' | translate }}</h5>
+           <div class="row">
+-            <div *ngFor="let item of report.summaryStatistics.ticketsByCategory | keyvalue" class="col-md-4 mb-3">
++            <div *ngFor="let item of toEntries(report.ticketsByCategory)" class="col-md-4 mb-3">
+               <div class="category-stat">
+                 <div class="category-name">{{ item.key }}</div>
+                 <div class="category-count">{{ item.value }}</div>
+@@ -276,6 +277,56 @@
+             </div>
+           </div>
+         </div>
++
++        <!-- Tickets by Creator -->
++        <div class="report-section mb-4" *ngIf="toEntries(report.ticketsByCreator).length > 0">
++          <h5>{{ 'technicalSupport.reports.ticketsByCreator' | translate }}</h5>
++          <div class="table-responsive">
++            <table class="table table-sm">
++              <thead>
++                <tr>
++                  <th>{{ 'technicalSupport.createdBy' | translate }}</th>
++                  <th class="text-right">{{ 'technicalSupport.statistics.totalTickets' | translate }}</th>
++                </tr>
++              </thead>
++              <tbody>
++                <tr *ngFor="let item of toEntries(report.ticketsByCreator)">
++                  <td>{{ item.key }}</td>
++                  <td class="text-right">{{ item.value }}</td>
++                </tr>
++              </tbody>
++            </table>
++          </div>
++        </div>
++
++        <!-- Ticket List -->
++        <div class="report-section" *ngIf="report.tickets && report.tickets.length > 0">
++          <h5>{{ 'technicalSupport.reports.ticketsInPeriod' | translate }}</h5>
++          <div class="table-responsive">
++            <table class="table table-sm table-hover">
++              <thead>
++                <tr>
++                  <th>{{ 'technicalSupport.title' | translate }}</th>
++                  <th>{{ 'technicalSupport.category' | translate }}</th>
++                  <th>{{ 'technicalSupport.priority' | translate }}</th>
++                  <th>{{ 'technicalSupport.status' | translate }}</th>
++                  <th>{{ 'technicalSupport.createdBy' | translate }}</th>
++                  <th>{{ 'technicalSupport.createdDate' | translate }}</th>
++                </tr>
++              </thead>
++              <tbody>
++                <tr *ngFor="let ticket of report.tickets">
++                  <td>{{ ticket.title }}</td>
++                  <td>{{ ticket.categoryName }}</td>
++                  <td>{{ ticket.priorityName }}</td>
++                  <td>{{ ticket.statusName }}</td>
++                  <td>{{ ticket.createdByUserName }}</td>
++                  <td>{{ ticket.createdOn | date:'mediumDate' }}</td>
++                </tr>
++              </tbody>
++            </table>
++          </div>
++        </div>
+       </div>
+     </div>
+   </div>
+diff --git a/Frontend/src/app/modules/technical-support/support-report/support-report.component.ts b/Frontend/src/app/modules/technical-support/support-report/support-report.component.ts
+index d332e61..a0e2912 100644
+--- a/Frontend/src/app/modules/technical-support/support-report/support-report.component.ts
++++ b/Frontend/src/app/modules/technical-support/support-report/support-report.component.ts
+@@ -1,13 +1,13 @@
+-import { Component, OnInit } from '@angular/core';
++import { Component } from '@angular/core';
+ import { CommonModule } from '@angular/common';
+ import { FormsModule } from '@angular/forms';
+-import { TranslateModule } from '@ngx-translate/core';
++import { RouterModule } from '@angular/router';
++import { TranslateModule, TranslateService } from '@ngx-translate/core';
+ 
+ import { TechnicalSupportService } from '../services/technical-support.service';
+ import {
+   SupportReportRequest,
+-  SupportReport,
+-  ReportGroupBy
++  SupportReport
+ } from '../../../core/models/technical-support.model';
+ 
+ @Component({
+@@ -16,37 +16,28 @@ import {
+   imports: [
+     CommonModule,
+     FormsModule,
++    RouterModule,
+     TranslateModule
+   ],
+   templateUrl: './support-report.component.html',
+   styleUrls: ['./support-report.component.scss']
+ })
+-export class SupportReportComponent implements OnInit {
++export class SupportReportComponent {
++  // POST /api/SupportTickets/report takes just the date range
+   reportRequest: SupportReportRequest = {
+     startDate: this.getDefaultStartDate(),
+-    endDate: this.getDefaultEndDate(),
+-    groupBy: ReportGroupBy.Category,
+-    includeCategories: true,
+-    includeUsers: true
++    endDate: this.getDefaultEndDate()
+   };
+ 
+   report: SupportReport | null = null;
+   loading: boolean = false;
+   generating: boolean = false;
+ 
+-  groupByOptions = [
+-    { value: ReportGroupBy.Category, label: 'technicalSupport.category' },
+-    { value: ReportGroupBy.Status, label: 'technicalSupport.status' },
+-    { value: ReportGroupBy.User, label: 'technicalSupport.createdBy' },
+-    { value: ReportGroupBy.Priority, label: 'technicalSupport.priority' }
+-  ];
+-
+   constructor(
+-    private technicalSupportService: TechnicalSupportService
++    private technicalSupportService: TechnicalSupportService,
++    private translate: TranslateService
+   ) {}
+ 
+-  ngOnInit(): void {}
+-
+   generateReport(): void {
+     this.generating = true;
+     this.technicalSupportService.generateReport(this.reportRequest).subscribe({
+@@ -60,19 +51,57 @@ export class SupportReportComponent implements OnInit {
+     });
+   }
+ 
++  /**
++   * Client-side CSV export of the report's ticket list —
++   * the API has no server-side export endpoint.
++   */
+   exportReport(): void {
+     if (!this.report) {
+       return;
+     }
+ 
+-    // Implement export functionality
+-    console.log('Exporting report...');
++    const header = [
++      this.translate.instant('technicalSupport.title'),
++      this.translate.instant('technicalSupport.category'),
++      this.translate.instant('technicalSupport.priority'),
++      this.translate.instant('technicalSupport.status'),
++      this.translate.instant('technicalSupport.createdBy'),
++      this.translate.instant('technicalSupport.createdDate'),
++      this.translate.instant('technicalSupport.isSolved')
++    ];
++
++    const rows = this.report.tickets.map(t => [
++      t.title,
++      t.categoryName ?? '',
++      t.priorityName ?? '',
++      t.statusName ?? '',
++      t.createdByUserName ?? '',
++      t.createdOn ?? '',
++      t.isSolved ? this.translate.instant('common.yes') : this.translate.instant('common.no')
++    ]);
++
++    const csv = [header, ...rows]
++      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
++      .join('\n');
++
++    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
++    const url = window.URL.createObjectURL(blob);
++    const a = document.createElement('a');
++    a.href = url;
++    a.download = `support-report-${this.reportRequest.startDate}_${this.reportRequest.endDate}.csv`;
++    a.click();
++    window.URL.revokeObjectURL(url);
+   }
+ 
+   printReport(): void {
+     window.print();
+   }
+ 
++  // Dictionary<string, number> entries as key/value pairs for the tables
++  toEntries(dict: Record<string, number> | undefined): { key: string; value: number }[] {
++    return Object.entries(dict ?? {}).map(([key, value]) => ({ key, value }));
++  }
++
+   private getDefaultStartDate(): string {
+     const date = new Date();
+     date.setMonth(date.getMonth() - 1);
+@@ -88,20 +117,16 @@ export class SupportReportComponent implements OnInit {
+     return Math.round((value / total) * 100);
+   }
+ 
+-  formatDuration(hours: number): string {
+-    if (hours < 1) {
+-      const minutes = Math.round(hours * 60);
++  formatDuration(hours: number | undefined): string {
++    const h = hours ?? 0;
++    if (h < 1) {
++      const minutes = Math.round(h * 60);
+       return `${minutes}m`;
+     }
+-    if (hours < 24) {
+-      return `${Math.round(hours)}h`;
++    if (h < 24) {
++      return `${Math.round(h)}h`;
+     }
+-    const days = Math.round(hours / 24);
++    const days = Math.round(h / 24);
+     return `${days}d`;
+   }
+-
+-  getGroupByTranslation(groupBy: ReportGroupBy): string {
+-    const option = this.groupByOptions.find(opt => opt.value === groupBy);
+-    return option ? option.label : groupBy;
+-  }
+ }
+diff --git a/Frontend/src/app/modules/technical-support/technical-support-routing.module.ts b/Frontend/src/app/modules/technical-support/technical-support-routing.module.ts
+index f241f29..efb0e20 100644
+--- a/Frontend/src/app/modules/technical-support/technical-support-routing.module.ts
++++ b/Frontend/src/app/modules/technical-support/technical-support-routing.module.ts
+@@ -25,6 +25,11 @@ const routes: Routes = [
+     path: 'create',
+     component: TicketFormComponent
+   },
++  {
++    // Must be registered before ':id' or 'reports' matches the id param
++    path: 'reports',
++    component: SupportReportComponent
++  },
+   {
+     path: ':id',
+     component: TicketDetailComponent
+@@ -32,10 +37,6 @@ const routes: Routes = [
+   {
+     path: ':id/edit',
+     component: TicketFormComponent
+-  },
+-  {
+-    path: 'reports',
+-    component: SupportReportComponent
+   }
+ ];
+ 
+diff --git a/Frontend/src/app/modules/technical-support/ticket-detail/ticket-detail.component.html b/Frontend/src/app/modules/technical-support/ticket-detail/ticket-detail.component.html
+index 6125e8d..8e115fc 100644
+--- a/Frontend/src/app/modules/technical-support/ticket-detail/ticket-detail.component.html
++++ b/Frontend/src/app/modules/technical-support/ticket-detail/ticket-detail.component.html
+@@ -5,7 +5,7 @@
+         <i class="fe fe-life-buoy mr-2"></i>
+         {{ 'technicalSupport.ticketDetails' | translate }}
+         <span class="badge badge-primary ml-2" *ngIf="ticket">
+-          #{{ ticket.id }}
++          #{{ shortId(ticket.id) }}
+         </span>
+       </h3>
+       <app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+@@ -35,11 +35,11 @@
+             <h4 class="card-title mb-0">{{ ticket.title }}</h4>
+           </div>
+           <div class="col-auto">
+-            <span class="badge" [ngClass]="getPriorityClass(ticket.priority)">
+-              {{ getPriorityTranslation(ticket.priority) }}
++            <span class="badge text-white" [style.background]="ticket.priorityColor || '#6c757d'">
++              {{ ticket.priorityName }}
+             </span>
+-            <span class="badge ml-1" [ngClass]="getStatusClass(ticket.status)">
+-              {{ getStatusTranslation(ticket.status) }}
++            <span class="badge text-white ml-1" [style.background]="ticket.statusColor || '#6c757d'">
++              {{ ticket.statusName }}
+             </span>
+             <span class="badge badge-success ml-1" *ngIf="ticket.isSolved">
+               <i class="fe fe-check-circle"></i>
+@@ -60,13 +60,13 @@
+ 
+                 <dt class="col-sm-4">{{ 'technicalSupport.category' | translate }}</dt>
+                 <dd class="col-sm-8">
+-                  <span class="badge badge-light">{{ getCategoryTranslation(ticket.category) }}</span>
++                  <span class="badge badge-light">{{ ticket.categoryName }}</span>
+                 </dd>
+ 
+                 <dt class="col-sm-4">{{ 'technicalSupport.priority' | translate }}</dt>
+                 <dd class="col-sm-8">
+-                  <span class="badge" [ngClass]="getPriorityClass(ticket.priority)">
+-                    {{ getPriorityTranslation(ticket.priority) }}
++                  <span class="badge text-white" [style.background]="ticket.priorityColor || '#6c757d'">
++                    {{ ticket.priorityName }}
+                   </span>
+                 </dd>
+               </dl>
+@@ -76,16 +76,16 @@
+               <dl class="row">
+                 <dt class="col-sm-4">{{ 'technicalSupport.status' | translate }}</dt>
+                 <dd class="col-sm-8">
+-                  <span class="badge" [ngClass]="getStatusClass(ticket.status)">
+-                    {{ getStatusTranslation(ticket.status) }}
++                  <span class="badge text-white" [style.background]="ticket.statusColor || '#6c757d'">
++                    {{ ticket.statusName }}
+                   </span>
+                 </dd>
+ 
+                 <dt class="col-sm-4">{{ 'technicalSupport.createdDate' | translate }}</dt>
+-                <dd class="col-sm-8">{{ ticket.createdDate | date:'medium' }}</dd>
++                <dd class="col-sm-8">{{ ticket.createdOn | date:'medium' }}</dd>
+ 
+                 <dt class="col-sm-4">{{ 'technicalSupport.lastUpdated' | translate }}</dt>
+-                <dd class="col-sm-8">{{ ticket.lastUpdated | date:'medium' }}</dd>
++                <dd class="col-sm-8">{{ ticket.updatedOn | date:'medium' }}</dd>
+               </dl>
+             </div>
+           </div>
+@@ -101,17 +101,14 @@
+             <div class="col-md-6">
+               <dl class="row">
+                 <dt class="col-sm-4">{{ 'employees.fullName' | translate }}</dt>
+-                <dd class="col-sm-8">{{ ticket.userName }}</dd>
++                <dd class="col-sm-8">{{ ticket.createdByUserName }}</dd>
+ 
+-                <dt class="col-sm-4">{{ 'userManagement.users.email' | translate }}</dt>
+-                <dd class="col-sm-8">{{ ticket.userEmail }}</dd>
++                <dt class="col-sm-4">{{ 'userManagement.email' | translate }}</dt>
++                <dd class="col-sm-8">{{ ticket.createdByEmail }}</dd>
+               </dl>
+             </div>
+             <div class="col-md-6">
+               <dl class="row">
+-                <dt class="col-sm-4">{{ 'userManagement.roles' | translate }}</dt>
+-                <dd class="col-sm-8">{{ ticket.userRole }}</dd>
+-
+                 <dt class="col-sm-4" *ngIf="isAdmin">{{ 'technicalSupport.assignedTo' | translate }}</dt>
+                 <dd class="col-sm-8" *ngIf="isAdmin">
+                   <span *ngIf="ticket.assignedToName" class="badge badge-info">
+@@ -119,7 +116,7 @@
+                     {{ ticket.assignedToName }}
+                   </span>
+                   <span *ngIf="!ticket.assignedToName" class="text-muted">
+-                    <em>{{ 'common.select' | translate }}</em>
++                    <em>{{ 'common.notAssigned' | translate }}</em>
+                   </span>
+                 </dd>
+               </dl>
+@@ -137,20 +134,17 @@
+             <p class="text-pre-wrap">{{ ticket.message }}</p>
+           </div>
+ 
+-          <!-- Original Attachment -->
+-          <div class="attachment-section mt-3" *ngIf="ticket.attachedFileName">
++          <!-- Original Attachment (name only — no download endpoint exists) -->
++          <div class="attachment-section mt-3" *ngIf="ticket.attachmentFileName">
+             <h6>{{ 'technicalSupport.attachFile' | translate }}</h6>
+             <div class="attachment-item">
+               <i class="fe fe-file mr-2"></i>
+-              <a href="javascript:void(0)"
+-                 (click)="downloadAttachment(ticket.attachedFile!, ticket.attachedFileName!)">
+-                {{ ticket.attachedFileName }}
+-              </a>
++              {{ ticket.attachmentFileName }}
+             </div>
+           </div>
+ 
+           <!-- System Information -->
+-          <div class="system-info mt-3" *ngIf="ticket.browserInfo || ticket.pageUrl">
++          <div class="system-info mt-3" *ngIf="ticket.browserInfo || ticket.pageUrl || ticket.userAction">
+             <h6>{{ 'technicalSupport.browserInfo' | translate }}</h6>
+             <dl class="row">
+               <dt class="col-sm-3" *ngIf="ticket.browserInfo">{{ 'technicalSupport.browserInfo' | translate }}</dt>
+@@ -175,8 +169,8 @@
+               {{ 'technicalSupport.resolution' | translate }}
+             </h6>
+             <p class="mb-2">{{ ticket.resolutionDescription }}</p>
+-            <div *ngIf="ticket.resolutionDate" class="small text-muted">
+-              <em>{{ 'technicalSupport.resolutionDate' | translate }}: {{ ticket.resolutionDate | date:'medium' }}</em>
++            <div *ngIf="ticket.resolvedOn" class="small text-muted">
++              <em>{{ 'technicalSupport.resolutionDate' | translate }}: {{ ticket.resolvedOn | date:'medium' }}</em>
+             </div>
+           </div>
+         </div>
+@@ -186,12 +180,12 @@
+           <h6 class="mb-3">
+             <i class="fe fe-message-circle mr-2"></i>
+             {{ 'technicalSupport.responseHistory' | translate }}
+-            <span class="badge badge-secondary">{{ ticket.responses?.length || 0 }}</span>
++            <span class="badge badge-secondary">{{ visibleResponses.length }}</span>
+           </h6>
+ 
+-          <!-- Add Response Button -->
++          <!-- Add Response Button (admins only — the endpoint authorises Admin/SuperAdmin) -->
+           <button class="btn btn-primary btn-sm mb-3"
+-                  *ngIf="canPerformActions() || isOwner"
++                  *ngIf="canPerformActions()"
+                   (click)="toggleResponseForm()">
+             <i class="fe fe-plus mr-1"></i>
+             {{ 'technicalSupport.addResponse' | translate }}
+@@ -208,7 +202,8 @@
+                       <input type="checkbox"
+                              class="custom-control-input"
+                              id="isInternalNote"
+-                             [(ngModel)]="isInternalNote">
++                             [(ngModel)]="isInternalNote"
++                             [ngModelOptions]="{ standalone: true }">
+                       <label class="custom-control-label" for="isInternalNote">
+                         {{ 'technicalSupport.internalNote' | translate }}
+                       </label>
+@@ -236,20 +231,6 @@
+                     </div>
+                   </div>
+ 
+-                  <!-- Attachment -->
+-                  <div class="form-group">
+-                    <label for="responseFile">{{ 'technicalSupport.attachFile' | translate }}</label>
+-                    <input
+-                      type="file"
+-                      class="form-control-file"
+-                      id="responseFile"
+-                      accept="image/*,.pdf,.doc,.docx"
+-                      (change)="onResponseFileSelected($event)">
+-                    <small class="form-text text-muted" *ngIf="responseFile">
+-                      {{ getResponseFileName() }}
+-                    </small>
+-                  </div>
+-
+                   <!-- Form Actions -->
+                   <div class="form-actions">
+                     <button
+@@ -275,24 +256,24 @@
+ 
+           <!-- Responses List -->
+           <div class="responses-list">
+-            <div *ngIf="!ticket.responses || ticket.responses.length === 0" class="text-muted">
++            <div *ngIf="visibleResponses.length === 0" class="text-muted">
+               <em>{{ 'technicalSupport.messages.noResponses' | translate }}</em>
+             </div>
+ 
+-            <div *ngFor="let response of ticket.responses" class="response-item">
+-              <div class="card" [class.internal-note]="response.isInternal">
++            <div *ngFor="let response of visibleResponses; trackBy: trackByResponseId" class="response-item">
++              <div class="card" [class.internal-note]="response.isInternalNote">
+                 <div class="card-body">
+                   <div class="response-header mb-2">
+                     <div class="d-flex justify-content-between align-items-start">
+                       <div>
+-                        <strong>{{ response.respondedByName || ('technicalSupport.unknownUser' | translate) }}</strong>
+-                        <span class="badge badge-warning ml-2" *ngIf="response.isInternal">
++                        <strong>{{ response.responderName || ('technicalSupport.unknownUser' | translate) }}</strong>
++                        <span class="badge badge-warning ml-2" *ngIf="response.isInternalNote">
+                           <i class="fe fe-lock"></i>
+                           {{ 'technicalSupport.internalNote' | translate }}
+                         </span>
+                       </div>
+                       <small class="text-muted">
+-                        {{ response.responseDate | date:'medium' }}
++                        {{ response.createdOn | date:'medium' }}
+                       </small>
+                     </div>
+                   </div>
+@@ -301,12 +282,9 @@
+                     <p class="text-pre-wrap mb-0">{{ response.responseText }}</p>
+                   </div>
+ 
+-                  <div class="response-attachment" *ngIf="response.attachmentName">
+-                    <a href="javascript:void(0)"
+-                       (click)="downloadAttachment(response.attachment!, response.attachmentName!)">
+-                      <i class="fe fa-paperclip mr-1"></i>
+-                      {{ response.attachmentName }}
+-                    </a>
++                  <div class="response-attachment" *ngIf="response.attachmentFileName">
++                    <i class="fe fe-paperclip mr-1"></i>
++                    {{ response.attachmentFileName }}
+                   </div>
+                 </div>
+               </div>
+@@ -327,14 +305,23 @@
+         </h4>
+       </div>
+       <div class="card-body">
++        <!-- Edit Ticket -->
++        <div class="action-section mb-4">
++          <button class="btn btn-outline-secondary btn-sm btn-block"
++                  [routerLink]="['/technical-support', ticket.id, 'edit']">
++            <i class="fe fe-edit mr-1"></i>
++            {{ 'technicalSupport.editTicket' | translate }}
++          </button>
++        </div>
++
+         <!-- Update Status -->
+         <div class="action-section mb-4">
+           <h6>{{ 'technicalSupport.updateStatus' | translate }}</h6>
+           <div *ngIf="!updatingStatus">
+             <p class="text-muted">
+               {{ 'technicalSupport.status' | translate }}:
+-              <span class="badge" [ngClass]="getStatusClass(ticket.status)">
+-                {{ getStatusTranslation(ticket.status) }}
++              <span class="badge text-white" [style.background]="ticket.statusColor || '#6c757d'">
++                {{ ticket.statusName }}
+               </span>
+             </p>
+             <button class="btn btn-outline-primary btn-sm"
+@@ -345,16 +332,15 @@
+           </div>
+           <div *ngIf="updatingStatus">
+             <select class="form-control mb-2"
+-                    [(ngModel)]="selectedStatus">
+-              <option value="Open">{{ 'technicalSupport.statuses.Open' | translate }}</option>
+-              <option value="InProgress">{{ 'technicalSupport.statuses.InProgress' | translate }}</option>
+-              <option value="Resolved">{{ 'technicalSupport.statuses.Resolved' | translate }}</option>
+-              <option value="Closed">{{ 'technicalSupport.statuses.Closed' | translate }}</option>
++                    [(ngModel)]="selectedStatusId">
++              <option *ngFor="let sta of statuses" [ngValue]="sta.id">
++                {{ sta.name }}
++              </option>
+             </select>
+             <div class="btn-group">
+               <button class="btn btn-primary btn-sm"
+                       (click)="updateTicketStatus()"
+-                      [disabled]="!selectedStatus">
++                      [disabled]="selectedStatusId === null">
+                 {{ 'common.save' | translate }}
+               </button>
+               <button class="btn btn-secondary btn-sm"
+@@ -366,7 +352,7 @@
+         </div>
+ 
+         <!-- Mark as Solved -->
+-        <div class="action-section mb-4" *ngIf="!ticket.isSolved && ticket.status !== 'Closed'">
++        <div class="action-section mb-4" *ngIf="!ticket.isSolved && ticket.statusId !== closedStatusId">
+           <h6>{{ 'technicalSupport.markAsSolved' | translate }}</h6>
+           <div *ngIf="!showSolveForm">
+             <button class="btn btn-success btn-sm btn-block"
+@@ -418,7 +404,7 @@
+         </div>
+ 
+         <!-- Close Ticket -->
+-        <div class="action-section mb-4" *ngIf="ticket.status !== 'Closed'">
++        <div class="action-section mb-4" *ngIf="ticket.statusId !== closedStatusId">
+           <h6>{{ 'technicalSupport.closeTicket' | translate }}</h6>
+           <button class="btn btn-danger btn-sm btn-block"
+                   (click)="closeTicket()">
+@@ -427,33 +413,16 @@
+           </button>
+         </div>
+ 
+-        <!-- Assignment -->
++        <!-- Assignment (display only — assign/unassign endpoints are not wired in the UI) -->
+         <div class="action-section">
+           <h6>{{ 'technicalSupport.assignedTo' | translate }}</h6>
+-          <div *ngIf="ticket.assignedToName">
+-            <p class="text-muted">
+-              <i class="fe fe-user mr-1"></i>
+-              {{ ticket.assignedToName }}
+-            </p>
+-            <button class="btn btn-outline-warning btn-sm btn-block"
+-                    (click)="unassignTicket()">
+-              <i class="fe fe-user-minus mr-1"></i>
+-              {{ 'technicalSupport.unassign' | translate }}
+-            </button>
+-          </div>
+-          <div *ngIf="!ticket.assignedToName">
+-            <p class="text-muted">
+-              <em>{{ 'common.select' | translate }}</em>
+-            </p>
+-            <button class="btn btn-outline-primary btn-sm btn-block"
+-                    disabled>
+-              <i class="fe fe-user-plus mr-1"></i>
+-              {{ 'technicalSupport.assignTo' | translate }}
+-            </button>
+-            <small class="form-text text-muted">
+-              {{ 'technicalSupport.assignmentComingSoon' | translate }}
+-            </small>
+-          </div>
++          <p class="text-muted" *ngIf="ticket.assignedToName">
++            <i class="fe fe-user mr-1"></i>
++            {{ ticket.assignedToName }}
++          </p>
++          <p class="text-muted" *ngIf="!ticket.assignedToName">
++            <em>{{ 'common.notAssigned' | translate }}</em>
++          </p>
+         </div>
+       </div>
+     </div>
+diff --git a/Frontend/src/app/modules/technical-support/ticket-detail/ticket-detail.component.ts b/Frontend/src/app/modules/technical-support/ticket-detail/ticket-detail.component.ts
+index 4e1a71d..ca970d0 100644
+--- a/Frontend/src/app/modules/technical-support/ticket-detail/ticket-detail.component.ts
++++ b/Frontend/src/app/modules/technical-support/ticket-detail/ticket-detail.component.ts
+@@ -3,15 +3,15 @@ import { CommonModule } from '@angular/common';
+ import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
+ import { TranslateModule, TranslateService } from '@ngx-translate/core';
+-import { Observable, Subject, takeUntil } from 'rxjs';
++import { Subject, takeUntil } from 'rxjs';
+ 
+ import { TechnicalSupportService } from '../services/technical-support.service';
+ import {
+   SupportTicket,
+   AddTicketResponseRequest,
+-  UpdateTicketStatusRequest,
+   MarkTicketSolvedRequest,
+-  TicketStatus
++  TicketResponse,
++  LookupOption
+ } from '../../../core/models/technical-support.model';
+ import { AuthService, User } from '../../../core/services/auth.service';
+ import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
+@@ -51,20 +51,19 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
+   responseForm: FormGroup;
+   showResponseForm: boolean = false;
+   isInternalNote: boolean = false;
+-  responseFile: File | null = null;
+ 
+   // Status update
+   updatingStatus: boolean = false;
+-  selectedStatus: TicketStatus | '' = '';
++  selectedStatusId: number | null = null;
++
++  // Status lookups (GET /api/SupportTickets/lookups)
++  statuses: LookupOption[] = [];
++  closedStatusId: number | null = null;
+ 
+   // Mark as solved
+   showSolveForm: boolean = false;
+   solveForm: FormGroup;
+ 
+-  // UI helpers
+-  browserInfo: string = '';
+-  pageUrl: string = '';
+-
+   constructor(
+     private route: ActivatedRoute,
+     private router: Router,
+@@ -84,9 +83,6 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
+       resolutionDescription: ['', [Validators.required, Validators.minLength(10)]],
+       solutionSteps: ['']
+     });
+-
+-    this.browserInfo = this.technicalSupportService.detectBrowserInfo();
+-    this.pageUrl = this.technicalSupportService.getCurrentPageUrl();
+   }
+ 
+   ngOnInit(): void {
+@@ -97,13 +93,15 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
+       this.router.navigate(['/technical-support']);
+     }
+ 
++    this.loadLookups();
++
+     // Subscribe to tickets updates
+     this.technicalSupportService.ticketsUpdated$
+       .pipe(takeUntil(this.destroy$))
+       .subscribe(() => {
+-        const ticketId = this.route.snapshot.paramMap.get('id');
+-        if (ticketId) {
+-          this.loadTicket(ticketId);
++        const currentId = this.route.snapshot.paramMap.get('id');
++        if (currentId) {
++          this.loadTicket(currentId);
+         }
+       });
+   }
+@@ -113,12 +111,22 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
+     this.destroy$.complete();
+   }
+ 
++  loadLookups(): void {
++    this.technicalSupportService.getTicketLookups().subscribe({
++      next: (lookups) => {
++        this.statuses = lookups.statuses ?? [];
++        this.closedStatusId =
++          this.statuses.find(s => s.nameEn === 'Closed' || s.name === 'Closed')?.id ?? null;
++      }
++    });
++  }
++
+   loadTicket(id: string): void {
+     this.loading = true;
+     this.technicalSupportService.getTicketById(id).subscribe({
+       next: (ticket: SupportTicket) => {
+         this.ticket = ticket;
+-        this.isOwner = this.currentUser?.id === ticket.userId;
++        this.isOwner = !!this.currentUser && this.currentUser.id === ticket.createdByUserId;
+         this.loading = false;
+       },
+       error: () => {
+@@ -128,23 +136,29 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
+     });
+   }
+ 
++  /**
++   * Admins see all responses (public + internal notes); regular users
++   * only see the public responses the API returns for them.
++   */
++  get visibleResponses(): TicketResponse[] {
++    if (!this.ticket) {
++      return [];
++    }
++    if (this.isAdmin) {
++      return this.ticket.responses ?? [];
++    }
++    return this.ticket.publicResponses ?? [];
++  }
++
+   // Response Management
+   toggleResponseForm(): void {
+     this.showResponseForm = !this.showResponseForm;
+     if (!this.showResponseForm) {
+       this.responseForm.reset();
+-      this.responseFile = null;
+       this.isInternalNote = false;
+     }
+   }
+ 
+-  onResponseFileSelected(event: Event): void {
+-    const input = event.target as HTMLInputElement;
+-    if (input.files && input.files.length > 0) {
+-      this.responseFile = input.files[0];
+-    }
+-  }
+-
+   submitResponse(): void {
+     if (this.responseForm.invalid || !this.ticket) {
+       return;
+@@ -154,8 +168,7 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
+ 
+     const request: AddTicketResponseRequest = {
+       responseText: this.responseForm.value.responseText,
+-      attachment: this.responseFile || undefined,
+-      isInternal: this.isInternalNote
++      isInternalNote: this.isInternalNote
+     };
+ 
+     this.technicalSupportService.addTicketResponse(this.ticket.id, request).subscribe({
+@@ -163,7 +176,6 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
+         this.submitting = false;
+         this.showResponseForm = false;
+         this.responseForm.reset();
+-        this.responseFile = null;
+         this.isInternalNote = false;
+         this.technicalSupportService.notifyTicketsUpdated();
+       },
+@@ -177,25 +189,23 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
+   toggleStatusUpdate(): void {
+     this.updatingStatus = !this.updatingStatus;
+     if (this.updatingStatus && this.ticket) {
+-      this.selectedStatus = this.ticket.status;
++      this.selectedStatusId = this.ticket.statusId;
+     }
+   }
+ 
+   updateTicketStatus(): void {
+-    if (!this.ticket || !this.selectedStatus) {
++    if (!this.ticket || this.selectedStatusId === null) {
+       return;
+     }
+ 
+-    const request: UpdateTicketStatusRequest = {
+-      status: this.selectedStatus as TicketStatus
+-    };
+-
+-    this.technicalSupportService.updateTicketStatus(this.ticket.id, request).subscribe({
+-      next: () => {
+-        this.updatingStatus = false;
+-        this.technicalSupportService.notifyTicketsUpdated();
+-      }
+-    });
++    this.technicalSupportService
++      .updateTicketStatus(this.ticket.id, { statusId: this.selectedStatusId })
++      .subscribe({
++        next: () => {
++          this.updatingStatus = false;
++          this.technicalSupportService.notifyTicketsUpdated();
++        }
++      });
+   }
+ 
+   // Mark as Solved
+@@ -231,115 +241,42 @@ export class TicketDetailComponent implements OnInit, OnDestroy {
+     });
+   }
+ 
+-  // Close Ticket
++  // Close Ticket — sets the Closed status via the status endpoint
+   closeTicket(): void {
+-    if (!this.ticket) {
++    if (!this.ticket || this.closedStatusId === null) {
+       return;
+     }
+ 
+     if (confirm(this.translate.instant('technicalSupport.messages.confirmClose'))) {
+-      this.technicalSupportService.closeTicket(this.ticket.id).subscribe({
+-        next: () => {
+-          this.technicalSupportService.notifyTicketsUpdated();
+-        }
+-      });
++      this.technicalSupportService
++        .updateTicketStatus(this.ticket.id, { statusId: this.closedStatusId })
++        .subscribe({
++          next: () => {
++            this.technicalSupportService.notifyTicketsUpdated();
++          }
++        });
+     }
+   }
+ 
+-  // Assignment
+-  assignToUser(userId: string): void {
+-    if (!this.ticket) {
+-      return;
+-    }
+-
+-    this.technicalSupportService.assignTicket(this.ticket.id, userId).subscribe({
+-      next: () => {
+-        this.technicalSupportService.notifyTicketsUpdated();
+-      }
+-    });
+-  }
+-
+-  unassignTicket(): void {
+-    if (!this.ticket) {
+-      return;
+-    }
+-
+-    this.technicalSupportService.unassignTicket(this.ticket.id).subscribe({
+-      next: () => {
+-        this.technicalSupportService.notifyTicketsUpdated();
+-      }
+-    });
+-  }
+-
+-  // File downloads
+-  downloadAttachment(fileUrl: string, fileName: string): void {
+-    this.technicalSupportService.downloadTicketAttachment(this.ticket!.id, this.extractAttachmentId(fileUrl))
+-      .subscribe((blob: Blob) => {
+-        const url = window.URL.createObjectURL(blob);
+-        const a = document.createElement('a');
+-        a.href = url;
+-        a.download = fileName;
+-        a.click();
+-        window.URL.revokeObjectURL(url);
+-      });
+-  }
+-
+-  private extractAttachmentId(fileUrl: string): string {
+-    // Extract attachment ID from URL (implementation depends on your API)
+-    const parts = fileUrl.split('/');
+-    return parts[parts.length - 1];
+-  }
+-
+   // Helper methods
+   canViewTicket(): boolean {
+     if (!this.ticket || !this.currentUser) {
+       return false;
+     }
+ 
+-    return this.isAdmin || this.ticket.userId === this.currentUser.id;
++    return this.isAdmin || this.ticket.createdByUserId === this.currentUser.id;
+   }
+ 
+   canPerformActions(): boolean {
+     return this.isAdmin;
+   }
+ 
+-  getCategoryTranslation(category: string): string {
+-    return this.translate.instant(`technicalSupport.categories.${category}`);
+-  }
+-
+-  getPriorityTranslation(priority: string): string {
+-    return this.translate.instant(`technicalSupport.priorities.${priority}`);
+-  }
+-
+-  getStatusTranslation(status: TicketStatus): string {
+-    return this.translate.instant(`technicalSupport.statuses.${status}`);
+-  }
+-
+-  getPriorityClass(priority: string): string {
+-    const priorityLower = priority.toLowerCase();
+-    if (priorityLower === 'urgent') return 'badge-danger';
+-    if (priorityLower === 'high') return 'badge-warning';
+-    if (priorityLower === 'medium') return 'badge-info';
+-    return 'badge-secondary';
+-  }
+-
+-  getStatusClass(status: TicketStatus): string {
+-    switch (status) {
+-      case TicketStatus.Open:
+-        return 'badge-primary';
+-      case TicketStatus.InProgress:
+-        return 'badge-info';
+-      case TicketStatus.Resolved:
+-        return 'badge-success';
+-      case TicketStatus.Closed:
+-        return 'badge-secondary';
+-      default:
+-        return 'badge-light';
+-    }
++  shortId(id: string): string {
++    return id ? id.substring(0, 8).toUpperCase() : '';
+   }
+ 
+-  getResponseFileName(): string {
+-    return this.responseFile?.name || '';
++  trackByResponseId(index: number, response: TicketResponse): string {
++    return response.id;
+   }
+ 
+   // Form validation
+diff --git a/Frontend/src/app/modules/technical-support/ticket-form/ticket-form.component.html b/Frontend/src/app/modules/technical-support/ticket-form/ticket-form.component.html
+index 6e0ed53..7c8a82a 100644
+--- a/Frontend/src/app/modules/technical-support/ticket-form/ticket-form.component.html
++++ b/Frontend/src/app/modules/technical-support/ticket-form/ticket-form.component.html
+@@ -41,8 +41,8 @@
+                   [class.is-invalid]="isFieldInvalid('category')"
+                   id="category"
+                   formControlName="category">
+-                  <option *ngFor="let cat of categories" [value]="cat">
+-                    {{ getCategoryTranslation(cat) }}
++                  <option *ngFor="let cat of categories" [ngValue]="cat.id">
++                    {{ cat.name }}
+                   </option>
+                 </select>
+                 <div class="invalid-feedback" *ngIf="isFieldInvalid('category')">
+@@ -62,8 +62,8 @@
+                   [class.is-invalid]="isFieldInvalid('priority')"
+                   id="priority"
+                   formControlName="priority">
+-                  <option *ngFor="let pri of priorities" [value]="pri">
+-                    {{ getPriorityTranslation(pri) }}
++                  <option *ngFor="let pri of priorities" [ngValue]="pri.id">
++                    {{ pri.name }}
+                   </option>
+                 </select>
+                 <div class="invalid-feedback" *ngIf="isFieldInvalid('priority')">
+diff --git a/Frontend/src/app/modules/technical-support/ticket-form/ticket-form.component.ts b/Frontend/src/app/modules/technical-support/ticket-form/ticket-form.component.ts
+index f53acdc..47296cb 100644
+--- a/Frontend/src/app/modules/technical-support/ticket-form/ticket-form.component.ts
++++ b/Frontend/src/app/modules/technical-support/ticket-form/ticket-form.component.ts
+@@ -7,11 +7,11 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
+ import { TechnicalSupportService } from '../services/technical-support.service';
+ import {
+   CreateTicketRequest,
+-  TicketCategory,
+-  TicketPriority,
++  UpdateTicketRequest,
++  TicketLookups,
++  LookupOption,
+   SupportTicket
+ } from '../../../core/models/technical-support.model';
+-import { ApiResponse } from '../../../core/models/common.model';
+ import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+ import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
+ 
+@@ -56,9 +56,13 @@ export class TicketFormComponent implements OnInit {
+   browserInfo: string = '';
+   pageUrl: string = '';
+ 
+-  // Enum values
+-  categories = Object.values(TicketCategory);
+-  priorities = Object.values(TicketPriority);
++  // Loaded ticket (edit mode) — carries the current statusId for the update payload
++  loadedTicket: SupportTicket | null = null;
++
++  // Lookup options from GET /api/SupportTickets/lookups
++  lookups: TicketLookups | null = null;
++  categories: LookupOption[] = [];
++  priorities: LookupOption[] = [];
+ 
+   // Page actions for header
+   pageActions = [
+@@ -93,6 +97,8 @@ export class TicketFormComponent implements OnInit {
+       }
+     });
+ 
++    this.loadLookups();
++
+     // Pre-fill system information
+     this.ticketForm.patchValue({
+       browserInfo: this.browserInfo,
+@@ -103,8 +109,8 @@ export class TicketFormComponent implements OnInit {
+   private createForm(): FormGroup {
+     return this.fb.group({
+       title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(200)]],
+-      category: [TicketCategory.Other, [Validators.required]],
+-      priority: [TicketPriority.Medium, [Validators.required]],
++      category: [null, [Validators.required]],
++      priority: [null, [Validators.required]],
+       message: ['', [Validators.required, Validators.minLength(10)]],
+       userAction: [''],
+       browserInfo: [''],
+@@ -112,14 +118,35 @@ export class TicketFormComponent implements OnInit {
+     });
+   }
+ 
++  loadLookups(): void {
++    this.technicalSupportService.getTicketLookups().subscribe({
++      next: (lookups: TicketLookups) => {
++        this.lookups = lookups;
++        this.categories = lookups.categories ?? [];
++        this.priorities = lookups.priorities ?? [];
++
++        // Default the selects to the first option in create mode once options are known
++        if (!this.isEditMode) {
++          if (this.categories.length > 0 && !this.ticketForm.get('category')?.value) {
++            this.ticketForm.patchValue({ category: this.categories[0].id });
++          }
++          if (this.priorities.length > 0 && !this.ticketForm.get('priority')?.value) {
++            this.ticketForm.patchValue({ priority: this.priorities[0].id });
++          }
++        }
++      }
++    });
++  }
++
+   loadTicket(id: string): void {
+     this.loading = true;
+     this.technicalSupportService.getTicketById(id).subscribe({
+       next: (ticket: SupportTicket) => {
++        this.loadedTicket = ticket;
+         this.ticketForm.patchValue({
+           title: ticket.title,
+-          category: ticket.category,
+-          priority: ticket.priority,
++          category: ticket.categoryId,
++          priority: ticket.priorityId,
+           message: ticket.message,
+           userAction: ticket.userAction
+         });
+@@ -140,21 +167,50 @@ export class TicketFormComponent implements OnInit {
+ 
+     this.submitting = true;
+ 
+-    const request: CreateTicketRequest = {
+-      ...this.ticketForm.value,
+-      attachedFile: this.selectedFile || undefined
+-    };
++    if (this.isEditMode && this.ticketId) {
++      const request: UpdateTicketRequest = {
++        id: this.ticketId,
++        title: this.ticketForm.value.title,
++        message: this.ticketForm.value.message,
++        categoryId: Number(this.ticketForm.value.category),
++        priorityId: Number(this.ticketForm.value.priority),
++        // Status stays managed by the dedicated status/solve actions —
++        // the payload carries the loaded value unchanged (the DTO requires it).
++        statusId: this.loadedTicket?.statusId ?? 0
++      };
+ 
+-    this.technicalSupportService.createTicket(request).subscribe({
+-      next: (response: ApiResponse<SupportTicket>) => {
+-        this.submitting = false;
+-        this.technicalSupportService.notifyTicketsUpdated();
+-        this.router.navigate(['/technical-support', response.value!.id]);
+-      },
+-      error: () => {
+-        this.submitting = false;
+-      }
+-    });
++      this.technicalSupportService.updateTicket(this.ticketId, request).subscribe({
++        next: () => {
++          this.submitting = false;
++          this.technicalSupportService.notifyTicketsUpdated();
++          this.router.navigate(['/technical-support', this.ticketId]);
++        },
++        error: () => {
++          this.submitting = false;
++        }
++      });
++    } else {
++      const request: CreateTicketRequest = {
++        title: this.ticketForm.value.title,
++        message: this.ticketForm.value.message,
++        categoryId: Number(this.ticketForm.value.category),
++        priorityId: Number(this.ticketForm.value.priority),
++        userAction: this.ticketForm.value.userAction || undefined,
++        browserInfo: this.browserInfo,
++        pageUrl: this.pageUrl
++      };
++
++      this.technicalSupportService.createTicket(request).subscribe({
++        next: (ticket: SupportTicket) => {
++          this.submitting = false;
++          this.technicalSupportService.notifyTicketsUpdated();
++          this.router.navigate(['/technical-support', ticket.id]);
++        },
++        error: () => {
++          this.submitting = false;
++        }
++      });
++    }
+   }
+ 
+   onCancel(): void {
+@@ -277,12 +333,4 @@ export class TicketFormComponent implements OnInit {
+       }
+     });
+   }
+-
+-  getCategoryTranslation(category: TicketCategory): string {
+-    return this.translate.instant(`technicalSupport.categories.${category}`);
+-  }
+-
+-  getPriorityTranslation(priority: TicketPriority): string {
+-    return this.translate.instant(`technicalSupport.priorities.${priority}`);
+-  }
+ }
+diff --git a/Frontend/src/app/modules/technical-support/ticket-list/ticket-list.component.html b/Frontend/src/app/modules/technical-support/ticket-list/ticket-list.component.html
+index 117c458..505b051 100644
+--- a/Frontend/src/app/modules/technical-support/ticket-list/ticket-list.component.html
++++ b/Frontend/src/app/modules/technical-support/ticket-list/ticket-list.component.html
+@@ -58,33 +58,33 @@
+ 
+           <div class="col-md-2">
+             <select class="form-control"
+-                    [(ngModel)]="selectedCategory"
++                    [(ngModel)]="selectedCategoryId"
+                     (change)="onSearch()">
+-              <option value="">{{ 'technicalSupport.category' | translate }}</option>
+-              <option *ngFor="let cat of categories" [value]="cat">
+-                {{ getCategoryTranslation(cat) }}
++              <option [ngValue]="null">{{ 'technicalSupport.category' | translate }}</option>
++              <option *ngFor="let cat of categories" [ngValue]="cat.id">
++                {{ cat.name }}
+               </option>
+             </select>
+           </div>
+ 
+           <div class="col-md-2">
+             <select class="form-control"
+-                    [(ngModel)]="selectedPriority"
++                    [(ngModel)]="selectedPriorityId"
+                     (change)="onSearch()">
+-              <option value="">{{ 'technicalSupport.priority' | translate }}</option>
+-              <option *ngFor="let pri of priorities" [value]="pri">
+-                {{ getPriorityTranslation(pri) }}
++              <option [ngValue]="null">{{ 'technicalSupport.priority' | translate }}</option>
++              <option *ngFor="let pri of priorities" [ngValue]="pri.id">
++                {{ pri.name }}
+               </option>
+             </select>
+           </div>
+ 
+           <div class="col-md-2">
+             <select class="form-control"
+-                    [(ngModel)]="selectedStatus"
++                    [(ngModel)]="selectedStatusId"
+                     (change)="onSearch()">
+-              <option value="">{{ 'technicalSupport.status' | translate }}</option>
+-              <option *ngFor="let sta of statuses" [value]="sta">
+-                {{ getStatusTranslation(sta) }}
++              <option [ngValue]="null">{{ 'technicalSupport.status' | translate }}</option>
++              <option *ngFor="let sta of statuses" [ngValue]="sta.id">
++                {{ sta.name }}
+               </option>
+             </select>
+           </div>
+@@ -125,15 +125,13 @@
+           <table class="table table-hover table-striped">
+             <thead>
+               <tr>
+-                <th *ngFor="let column of isAdmin ? adminColumns : columns"
++                <th *ngFor="let column of isAdmin && viewMode === 'all-tickets' ? adminColumns : columns"
+                     [style.width]="column.width"
+                     [class.sortable]="column.sortable"
+-                    (click)="column.sortable && onSort(column.key, 'asc')">
++                    (click)="column.sortable && onSort(column.key)">
+                   <div class="d-flex align-items-center">
+                     <span>{{ column.title | translate }}</span>
+-                    <i *ngIf="column.sortable"
+-                       class="fe fe-chevron-down ml-1 sort-icon">
+-                    </i>
++                    <i *ngIf="column.sortable" [class]="getSortIcon(column.key)"></i>
+                   </div>
+                 </th>
+                 <th *ngIf="isAdmin || viewMode === 'all-tickets'" class="text-right">
+@@ -142,58 +140,47 @@
+               </tr>
+             </thead>
+             <tbody>
+-              <tr *ngFor="let ticket of tickets"
++              <tr *ngFor="let ticket of tickets; trackBy: trackByTicketId"
+                   [routerLink]="['/technical-support', ticket.id]"
+                   class="ticket-row">
+-                <td *ngIf="!isAdmin || viewMode === 'my-tickets'">{{ ticket.id }}</td>
+-                <td *ngIf="isAdmin && viewMode === 'all-tickets'">{{ ticket.id }}</td>
+-
+                 <td>
+                   <strong>{{ ticket.title }}</strong>
++                  <div class="text-muted small">{{ shortId(ticket.id) }}</div>
+                 </td>
+ 
+                 <td>
+-                  <span class="badge badge-light">{{ getCategoryTranslation(ticket.category) }}</span>
++                  <span class="badge badge-light">{{ ticket.categoryName }}</span>
+                 </td>
+ 
+                 <td>
+-                  <span class="badge" [ngClass]="getPriorityClass(ticket.priority)">
+-                    {{ getPriorityTranslation(ticket.priority) }}
++                  <span class="badge text-white"
++                        [style.background]="ticket.priorityColor || '#6c757d'">
++                    {{ ticket.priorityName }}
+                   </span>
+                 </td>
+ 
+                 <td>
+-                  <span class="badge" [ngClass]="getStatusClass(ticket.status)">
+-                    {{ getStatusTranslation(ticket.status) }}
+-                  </span>
+-                </td>
+-
+-                <td *ngIf="!isAdmin || viewMode === 'my-tickets'">
+-                  <span *ngIf="ticket.isSolved" class="badge badge-success">
+-                    <i class="fe fe-check-circle"></i>
+-                    {{ 'common.yes' | translate }}
+-                  </span>
+-                  <span *ngIf="!ticket.isSolved" class="badge badge-secondary">
+-                    <i class="fe fe-x-circle"></i>
+-                    {{ 'common.no' | translate }}
++                  <span class="badge text-white"
++                        [style.background]="ticket.statusColor || '#6c757d'">
++                    {{ ticket.statusName }}
+                   </span>
+                 </td>
+ 
+-                <td *ngIf="isAdmin && viewMode === 'all-tickets'">
+-                  {{ ticket.userName }}
+-                </td>
++                <ng-container *ngIf="isAdmin && viewMode === 'all-tickets'">
++                  <td>{{ ticket.createdByUserName }}</td>
+ 
+-                <td *ngIf="isAdmin && viewMode === 'all-tickets'">
+-                  <span *ngIf="ticket.assignedToName" class="badge badge-info">
+-                    <i class="fe fe-user"></i>
+-                    {{ ticket.assignedToName }}
+-                  </span>
+-                  <span *ngIf="!ticket.assignedToName" class="text-muted">
+-                    <em>{{ 'common.select' | translate }}</em>
+-                  </span>
+-                </td>
++                  <td>
++                    <span *ngIf="ticket.assignedToName" class="badge badge-info">
++                      <i class="fe fe-user"></i>
++                      {{ ticket.assignedToName }}
++                    </span>
++                    <span *ngIf="!ticket.assignedToName" class="text-muted">
++                      <em>{{ 'common.notAssigned' | translate }}</em>
++                    </span>
++                  </td>
++                </ng-container>
+ 
+-                <td *ngIf="isAdmin && viewMode === 'all-tickets'">
++                <td>
+                   <span *ngIf="ticket.isSolved" class="badge badge-success">
+                     <i class="fe fe-check-circle"></i>
+                     {{ 'common.yes' | translate }}
+@@ -204,8 +191,8 @@
+                   </span>
+                 </td>
+ 
+-                <td>{{ ticket.createdDate | date:'mediumDate' }}</td>
+-                <td>{{ ticket.lastUpdated | date:'medium' }}</td>
++                <td>{{ ticket.createdOn | date:'mediumDate' }}</td>
++                <td>{{ ticket.updatedOn | date:'medium' }}</td>
+ 
+                 <td *ngIf="isAdmin || viewMode === 'all-tickets'" class="text-right">
+                   <div class="dropdown">
+@@ -230,7 +217,7 @@
+ 
+               <!-- Empty State -->
+               <tr *ngIf="tickets.length === 0">
+-                <td [colSpan]="(isAdmin ? adminColumns.length : columns.length) + 1" class="text-center py-5">
++                <td [colSpan]="(isAdmin && viewMode === 'all-tickets' ? adminColumns.length : columns.length) + 1" class="text-center py-5">
+                   <div class="empty-state">
+                     <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+                     <p class="text-muted">
+diff --git a/Frontend/src/app/modules/technical-support/ticket-list/ticket-list.component.ts b/Frontend/src/app/modules/technical-support/ticket-list/ticket-list.component.ts
+index 695707c..c027a17 100644
+--- a/Frontend/src/app/modules/technical-support/ticket-list/ticket-list.component.ts
++++ b/Frontend/src/app/modules/technical-support/ticket-list/ticket-list.component.ts
+@@ -1,17 +1,15 @@
+ import { Component, OnInit, OnDestroy } from '@angular/core';
+ import { CommonModule } from '@angular/common';
+-import { RouterModule } from '@angular/router';
++import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+ import { FormsModule } from '@angular/forms';
+ import { TranslateModule, TranslateService } from '@ngx-translate/core';
+-import { Observable, Subject, takeUntil } from 'rxjs';
++import { Subject, takeUntil } from 'rxjs';
+ 
+ import { TechnicalSupportService } from '../services/technical-support.service';
+ import {
+   SupportTicket,
+   TicketSearchRequest,
+-  TicketCategory,
+-  TicketPriority,
+-  TicketStatus
++  LookupOption
+ } from '../../../core/models/technical-support.model';
+ import { AuthService, User } from '../../../core/services/auth.service';
+ import { PagedResponse } from '../../../core/models/common.model';
+@@ -70,20 +68,27 @@ export class TicketListComponent implements OnInit, OnDestroy {
+   viewMode: 'my-tickets' | 'all-tickets' = 'my-tickets';
+   currentUser: User | null = null;
+   isAdmin: boolean = false;
++  isSuperAdmin: boolean = false;
+ 
+-  // Search and filters
++  // Search and filters (wire names of SupportTicketFilterDto)
+   searchRequest: TicketSearchRequest = {
+     pageNumber: 1,
+     pageSize: 10,
+-    sortBy: 'createdDate',
+-    sortDescending: true
++    sortBy: 'CreatedOn',
++    sortDirection: 'desc'
+   };
+ 
+   searchTerm: string = '';
+-  selectedCategory: TicketCategory | '' = '';
+-  selectedPriority: TicketPriority | '' = '';
+-  selectedStatus: TicketStatus | '' = '';
+-  selectedIsSolved: boolean | '' = '';
++  selectedCategoryId: number | null = null;
++  selectedPriorityId: number | null = null;
++  selectedStatusId: number | null = null;
++  sortDirection: 'asc' | 'desc' = 'desc';
++
++  // Lookup options (GET /api/SupportTickets/lookups)
++  categories: LookupOption[] = [];
++  priorities: LookupOption[] = [];
++  statuses: LookupOption[] = [];
++  closedStatusId: number | null = null;
+ 
+   // Pagination
+   totalRecords: number = 0;
+@@ -92,154 +97,56 @@ export class TicketListComponent implements OnInit, OnDestroy {
+ 
+   // Data list configuration
+   columns: DataColumn[] = [
+-    {
+-      key: 'ticketId',
+-      title: 'technicalSupport.ticketId',
+-      sortable: true,
+-      width: '100px'
+-    },
+-    {
+-      key: 'title',
+-      title: 'technicalSupport.title',
+-      sortable: true,
+-      filterable: true
+-    },
+-    {
+-      key: 'category',
+-      title: 'technicalSupport.category',
+-      sortable: true,
+-      filterable: true
+-    },
+-    {
+-      key: 'priority',
+-      title: 'technicalSupport.priority',
+-      sortable: true,
+-      filterable: true
+-    },
+-    {
+-      key: 'status',
+-      title: 'technicalSupport.status',
+-      sortable: true,
+-      filterable: true
+-    },
+-    {
+-      key: 'isSolved',
+-      title: 'technicalSupport.isSolved',
+-      type: 'boolean',
+-      sortable: true
+-    },
+-    {
+-      key: 'createdDate',
+-      title: 'technicalSupport.createdDate',
+-      type: 'date',
+-      sortable: true
+-    },
+-    {
+-      key: 'lastUpdated',
+-      title: 'technicalSupport.lastUpdated',
+-      type: 'datetime',
+-      sortable: true
+-    }
++    { key: 'title', title: 'technicalSupport.title', sortable: true },
++    { key: 'categoryName', title: 'technicalSupport.category', sortable: true },
++    { key: 'priorityName', title: 'technicalSupport.priority', sortable: true },
++    { key: 'statusName', title: 'technicalSupport.status', sortable: true },
++    { key: 'isSolved', title: 'technicalSupport.isSolved', type: 'boolean', sortable: true },
++    { key: 'createdOn', title: 'technicalSupport.createdDate', type: 'date', sortable: true },
++    { key: 'updatedOn', title: 'technicalSupport.lastUpdated', type: 'datetime', sortable: true }
+   ];
+ 
+   adminColumns: DataColumn[] = [
+-    {
+-      key: 'ticketId',
+-      title: 'technicalSupport.ticketId',
+-      sortable: true,
+-      width: '100px'
+-    },
+-    {
+-      key: 'title',
+-      title: 'technicalSupport.title',
+-      sortable: true,
+-      filterable: true
+-    },
+-    {
+-      key: 'category',
+-      title: 'technicalSupport.category',
+-      sortable: true,
+-      filterable: true
+-    },
+-    {
+-      key: 'priority',
+-      title: 'technicalSupport.priority',
+-      sortable: true,
+-      filterable: true
+-    },
+-    {
+-      key: 'status',
+-      title: 'technicalSupport.status',
+-      sortable: true,
+-      filterable: true
+-    },
+-    {
+-      key: 'userName',
+-      title: 'technicalSupport.createdBy',
+-      sortable: true
+-    },
+-    {
+-      key: 'assignedToName',
+-      title: 'technicalSupport.assignedTo',
+-      sortable: true
+-    },
+-    {
+-      key: 'isSolved',
+-      title: 'technicalSupport.isSolved',
+-      type: 'boolean',
+-      sortable: true
+-    },
+-    {
+-      key: 'createdDate',
+-      title: 'technicalSupport.createdDate',
+-      type: 'date',
+-      sortable: true
+-    },
+-    {
+-      key: 'lastUpdated',
+-      title: 'technicalSupport.lastUpdated',
+-      type: 'datetime',
+-      sortable: true
+-    }
++    { key: 'title', title: 'technicalSupport.title', sortable: true },
++    { key: 'categoryName', title: 'technicalSupport.category', sortable: true },
++    { key: 'priorityName', title: 'technicalSupport.priority', sortable: true },
++    { key: 'statusName', title: 'technicalSupport.status', sortable: true },
++    { key: 'createdByUserName', title: 'technicalSupport.createdBy', sortable: true },
++    { key: 'assignedToName', title: 'technicalSupport.assignedTo', sortable: true },
++    { key: 'isSolved', title: 'technicalSupport.isSolved', type: 'boolean', sortable: true },
++    { key: 'createdOn', title: 'technicalSupport.createdDate', type: 'date', sortable: true },
++    { key: 'updatedOn', title: 'technicalSupport.lastUpdated', type: 'datetime', sortable: true }
+   ];
+ 
+   rowActions: ListAction[] = [
+-    {
+-      key: 'view',
+-      label: 'common.view',
+-      icon: 'fe fe-eye'
+-    }
++    { key: 'view', label: 'common.view', icon: 'fe fe-eye' }
+   ];
+ 
+   adminActions: ListAction[] = [
++    { key: 'view', label: 'common.view', icon: 'fe fe-eye' },
+     {
+-      key: 'view',
+-      label: 'common.view',
+-      icon: 'fe fe-eye'
+-    },
+-    {
+-      key: 'assign',
+-      label: 'technicalSupport.assignTo',
+-      icon: 'fe fe-user-plus',
+-      show: (item) => !item.assignedTo
+-    },
+-    {
+-      key: 'unassign',
+-      label: 'technicalSupport.unassign',
+-      icon: 'fe fe-user-minus',
+-      show: (item) => !!item.assignedTo
++      key: 'edit',
++      label: 'common.edit',
++      icon: 'fe fe-edit',
++      show: () => this.isAdmin
+     },
+     {
+       key: 'solve',
+       label: 'technicalSupport.markAsSolved',
+       icon: 'fe fe-check-circle',
+-      show: (item) => !item.isSolved && item.status !== TicketStatus.Closed
++      show: (item) => !item.isSolved && item.statusId !== this.closedStatusId
+     },
+     {
+       key: 'close',
+       label: 'technicalSupport.closeTicket',
+       icon: 'fe fe-x-circle',
+-      show: (item) => item.status !== TicketStatus.Closed
++      show: (item) => this.closedStatusId !== null && item.statusId !== this.closedStatusId
++    },
++    {
++      key: 'delete',
++      label: 'common.delete',
++      icon: 'fe fe-trash-2',
++      show: () => this.isSuperAdmin
+     }
+   ];
+ 
+@@ -255,21 +162,12 @@ export class TicketListComponent implements OnInit, OnDestroy {
+       icon: 'fe fe-bar-chart-2',
+       action: 'reports',
+       cssClass: 'btn-info'
+-    },
+-    {
+-      label: 'common.exportToExcel',
+-      icon: 'fe fe-file-plus',
+-      action: 'export',
+-      cssClass: 'btn-success'
+     }
+   ];
+ 
+-  // Enum values for filters
+-  categories = Object.values(TicketCategory);
+-  priorities = Object.values(TicketPriority);
+-  statuses = Object.values(TicketStatus);
+-
+   constructor(
++    private route: ActivatedRoute,
++    private router: Router,
+     private technicalSupportService: TechnicalSupportService,
+     private authService: AuthService,
+     private translate: TranslateService
+@@ -278,13 +176,17 @@ export class TicketListComponent implements OnInit, OnDestroy {
+   ngOnInit(): void {
+     this.currentUser = this.authService.getCurrentUser();
+     this.isAdmin = this.authService.hasAnyRole(['Admin', 'SuperAdmin']);
++    this.isSuperAdmin = this.authService.hasAnyRole(['SuperAdmin']);
+ 
+-    // Check view mode from route data
+-    const navigation = window.history.state;
+-    if (navigation?.viewMode === 'all-tickets' && this.isAdmin) {
++    // View mode comes from the route data (my-tickets / all-tickets)
++    const routeViewMode = this.route.snapshot.data['viewMode'];
++    if (routeViewMode === 'all-tickets' && this.isAdmin) {
+       this.viewMode = 'all-tickets';
++    } else if (routeViewMode === 'my-tickets') {
++      this.viewMode = 'my-tickets';
+     }
+ 
++    this.loadLookups();
+     this.loadTickets();
+ 
+     // Subscribe to tickets updates
+@@ -300,16 +202,28 @@ export class TicketListComponent implements OnInit, OnDestroy {
+     this.destroy$.complete();
+   }
+ 
++  loadLookups(): void {
++    this.technicalSupportService.getTicketLookups().subscribe({
++      next: (lookups) => {
++        this.categories = lookups.categories ?? [];
++        this.priorities = lookups.priorities ?? [];
++        this.statuses = lookups.statuses ?? [];
++        // The Closed status is matched by its English name; ColorCode also comes from the lookup
++        this.closedStatusId =
++          this.statuses.find(s => s.nameEn === 'Closed' || s.name === 'Closed')?.id ?? null;
++      }
++    });
++  }
++
+   loadTickets(): void {
+     this.loading = true;
+ 
+     const searchParams: TicketSearchRequest = {
+       ...this.searchRequest,
+       searchTerm: this.searchTerm || undefined,
+-      category: this.selectedCategory || undefined,
+-      priority: this.selectedPriority || undefined,
+-      status: this.selectedStatus || undefined,
+-      isSolved: this.selectedIsSolved !== '' ? this.selectedIsSolved : undefined
++      categoryId: this.selectedCategoryId ?? undefined,
++      priorityId: this.selectedPriorityId ?? undefined,
++      statusId: this.selectedStatusId ?? undefined
+     };
+ 
+     const tickets$ = this.viewMode === 'my-tickets' || !this.isAdmin
+@@ -320,7 +234,7 @@ export class TicketListComponent implements OnInit, OnDestroy {
+       next: (response: PagedResponse<SupportTicket>) => {
+         this.tickets = response.items;
+         this.totalRecords = response.totalCount;
+-        this.pageNumber = response.pageNumber;
++        this.pageNumber = response.pageNumber || this.searchRequest.pageNumber || 1;
+         this.loading = false;
+       },
+       error: () => {
+@@ -336,10 +250,9 @@ export class TicketListComponent implements OnInit, OnDestroy {
+ 
+   onClearFilters(): void {
+     this.searchTerm = '';
+-    this.selectedCategory = '';
+-    this.selectedPriority = '';
+-    this.selectedStatus = '';
+-    this.selectedIsSolved = '';
++    this.selectedCategoryId = null;
++    this.selectedPriorityId = null;
++    this.selectedStatusId = null;
+     this.onSearch();
+   }
+ 
+@@ -350,45 +263,64 @@ export class TicketListComponent implements OnInit, OnDestroy {
+ 
+   onPageSizeChange(size: number): void {
+     this.searchRequest.pageSize = size;
++    this.pageSize = size;
+     this.searchRequest.pageNumber = 1;
+     this.loadTickets();
+   }
+ 
+-  onSort(column: string, direction: 'asc' | 'desc'): void {
++  onSort(column: string): void {
++    if (this.searchRequest.sortBy === column) {
++      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
++    } else {
++      this.sortDirection = 'desc';
++    }
+     this.searchRequest.sortBy = column;
+-    this.searchRequest.sortDescending = direction === 'desc';
++    this.searchRequest.sortDirection = this.sortDirection;
+     this.loadTickets();
+   }
+ 
++  getSortIcon(column: string): string {
++    if (this.searchRequest.sortBy !== column) {
++      return 'fe fe-chevrons-up-down ml-1 sort-icon';
++    }
++    return this.sortDirection === 'asc'
++      ? 'fe fe-chevron-up ml-1 sort-icon'
++      : 'fe fe-chevron-down ml-1 sort-icon';
++  }
++
+   onAction(event: { item: SupportTicket | null; action: string }): void {
+     switch (event.action) {
+       case 'view':
+-        // Navigate to ticket details
+-        break;
+-      case 'create':
+-        // Navigate to create ticket
+-        break;
+-      case 'assign':
+-        // Open assign dialog
++        if (event.item) {
++          this.router.navigate(['/technical-support', event.item.id]);
++        }
+         break;
+-      case 'unassign':
++      case 'edit':
+         if (event.item) {
+-          this.unassignTicket(event.item);
++          this.router.navigate(['/technical-support', event.item.id, 'edit']);
+         }
+         break;
++      case 'create':
++        this.router.navigate(['/technical-support', 'create']);
++        break;
+       case 'solve':
+-        // Open solve dialog
++        // The solve form lives on the detail screen
++        if (event.item) {
++          this.router.navigate(['/technical-support', event.item.id]);
++        }
+         break;
+       case 'close':
+         if (event.item) {
+           this.closeTicket(event.item);
+         }
+         break;
+-      case 'export':
+-        this.exportToExcel();
++      case 'delete':
++        if (event.item) {
++          this.deleteTicket(event.item);
++        }
+         break;
+       case 'reports':
+-        // Navigate to reports
++        this.router.navigate(['/technical-support', 'reports']);
+         break;
+     }
+   }
+@@ -399,97 +331,48 @@ export class TicketListComponent implements OnInit, OnDestroy {
+     this.loadTickets();
+   }
+ 
+-  unassignTicket(ticket: SupportTicket): void {
+-    this.technicalSupportService.unassignTicket(ticket.id).subscribe({
+-      next: () => {
+-        this.loadTickets();
+-      }
+-    });
+-  }
+-
+   closeTicket(ticket: SupportTicket): void {
++    if (this.closedStatusId === null) {
++      return;
++    }
++
+     if (confirm(this.translate.instant('technicalSupport.messages.confirmClose'))) {
+-      this.technicalSupportService.closeTicket(ticket.id).subscribe({
++      this.technicalSupportService
++        .updateTicketStatus(ticket.id, { statusId: this.closedStatusId })
++        .subscribe({
++          next: () => {
++            this.technicalSupportService.notifyTicketsUpdated();
++          }
++        });
++    }
++  }
++
++  deleteTicket(ticket: SupportTicket): void {
++    if (confirm(
++      this.translate.instant('technicalSupport.messages.confirmDelete', { title: ticket.title })
++    )) {
++      this.technicalSupportService.deleteTicket(ticket.id).subscribe({
+         next: () => {
+-          this.loadTickets();
++          this.technicalSupportService.notifyTicketsUpdated();
+         }
+       });
+     }
+   }
+ 
+-  exportToExcel(): void {
+-    const searchParams: TicketSearchRequest = {
+-      ...this.searchRequest,
+-      searchTerm: this.searchTerm || undefined,
+-      category: this.selectedCategory || undefined,
+-      priority: this.selectedPriority || undefined,
+-      status: this.selectedStatus || undefined,
+-      isSolved: this.selectedIsSolved !== '' ? this.selectedIsSolved : undefined
+-    };
+-
+-    this.technicalSupportService.exportTicketsToExcel(searchParams).subscribe((blob: Blob) => {
+-      const url = window.URL.createObjectURL(blob);
+-      const a = document.createElement('a');
+-      a.href = url;
+-      a.download = `support-tickets-${new Date().toISOString().split('T')[0]}.xlsx`;
+-      a.click();
+-      window.URL.revokeObjectURL(url);
+-    });
+-  }
+-
+-  // Pagination helper methods
+-  getTotalPages(): number {
+-    return Math.ceil(this.totalRecords / this.pageSize);
+-  }
+-
+-  getPages(): number[] {
+-    // Now using shared pagination component
+-    return [];
+-  }
+-
+-  getCategoryTranslation(category: TicketCategory): string {
+-    return this.translate.instant(`technicalSupport.categories.${category}`);
++  // Display helpers
++  shortId(id: string): string {
++    return id ? id.substring(0, 8).toUpperCase() : '';
+   }
+ 
+-  getPriorityTranslation(priority: TicketPriority): string {
+-    return this.translate.instant(`technicalSupport.priorities.${priority}`);
+-  }
+-
+-  getStatusTranslation(status: TicketStatus): string {
+-    return this.translate.instant(`technicalSupport.statuses.${status}`);
+-  }
+-
+-  getPriorityClass(priority: TicketPriority): string {
+-    switch (priority) {
+-      case TicketPriority.Urgent:
+-        return 'badge-danger';
+-      case TicketPriority.High:
+-        return 'badge-warning';
+-      case TicketPriority.Medium:
+-        return 'badge-info';
+-      case TicketPriority.Low:
+-        return 'badge-secondary';
+-      default:
+-        return 'badge-light';
+-    }
+-  }
+-
+-  getStatusClass(status: TicketStatus): string {
+-    switch (status) {
+-      case TicketStatus.Open:
+-        return 'badge-primary';
+-      case TicketStatus.InProgress:
+-        return 'badge-info';
+-      case TicketStatus.Resolved:
+-        return 'badge-success';
+-      case TicketStatus.Closed:
+-        return 'badge-secondary';
+-      default:
+-        return 'badge-light';
+-    }
++  trackByTicketId(index: number, ticket: SupportTicket): string {
++    return ticket.id;
+   }
+ 
+   getDisplayEnd(): number {
+     return Math.min(this.pageNumber * this.pageSize, this.totalRecords);
+   }
++
++  getTotalPages(): number {
++    return Math.ceil(this.totalRecords / this.pageSize);
++  }
+ }
+diff --git a/Frontend/src/assets/i18n/ar.json b/Frontend/src/assets/i18n/ar.json
+index d51f239..ccd2ccc 100644
+--- a/Frontend/src/assets/i18n/ar.json
++++ b/Frontend/src/assets/i18n/ar.json
+@@ -21,6 +21,7 @@
+     "confirm": "تأكيد",
+     "yes": "نعم",
+     "no": "لا",
++    "notAssigned": "غير معيّن",
+     "loading": "جاري التحميل...",
+     "noData": "لا توجد بيانات",
+     "success": "نجاح",
+@@ -616,7 +617,6 @@
+     "isActive": "نشط",
+     "createdDate": "تاريخ الإنشاء",
+     "modifiedDate": "تاريخ التعديل",
+-    "roles": "الأدوار",
+     "role": "دور",
+     "manageRoles": "إدارة الأدوار",
+     "manageClaims": "إدارة المطالبات",
+@@ -637,7 +637,6 @@
+     "name": "الاسم",
+     "description": "الوصف",
+     "userCount": "عدد المستخدمين",
+-    "permissions": "الصلاحيات",
+     "systemRole": "دور النظام",
+     "systemRoles": "أدوار النظام",
+     "customRoles": "أدوار مخصصة",
+@@ -656,7 +655,7 @@
+     "availableRoles": "الأدوار المتاحة",
+     "assignedRoles": "الأدوار المعينة",
+     "selectedRoles": "الأدوار المحددة",
+-    "atLeastOneRole": "يجب تعيين دور واحد على الأقل",
++    "atLeastOneRole": "يجب تحديد دور واحد على الأقل",
+     "rolesAssigned": "تم تعيين الأدوار بنجاح",
+     "failedToAssignRoles": "فشل تعيين الأدوار",
+     "userCreated": "تم إنشاء المستخدم بنجاح",
+@@ -673,8 +672,6 @@
+     "confirmRoleDeletion": "هل أنت متأكد من حذف هذا الدور؟",
+     "entries": "سجلات",
+     "selectRoles": "اختر الأدوار",
+-    "noRolesAvailable": "لا توجد أدوار متاحة",
+-    "atLeastOneRole": "يجب تحديد دور واحد على الأقل",
+     "emailRequired": "البريد الإلكتروني مطلوب",
+     "emailInvalid": "عنوان بريد إلكتروني غير صالح",
+     "phoneOptional": "رقم الهاتف اختياري",
+@@ -734,7 +731,8 @@
+     "nameTaken": "هذا الاسم مستخدم بالفعل لجمعية أخرى",
+     "invalid": "قيمة غير صالحة",
+     "fileTooLarge": "حجم الملف يتجاوز الحد الأقصى المسموح به من 10 ميغابايت",
+-    "invalidFileType": "نوع الملف غير مسموح به. فقط الصور وملفات PDF ووثائق Word مسموحة."
++    "invalidFileType": "نوع الملف غير مسموح به. فقط الصور وملفات PDF ووثائق Word مسموحة.",
++    "invalidFormat": "صيغة غير صالحة"
+   },
+   "errors": {
+     "serverError": "حدث خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.",
+@@ -815,7 +813,6 @@
+     "myMissions": "مهامي",
+     "manageMissions": "إدارة المهام",
+     "missionTarget": "هدف المهمة",
+-    "missionDetails": "تفاصيل المهمة",
+     "details": "التفاصيل",
+     "missionType": "نوع المهمة",
+     "missionTimeType": "نوع توقيت المهمة",
+@@ -981,6 +978,7 @@
+     "charityAssignment": "تعيين الجمعية",
+     "documents": "المستندات",
+     "status": "الحالة",
++    "serial": "الرقم",
+     "projectName": "اسم المشروع",
+     "projectHint": "وصف المشروع",
+     "projectDate": "تاريخ المشروع",
+@@ -1194,7 +1192,61 @@
+     "unlimited": "غير محدود",
+     "allTypes": "جميع الأنواع",
+     "allRegions": "جميع المناطق",
+-    "all": "الكل"
++    "all": "الكل",
++    "inactive": "غير نشط",
++    "distributedLabel": "موزّع",
++    "distributedOn": "تاريخ التوزيع",
++    "region": "المنطقة",
++    "center": "المركز",
++    "eligibleFamilies": "الأسر المتاحة للمشروع",
++    "families": "أسرة",
++    "familyMembers": "عدد أفراد الأسرة",
++    "searchFamiliesPlaceholder": "ابحث برقم الأسرة أو العنوان...",
++    "campaignDetails": "تفاصيل الحملة",
++    "campaignCreated": "تم إنشاء الحملة بنجاح",
++    "campaignCreateFailed": "فشل إنشاء الحملة",
++    "campaignUpdated": "تم تحديث الحملة بنجاح",
++    "campaignUpdateFailed": "فشل تحديث الحملة",
++    "campaignLoadFailed": "فشل تحميل الحملة",
++    "campaignClosed": "تم إغلاق الحملة بنجاح",
++    "campaignCloseFailed": "فشل إغلاق الحملة",
++    "closureNotesPrompt": "أدخل ملاحظات الإغلاق (اختياري):",
++    "beneficiariesUpdated": "تمت إضافة {added} أسرة — الإجمالي المسجل {total}",
++    "beneficiariesUpdateFailed": "فشل تحديث المستفيدين",
++    "beneficiaryRemoved": "تم إزالة الأسرة من الحملة",
++    "beneficiaryRemoveFailed": "فشل إزالة الأسرة",
++    "removeBeneficiaryConfirm": "هل أنت متأكد من إزالة الأسرة {code} من الحملة؟",
++    "confirmReceived": "تأكيد استلام الأسرة للمساعدة",
++    "receivedFlagConfirmed": "تم تأكيد استلام الأسرة للمساعدة",
++    "receivedFlagWithdrawn": "تم إلغاء تأكيد الاستلام",
++    "receivedFlagFailed": "فشل تحديث حالة الاستلام",
++    "distributionRecorded": "تم تسجيل التوزيع بنجاح",
++    "distributionRecordFailed": "فشل تسجيل التوزيع",
++    "recipientRelationship": "صلة المستلم بالأسرة",
++    "recipientRelationshipPlaceholder": "الأب، الأم، الوصي...",
++    "distributionMethod": "طريقة التوزيع",
++    "distributionMethodPlaceholder": "نقدي، تحويل بنكي، عيني...",
++    "printReceipt": "طباعة إيذون الاستلام",
++    "distributionReceipt": "إيذون استلام مساعدة موسمية",
++    "distributionReceiptSub": "يُستكمل هذا الإيذون عند تسليم المساعدة للأسرة",
++    "recipientSignature": "توقيع المستلم",
++    "distributorSignature": "توقيع الموزّع",
++    "printBlocked": "يرجى السماح بالنوافذ المنبثقة لطباعة الإيذون",
++    "campaignReport": "تقرير الحملة",
++    "generatedOn": "تاريخ إنشاء التقرير",
++    "distributionRate": "نسبة التوزيع",
++    "budgetUtilization": "نسبة استخدام الميزانية",
++    "byRegion": "التوزيع حسب المنطقة",
++    "byCharity": "التوزيع حسب الجمعية",
++    "byFamilyType": "التوزيع حسب نوع الأسرة",
++    "distributionDetails": "تفاصيل التوزيع",
++    "totalBeneficiaries": "إجمالي المستفيدين",
++    "budget": "الميزانية",
++    "totalBudgetPlaceholder": "أدخل إجمالي الميزانية",
++    "perFamilyAllocationPlaceholder": "المبلغ المخصص لكل أسرة",
++    "maximumFamiliesPlaceholder": "الحد الأقصى لعدد الأسر",
++    "ageRangeFromPlaceholder": "من (سنوات)",
++    "ageRangeToPlaceholder": "إلى (سنوات)"
+   },
+   "housingProjects": {
+     "title": "مشاريع الإسكان",
+@@ -1321,28 +1373,19 @@
+   },
+   "generalChecks": {
+     "title": "الشيكات العامة",
+-    "manageChecks": "إدارة الشيكات وأدوات الدفع",
++    "subtitle": "إدارة الشيكات العامة",
++    "manageChecks": "إدارة الشيكات",
+     "addCheck": "إضافة شيك",
+     "editCheck": "تعديل شيك",
+-    "deleteCheck": "حذف شيك",
+     "checkDetails": "تفاصيل الشيك",
+-    "viewCheckList": "عرض قائمة الشيكات",
+-    "reconcileChecks": "مطابقة الشيكات",
+-    "generateReport": "إنشاء تقرير",
+     "checkInformation": "معلومات الشيك",
+     "beneficiaryInformation": "معلومات المستفيد",
+     "financialInformation": "المعلومات المالية",
+-    "bankInformation": "معلومات البنك",
+-    "statusInformation": "معلومات الحالة",
++    "flags": "الحالات",
++    "serial": "الرقم",
+     "checkNumber": "رقم الشيك",
+     "checkDate": "تاريخ الشيك",
+-    "dueDate": "تاريخ الاستحقاق",
+     "currency": "العملة",
+-    "currencies": {
+-      "EGP": "الجنيه المصري (EGP)",
+-      "SAR": "الريال السعودي (SAR)",
+-      "USD": "الدولار الأمريكي (USD)"
+-    },
+     "beneficiaryType": "نوع المستفيد",
+     "beneficiaryTypes": {
+       "Individual": "فرد",
+@@ -1352,109 +1395,42 @@
+       "Employee": "موظف"
+     },
+     "beneficiaryName": "اسم المستفيد",
+-    "beneficiaryId": "معرف المستفيد",
+     "beneficiaryAddress": "عنوان المستفيد",
+     "beneficiaryPhone": "هاتف المستفيد",
+-    "beneficiaryEmail": "بريد المستفيد الإلكتروني",
+     "idPassportNumber": "رقم الهوية/جواز السفر",
+     "amount": "المبلغ",
+     "amountInWords": "المبلغ بالكلمات",
+-    "paymentReason": "سبب الدفع",
+-    "paymentReasons": {
+-      "Salary": "راتب",
+-      "SupplierRefund": "رد المورد",
+-      "Expense": "مصروف",
+-      "Other": "أخرى"
+-    },
+-    "paymentDescription": "وصف الدفع",
++    "amountInWordsAutoGenerated": "يتم إنشاؤه تلقائياً ما لم تقم بتعديله",
+     "bank": "البنك",
+     "branch": "الفرع",
+     "accountNumber": "رقم الحساب",
+-    "checkStatus": "حالة الشيك",
+-    "checkStatuses": {
+-      "Pending": "معلق",
+-      "Issued": "صادر",
+-      "Cleared": "مصروف",
+-      "Void": "ملغي"
+-    },
+-    "issueDate": "تاريخ الإصدار",
+-    "clearanceDate": "تاريخ الصرف",
+-    "bankReference": "مرجع البنك",
+-    "clearanceNotes": "ملاحظات الصرف",
+-    "voidReason": "سبب الإلغاء",
+-    "voidReasons": {
+-      "Lost": "مفقود",
+-      "Stopped": "متوقف",
+-      "Error": "خطأ",
+-      "Expired": "منتهي الصلاحية",
+-      "Other": "أخرى"
+-    },
+-    "voidDate": "تاريخ الإلغاء",
+-    "voidNotes": "ملاحظات الإلغاء",
+-    "markAsCleared": "تعيين كمصروف",
+-    "voidCheck": "إلغاء الشيك",
+-    "requiresApproval": "يتطلب موافقة",
+-    "approvedBy": "وافق عليه",
+-    "saveToLookup": "حفظ في الجدول المرجعي",
+-    "reconciliation": "مطابقة الشيكات",
+-    "unreconciledChecks": "الشيكات غير المطابقة",
+-    "bankStatementImport": "استيراد كشف حساب البنك",
+-    "manualMatching": "المطابقة اليدوية",
+-    "enterBankReference": "أدخل مرجع البنك",
+-    "confirmMatch": "تأكيد المطابقة",
+-    "reconciliationSummary": "ملخص المطابقة",
+-    "totalChecksReconciled": "إجمالي الشيكات المطابقة",
+-    "totalAmount": "المبلغ الإجمالي",
+-    "reconcileSuccess": "تمت مطابقة الشيكات بنجاح",
+-    "reportOptions": "خيارات التقرير",
+-    "reportPeriod": "فترة التقرير",
+-    "groupBy": "تجميع حسب",
+-    "groupByOptions": {
+-      "Status": "الحالة",
+-      "Bank": "البنك",
+-      "Beneficiary": "المستفيد"
++    "charity": "الجمعية",
++    "allCharities": "كافة الجهات",
++    "chequeType": "نوع الشيكات",
++    "chequeTypes": {
++      "All": "كل الشيكات",
++      "Orphans": "شيكات إيتام",
++      "Individuals": "شيكات أفراد"
+     },
+-    "summaryStatistics": "الإحصائيات الملخصة",
+-    "totalChecks": "إجمالي الشيكات",
+-    "clearedChecks": "الشيكات المصروفة",
+-    "pendingChecks": "الشيكات المعلقة",
+-    "voidChecks": "الشيكات الملغاة",
+-    "detailedCheckList": "قائمة الشيكات التفصيلية",
+-    "generate": "إنشاء",
+-    "export": "تصدير",
++    "isDamaged": "شيك تالف",
++    "isReturned": "تم رد الشيك",
++    "isDispensed": "تم الصرف",
++    "isDone": "CheckDone",
++    "comment": "تعليقات",
++    "statement": "بيان الشيكات",
++    "search": "بحث",
+     "print": "طباعة",
+-    "searchPlaceholder": "البحث برقم الشيك أو المستفيد...",
++    "printEgyptian": "طباعة مصري",
++    "save": "حفظ",
++    "dateFrom": "من تاريخ",
++    "dateTo": "إلى تاريخ",
++    "total": "الإجمالي",
++    "totalChecks": "إجمالي الشيكات",
++    "generatedOn": "تاريخ الإنشاء",
+     "noChecksFound": "لم يتم العثور على شيكات",
+-    "allBanks": "جميع البنوك",
+-    "allCurrencies": "جميع العملات",
+-    "allStatuses": "جميع الحالات",
+-    "filters": "الفلاتر",
+-    "clearFilters": "مسح الفلاتر",
+-    "applyFilters": "تطبيق الفلاتر",
+-    "exportToExcel": "تصدير إلى Excel",
+-    "exportSuccess": "تم تصدير الشيكات بنجاح",
+-    "exportFailed": "فشل تصدير الشيكات",
+-    "checkCreated": "تم إنشاء الشيك بنجاح",
+-    "checkUpdated": "تم تحديث الشيك بنجاح",
+-    "checkDeleted": "تم حذف الشيك بنجاح",
+-    "checkCleared": "تم تحديد الشيك كمصروف",
+-    "checkVoided": "تم إلغاء الشيك بنجاح",
+-    "confirmDelete": "هل أنت متأكد من حذف هذا الشيك؟",
+-    "confirmClear": "هل أنت متأكد من تعيين هذا الشيك كمصروف؟",
+-    "confirmVoid": "هل أنت متأكد من إلغاء هذا الشيك؟ لا يمكن التراجع عن هذا الإجراء.",
+-    "cannotEditCleared": "لا يمكن تعديل الشيك المصروف",
+-    "cannotEditVoided": "لا يمكن تعديل الشيك الملغي",
+-    "cannotVoidCleared": "لا يمكن إلغاء الشيك المصروف",
+     "enterCheckNumber": "أدخل رقم الشيك",
+     "enterBeneficiaryName": "أدخل اسم المستفيد",
+     "enterAmount": "أدخل المبلغ",
+-    "enterPaymentDescription": "أدخل وصف الدفع",
+-    "enterVoidNotes": "أدخل ملاحظات الإلغاء (مطلوب)",
+-    "selectBeneficiaryType": "اختر نوع المستفيد",
+-    "selectCurrency": "اختر العملة",
+-    "selectPaymentReason": "اختر سبب الدفع",
+-    "selectBank": "اختر البنك",
+-    "selectVoidReason": "اختر سبب الإلغاء",
+     "checkNumberRequired": "رقم الشيك مطلوب",
+     "checkDateRequired": "تاريخ الشيك مطلوب",
+     "beneficiaryNameRequired": "اسم المستفيد مطلوب",
+@@ -1462,27 +1438,11 @@
+     "amountMustBePositive": "يجب أن يكون المبلغ رقماً موجباً",
+     "currencyRequired": "العملة مطلوبة",
+     "bankRequired": "البنك مطلوب",
+-    "voidNotesRequired": "ملاحظات الإلغاء مطلوبة",
+-    "invalidDateRange": "يجب أن يكون تاريخ الاستحقاق بعد تاريخ الشيك",
+-    "auditTrail": "سجل التدقيق",
+-    "createdOn": "تم الإنشاء في",
+-    "modifiedOn": "تم التعديل في",
+-    "noAuditInformation": "لا توجد معلومات تدقيق متاحة",
+-    "accessDenied": "تم رفض الوصول",
+-    "adminOnlyModule": "هذه الوحدة متاحة فقط للمشرفين ومشرفي المستوى الأعلى والمحاسبين",
+-    "unauthorizedAccess": "لست مخولاً للوصول إلى هذه الوحدة",
+-    "uploadCheckImage": "رفع صورة الشيك",
+-    "checkImage": "صورة الشيك",
+-    "viewImage": "عرض الصورة",
+-    "removeImage": "إزالة الصورة",
+-    "amountInWordsAutoGenerated": "سيتم إنشاء المبلغ بالكلمات تلقائياً",
+-    "fromLookup": "من الجدول المرجعي",
+-    "newEntry": "إدخال جديد",
+-    "saveBeneficiary": "حفظ المستفيد",
+-    "beneficiarySaved": "تم حفظ المستفيد بنجاح",
+-    "beneficiaryLinked": "تم ربط المستفيد بالشيك"
++    "checkCreated": "تم إنشاء الشيك بنجاح",
++    "checkUpdated": "تم تحديث الشيك بنجاح",
++    "saveFailed": "فشل حفظ الشيك",
++    "loadFailed": "فشل تحميل البيانات"
+   },
+-  
+   "incomingOutgoing": {
+     "title": "المراسلات الواردة والصادرة",
+     "subtitle": "إدارة المراسلات الواردة والصادرة",
+@@ -1504,8 +1464,8 @@
+     "importExportHistory": "سجل الاستيراد والتصدير",
+     "serial": "مسلسل",
+     "subject": "الموضوع",
+-    "date": "التاريخ",
+-    "body": "النص",
++    "date": "تاريخ الاستلام",
++    "body": "نص المعاملة",
+     "letterNumber": "رقم المعاملة",
+     "letterDate": "تاريخ المعاملة",
+     "incomingId": "رقم الوارد",
+@@ -1599,29 +1559,17 @@
+     "searchPlaceholder": "البحث بالموضوع أو المسلسل...",
+     "clearFilters": "مسح الفلاتر",
+     "noLettersFound": "لم يتم العثور على مراسلات",
+-    "subject": "الموضوع",
+     "subjectPlaceholder": "أدخل موضوع المعاملة",
+-    "incomingId": "رقم الوارد",
+     "incomingIdPlaceholder": "أدخل رقم الوارد",
+-    "incomingNumber": "رقم داخلي",
+     "incomingNumberPlaceholder": "أدخل الرقم الداخلي",
+     "outGoingId": "رقم الصادر",
+     "outGoingIdPlaceholder": "أدخل رقم الصادر",
+-    "outGoingNumber": "رقم داخلي",
+     "outGoingNumberPlaceholder": "أدخل الرقم الداخلي",
+-    "letterNumber": "رقم المعاملة",
+     "letterNumberPlaceholder": "أدخل رقم المعاملة الرسمي",
+-    "letterDate": "تاريخ المعاملة",
+-    "date": "تاريخ الاستلام",
+-    "year": "السنة",
+     "yearPlaceholder": "أدخل السنة المالية",
+-    "body": "نص المعاملة",
+     "bodyPlaceholder": "أدخل محتوى المعاملة",
+-    "letterDescription": "الوصف",
+     "letterDescriptionPlaceholder": "أدخل وصفاً مختصراً",
+-    "department": "الإدارة",
+     "selectDepartment": "اختر الإدارة",
+-    "category": "الفئة",
+     "selectCategory": "اختر الفئة",
+     "categoryOfficial": "رسمي",
+     "categoryInternal": "داخلي",
+@@ -1737,7 +1685,6 @@
+     "selected": "محدد",
+     "formatTitle": "اختر التنسيق والتصدير",
+     "selectFormat": "اختر تنسيق التصدير",
+-    "generateExport": "إنشاء التصدير",
+     "exportSummary": "ملخص التصدير",
+     "records": "السجلات",
+     "fields": "الحقول",
+@@ -1771,7 +1718,7 @@
+     "proceedToFormat": "متابعة إلى التنسيق"
+   },
+   "technicalSupport": {
+-    "title": "الدعم الفني",
++    "title": "العنوان",
+     "supportCenter": "مركز الدعم",
+     "myTickets": "تذاكري",
+     "allTickets": "جميع التذاكر",
+@@ -1781,7 +1728,6 @@
+     "editTicket": "تعديل التذكرة",
+     "deleteTicket": "حذف التذكرة",
+     "ticketId": "رقم التذكرة",
+-    "title": "العنوان",
+     "category": "الفئة",
+     "priority": "الأولوية",
+     "status": "الحالة",
+@@ -1895,7 +1841,16 @@
+       "topTicketCreators": "أكثر منشئي التذاكر",
+       "exportReport": "تصدير التقرير",
+       "printReport": "طباعة التقرير",
+-      "configureMessage": "قم بتكوين خيارات التقرير وانقر فوق إنشاء تقرير لعرض الإحصائيات"
++      "configureMessage": "قم بتكوين خيارات التقرير وانقر فوق إنشاء تقرير لعرض الإحصائيات",
++      "openTickets": "التذاكر المفتوحة",
++      "inProgressTickets": "التذاكر قيد التنفيذ",
++      "resolvedTickets": "التذاكر المحلولة",
++      "closedTickets": "التذاكر المغلقة",
++      "slaBreached": "التذاكر التي تجاوزت مدة الاتفاقية",
++      "ticketsByStatus": "التذاكر حسب الحالة",
++      "ticketsByPriority": "التذاكر حسب الأولوية",
++      "ticketsByCreator": "التذاكر حسب المنشئ",
++      "ticketsInPeriod": "التذاكر خلال الفترة"
+     },
+     "placeholders": {
+       "userAction": "ماذا كنت تفعل عند حدوث المشكلة؟",
+diff --git a/Frontend/src/assets/i18n/en.json b/Frontend/src/assets/i18n/en.json
+index b2034da..0df95ab 100644
+--- a/Frontend/src/assets/i18n/en.json
++++ b/Frontend/src/assets/i18n/en.json
+@@ -21,6 +21,7 @@
+     "confirm": "Confirm",
+     "yes": "Yes",
+     "no": "No",
++    "notAssigned": "Not assigned",
+     "loading": "Loading...",
+     "noData": "No data available",
+     "success": "Success",
+@@ -614,7 +615,6 @@
+     "isActive": "Is Active",
+     "createdDate": "Created Date",
+     "modifiedDate": "Modified Date",
+-    "roles": "Roles",
+     "manageRoles": "Manage Roles",
+     "manageClaims": "Manage Claims",
+     "managePermissions": "Manage Permissions",
+@@ -634,7 +634,6 @@
+     "name": "Name",
+     "description": "Description",
+     "userCount": "User Count",
+-    "permissions": "Permissions",
+     "systemRole": "System Role",
+     "noRolesFound": "No roles found",
+     "noUsersFound": "No users found",
+@@ -648,7 +647,6 @@
+     "roleDeleted": "Role deleted successfully",
+     "passwordReset": "Password reset successfully",
+     "roleAssignment": "Role Assignment",
+-    "assignRoles": "Assign Roles",
+     "availableRoles": "Available Roles",
+     "assignedRoles": "Assigned Roles",
+     "confirmPasswordReset": "Are you sure you want to reset this user's password?",
+@@ -700,24 +698,13 @@
+   },
+   "validation": {
+     "required": "This field is required",
+-    "requiredField": "{{field}} is required",
+-    "email": "Invalid email address",
+-    "minLength": "Minimum length is {{minLength}} characters",
+-    "maxLength": "Maximum length is {{maxLength}} characters",
+-    "pattern": "Invalid format",
+-    "min": "Minimum value is {{min}}",
+-    "max": "Maximum value is {{max}}",
+-    "minValue": "Please enter a valid positive value",
+-    "dateInvalid": "Invalid date",
+-    "phoneInvalid": "Invalid phone number",
+-    "nationalIdInvalid": "Invalid National ID",
+     "completionPercentageRange": "Completion percentage must be between 0 and 100",
+-    "looksGood": "Looks good!",
+-    "selectAnOption": "Select an option",
+-    "nameTaken": "This name is already used by another charity",
+-    "invalid": "Invalid value",
+-    "fileTooLarge": "File size exceeds the maximum allowed size of 10MB",
+-    "invalidFileType": "File type is not allowed. Only images, PDF, and Word documents are accepted."
++    "fixErrors": "Please fix the errors before submitting",
++    "minLength": "Minimum length is",
++    "maxLength": "Maximum length is",
++    "fileTooLarge": "File size exceeds the maximum allowed size of 10 MB",
++    "invalidFileType": "File type not allowed. Only images, PDF and Word documents are permitted.",
++    "invalidFormat": "Invalid format"
+   },
+   "errors": {
+     "serverError": "Server error occurred. Please try again later.",
+@@ -798,7 +785,6 @@
+     "myMissions": "My Missions",
+     "manageMissions": "Manage Missions",
+     "missionTarget": "Mission Target",
+-    "missionDetails": "Mission Details",
+     "details": "Details",
+     "missionType": "Mission Type",
+     "missionTimeType": "Mission Time Type",
+@@ -967,6 +953,7 @@
+     "charityAssignment": "Charity Assignment",
+     "documents": "Documents",
+     "status": "Status",
++    "serial": "#",
+     "projectName": "Project Name",
+     "projectHint": "Project Description",
+     "projectDate": "Project Date",
+@@ -1180,7 +1167,61 @@
+     "unlimited": "Unlimited",
+     "allTypes": "All Types",
+     "allRegions": "All Regions",
+-    "all": "All"
++    "all": "All",
++    "inactive": "Inactive",
++    "distributedLabel": "distributed",
++    "distributedOn": "Distributed On",
++    "region": "Region",
++    "center": "Center",
++    "eligibleFamilies": "Eligible Families",
++    "families": "families",
++    "familyMembers": "Family Members",
++    "searchFamiliesPlaceholder": "Search by family code or address...",
++    "campaignDetails": "Campaign Details",
++    "campaignCreated": "Campaign created successfully",
++    "campaignCreateFailed": "Failed to create campaign",
++    "campaignUpdated": "Campaign updated successfully",
++    "campaignUpdateFailed": "Failed to update campaign",
++    "campaignLoadFailed": "Failed to load campaign",
++    "campaignClosed": "Campaign closed successfully",
++    "campaignCloseFailed": "Failed to close campaign",
++    "closureNotesPrompt": "Enter closure notes (optional):",
++    "beneficiariesUpdated": "Added {added} families — {total} now registered",
++    "beneficiariesUpdateFailed": "Failed to update beneficiaries",
++    "beneficiaryRemoved": "Family removed from the campaign",
++    "beneficiaryRemoveFailed": "Failed to remove family",
++    "removeBeneficiaryConfirm": "Remove family {code} from the campaign?",
++    "confirmReceived": "Confirm the family received the assistance",
++    "receivedFlagConfirmed": "Family receipt confirmed",
++    "receivedFlagWithdrawn": "Receipt confirmation withdrawn",
++    "receivedFlagFailed": "Failed to update receipt status",
++    "distributionRecorded": "Distribution recorded successfully",
++    "distributionRecordFailed": "Failed to record distribution",
++    "recipientRelationship": "Recipient Relationship",
++    "recipientRelationshipPlaceholder": "Father, Mother, Guardian...",
++    "distributionMethod": "Distribution Method",
++    "distributionMethodPlaceholder": "Cash, Bank Transfer, In-Kind...",
++    "printReceipt": "Print Receipt",
++    "distributionReceipt": "Seasonal Aid Receipt",
++    "distributionReceiptSub": "To be completed when the assistance is delivered to the family",
++    "recipientSignature": "Recipient Signature",
++    "distributorSignature": "Distributor Signature",
++    "printBlocked": "Allow pop-up windows to print the receipt",
++    "campaignReport": "Campaign Report",
++    "generatedOn": "Report Generated On",
++    "distributionRate": "Distribution Rate",
++    "budgetUtilization": "Budget Utilization",
++    "byRegion": "By Region",
++    "byCharity": "By Charity",
++    "byFamilyType": "By Family Type",
++    "distributionDetails": "Distribution Details",
++    "totalBeneficiaries": "Total Beneficiaries",
++    "budget": "Budget",
++    "totalBudgetPlaceholder": "Enter total budget",
++    "perFamilyAllocationPlaceholder": "Allocation per family",
++    "maximumFamiliesPlaceholder": "Maximum number of families",
++    "ageRangeFromPlaceholder": "From (years)",
++    "ageRangeToPlaceholder": "To (years)"
+   },
+   "housingProjects": {
+     "title": "Housing Projects",
+@@ -1306,30 +1347,20 @@
+     }
+   },
+   "generalChecks": {
+-    "title": "General Checks",
+-    "manageChecks": "Manage Checks and Payment Instruments",
+-    "addCheck": "Add Check",
+-    "createCheck": "Create Check",
+-    "editCheck": "Edit Check",
+-    "deleteCheck": "Delete Check",
+-    "checkDetails": "Check Details",
+-    "viewCheckList": "View Check List",
+-    "reconcileChecks": "Reconcile Checks",
+-    "generateReport": "Generate Report",
+-    "checkInformation": "Check Information",
++    "title": "General Cheques",
++    "subtitle": "General cheques management",
++    "manageChecks": "Manage Cheques",
++    "addCheck": "Add Cheque",
++    "editCheck": "Edit Cheque",
++    "checkDetails": "Cheque Details",
++    "checkInformation": "Cheque Information",
+     "beneficiaryInformation": "Beneficiary Information",
+     "financialInformation": "Financial Information",
+-    "bankInformation": "Bank Information",
+-    "statusInformation": "Status Information",
+-    "checkNumber": "Check Number",
+-    "checkDate": "Check Date",
+-    "dueDate": "Due Date",
++    "flags": "Flags",
++    "serial": "No.",
++    "checkNumber": "Cheque Number",
++    "checkDate": "Cheque Date",
+     "currency": "Currency",
+-    "currencies": {
+-      "EGP": "Egyptian Pound (EGP)",
+-      "SAR": "Saudi Riyal (SAR)",
+-      "USD": "US Dollar (USD)"
+-    },
+     "beneficiaryType": "Beneficiary Type",
+     "beneficiaryTypes": {
+       "Individual": "Individual",
+@@ -1339,140 +1370,53 @@
+       "Employee": "Employee"
+     },
+     "beneficiaryName": "Beneficiary Name",
+-    "beneficiaryId": "Beneficiary ID",
+     "beneficiaryAddress": "Beneficiary Address",
+     "beneficiaryPhone": "Beneficiary Phone",
+-    "beneficiaryEmail": "Beneficiary Email",
+     "idPassportNumber": "ID/Passport Number",
+     "amount": "Amount",
+     "amountInWords": "Amount in Words",
+-    "paymentReason": "Payment Reason",
+-    "paymentReasons": {
+-      "Salary": "Salary",
+-      "SupplierRefund": "Supplier Refund",
+-      "Expense": "Expense",
+-      "Other": "Other"
+-    },
+-    "paymentDescription": "Payment Description",
++    "amountInWordsAutoGenerated": "generated automatically unless edited",
+     "bank": "Bank",
+     "branch": "Branch",
+     "accountNumber": "Account Number",
+-    "checkStatus": "Check Status",
+-    "checkStatuses": {
+-      "Pending": "Pending",
+-      "Issued": "Issued",
+-      "Cleared": "Cleared",
+-      "Void": "Void"
+-    },
+-    "issueDate": "Issue Date",
+-    "clearanceDate": "Clearance Date",
+-    "bankReference": "Bank Reference",
+-    "clearanceNotes": "Clearance Notes",
+-    "voidReason": "Void Reason",
+-    "voidReasons": {
+-      "Lost": "Lost",
+-      "Stopped": "Stopped",
+-      "Error": "Error",
+-      "Expired": "Expired",
+-      "Other": "Other"
+-    },
+-    "voidDate": "Void Date",
+-    "voidNotes": "Void Notes",
+-    "markAsCleared": "Mark as Cleared",
+-    "voidCheck": "Void Check",
+-    "requiresApproval": "Requires Approval",
+-    "approvedBy": "Approved By",
+-    "saveToLookup": "Save to Lookup",
+-    "reconciliation": "Check Reconciliation",
+-    "unreconciledChecks": "Unreconciled Checks",
+-    "bankStatementImport": "Import Bank Statement",
+-    "manualMatching": "Manual Matching",
+-    "enterBankReference": "Enter Bank Reference",
+-    "confirmMatch": "Confirm Match",
+-    "reconciliationSummary": "Reconciliation Summary",
+-    "totalChecksReconciled": "Total Checks Reconciled",
+-    "totalAmount": "Total Amount",
+-    "reconcileSuccess": "Checks reconciled successfully",
+-    "reportOptions": "Report Options",
+-    "reportPeriod": "Report Period",
+-    "groupBy": "Group By",
+-    "groupByOptions": {
+-      "Status": "Status",
+-      "Bank": "Bank",
+-      "Beneficiary": "Beneficiary"
++    "charity": "Charity",
++    "allCharities": "All Charities",
++    "chequeType": "Cheque Type",
++    "chequeTypes": {
++      "All": "All Cheques",
++      "Orphans": "Orphan Cheques",
++      "Individuals": "Individuals Cheques"
+     },
+-    "summaryStatistics": "Summary Statistics",
+-    "totalChecks": "Total Checks",
+-    "clearedChecks": "Cleared Checks",
+-    "pendingChecks": "Pending Checks",
+-    "voidChecks": "Void Checks",
+-    "detailedCheckList": "Detailed Check List",
+-    "generate": "Generate",
+-    "export": "Export",
++    "isDamaged": "Damaged Cheque",
++    "isReturned": "Returned Cheque",
++    "isDispensed": "Dispensed",
++    "isDone": "CheckDone",
++    "comment": "Comments",
++    "statement": "Cheque Statement",
++    "search": "Search",
+     "print": "Print",
+-    "searchPlaceholder": "Search by check number or beneficiary...",
+-    "noChecksFound": "No checks found",
+-    "allBanks": "All Banks",
+-    "allCurrencies": "All Currencies",
+-    "allStatuses": "All Statuses",
+-    "filters": "Filters",
+-    "clearFilters": "Clear Filters",
+-    "applyFilters": "Apply Filters",
+-    "exportToExcel": "Export to Excel",
+-    "exportSuccess": "Checks exported successfully",
+-    "exportFailed": "Failed to export checks",
+-    "checkCreated": "Check created successfully",
+-    "checkUpdated": "Check updated successfully",
+-    "checkDeleted": "Check deleted successfully",
+-    "checkCleared": "Check marked as cleared",
+-    "checkVoided": "Check voided successfully",
+-    "confirmDelete": "Are you sure you want to delete this check?",
+-    "confirmClear": "Are you sure you want to mark this check as cleared?",
+-    "confirmVoid": "Are you sure you want to void this check? This action cannot be undone.",
+-    "cannotEditCleared": "Cannot edit cleared check",
+-    "cannotEditVoided": "Cannot edit voided check",
+-    "cannotVoidCleared": "Cannot void a cleared check",
+-    "enterCheckNumber": "Enter check number",
++    "printEgyptian": "Print (Egyptian)",
++    "save": "Save",
++    "dateFrom": "From Date",
++    "dateTo": "To Date",
++    "total": "Total",
++    "totalChecks": "Total Cheques",
++    "generatedOn": "Generated On",
++    "noChecksFound": "No cheques found",
++    "enterCheckNumber": "Enter cheque number",
+     "enterBeneficiaryName": "Enter beneficiary name",
+     "enterAmount": "Enter amount",
+-    "enterPaymentDescription": "Enter payment description",
+-    "enterVoidNotes": "Enter void notes (required)",
+-    "selectBeneficiaryType": "Select beneficiary type",
+-    "selectCurrency": "Select currency",
+-    "selectPaymentReason": "Select payment reason",
+-    "selectBank": "Select bank",
+-    "selectVoidReason": "Select void reason",
+-    "checkNumberRequired": "Check number is required",
+-    "checkDateRequired": "Check date is required",
++    "checkNumberRequired": "Cheque number is required",
++    "checkDateRequired": "Cheque date is required",
+     "beneficiaryNameRequired": "Beneficiary name is required",
+     "amountRequired": "Amount is required",
+     "amountMustBePositive": "Amount must be a positive number",
+     "currencyRequired": "Currency is required",
+     "bankRequired": "Bank is required",
+-    "voidNotesRequired": "Void notes are required",
+-    "invalidDateRange": "Due date must be after check date",
+-    "auditTrail": "Audit Trail",
+-    "createdOn": "Created On",
+-    "modifiedOn": "Modified On",
+-    "noAuditInformation": "No audit information available",
+-    "accessDenied": "Access Denied",
+-    "adminOnlyModule": "This module is accessible only by Admin, Super Admin, and Accountant users",
+-    "unauthorizedAccess": "You are not authorized to access this module",
+-    "uploadCheckImage": "Upload Check Image",
+-    "checkImage": "Check Image",
+-    "viewImage": "View Image",
+-    "removeImage": "Remove Image",
+-    "amountInWordsAutoGenerated": "Amount in words will be auto-generated",
+-    "fromLookup": "From Lookup",
+-    "newEntry": "New Entry",
+-    "saveBeneficiary": "Save Beneficiary",
+-    "beneficiarySaved": "Beneficiary saved successfully",
+-    "beneficiaryLinked": "Beneficiary linked to check"
+-  },
+-  "validation": {
+-    "required": "This field is required",
+-    "completionPercentageRange": "Completion percentage must be between 0 and 100",
+-    "fixErrors": "Please fix the errors before submitting"
++    "checkCreated": "Cheque created successfully",
++    "checkUpdated": "Cheque updated successfully",
++    "saveFailed": "Failed to save the cheque",
++    "loadFailed": "Failed to load data"
+   },
+   "incomingOutgoing": {
+     "title": "Incoming & Outgoing Correspondence",
+@@ -1495,8 +1439,8 @@
+     "importExportHistory": "Import & Export History",
+     "serial": "Serial",
+     "subject": "Subject",
+-    "date": "Date",
+-    "body": "Body",
++    "date": "Date Received",
++    "body": "Letter Body",
+     "letterNumber": "Letter Number",
+     "letterDate": "Letter Date",
+     "incomingId": "Incoming ID",
+@@ -1590,29 +1534,17 @@
+     "searchPlaceholder": "Search by subject or serial...",
+     "clearFilters": "Clear Filters",
+     "noLettersFound": "No letters found",
+-    "subject": "Subject",
+     "subjectPlaceholder": "Enter letter subject",
+-    "incomingId": "Incoming ID",
+     "incomingIdPlaceholder": "Enter incoming ID",
+-    "incomingNumber": "Internal Number",
+     "incomingNumberPlaceholder": "Enter internal number",
+     "outGoingId": "Outgoing ID",
+     "outGoingIdPlaceholder": "Enter outgoing ID",
+-    "outGoingNumber": "Internal Number",
+     "outGoingNumberPlaceholder": "Enter internal number",
+-    "letterNumber": "Letter Number",
+     "letterNumberPlaceholder": "Enter official letter number",
+-    "letterDate": "Letter Date",
+-    "date": "Date Received",
+-    "year": "Year",
+     "yearPlaceholder": "Enter fiscal year",
+-    "body": "Letter Body",
+     "bodyPlaceholder": "Enter letter content",
+-    "letterDescription": "Description",
+     "letterDescriptionPlaceholder": "Enter brief description",
+-    "department": "Department",
+     "selectDepartment": "Select department",
+-    "category": "Category",
+     "selectCategory": "Select category",
+     "categoryOfficial": "Official",
+     "categoryInternal": "Internal",
+@@ -1728,7 +1660,6 @@
+     "selected": "Selected",
+     "formatTitle": "Select Format & Export",
+     "selectFormat": "Select Export Format",
+-    "generateExport": "Generate Export",
+     "exportSummary": "Export Summary",
+     "records": "Records",
+     "fields": "Fields",
+@@ -1762,7 +1693,7 @@
+     "proceedToFormat": "Proceed to Format"
+   },
+   "technicalSupport": {
+-    "title": "Technical Support",
++    "title": "Title",
+     "supportCenter": "Support Center",
+     "myTickets": "My Tickets",
+     "allTickets": "All Tickets",
+@@ -1772,7 +1703,6 @@
+     "editTicket": "Edit Ticket",
+     "deleteTicket": "Delete Ticket",
+     "ticketId": "Ticket ID",
+-    "title": "Title",
+     "category": "Category",
+     "priority": "Priority",
+     "status": "Status",
+@@ -1886,7 +1816,16 @@
+       "topTicketCreators": "Top Ticket Creators",
+       "exportReport": "Export Report",
+       "printReport": "Print Report",
+-      "configureMessage": "Configure the report options and click Generate Report to view statistics"
++      "configureMessage": "Configure the report options and click Generate Report to view statistics",
++      "openTickets": "Open Tickets",
++      "inProgressTickets": "In-Progress Tickets",
++      "resolvedTickets": "Resolved Tickets",
++      "closedTickets": "Closed Tickets",
++      "slaBreached": "SLA-Breached Tickets",
++      "ticketsByStatus": "Tickets by Status",
++      "ticketsByPriority": "Tickets by Priority",
++      "ticketsByCreator": "Tickets by Creator",
++      "ticketsInPeriod": "Tickets in the Period"
+     },
+     "placeholders": {
+       "userAction": "What were you doing when the issue occurred?",
+diff --git a/Backend/src/IIROSA.Application/DTOs/TechnicalSupport/TicketLookupsDto.cs b/Backend/src/IIROSA.Application/DTOs/TechnicalSupport/TicketLookupsDto.cs
+new file mode 100644
+index 0000000..62ec0e9
+--- /dev/null
++++ b/Backend/src/IIROSA.Application/DTOs/TechnicalSupport/TicketLookupsDto.cs
+@@ -0,0 +1,14 @@
++using IIROSA.Application.DTOs.LookupManagement;
++
++namespace IIROSA.Application.DTOs.TechnicalSupport;
++
++/// <summary>
++/// Ticket Lookups DTO
++/// Category / priority / status options for the ticket form selects.
++/// </summary>
++public class TicketLookupsDto
++{
++    public IEnumerable<LookupDto> Categories { get; set; } = Enumerable.Empty<LookupDto>();
++    public IEnumerable<LookupDto> Priorities { get; set; } = Enumerable.Empty<LookupDto>();
++    public IEnumerable<LookupDto> Statuses { get; set; } = Enumerable.Empty<LookupDto>();
++}
+diff --git a/Backend/src/IIROSA.Application/Validators/TechnicalSupport/UpdateSupportTicketValidator.cs b/Backend/src/IIROSA.Application/Validators/TechnicalSupport/UpdateSupportTicketValidator.cs
+new file mode 100644
+index 0000000..00d07eb
+--- /dev/null
++++ b/Backend/src/IIROSA.Application/Validators/TechnicalSupport/UpdateSupportTicketValidator.cs
+@@ -0,0 +1,40 @@
++using FluentValidation;
++using IIROSA.Application.DTOs.TechnicalSupport;
++
++namespace IIROSA.Application.Validators.TechnicalSupport;
++
++/// <summary>
++/// Validator for <see cref="UpdateSupportTicketDto"/> (UC-CST-04).
++/// </summary>
++/// <remarks>
++/// Keeps the update path as strict as the create path — without it every length/presence
++/// rule was bypassable by creating a minimal ticket and then amending it.
++/// Registered automatically via AddValidatorsFromAssembly (IIROSA.Application).
++/// </remarks>
++public class UpdateSupportTicketValidator : AbstractValidator<UpdateSupportTicketDto>
++{
++    public UpdateSupportTicketValidator()
++    {
++        RuleFor(x => x.Id)
++            .NotEmpty().WithMessage("Ticket id is required");
++
++        RuleFor(x => x.Title)
++            .NotEmpty().WithMessage("Title is required")
++            .MaximumLength(200).WithMessage("Title cannot exceed 200 characters");
++
++        RuleFor(x => x.Message)
++            .NotEmpty().WithMessage("Message is required")
++            .MaximumLength(4000).WithMessage("Message cannot exceed 4000 characters");
++
++        // Lookup FKs are Restrict — 0 would reach SQL and surface as a 500 leaking
++        // constraint detail instead of a field error.
++        RuleFor(x => x.CategoryId)
++            .GreaterThan(0).WithMessage("Category is required");
++
++        RuleFor(x => x.PriorityId)
++            .GreaterThan(0).WithMessage("Priority is required");
++
++        RuleFor(x => x.StatusId)
++            .GreaterThan(0).WithMessage("Status is required");
++    }
++}
+diff --git a/Backend/src/IIROSA.Domain/Interfaces/ISupportTicketLookupRepository.cs b/Backend/src/IIROSA.Domain/Interfaces/ISupportTicketLookupRepository.cs
+new file mode 100644
+index 0000000..0492879
+--- /dev/null
++++ b/Backend/src/IIROSA.Domain/Interfaces/ISupportTicketLookupRepository.cs
+@@ -0,0 +1,14 @@
++using IIROSA.Domain.Entities.TechnicalSupport.Lookups;
++
++namespace IIROSA.Domain.Interfaces;
++
++/// <summary>
++/// Support Ticket Lookup Repository Interface
++/// Reads the seeded category / priority / status lookup tables of the Technical Support module.
++/// </summary>
++public interface ISupportTicketLookupRepository
++{
++    Task<IEnumerable<SupportTicketCategory>> GetCategoriesAsync();
++    Task<IEnumerable<SupportTicketPriority>> GetPrioritiesAsync();
++    Task<IEnumerable<SupportTicketStatus>> GetStatusesAsync();
++}
+diff --git a/Backend/src/IIROSA.Infrastructure/Data/Repository/SupportTicketLookupRepository.cs b/Backend/src/IIROSA.Infrastructure/Data/Repository/SupportTicketLookupRepository.cs
+new file mode 100644
+index 0000000..7d9b2df
+--- /dev/null
++++ b/Backend/src/IIROSA.Infrastructure/Data/Repository/SupportTicketLookupRepository.cs
+@@ -0,0 +1,45 @@
++using IIROSA.Domain.Entities.TechnicalSupport.Lookups;
++using IIROSA.Domain.Interfaces;
++using IIROSA.Infrastructure.Data;
++using Microsoft.EntityFrameworkCore;
++
++namespace IIROSA.Infrastructure.Data.Repository;
++
++/// <summary>
++/// Support Ticket Lookup Repository Implementation
++/// Serves the three seeded lookup tables; one repository because the ticket form
++/// consumes all three lists together.
++/// </summary>
++public class SupportTicketLookupRepository : ISupportTicketLookupRepository
++{
++    private readonly ApplicationDbContext _context;
++
++    public SupportTicketLookupRepository(ApplicationDbContext context)
++    {
++        _context = context;
++    }
++
++    public async Task<IEnumerable<SupportTicketCategory>> GetCategoriesAsync()
++    {
++        return await _context.Set<SupportTicketCategory>()
++            .Where(l => l.IsActive)
++            .OrderBy(l => l.SortOrder)
++            .ToListAsync();
++    }
++
++    public async Task<IEnumerable<SupportTicketPriority>> GetPrioritiesAsync()
++    {
++        return await _context.Set<SupportTicketPriority>()
++            .Where(l => l.IsActive)
++            .OrderBy(l => l.SeverityLevel)
++            .ToListAsync();
++    }
++
++    public async Task<IEnumerable<SupportTicketStatus>> GetStatusesAsync()
++    {
++        return await _context.Set<SupportTicketStatus>()
++            .Where(l => l.IsActive)
++            .OrderBy(l => l.SortOrder)
++            .ToListAsync();
++    }
++}

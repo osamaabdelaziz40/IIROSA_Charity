@@ -1,5 +1,6 @@
 using IIROSA.Domain.Entities.Base;
 using IIROSA.Domain.Entities.Lookups;
+using IIROSA.Domain.Enums;
 
 namespace IIROSA.Domain.Entities;
 
@@ -91,6 +92,30 @@ public class Family : FullAuditedEntity
     public int? HousingTypeId { get; set; }
 
     /// <summary>
+    /// Register discriminator: Regular (orphan sponsorship), Housing (UC-HOU chapter 11), Refugee (epic 7).
+    /// Distinct from the HousingTypeId living-condition lookup above.
+    /// </summary>
+    public FamilyType FamilyType { get; set; } = FamilyType.Regular;
+
+    /// <summary>
+    /// Allocation: the organisation-owned building the housing family lives in (UC-HOU-05)
+    /// </summary>
+    public int? FK_HousingBuildingId { get; set; }
+
+    /// <summary>
+    /// Allocation: the flat inside that building (UC-HOU-05)
+    /// </summary>
+    public int? FK_HousingFlatId { get; set; }
+
+    /// <summary>
+    /// Holding-family marker (5-6/5-7/5-8 ruling 2026-08-24): member-control detach moves
+    /// (action 0) auto-create a synthetic family to hold the detached member. This flag makes
+    /// them distinguishable from real register families in lists and reports. Deliberately NOT
+    /// a FamilyType value — that discriminator belongs to the register contracts (epics 6/7).
+    /// </summary>
+    public bool IsHoldingFamily { get; set; } = false;
+
+    /// <summary>
     /// Provider type: Father, Mother, Other
     /// </summary>
     public string? ProviderType { get; set; }
@@ -125,15 +150,67 @@ public class Family : FullAuditedEntity
     /// </summary>
     public string? Notes { get; set; }
 
+    // Refugee register household fields (epic 7, UC-REF-03 §12.S.2) — all nullable:
+    // a Regular/Housing family row is untouched; one table, no join.
+
+    /// <summary>
+    /// Governorate / region of residence (المنطقة /المحافظة)
+    /// </summary>
+    public int? RegionId { get; set; }
+
+    /// <summary>
+    /// Center / city of residence (المركز/ المدينة) — cascade-loads from the region
+    /// </summary>
+    public int? CenterId { get; set; }
+
+    /// <summary>
+    /// Nearby landmark (بجوار)
+    /// </summary>
+    public string? NearBy { get; set; }
+
+    /// <summary>
+    /// Street (الشارع)
+    /// </summary>
+    public string? Street { get; set; }
+
+    /// <summary>
+    /// Monthly rent amount (قيمة الإيجار) — relevant when the ownership is إيجار
+    /// </summary>
+    public decimal? RentAmount { get; set; }
+
+    /// <summary>
+    /// House ownership (ملكية السكن)
+    /// </summary>
+    public int? HouseOwnershipId { get; set; }
+
+    /// <summary>
+    /// House contents status (حالة محتويات السكن)
+    /// </summary>
+    public int? HouseStatusId { get; set; }
+
+    /// <summary>
+    /// Income type (نوع الدخل)
+    /// </summary>
+    public int? IncomeTypeId { get; set; }
+
     // Navigation Properties
     public virtual Country? Country { get; set; }
     public virtual City? City { get; set; }
     public virtual Charity? Charity { get; set; }
     public virtual LivingCondition? LivingCondition { get; set; }
     public virtual HousingType? HousingType { get; set; }
+    public virtual Lookups.HousingBuilding? HousingBuilding { get; set; }
+    public virtual Lookups.HousingFlat? HousingFlat { get; set; }
     public virtual Father? Father { get; set; }
     public virtual Mother? Mother { get; set; }
     public virtual Provider? Provider { get; set; }
     public virtual ICollection<Relative> Relatives { get; set; } = new List<Relative>();
     public virtual ICollection<Orphan> Orphans { get; set; } = new List<Orphan>();
+
+    // Refugee register navigations (epic 7)
+    public virtual Region? Region { get; set; }
+    public virtual Center? Center { get; set; }
+    public virtual HouseOwnership? HouseOwnership { get; set; }
+    public virtual HouseStatus? HouseStatus { get; set; }
+    public virtual IncomeType? IncomeType { get; set; }
 }

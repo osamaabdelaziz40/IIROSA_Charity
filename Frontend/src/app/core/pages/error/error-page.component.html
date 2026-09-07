@@ -1,0 +1,22 @@
+<div class="error-page d-flex align-items-center justify-content-center min-vh-100" dir="rtl">
+  <div class="card shadow-sm error-card">
+    <div class="card-body text-center p-4 p-md-5">
+      <div class="error-icon mb-3">
+        <i class="fe fe-alert-triangle"></i>
+      </div>
+      <h1 class="h4 mb-3">{{ 'error.title' | translate }}</h1>
+      <p class="text-secondary mb-4">{{ 'error.body' | translate }}</p>
+
+      <!-- The reference the user reads out to support — shown only when the server signed it. -->
+      <p class="error-trace mb-4" *ngIf="traceId">
+        <span class="text-secondary">{{ 'error.traceId' | translate }}:</span>
+        <code class="ms-2">{{ traceId }}</code>
+      </p>
+
+      <button type="button" class="btn btn-primary" (click)="backToDashboard()">
+        <i class="fe fe-home ms-1"></i>
+        {{ 'error.back' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

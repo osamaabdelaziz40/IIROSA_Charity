@@ -13,7 +13,7 @@
           <!-- Title -->
           <div class="form-group">
             <label for="title">
-              {{ 'technicalSupport.title' | translate }}
+              {{ 'technicalSupport.ticketTitle' | translate }}
               <span class="text-danger">*</span>
             </label>
             <input
@@ -41,8 +41,8 @@
                   [class.is-invalid]="isFieldInvalid('category')"
                   id="category"
                   formControlName="category">
-                  <option *ngFor="let cat of categories" [value]="cat">
-                    {{ getCategoryTranslation(cat) }}
+                  <option *ngFor="let cat of categories; trackBy: trackByLookupId" [ngValue]="cat.id">
+                    {{ cat.name }}
                   </option>
                 </select>
                 <div class="invalid-feedback" *ngIf="isFieldInvalid('category')">
@@ -62,8 +62,8 @@
                   [class.is-invalid]="isFieldInvalid('priority')"
                   id="priority"
                   formControlName="priority">
-                  <option *ngFor="let pri of priorities" [value]="pri">
-                    {{ getPriorityTranslation(pri) }}
+                  <option *ngFor="let pri of priorities; trackBy: trackByLookupId" [ngValue]="pri.id">
+                    {{ pri.name }}
                   </option>
                 </select>
                 <div class="invalid-feedback" *ngIf="isFieldInvalid('priority')">
@@ -94,60 +94,8 @@
             </small>
           </div>
 
-          <!-- File Attachment -->
-          <div class="form-group">
-            <label>{{ 'technicalSupport.attachFile' | translate }}</label>
-
-            <div
-              class="file-drop-zone"
-              [class.drag-over]="false"
-              (drop)="onFileDropped($event)"
-              (dragover)="onDragOver($event)"
-              *ngIf="!selectedFile">
-
-              <div class="drop-zone-content">
-                <i class="fe fe-upload-cloud fe-3x mb-3"></i>
-                <p class="mb-2">{{ 'common.dragDrop' | translate }}</p>
-                <p class="text-muted mb-3">{{ 'common.or' | translate }}</p>
-                <label class="btn btn-outline-primary">
-                  <i class="fe fe-folder mr-1"></i>
-                  {{ 'common.browse' | translate }}
-                  <input
-                    type="file"
-                    class="d-none"
-                    accept="image/*,.pdf,.doc,.docx"
-                    (change)="onFileSelected($event)">
-                </label>
-                <p class="text-muted small mt-2">
-                  {{ 'common.maxFiles' | translate }}: 1 | {{ 'common.maxSize' | translate }}: 10MB
-                </p>
-              </div>
-            </div>
-
-            <!-- Selected File Preview -->
-            <div class="selected-file" *ngIf="selectedFile">
-              <div class="file-item">
-                <div class="file-icon">
-                  <i [class]="getFileIcon()"></i>
-                </div>
-                <div class="file-info">
-                  <div class="file-name">{{ getFileName() }}</div>
-                  <div class="file-size">{{ getFileSize() }}</div>
-                </div>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-danger"
-                  (click)="removeFile()">
-                  <i class="fe fe-trash"></i>
-                </button>
-              </div>
-
-              <!-- Image Preview -->
-              <div class="image-preview" *ngIf="filePreview">
-                <img [src]="filePreview" alt="File preview" class="img-fluid">
-              </div>
-            </div>
-          </div>
+          <!-- File Attachment — hidden until a backend attachment endpoint exists;
+               the picker previously suggested uploads that were never persisted. -->
 
           <!-- User Action -->
           <div class="form-group">

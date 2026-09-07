@@ -1,7 +1,5 @@
 <div class="periodic-report-form">
-  <app-breadcrumb
-    [title]="isEditMode ? 'periodicReports.editReport' : 'periodicReports.createReport' | translate">
-  </app-breadcrumb>
+  <app-breadcrumb [autoGenerate]="true"></app-breadcrumb>
 
   <div class="card">
     <div class="card-header">
@@ -24,14 +22,71 @@
           </h5>
 
           <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">{{ 'periodicReports.form.orphan' | translate }} *</label>
-              <select class="form-select" formControlName="orphanId" required>
-                <option value="">Select Orphan</option>
-                <option *ngFor="let orphan of orphans" [value]="orphan.id">
-                  {{ orphan.code }} - {{ orphan.name }}
-                </option>
-              </select>
+            <!-- Orphan code lookup - UC-ORR-02 -->
+            <div class="col-md-6" *ngIf="!isEditMode">
+              <label class="form-label">{{ 'periodicReports.lookup.code' | translate }} *</label>
+              <div class="input-group">
+                <input type="text" class="form-control"
+                       [(ngModel)]="orphanCodeInput"
+                       [ngModelOptions]="{ standalone: true }"
+                       (ngModelChange)="onCodeInputChanged()"
+                       (keyup.enter)="lookupOrphan()"
+                       [placeholder]="'periodicReports.lookup.placeholder' | translate">
+                <button class="btn btn-outline-primary" type="button"
+                        (click)="lookupOrphan()"
+                        [disabled]="lookupLoading || !orphanCodeInput.trim()">
+                  <i class="fas" [ngClass]="lookupLoading ? 'fa-spinner fa-spin' : 'fa-search'"></i>
+                  {{ 'periodicReports.lookup.submit' | translate }}
+                </button>
+              </div>
+              <!-- Review P60a 2026-08-24: an uncoded orphan resolves but can never
+                   be saved — say why instead of a silently disabled save button. -->
+              <div class="form-text text-danger" *ngIf="orphanHeader && !orphanResolved">
+                {{ 'periodicReports.lookup.uncodedHint' | translate }}
+              </div>
+              <input type="hidden" formControlName="orphanId">
+            </div>
+
+            <!-- Edit mode: read-only resolved code -->
+            <div class="col-md-6" *ngIf="isEditMode">
+              <label class="form-label">{{ 'periodicReports.lookup.code' | translate }}</label>
+              <input type="text" class="form-control" [value]="orphanCodeInput" readonly>
+              <input type="hidden" formControlName="orphanId">
+            </div>
+
+            <!-- Resolved orphan header - UC-ORR-02 prefill (read-only) -->
+            <div class="col-12" *ngIf="orphanHeader">
+              <div class="border rounded p-3 bg-light">
+                <div class="row g-2 align-items-center">
+                  <div class="col-md-4">
+                    <small class="text-muted d-block">{{ 'periodicReports.lookup.orphanName' | translate }}</small>
+                    <span class="fw-bold">{{ orphanHeader.fullName || '-' }}</span>
+                  </div>
+                  <div class="col-md-2">
+                    <small class="text-muted d-block">{{ 'periodicReports.lookup.age' | translate }}</small>
+                    <span>{{ orphanHeader.age ?? '-' }}</span>
+                  </div>
+                  <div class="col-md-3">
+                    <small class="text-muted d-block">{{ 'periodicReports.lookup.charity' | translate }}</small>
+                    <span>{{ orphanHeader.charityName || '-' }}</span>
+                  </div>
+                  <div class="col-md-3">
+                    <small class="text-muted d-block">{{ 'periodicReports.lookup.familyReference' | translate }}</small>
+                    <span>{{ orphanHeader.familyCode || '-' }}</span>
+                  </div>
+                  <div class="col-md-4">
+                    <small class="text-muted d-block">{{ 'periodicReports.lookup.guardian' | translate }}</small>
+                    <span>{{ orphanHeader.guardianName || '-' }}</span>
+                  </div>
+                  <div class="col-md-3" *ngIf="!isEditMode">
+                    <small class="text-muted d-block">{{ 'periodicReports.lookup.reportsCount' | translate }}</small>
+                    <span class="badge bg-info">{{ orphanHeader.totalReports }}</span>
+                    <span class="badge bg-warning ms-1" *ngIf="orphanHeader.pendingReports > 0">
+                      {{ orphanHeader.pendingReports }} {{ 'periodicReports.lookup.pending' | translate }}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="col-md-6">
@@ -185,6 +240,18 @@
 
           <div class="row g-3">
             <div class="col-md-4">
+              <label class="form-label">{{ 'periodicReports.form.educationalLevel' | translate }}</label>
+              <select class="form-select" formControlName="educationalLevelId">
+                <option value="">{{ 'periodicReports.form.selectLevel' | translate }}</option>
+                <!-- Review P48 2026-08-24: [value] stringifies the numeric lookup id,
+                     so the numeric patch value never matched and edit mode never
+                     pre-selected the stored level. [ngValue] keeps the number. -->
+                <option *ngFor="let level of educationLevels; trackBy: trackByLookupId" [ngValue]="level.id">
+                  {{ level.name }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-4">
               <label class="form-label">{{ 'periodicReports.form.school' | translate }}</label>
               <input type="text" class="form-control" formControlName="school">
             </div>
@@ -233,6 +300,26 @@
                 </label>
               </div>
             </div>
+
+            <!-- Student-sponsorship funding block — revealed by the IsOrphanStudent interlock -->
+            <ng-container *ngIf="reportForm.get('isOrphanStudent')?.value">
+              <div class="col-md-3">
+                <label class="form-label">{{ 'periodicReports.form.annualFeeForStudy' | translate }} *</label>
+                <input type="number" class="form-control" formControlName="annualFeeForStudy" min="0" step="0.01">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">{{ 'periodicReports.form.studyingYears' | translate }}</label>
+                <input type="number" class="form-control" formControlName="studyingYears" min="0" max="30">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">{{ 'periodicReports.form.restStudyingYears' | translate }}</label>
+                <input type="number" class="form-control" formControlName="restStudyingYears" min="0" max="30">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">{{ 'periodicReports.form.graduationYear' | translate }}</label>
+                <input type="number" class="form-control" formControlName="graduationYear" min="1900" max="2100">
+              </div>
+            </ng-container>
           </div>
         </div>
 
@@ -274,7 +361,7 @@
           </div>
         </div>
 
-        <!-- Attachments Section - UC-6.11 -->
+        <!-- الملفات المطلوبه - §14.S.2 attachment slots (BR-12: reference by id) -->
         <div class="section mb-4">
           <h5 class="section-title">
             <i class="fas fa-paperclip me-2"></i>
@@ -282,6 +369,22 @@
           </h5>
 
           <div class="row g-3">
+            <div class="col-md-6" *ngFor="let slot of imageSlots; trackBy: trackBySlotControl">
+              <label class="form-label">
+                {{ slot.labelKey | translate }}<span class="text-danger" *ngIf="slot.required"> *</span>
+              </label>
+              <app-attachment
+                [maxFiles]="1"
+                [accept]="'image/*'"
+                [multiple]="false"
+                (onFileSelect)="onImageSelected(slot.control, $event)"
+                (onFileRemove)="onImageRemoved(slot.control)">
+              </app-attachment>
+              <div class="invalid-feedback d-block" *ngIf="serverErrors[slot.control]">
+                {{ serverErrors[slot.control] }}
+              </div>
+            </div>
+
             <div class="col-md-4">
               <div class="form-check">
                 <input class="form-check-input" type="checkbox" formControlName="missingDocuments" id="missingDocuments">
@@ -298,6 +401,19 @@
           </div>
         </div>
 
+        <!-- Server-side errors summary (15-6 errors-map) -->
+        <div class="alert alert-danger" *ngIf="serverErrorsKeys.length > 0">
+          <ul class="mb-0">
+            <li *ngFor="let key of serverErrorsKeys">{{ serverErrors[key] }}</li>
+          </ul>
+        </div>
+
+        <!-- §14.U.5 — locked/accepted reports cannot be edited -->
+        <div class="alert alert-warning" *ngIf="editBlocked">
+          <i class="fas fa-lock me-2"></i>
+          {{ 'periodicReports.cannotEditOldReport' | translate }}
+        </div>
+
         <!-- Form Actions -->
         <div class="d-flex justify-content-between">
           <button type="button" class="btn btn-secondary" (click)="cancel()">
@@ -305,7 +421,7 @@
             <span translate>common.cancel</span>
           </button>
 
-          <button type="submit" class="btn btn-primary" [disabled]="saving">
+          <button type="submit" class="btn btn-primary" [disabled]="saving || editBlocked || (!isEditMode && !orphanResolved)">
             <i class="fas fa-save me-2" *ngIf="!saving"></i>
             <i class="fas fa-spinner fa-spin me-2" *ngIf="saving"></i>
             <span translate>common.save</span>

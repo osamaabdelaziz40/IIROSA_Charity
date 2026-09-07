@@ -1,0 +1,13 @@
+/* UC-RPT-40 — the preview frame fills the modal body; the backdrop sits above the app shell. */
+.report-preview-backdrop {
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1055;
+}
+
+.report-preview-frame {
+  display: block;
+  width: 100%;
+  height: 70vh;
+  border: 0;
+  background: #fff;
+}

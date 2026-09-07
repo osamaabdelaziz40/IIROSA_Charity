@@ -6,22 +6,38 @@
   [actions]="pageActions">
 </app-page-header>
 
-<div class="card">
+<!-- Filters Card -->
+<div class="card shadow mb-4">
   <div class="card-body">
-    <!-- Filters using shared components -->
+    <!-- Filters using shared components (§21.S.1 criteria) -->
     <form [formGroup]="filterForm">
       <div class="row mb-3">
-        <!-- Search -->
+        <!-- الموضوع (subject search) -->
         <div class="col-md-3">
-          <app-input-text
-            [fg]="filterForm"
-            fcn="searchValue"
-            [label]="'common.search'"
-            [placeholder]="'incomingOutgoing.searchPlaceholder' | translate">
-          </app-input-text>
+          <div class="form-group">
+            <label>{{ 'incomingOutgoing.subject' | translate }}</label>
+            <input type="text" class="form-control" formControlName="searchValue"
+                   [placeholder]="'incomingOutgoing.searchPlaceholder' | translate" />
+          </div>
         </div>
 
-        <!-- Status -->
+        <!-- رقم الوارد (serial) -->
+        <div class="col-md-2">
+          <div class="form-group">
+            <label>{{ 'incomingOutgoing.serial' | translate }}</label>
+            <input type="number" class="form-control" formControlName="serial" />
+          </div>
+        </div>
+
+        <!-- رقم الخطاب (letter number) -->
+        <div class="col-md-2">
+          <div class="form-group">
+            <label>{{ 'incomingOutgoing.letterNumber' | translate }}</label>
+            <input type="text" class="form-control" formControlName="letterNumber" />
+          </div>
+        </div>
+
+        <!-- الحاله (tri-state) -->
         <div class="col-md-2">
           <app-drop-down
             [fg]="filterForm"
@@ -33,50 +49,88 @@
           </app-drop-down>
         </div>
 
-        <!-- Year -->
-        <div class="col-md-2">
-          <app-input-text
+        <!-- الموظف (responsible employee) -->
+        <div class="col-md-3">
+          <app-drop-down
             [fg]="filterForm"
-            fcn="selectedYear"
-            [label]="'incomingOutgoing.year'"
-            type="number"
-            (change)="onFilterChange()">
-          </app-input-text>
-        </div>
-
-        <!-- Start Date -->
-        <div class="col-md-2">
-          <app-input-text
-            [fg]="filterForm"
-            fcn="startDate"
-            [label]="'incomingOutgoing.startDate'"
-            type="date"
-            (change)="onFilterChange()">
-          </app-input-text>
-        </div>
-
-        <!-- End Date -->
-        <div class="col-md-2">
-          <app-input-text
-            [fg]="filterForm"
-            fcn="endDate"
-            [label]="'incomingOutgoing.endDate'"
-            type="date"
-            (change)="onFilterChange()">
-          </app-input-text>
+            fcn="selectedEmployee"
+            [label]="'incomingOutgoing.assignedEmployee'"
+            [initialData]="employeeOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onFilterChange()">
+          </app-drop-down>
         </div>
       </div>
 
-      <div class="row mb-3" *ngIf="hasActiveFilters()">
+      <div class="row mb-3">
+        <!-- الجمعية (HQ only) -->
+        <div class="col-md-3" *ngIf="isSuperAdmin">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="selectedCharity"
+            [label]="'incomingOutgoing.charity'"
+            [initialData]="charityOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onFilterChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- الادارة -->
+        <div class="col-md-2">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="selectedDepartment"
+            [label]="'incomingOutgoing.department'"
+            [initialData]="departmentOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onFilterChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- العام الهجري -->
+        <div class="col-md-2">
+          <div class="form-group">
+            <label>{{ 'incomingOutgoing.year' | translate }}</label>
+            <input type="number" class="form-control" formControlName="selectedYear" (change)="onFilterChange()" />
+          </div>
+        </div>
+
+        <!-- من تاريخ -->
+        <div class="col-md-2">
+          <div class="form-group">
+            <label>{{ 'incomingOutgoing.startDate' | translate }}</label>
+            <input type="date" class="form-control" formControlName="startDate" (change)="onFilterChange()" />
+          </div>
+        </div>
+
+        <!-- الي تاريخ -->
+        <div class="col-md-2">
+          <div class="form-group">
+            <label>{{ 'incomingOutgoing.endDate' | translate }}</label>
+            <input type="date" class="form-control" formControlName="endDate" (change)="onFilterChange()" />
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
         <div class="col-12">
-          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+          <button class="btn btn-primary" type="button" (click)="onSearch()">
+            <i class="fe fe-search mr-1"></i>
+            {{ 'common.search' | translate }}
+          </button>
+          <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary ml-2" type="button" (click)="clearFilters()">
             <i class="fe fe-x mr-1"></i>
             {{ 'common.clearFilters' | translate }}
           </button>
         </div>
       </div>
     </form>
+  </div>
+</div>
 
+<!-- Data Table Card -->
+<div class="card shadow mb-4">
+  <div class="card-body">
     <!-- Loading State -->
     <div *ngIf="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status">
@@ -84,38 +138,46 @@
       </div>
     </div>
 
-    <!-- Data Table -->
+    <!-- Data Table (§21.S.1 grid) -->
     <div class="table-responsive" *ngIf="!loading">
       <table class="table table-hover table-striped">
         <thead>
           <tr>
             <th>{{ 'incomingOutgoing.serial' | translate }}</th>
-            <th>{{ 'incomingOutgoing.subject' | translate }}</th>
-            <th>{{ 'incomingOutgoing.incomingId' | translate }}</th>
-            <th>{{ 'incomingOutgoing.letterNumber' | translate }}</th>
-            <th>{{ 'incomingOutgoing.letterDate' | translate }}</th>
-            <th>{{ 'incomingOutgoing.date' | translate }}</th>
+            <th>{{ 'incomingOutgoing.year' | translate }}</th>
             <th>{{ 'incomingOutgoing.department' | translate }}</th>
+            <th>{{ 'incomingOutgoing.date' | translate }}</th>
+            <th>{{ 'incomingOutgoing.letterNumber' | translate }}</th>
+            <th>{{ 'incomingOutgoing.subject' | translate }}</th>
+            <th>{{ 'incomingOutgoing.attachedFile' | translate }}</th>
             <th>{{ 'common.status' | translate }}</th>
             <th>{{ 'common.actions' | translate }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let letter of letters">
-            <td>{{ letter.serial || letter.serialTxt || '-' }}</td>
+          <tr *ngFor="let letter of letters; trackBy: trackById">
+            <td>{{ letter.serialTxt || letter.serial || '-' }}</td>
+            <td>{{ letter.year || '-' }}</td>
+            <td>{{ letter.departmentName || '-' }}</td>
+            <td>{{ formatDate(letter.date) }}</td>
+            <td>{{ letter.letterNumber || '-' }}</td>
             <td>
               <a [routerLink]="['/incoming-outgoing/incoming', letter.id]" class="text-primary">
                 {{ letter.subject }}
               </a>
             </td>
-            <td>{{ letter.incomingId }}</td>
-            <td>{{ letter.letterNumber }}</td>
-            <td>{{ formatDate(letter.letterDate) }}</td>
-            <td>{{ formatDate(letter.date) }}</td>
-            <td>{{ letter.departmentName || '-' }}</td>
             <td>
-              <span class="badge" [ngClass]="getStatusBadgeClass(letter.status || 'Received')">
-                {{ letter.status || 'Received' | translate }}
+              <a *ngIf="letter.uploadedFileId"
+                 role="button" style="cursor: pointer"
+                 (click)="downloadLetterFile(letter)"
+                 [title]="'common.download' | translate">
+                <i class="fe fe-file-text mr-1"></i>{{ letter.uploadedFileName }}
+              </a>
+              <span *ngIf="!letter.uploadedFileId">-</span>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="getStatusBadgeClass(letter.status)">
+                {{ letter.status || '-' }}
               </span>
             </td>
             <td>
@@ -126,7 +188,7 @@
                 <button type="button" class="btn btn-sm btn-light" [title]="'common.edit' | translate" (click)="editLetter(letter.id)">
                   <i class="fe fe-edit"></i>
                 </button>
-                <div class="dropdown">
+                <div class="dropdown" *ngIf="canDelete">
                   <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown">
                     <i class="fe fe-more-vertical"></i>
                   </button>

@@ -20,14 +20,14 @@
       <option *ngIf="hasDefaultValue" [attr.value]="" disabled>
         {{ placeholder || ('common.select' | translate) }}
       </option>
-      <ng-container *ngFor="let group of groupedData">
+      <ng-container *ngFor="let group of groupedData; trackBy: trackByGroup">
         <optgroup *ngIf="group.group" [label]="group.group">
-          <option *ngFor="let item of group.items" [attr.value]="item?.id" [disabled]="item.disabled">
+          <option *ngFor="let item of group.items; trackBy: trackByItem" [attr.value]="item?.id" [disabled]="item.disabled">
             {{ getItemValue(item) }}
           </option>
         </optgroup>
         <ng-container *ngIf="!group.group">
-          <option *ngFor="let item of group.items" [attr.value]="item?.id" [disabled]="item.disabled">
+          <option *ngFor="let item of group.items; trackBy: trackByItem" [attr.value]="item?.id" [disabled]="item.disabled">
             {{ getItemValue(item) }}
           </option>
         </ng-container>

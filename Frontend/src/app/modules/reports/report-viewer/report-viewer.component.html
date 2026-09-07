@@ -1,0 +1,71 @@
+<app-page-header [title]="titleKey | translate"
+                 [subtitle]="subtitleKey | translate"></app-page-header>
+
+<div class="container-fluid report-viewer">
+  <!-- Filter panel slot — each report projects its own §23.S.x filter fields -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <ng-content select="[report-filters]"></ng-content>
+
+      <div class="row mt-2">
+        <div class="col-12 d-flex gap-2">
+          <button type="button" class="btn btn-primary" (click)="search.emit()"
+                  [disabled]="loading || exporting">
+            <span class="spinner-border spinner-border-sm me-1" *ngIf="loading"></span>
+            {{ 'reports.actions.search' | translate }}
+          </button>
+          <button type="button" class="btn btn-success" (click)="runExport()"
+                  *ngIf="showExport"
+                  [disabled]="loading || exporting || engineExporting || !hasRun || !hasRows">
+            <span class="spinner-border spinner-border-sm me-1" *ngIf="exporting || engineExporting"></span>
+            {{ 'reports.actions.export' | translate }}
+          </button>
+          <!-- §23.U.40 عرض — HIDDEN until the screen registers a document producer. Review
+               P27 2026-08-26: a permanently disabled button is dead chrome — the shell's
+               own doc promises honest absence, so no producer means no button at all. -->
+          <button type="button" class="btn btn-outline-info" (click)="openPreview()"
+                  *ngIf="previewProducer"
+                  [disabled]="loading || exporting || previewing || !hasRun || !hasRows">
+            <span class="spinner-border spinner-border-sm me-1" *ngIf="previewing"></span>
+            {{ 'reports.preview.display' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bespoke grid slot — the column set differs per report, so the table is projected -->
+  <div class="card">
+    <div class="card-body">
+      <div class="position-relative" *ngIf="loading">
+        <div class="text-center py-4">
+          <span class="spinner-border"></span>
+        </div>
+      </div>
+
+      <ng-container *ngIf="!loading">
+        <ng-content select="[report-grid]"></ng-content>
+
+        <div class="text-center text-muted py-4" *ngIf="hasRun && !hasRows">
+          <i class="fe-search display-6 d-block mb-2"></i>
+          {{ 'reports.emptyState' | translate }}
+        </div>
+
+        <div class="text-center text-muted py-4" *ngIf="!hasRun">
+          <i class="fe-filter display-6 d-block mb-2"></i>
+          {{ 'reports.initialState' | translate }}
+        </div>
+      </ng-container>
+
+      <div class="d-flex justify-content-between align-items-center mt-3"
+           *ngIf="hasRun && hasRows">
+        <small class="text-muted">{{ 'reports.rowCount' | translate }}: {{ totalCount }}</small>
+        <app-pagination [currentPage]="currentPage" [pageSize]="pageSize" [totalCount]="totalCount"
+                        (pageChange)="pageChange.emit($event)"></app-pagination>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- §23.U.40 — the ONE shared preview modal, hosted by the shell for every report screen -->
+<app-report-preview></app-report-preview>

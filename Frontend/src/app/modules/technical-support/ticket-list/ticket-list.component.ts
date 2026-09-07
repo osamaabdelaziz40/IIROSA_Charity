@@ -1,21 +1,20 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { Observable, Subject, takeUntil } from 'rxjs';
+import { Subject, Subscription, takeUntil } from 'rxjs';
 
 import { TechnicalSupportService } from '../services/technical-support.service';
 import {
   SupportTicket,
   TicketSearchRequest,
-  TicketCategory,
-  TicketPriority,
-  TicketStatus
+  LookupOption
 } from '../../../core/models/technical-support.model';
 import { AuthService, User } from '../../../core/services/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { PagedResponse } from '../../../core/models/common.model';
-import { PaginationComponent, BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
+import { PaginationComponent, BreadcrumbComponent, BreadcrumbItem, DropDownComponent } from '../../../shared/components';
 
 // Local interfaces (data-list component not yet implemented)
 export interface DataColumn {
@@ -49,9 +48,11 @@ export interface ActionItem {
     CommonModule,
     RouterModule,
     FormsModule,
+    ReactiveFormsModule,
     TranslateModule,
     PaginationComponent,
-    BreadcrumbComponent
+    BreadcrumbComponent,
+    DropDownComponent
   ],
   templateUrl: './ticket-list.component.html',
   styleUrls: ['./ticket-list.component.scss']
@@ -70,176 +71,98 @@ export class TicketListComponent implements OnInit, OnDestroy {
   viewMode: 'my-tickets' | 'all-tickets' = 'my-tickets';
   currentUser: User | null = null;
   isAdmin: boolean = false;
+  isSuperAdmin: boolean = false;
 
-  // Search and filters
+  // Search and filters (wire names of SupportTicketFilterDto)
   searchRequest: TicketSearchRequest = {
     pageNumber: 1,
     pageSize: 10,
-    sortBy: 'createdDate',
-    sortDescending: true
+    sortBy: 'CreatedOn',
+    sortDirection: 'desc'
   };
 
-  searchTerm: string = '';
-  selectedCategory: TicketCategory | '' = '';
-  selectedPriority: TicketPriority | '' = '';
-  selectedStatus: TicketStatus | '' = '';
-  selectedIsSolved: boolean | '' = '';
+  // Filter form — the shared select2 drop-downs bind to this (employee-list pattern);
+  // control names mirror the old [(ngModel)] filter properties.
+  filterForm: FormGroup;
+
+  sortDirection: 'asc' | 'desc' = 'desc';
+
+  // Lookup options (GET /api/SupportTickets/lookups)
+  categories: LookupOption[] = [];
+  priorities: LookupOption[] = [];
+  statuses: LookupOption[] = [];
+  closedStatusId: number | null = null;
+
+  // Select2 option arrays ({id, name}) fed to app-drop-down — lookup names are data.
+  categoryOptions: Array<{ id: number | string; name: string }> = [];
+  priorityOptions: Array<{ id: number | string; name: string }> = [];
+  statusOptions: Array<{ id: number | string; name: string }> = [];
+
+  /** Rebuilds the translated "All" label on language switch; torn down in ngOnDestroy. */
+  private langChangeSubscription?: Subscription;
+
+  /** Sentinel id meaning "no filter" on the lookup drop-downs. */
+  private static readonly ALL = 'all';
 
   // Pagination
   totalRecords: number = 0;
   pageNumber: number = 1;
   pageSize: number = 10;
 
-  // Data list configuration
+  // Data list configuration — only columns the backend's ApplySorting understands are
+  // marked sortable (title, priority, status, createdOn, updatedOn); the rest would be
+  // silent no-ops.
   columns: DataColumn[] = [
-    {
-      key: 'ticketId',
-      title: 'technicalSupport.ticketId',
-      sortable: true,
-      width: '100px'
-    },
-    {
-      key: 'title',
-      title: 'technicalSupport.title',
-      sortable: true,
-      filterable: true
-    },
-    {
-      key: 'category',
-      title: 'technicalSupport.category',
-      sortable: true,
-      filterable: true
-    },
-    {
-      key: 'priority',
-      title: 'technicalSupport.priority',
-      sortable: true,
-      filterable: true
-    },
-    {
-      key: 'status',
-      title: 'technicalSupport.status',
-      sortable: true,
-      filterable: true
-    },
-    {
-      key: 'isSolved',
-      title: 'technicalSupport.isSolved',
-      type: 'boolean',
-      sortable: true
-    },
-    {
-      key: 'createdDate',
-      title: 'technicalSupport.createdDate',
-      type: 'date',
-      sortable: true
-    },
-    {
-      key: 'lastUpdated',
-      title: 'technicalSupport.lastUpdated',
-      type: 'datetime',
-      sortable: true
-    }
+    { key: 'title', title: 'technicalSupport.ticketTitle', sortable: true },
+    { key: 'categoryName', title: 'technicalSupport.category' },
+    { key: 'priorityName', title: 'technicalSupport.priority', sortable: true },
+    { key: 'statusName', title: 'technicalSupport.status', sortable: true },
+    { key: 'isSolved', title: 'technicalSupport.isSolved', type: 'boolean' },
+    { key: 'createdOn', title: 'technicalSupport.createdDate', type: 'date', sortable: true },
+    { key: 'updatedOn', title: 'technicalSupport.lastUpdated', type: 'datetime', sortable: true }
   ];
 
   adminColumns: DataColumn[] = [
-    {
-      key: 'ticketId',
-      title: 'technicalSupport.ticketId',
-      sortable: true,
-      width: '100px'
-    },
-    {
-      key: 'title',
-      title: 'technicalSupport.title',
-      sortable: true,
-      filterable: true
-    },
-    {
-      key: 'category',
-      title: 'technicalSupport.category',
-      sortable: true,
-      filterable: true
-    },
-    {
-      key: 'priority',
-      title: 'technicalSupport.priority',
-      sortable: true,
-      filterable: true
-    },
-    {
-      key: 'status',
-      title: 'technicalSupport.status',
-      sortable: true,
-      filterable: true
-    },
-    {
-      key: 'userName',
-      title: 'technicalSupport.createdBy',
-      sortable: true
-    },
-    {
-      key: 'assignedToName',
-      title: 'technicalSupport.assignedTo',
-      sortable: true
-    },
-    {
-      key: 'isSolved',
-      title: 'technicalSupport.isSolved',
-      type: 'boolean',
-      sortable: true
-    },
-    {
-      key: 'createdDate',
-      title: 'technicalSupport.createdDate',
-      type: 'date',
-      sortable: true
-    },
-    {
-      key: 'lastUpdated',
-      title: 'technicalSupport.lastUpdated',
-      type: 'datetime',
-      sortable: true
-    }
+    { key: 'title', title: 'technicalSupport.ticketTitle', sortable: true },
+    { key: 'categoryName', title: 'technicalSupport.category' },
+    { key: 'priorityName', title: 'technicalSupport.priority', sortable: true },
+    { key: 'statusName', title: 'technicalSupport.status', sortable: true },
+    { key: 'createdByUserName', title: 'technicalSupport.createdBy' },
+    { key: 'assignedToName', title: 'technicalSupport.assignedTo' },
+    { key: 'isSolved', title: 'technicalSupport.isSolved', type: 'boolean' },
+    { key: 'createdOn', title: 'technicalSupport.createdDate', type: 'date', sortable: true },
+    { key: 'updatedOn', title: 'technicalSupport.lastUpdated', type: 'datetime', sortable: true }
   ];
 
   rowActions: ListAction[] = [
-    {
-      key: 'view',
-      label: 'common.view',
-      icon: 'fe fe-eye'
-    }
+    { key: 'view', label: 'common.view', icon: 'fe fe-eye' }
   ];
 
   adminActions: ListAction[] = [
+    { key: 'view', label: 'common.view', icon: 'fe fe-eye' },
     {
-      key: 'view',
-      label: 'common.view',
-      icon: 'fe fe-eye'
-    },
-    {
-      key: 'assign',
-      label: 'technicalSupport.assignTo',
-      icon: 'fe fe-user-plus',
-      show: (item) => !item.assignedTo
-    },
-    {
-      key: 'unassign',
-      label: 'technicalSupport.unassign',
-      icon: 'fe fe-user-minus',
-      show: (item) => !!item.assignedTo
+      key: 'edit',
+      label: 'common.edit',
+      icon: 'fe fe-edit',
+      show: () => this.isAdmin
     },
     {
       key: 'solve',
       label: 'technicalSupport.markAsSolved',
       icon: 'fe fe-check-circle',
-      show: (item) => !item.isSolved && item.status !== TicketStatus.Closed
+      show: (item) => !item.isSolved && item.statusId !== this.closedStatusId
     },
     {
       key: 'close',
       label: 'technicalSupport.closeTicket',
       icon: 'fe fe-x-circle',
-      show: (item) => item.status !== TicketStatus.Closed
+      show: (item) => this.closedStatusId !== null && item.statusId !== this.closedStatusId
+    },
+    {
+      key: 'delete',
+      label: 'common.delete',
+      icon: 'fe fe-trash-2',
+      show: () => this.isSuperAdmin
     }
   ];
 
@@ -255,36 +178,41 @@ export class TicketListComponent implements OnInit, OnDestroy {
       icon: 'fe fe-bar-chart-2',
       action: 'reports',
       cssClass: 'btn-info'
-    },
-    {
-      label: 'common.exportToExcel',
-      icon: 'fe fe-file-plus',
-      action: 'export',
-      cssClass: 'btn-success'
     }
   ];
 
-  // Enum values for filters
-  categories = Object.values(TicketCategory);
-  priorities = Object.values(TicketPriority);
-  statuses = Object.values(TicketStatus);
-
   constructor(
+    private fb: FormBuilder,
+    private route: ActivatedRoute,
+    private router: Router,
     private technicalSupportService: TechnicalSupportService,
     private authService: AuthService,
-    private translate: TranslateService
-  ) {}
+    private translate: TranslateService,
+    private notification: NotificationService
+  ) {
+    // Initialize filter form
+    this.filterForm = this.fb.group({
+      searchTerm: [''],
+      selectedCategoryId: [TicketListComponent.ALL],
+      selectedPriorityId: [TicketListComponent.ALL],
+      selectedStatusId: [TicketListComponent.ALL]
+    });
+  }
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
     this.isAdmin = this.authService.hasAnyRole(['Admin', 'SuperAdmin']);
+    this.isSuperAdmin = this.authService.hasAnyRole(['SuperAdmin']);
 
-    // Check view mode from route data
-    const navigation = window.history.state;
-    if (navigation?.viewMode === 'all-tickets' && this.isAdmin) {
+    // View mode comes from the route data (my-tickets / all-tickets)
+    const routeViewMode = this.route.snapshot.data['viewMode'];
+    if (routeViewMode === 'all-tickets' && this.isAdmin) {
       this.viewMode = 'all-tickets';
+    } else if (routeViewMode === 'my-tickets') {
+      this.viewMode = 'my-tickets';
     }
 
+    this.loadLookups();
     this.loadTickets();
 
     // Subscribe to tickets updates
@@ -293,23 +221,52 @@ export class TicketListComponent implements OnInit, OnDestroy {
       .subscribe(() => {
         this.loadTickets();
       });
+
+    // The "All" option label is pre-translated (app-drop-down renders raw text), so a
+    // language switch needs a rebuild — the translate pipe can't refresh it.
+    this.langChangeSubscription = this.translate.onLangChange.subscribe(() => {
+      this.buildFilterOptions();
+    });
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.langChangeSubscription?.unsubscribe();
+  }
+
+  loadLookups(): void {
+    this.technicalSupportService.getTicketLookups().subscribe({
+      next: (lookups) => {
+        this.categories = lookups.categories ?? [];
+        this.priorities = lookups.priorities ?? [];
+        this.statuses = lookups.statuses ?? [];
+        this.buildFilterOptions();
+        // The Closed status is matched by its English name; ColorCode also comes from the lookup
+        this.closedStatusId =
+          this.statuses.find(s => s.nameEn === 'Closed' || s.name === 'Closed')?.id ?? null;
+      }
+    });
+  }
+
+  /** Filter drop-down options: an explicit "All" first option, then the lookup rows ({id, name}). */
+  buildFilterOptions(): void {
+    const allOption = { id: TicketListComponent.ALL, name: this.translate.instant('common.all') };
+    this.categoryOptions = [allOption, ...this.categories.map(cat => ({ id: cat.id, name: cat.name }))];
+    this.priorityOptions = [allOption, ...this.priorities.map(pri => ({ id: pri.id, name: pri.name }))];
+    this.statusOptions = [allOption, ...this.statuses.map(sta => ({ id: sta.id, name: sta.name }))];
   }
 
   loadTickets(): void {
     this.loading = true;
+    const filters = this.filterForm.value;
 
     const searchParams: TicketSearchRequest = {
       ...this.searchRequest,
-      searchTerm: this.searchTerm || undefined,
-      category: this.selectedCategory || undefined,
-      priority: this.selectedPriority || undefined,
-      status: this.selectedStatus || undefined,
-      isSolved: this.selectedIsSolved !== '' ? this.selectedIsSolved : undefined
+      searchTerm: filters.searchTerm || undefined,
+      categoryId: this.filterIdOrUndefined(filters.selectedCategoryId),
+      priorityId: this.filterIdOrUndefined(filters.selectedPriorityId),
+      statusId: this.filterIdOrUndefined(filters.selectedStatusId)
     };
 
     const tickets$ = this.viewMode === 'my-tickets' || !this.isAdmin
@@ -320,11 +277,12 @@ export class TicketListComponent implements OnInit, OnDestroy {
       next: (response: PagedResponse<SupportTicket>) => {
         this.tickets = response.items;
         this.totalRecords = response.totalCount;
-        this.pageNumber = response.pageNumber;
+        this.pageNumber = response.pageNumber || this.searchRequest.pageNumber || 1;
         this.loading = false;
       },
       error: () => {
         this.loading = false;
+        this.notification.error(this.translate.instant('technicalSupport.messages.operationFailed'));
       }
     });
   }
@@ -334,13 +292,30 @@ export class TicketListComponent implements OnInit, OnDestroy {
     this.loadTickets();
   }
 
-  onClearFilters(): void {
-    this.searchTerm = '';
-    this.selectedCategory = '';
-    this.selectedPriority = '';
-    this.selectedStatus = '';
-    this.selectedIsSolved = '';
+  clearFilters(): void {
+    this.filterForm.reset({
+      searchTerm: '',
+      selectedCategoryId: TicketListComponent.ALL,
+      selectedPriorityId: TicketListComponent.ALL,
+      selectedStatusId: TicketListComponent.ALL
+    });
     this.onSearch();
+  }
+
+  // Check if any filters are active
+  hasActiveFilters(): boolean {
+    const filters = this.filterForm.value;
+    return !!(
+      filters.searchTerm ||
+      this.filterIdOrUndefined(filters.selectedCategoryId) !== undefined ||
+      this.filterIdOrUndefined(filters.selectedPriorityId) !== undefined ||
+      this.filterIdOrUndefined(filters.selectedStatusId) !== undefined
+    );
+  }
+
+  /** The 'all' sentinel (and empty values) map to undefined — no filter in the request. */
+  private filterIdOrUndefined(id: number | string | null | undefined): number | undefined {
+    return id !== null && id !== undefined && id !== TicketListComponent.ALL ? Number(id) : undefined;
   }
 
   onPageChange(page: number): void {
@@ -350,45 +325,83 @@ export class TicketListComponent implements OnInit, OnDestroy {
 
   onPageSizeChange(size: number): void {
     this.searchRequest.pageSize = size;
+    this.pageSize = size;
     this.searchRequest.pageNumber = 1;
     this.loadTickets();
   }
 
-  onSort(column: string, direction: 'asc' | 'desc'): void {
-    this.searchRequest.sortBy = column;
-    this.searchRequest.sortDescending = direction === 'desc';
+  // Backend ApplySorting understands: title, createdon, updatedon, priority, status
+  private static readonly SORT_KEY_MAP: Record<string, string> = {
+    title: 'Title',
+    priorityName: 'Priority',
+    statusName: 'Status',
+    createdOn: 'CreatedOn',
+    updatedOn: 'UpdatedOn'
+  };
+
+  private sortKeyFor(column: string): string | undefined {
+    return TicketListComponent.SORT_KEY_MAP[column];
+  }
+
+  isSortActive(column: string): boolean {
+    return this.searchRequest.sortBy === this.sortKeyFor(column);
+  }
+
+  onSort(column: string): void {
+    const sortKey = this.sortKeyFor(column);
+    if (!sortKey) {
+      return;
+    }
+    if (this.searchRequest.sortBy === sortKey) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortDirection = 'desc';
+    }
+    this.searchRequest.sortBy = sortKey;
+    this.searchRequest.sortDirection = this.sortDirection;
     this.loadTickets();
+  }
+
+  getSortIcon(column: string): string {
+    // feather.css has no chevrons-up-down glyph — the icon renders only on the active column
+    return this.sortDirection === 'asc'
+      ? 'fe fe-chevron-up ml-1 sort-icon'
+      : 'fe fe-chevron-down ml-1 sort-icon';
   }
 
   onAction(event: { item: SupportTicket | null; action: string }): void {
     switch (event.action) {
       case 'view':
-        // Navigate to ticket details
-        break;
-      case 'create':
-        // Navigate to create ticket
-        break;
-      case 'assign':
-        // Open assign dialog
-        break;
-      case 'unassign':
         if (event.item) {
-          this.unassignTicket(event.item);
+          this.router.navigate(['/technical-support', event.item.id]);
         }
         break;
+      case 'edit':
+        if (event.item) {
+          this.router.navigate(['/technical-support', event.item.id, 'edit']);
+        }
+        break;
+      case 'create':
+        this.router.navigate(['/technical-support', 'create']);
+        break;
       case 'solve':
-        // Open solve dialog
+        // The solve form lives on the detail screen
+        if (event.item) {
+          this.router.navigate(['/technical-support', event.item.id]);
+        }
         break;
       case 'close':
         if (event.item) {
           this.closeTicket(event.item);
         }
         break;
-      case 'export':
-        this.exportToExcel();
+      case 'delete':
+        if (event.item) {
+          this.deleteTicket(event.item);
+        }
         break;
       case 'reports':
-        // Navigate to reports
+        this.router.navigate(['/technical-support', 'reports']);
         break;
     }
   }
@@ -399,97 +412,60 @@ export class TicketListComponent implements OnInit, OnDestroy {
     this.loadTickets();
   }
 
-  unassignTicket(ticket: SupportTicket): void {
-    this.technicalSupportService.unassignTicket(ticket.id).subscribe({
-      next: () => {
-        this.loadTickets();
-      }
-    });
+  closeTicket(ticket: SupportTicket): void {
+    if (this.closedStatusId === null) {
+      // Lookups not loaded — closing is impossible; say so instead of silently doing nothing
+      this.notification.error(this.translate.instant('technicalSupport.messages.operationFailed'));
+      return;
+    }
+
+    if (confirm(this.translate.instant('technicalSupport.messages.confirmClose'))) {
+      this.technicalSupportService
+        .updateTicketStatus(ticket.id, { statusId: this.closedStatusId })
+        .subscribe({
+          next: () => {
+            this.technicalSupportService.notifyTicketsUpdated();
+          },
+          error: () => {
+            this.notification.error(this.translate.instant('technicalSupport.messages.operationFailed'));
+          }
+        });
+    }
   }
 
-  closeTicket(ticket: SupportTicket): void {
-    if (confirm(this.translate.instant('technicalSupport.messages.confirmClose'))) {
-      this.technicalSupportService.closeTicket(ticket.id).subscribe({
+  deleteTicket(ticket: SupportTicket): void {
+    if (confirm(
+      this.translate.instant('technicalSupport.messages.confirmDelete', { title: ticket.title })
+    )) {
+      this.technicalSupportService.deleteTicket(ticket.id).subscribe({
         next: () => {
-          this.loadTickets();
+          this.technicalSupportService.notifyTicketsUpdated();
+        },
+        error: () => {
+          this.notification.error(this.translate.instant('technicalSupport.messages.operationFailed'));
         }
       });
     }
   }
 
-  exportToExcel(): void {
-    const searchParams: TicketSearchRequest = {
-      ...this.searchRequest,
-      searchTerm: this.searchTerm || undefined,
-      category: this.selectedCategory || undefined,
-      priority: this.selectedPriority || undefined,
-      status: this.selectedStatus || undefined,
-      isSolved: this.selectedIsSolved !== '' ? this.selectedIsSolved : undefined
-    };
-
-    this.technicalSupportService.exportTicketsToExcel(searchParams).subscribe((blob: Blob) => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `support-tickets-${new Date().toISOString().split('T')[0]}.xlsx`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    });
+  // Display helpers
+  shortId(id: string): string {
+    return id ? id.substring(0, 8).toUpperCase() : '';
   }
 
-  // Pagination helper methods
-  getTotalPages(): number {
-    return Math.ceil(this.totalRecords / this.pageSize);
+  trackByTicketId(index: number, ticket: SupportTicket): string {
+    return ticket.id;
   }
 
-  getPages(): number[] {
-    // Now using shared pagination component
-    return [];
-  }
-
-  getCategoryTranslation(category: TicketCategory): string {
-    return this.translate.instant(`technicalSupport.categories.${category}`);
-  }
-
-  getPriorityTranslation(priority: TicketPriority): string {
-    return this.translate.instant(`technicalSupport.priorities.${priority}`);
-  }
-
-  getStatusTranslation(status: TicketStatus): string {
-    return this.translate.instant(`technicalSupport.statuses.${status}`);
-  }
-
-  getPriorityClass(priority: TicketPriority): string {
-    switch (priority) {
-      case TicketPriority.Urgent:
-        return 'badge-danger';
-      case TicketPriority.High:
-        return 'badge-warning';
-      case TicketPriority.Medium:
-        return 'badge-info';
-      case TicketPriority.Low:
-        return 'badge-secondary';
-      default:
-        return 'badge-light';
-    }
-  }
-
-  getStatusClass(status: TicketStatus): string {
-    switch (status) {
-      case TicketStatus.Open:
-        return 'badge-primary';
-      case TicketStatus.InProgress:
-        return 'badge-info';
-      case TicketStatus.Resolved:
-        return 'badge-success';
-      case TicketStatus.Closed:
-        return 'badge-secondary';
-      default:
-        return 'badge-light';
-    }
+  trackByActionKey(index: number, action: ActionItem): string {
+    return action.action;
   }
 
   getDisplayEnd(): number {
     return Math.min(this.pageNumber * this.pageSize, this.totalRecords);
+  }
+
+  getTotalPages(): number {
+    return Math.ceil(this.totalRecords / this.pageSize);
   }
 }

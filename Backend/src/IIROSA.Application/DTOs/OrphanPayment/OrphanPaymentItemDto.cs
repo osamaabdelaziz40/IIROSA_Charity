@@ -11,6 +11,20 @@ public class OrphanPaymentItemDto
     public int DisplayOrder { get; set; }
     public string? Notes { get; set; }
 
+    // §15.1 row ledger (EP-10) — snapshot taken at enrolment
+    public decimal? Amount { get; set; }
+    public bool IsStopped { get; set; }
+    public DateTime? StoppedOn { get; set; }
+    public bool IsPrinted { get; set; }
+    public DateTime? PrintedOn { get; set; }
+    public bool IsGotIt { get; set; }
+    public DateTime? ReceivedOn { get; set; }
+    public string? ChiqueNum { get; set; }
+    public DateTime? Printdate { get; set; }
+    public string? BenificiaryName { get; set; }
+    public string? TransferNo { get; set; }
+    public int? ExchangeStatus { get; set; }
+
     // Orphan Details
     public string OrphanCode { get; set; } = string.Empty;
     public string OrphanFullName { get; set; } = string.Empty;
@@ -21,7 +35,7 @@ public class OrphanPaymentItemDto
     public decimal? OrphanMonthlyAmount { get; set; }
 
     // Charity Details
-    public int? CharityId { get; set; }
+    public Guid? CharityId { get; set; }
     public string? CharityName { get; set; }
 
     // Location Details

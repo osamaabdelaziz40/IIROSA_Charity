@@ -125,6 +125,35 @@ public class SeasonalAidBeneficiaryRepository : Repository<SeasonalAidBeneficiar
         return (items, totalCount);
     }
 
+    /// <summary>
+    /// Interface-facing paged variant — delegates to the DTO overload so the filter
+    /// logic lives in exactly one place.
+    /// </summary>
+    public async Task<(IEnumerable<SeasonalAidBeneficiary> Items, int TotalCount)> GetByCampaignFilteredPaginatedAsync(
+        Guid campaignId, string? searchTerm = null, bool? isDistributed = null,
+        Guid? charityId = null, int? regionId = null, int? centerId = null,
+        DateTime? registrationDateFrom = null, DateTime? registrationDateTo = null,
+        DateTime? distributionDateFrom = null, DateTime? distributionDateTo = null,
+        int pageNumber = 1, int pageSize = 10, string? sortBy = null, bool sortDescending = false)
+    {
+        return await GetByCampaignFilteredAsync(campaignId, new SeasonalAidBeneficiaryFilterDto
+        {
+            SearchTerm = searchTerm,
+            IsDistributed = isDistributed,
+            CharityId = charityId,
+            RegionId = regionId,
+            CenterId = centerId,
+            RegistrationDateFrom = registrationDateFrom,
+            RegistrationDateTo = registrationDateTo,
+            DistributionDateFrom = distributionDateFrom,
+            DistributionDateTo = distributionDateTo,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            SortBy = sortBy,
+            SortDescending = sortDescending
+        });
+    }
+
     public async Task<IEnumerable<SeasonalAidBeneficiary>> GetByCampaignWithDistributionsAsync(Guid campaignId)
     {
         return await IncludeDistributions()
@@ -380,15 +409,17 @@ public class SeasonalAidBeneficiaryRepository : Repository<SeasonalAidBeneficiar
             .Include(f => f.Charity)
             .Include(f => f.City);
 
-        // Apply filters based on campaign criteria
+        // Apply filters based on campaign criteria.
+        // FK_CharityId is the populated charity column on Family — CharityId is a legacy
+        // nullable that stays null, so filtering on it matches nothing.
         if (campaign.CharityId.HasValue)
         {
-            familiesQuery = familiesQuery.Where(f => f.CharityId == campaign.CharityId.Value);
+            familiesQuery = familiesQuery.Where(f => f.FK_CharityId == campaign.CharityId.Value);
         }
 
         if (charityId.HasValue)
         {
-            familiesQuery = familiesQuery.Where(f => f.CharityId == charityId.Value);
+            familiesQuery = familiesQuery.Where(f => f.FK_CharityId == charityId.Value);
         }
 
         if (regionId.HasValue)

@@ -26,13 +26,20 @@ public class OrphanPaymentRepository : Repository<OrphanPayment>, IOrphanPayment
 
     public async Task<OrphanPayment?> GetByBatchNoAsync(string batchNo)
     {
+        // Review P15: the picker groups by Trim(), so resolve compares trimmed too — an
+        // offered number always resolves to its stored (trimmed) batch.
+        var normalized = batchNo?.Trim();
+        if (string.IsNullOrEmpty(normalized)) return null;
         return await IncludeNavigationProperties()
-            .FirstOrDefaultAsync(op => op.BatchNo == batchNo && !op.IsDeleted);
+            .FirstOrDefaultAsync(op => op.BatchNo != null && op.BatchNo.Trim() == normalized && !op.IsDeleted);
     }
 
     public async Task<bool> IsBatchNoUniqueAsync(string batchNo, Guid? excludeId = null)
     {
-        var query = _dbSet.Where(op => op.BatchNo == batchNo && !op.IsDeleted);
+        // Review P15: uniqueness compares trimmed values, matching how numbers are stored
+        // and how the picker groups them.
+        var normalized = batchNo?.Trim();
+        var query = _dbSet.Where(op => op.BatchNo != null && op.BatchNo.Trim() == normalized && !op.IsDeleted);
 
         if (excludeId.HasValue)
         {
@@ -78,7 +85,7 @@ public class OrphanPaymentRepository : Repository<OrphanPayment>, IOrphanPayment
         DateTime? groupDateFrom = null,
         DateTime? groupDateTo = null,
         bool? isBatchUploaded = null,
-        int? charityId = null,
+        Guid? charityId = null,
         int pageNumber = 1,
         int pageSize = 10,
         string? sortBy = null,
@@ -123,15 +130,20 @@ public class OrphanPaymentRepository : Repository<OrphanPayment>, IOrphanPayment
             query = query.Where(op => op.IsBatchUploaded == isBatchUploaded.Value);
         }
 
-        // Apply charity filter (UC-5.12)
-        // Filter groups that contain orphans from the specified charity
-        // Note: charityId is int? but FK_CharityId is Guid? - type mismatch
-        // TODO: Change parameter type to Guid? to match the entity
+        // Apply charity filter (UC-5.12) — wired per the review D1 decision (2026-08-26):
+        // the charity dimension derives through items → orphan → FK_CharityId ??
+        // Family.FK_CharityId (the standing 10-7 tenancy model); a batch matches when it
+        // has ≥1 live row tenanted to that charity.
         if (charityId.HasValue)
         {
-            // Can't compare int with Guid - filtering disabled for now
-            // query = query.Where(op => op.Orphans
-            //     .Any(opi => opi.Orphan != null && opi.Orphan.FK_CharityId == charityId.Value));
+            var scopedCharityId = charityId.Value;
+            query = query.Where(op => op.Orphans.Any(opi =>
+                !opi.IsDeleted &&
+                opi.Orphan != null &&
+                (opi.Orphan.FK_CharityId == scopedCharityId ||
+                 (opi.Orphan.FK_CharityId == null &&
+                  opi.Orphan.Family != null &&
+                  opi.Orphan.Family.FK_CharityId == scopedCharityId))));
         }
 
         // Get total count before pagination
@@ -266,10 +278,14 @@ public class OrphanPaymentRepository : Repository<OrphanPayment>, IOrphanPayment
 
     public async Task<Dictionary<Guid, int>> GetOrphanCountByCharityAsync(Guid orphanPaymentId)
     {
+        // Review P16: the charity derivation coalesces through the Family
+        // (Orphan.FK_CharityId ?? Family.FK_CharityId) — the same standing tenancy model
+        // the row filter on the same batch uses, so the dict totals agree with the grid.
         return await _context.Set<OrphanPaymentItem>()
             .Include(opi => opi.Orphan)
+            .ThenInclude(o => o.Family)
             .Where(opi => opi.OrphanPaymentId == orphanPaymentId && !opi.IsDeleted && opi.Orphan != null)
-            .GroupBy(opi => opi.Orphan.FK_CharityId)
+            .GroupBy(opi => opi.Orphan.FK_CharityId ?? opi.Orphan.Family!.FK_CharityId)
             .Select(g => new { CharityId = g.Key, Count = g.Count() })
             .Where(g => g.CharityId.HasValue)
             .ToDictionaryAsync(g => g.CharityId!.Value, g => g.Count);

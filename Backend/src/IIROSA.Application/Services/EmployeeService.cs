@@ -20,19 +20,22 @@ public class EmployeeService : IEmployeeService
     private readonly IRoleAppService _roleAppService;
     private readonly ILogger<EmployeeService> _logger;
     private readonly IMapper _mapper;
+    private readonly IDepartmentService _departmentService;
 
     public EmployeeService(
         IEmployeeRepository employeeRepository,
         IUserAppServiceExtended userAppService,
         IRoleAppService roleAppService,
         ILogger<EmployeeService> logger,
-        IMapper mapper)
+        IMapper mapper,
+        IDepartmentService departmentService)
     {
         _employeeRepository = employeeRepository;
         _userAppService = userAppService;
         _roleAppService = roleAppService;
         _logger = logger;
         _mapper = mapper;
+        _departmentService = departmentService;
     }
 
     /// <summary>
@@ -42,10 +45,12 @@ public class EmployeeService : IEmployeeService
     {
         try
         {
-            var query = await _employeeRepository.GetAllAsync();
+            // Department is a navigation the DTOs expose (DepartmentName) — Include it here;
+            // the base GetAllAsync materializes bare rows and the name would map as null
+            var query = await _employeeRepository.GetAllWithDepartmentAsync();
 
-            // Apply filters
-            var filteredQuery = query.AsQueryable();
+            // Soft-deleted rows never appear in reads
+            var filteredQuery = query.AsQueryable().Where(e => !e.IsDeleted);
 
             if (!string.IsNullOrWhiteSpace(filter.SearchText))
             {
@@ -59,28 +64,58 @@ public class EmployeeService : IEmployeeService
                         (e.NationalId != null && e.NationalId.Contains(searchText)));
             }
 
+            if (filter.DepartmentId.HasValue)
+            {
+                filteredQuery = filteredQuery.Where(e => e.DepartmentId == filter.DepartmentId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.Position))
+            {
+                filteredQuery = filteredQuery.Where(e => e.Position == filter.Position);
+            }
+
             if (filter.IsActive.HasValue)
             {
                 filteredQuery = filteredQuery.Where(e => e.IsActive == filter.IsActive.Value);
             }
 
+            // Role filter lives in the identity store, not on the Employee row: resolve the
+            // users holding the role first, then keep only employees linked to one of them.
+            if (!string.IsNullOrWhiteSpace(filter.Role))
+            {
+                var usersInRole = await _userAppService.GetUsersInRoles(new List<string> { filter.Role });
+                var userIds = usersInRole
+                    .Where(u => u.Id.HasValue)
+                    .Select(u => u.Id!.Value)
+                    .ToHashSet();
+
+                filteredQuery = filteredQuery.Where(e => e.FK_UserId.HasValue && userIds.Contains(e.FK_UserId.Value));
+            }
+
             // Get total count
             var totalCount = filteredQuery.Count();
 
+            // Clamp paging inputs — page 0 would produce a negative Skip and throw
+            var page = Math.Max(1, filter.Page);
+            var pageSize = Math.Max(1, filter.PageSize);
+
             // Apply pagination
-            var paginatedQuery = filteredQuery
-                .Skip((filter.Page - 1) * filter.PageSize)
-                .Take(filter.PageSize);
+            var pageRows = filteredQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
 
-            var employeeDtos = _mapper.Map<List<EmployeeListDto>>(paginatedQuery);
+            var employeeDtos = _mapper.Map<List<EmployeeListDto>>(pageRows);
 
-            // Load roles for each employee
-            foreach (var employeeDto in employeeDtos)
+            // Load roles for the page only, straight from the rows already in hand
+            // (no per-row re-fetch of the employee)
+            for (var i = 0; i < pageRows.Count; i++)
             {
-                var employee = await _employeeRepository.GetByIdAsync(employeeDto.Id);
-                if (employee != null && !string.IsNullOrWhiteSpace(employee.Email))
+                // Roles live on the identity user, so the guard is the account link — an
+                // account-linked row with no email still has roles to show
+                if (pageRows[i].FK_UserId.HasValue)
                 {
-                    employeeDto.Roles = await GetEmployeeRolesAsync(employeeDto.Id);
+                    employeeDtos[i].Roles = await _userAppService.GetUserRolesAsync(pageRows[i].FK_UserId.Value);
                 }
             }
 
@@ -88,8 +123,8 @@ public class EmployeeService : IEmployeeService
             {
                 Items = employeeDtos,
                 TotalCount = totalCount,
-                PageNumber = filter.Page,
-                PageSize = filter.PageSize
+                PageNumber = page,
+                PageSize = pageSize
             };
         }
         catch (Exception ex)
@@ -100,22 +135,70 @@ public class EmployeeService : IEmployeeService
     }
 
     /// <summary>
+    /// UC-EMP-02: verify a proposed login name is free before the record is submitted.
+    /// In this stack the identity UserName IS the email, so the probe consults both stores
+    /// that enforce uniqueness at save time: the Employee table (IsEmailUniqueAsync, the rule
+    /// CreateEmployeeAsync applies) and the identity user store (FindByEmailAsync, the rule
+    /// CreateUserAsync applies). excludeEmployeeId spares an employee's own account when editing.
+    /// </summary>
+    public async Task<bool> IsUserNameAvailableAsync(string userName, Guid? excludeEmployeeId = null)
+    {
+        var name = (userName ?? string.Empty).Trim();
+
+        // Nothing to check, or longer than the column allows — both mean "cannot use this name"
+        if (name.Length == 0 || name.Length > 100)
+        {
+            return false;
+        }
+
+        if (!await _employeeRepository.IsEmailUniqueAsync(name, excludeEmployeeId))
+        {
+            return false;
+        }
+
+        var identityMatch = await _userAppService.FindByEmailAsync(name);
+        if (identityMatch == null)
+        {
+            return true;
+        }
+
+        // A located account with no readable id is store corruption, not a free name
+        if (!identityMatch.Id.HasValue)
+        {
+            return false;
+        }
+
+        // A hit is fine when it is the excluded employee's own account
+        if (excludeEmployeeId.HasValue)
+        {
+            var employee = await _employeeRepository.GetByIdAsync(excludeEmployeeId.Value);
+            if (employee != null && employee.FK_UserId == identityMatch.Id.Value)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Get employee by ID (UC-2.7: View Employee Profile)
     /// </summary>
     public async Task<EmployeeDetailDto?> GetEmployeeByIdAsync(Guid id)
     {
         try
         {
-            var employee = await _employeeRepository.GetByIdAsync(id);
-            if (employee == null)
+            // Include Department — DepartmentName maps from the navigation
+            var employee = await _employeeRepository.GetByIdWithDepartmentAsync(id);
+            if (employee == null || employee.IsDeleted)
                 return null;
 
             var employeeDto = _mapper.Map<EmployeeDetailDto>(employee);
 
-            // Get employee roles
-            if (!string.IsNullOrWhiteSpace(employee.Email))
+            // Get employee roles — keyed on the account link, not the email
+            if (employee.FK_UserId.HasValue)
             {
-                employeeDto.Roles = await GetEmployeeRolesAsync(id);
+                employeeDto.Roles = await _userAppService.GetUserRolesAsync(employee.FK_UserId.Value);
             }
 
             return employeeDto;
@@ -134,71 +217,115 @@ public class EmployeeService : IEmployeeService
     {
         try
         {
-            // Validate email uniqueness
-            if (!string.IsNullOrWhiteSpace(dto.Email) &&
-                !await _employeeRepository.IsEmailUniqueAsync(dto.Email))
+            dto.FullName = (dto.FullName ?? string.Empty).Trim();
+            if (dto.FullName.Length == 0)
+            {
+                throw new InvalidOperationException("Full name is required");
+            }
+
+            dto.Email = dto.Email?.Trim();
+            dto.Code = (dto.Code ?? string.Empty).Trim();
+            dto.Position = dto.Position?.Trim();
+
+            // §9.S.2 mandatory fields — the screen enforces them and so does the endpoint;
+            // the account is the point of UC-EMP-03, it is never optional here
+            if (string.IsNullOrWhiteSpace(dto.Email))
+                throw new InvalidOperationException("Email (login name) is required");
+            if (string.IsNullOrWhiteSpace(dto.Password))
+                throw new InvalidOperationException("Password is required");
+            if (dto.Roles == null || dto.Roles.Count == 0)
+                throw new InvalidOperationException("At least one role is required");
+            if (string.IsNullOrWhiteSpace(dto.Position))
+                throw new InvalidOperationException("Position is required");
+
+            if (dto.DepartmentId.HasValue &&
+                await _departmentService.GetLookupByIdAsync(dto.DepartmentId.Value) == null)
+            {
+                throw new InvalidOperationException($"Department {dto.DepartmentId} does not exist");
+            }
+
+            // Login-name availability across BOTH stores (Employee table + identity users),
+            // the same rule the UC-EMP-02 check exposes to the screen
+            if (!await IsUserNameAvailableAsync(dto.Email))
             {
                 throw new InvalidOperationException($"Email '{dto.Email}' is already in use");
             }
 
-            // Validate code uniqueness
-            if (!string.IsNullOrWhiteSpace(dto.Code) &&
-                !await _employeeRepository.IsCodeUniqueAsync(dto.Code))
+            // Code is uniquely indexed; generate one when the screen leaves it blank,
+            // re-drawing until it is provably unique
+            if (dto.Code.Length == 0)
+            {
+                do
+                {
+                    dto.Code = $"EMP-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+                }
+                while (!await _employeeRepository.IsCodeUniqueAsync(dto.Code));
+            }
+            else if (!await _employeeRepository.IsCodeUniqueAsync(dto.Code))
             {
                 throw new InvalidOperationException($"Employee code '{dto.Code}' already exists");
             }
 
-            // Create employee entity
-            var employee = _mapper.Map<Employee>(dto);
-            employee.IsActive = true;
-
-            await _employeeRepository.AddAsync(employee);
-            await _employeeRepository.SaveChangesAsync();
-
-            // Create associated user account if email and password are provided
-            if (!string.IsNullOrWhiteSpace(dto.Email) && !string.IsNullOrWhiteSpace(dto.Password))
+            // The login account is created FIRST and fails loudly. If the Employee insert then
+            // fails, the just-created login is deleted again — otherwise it would occupy the
+            // email forever and every retry would fail the availability check above.
+            Guid? userId = null;
+            Employee? employee = null;
+            try
             {
-                try
+                var createUserDto = new Framework.Identity.Data.Services.Interfaces.CreateUserDto
                 {
-                    var createUserDto = new Framework.Identity.Data.Services.Interfaces.CreateUserDto
-                    {
-                        Email = dto.Email,
-                        FullName = dto.FullName,
-                        PhoneNumber = dto.PhoneNumber,
-                        Roles = dto.Roles,
-                        Password = dto.Password
-                    };
+                    Email = dto.Email,
+                    FullName = dto.FullName,
+                    PhoneNumber = dto.PhoneNumber,
+                    Roles = dto.Roles,
+                    Password = dto.Password
+                };
 
-                    var userResult = await _userAppService.CreateUserAsync(createUserDto);
-                    if (userResult.Success)
+                var userResult = await _userAppService.CreateUserAsync(createUserDto);
+                if (!userResult.Success)
+                {
+                    throw new InvalidOperationException(
+                        $"Could not create the login account for '{dto.Email}': {userResult.VerificationMSG}");
+                }
+                userId = userResult.InsertedId;
+
+                // Create employee entity, already linked to the account
+                employee = _mapper.Map<Employee>(dto);
+                employee.IsActive = true;
+                employee.FK_UserId = userId;
+
+                await _employeeRepository.AddAsync(employee);
+                await _employeeRepository.SaveChangesAsync();
+
+                _logger.LogInformation("Employee created successfully: {EmployeeId} - {Code} - {FullName}",
+                    employee.Id, employee.Code, employee.FullName);
+
+                var result = await GetEmployeeByIdAsync(employee.Id);
+                if (result == null)
+                {
+                    throw new InvalidOperationException($"Failed to retrieve newly created employee with ID {employee.Id}");
+                }
+
+                return result;
+            }
+            catch
+            {
+                if (userId.HasValue)
+                {
+                    try
                     {
-                        // Link employee to user
-                        employee.FK_UserId = userResult.InsertedId;
-                        _employeeRepository.Update(employee);
-                        await _employeeRepository.SaveChangesAsync();
+                        await _userAppService.DeleteAsync(userId.Value);
                     }
-                    else
+                    catch (Exception cleanupEx)
                     {
-                        _logger.LogWarning("User account creation failed for employee {EmployeeId}: {Message}",
-                            employee.Id, userResult.VerificationMSG);
+                        _logger.LogError(cleanupEx,
+                            "Failed to roll back the login account {UserId} created for '{Email}' — it must be removed manually",
+                            userId.Value, dto.Email);
                     }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error creating user account for employee {EmployeeId}", employee.Id);
-                }
+                throw;
             }
-
-            _logger.LogInformation("Employee created successfully: {EmployeeId} - {Code} - {FullName}",
-                employee.Id, employee.Code, employee.FullName);
-
-            var result = await GetEmployeeByIdAsync(employee.Id);
-            if (result == null)
-            {
-                throw new InvalidOperationException($"Failed to retrieve newly created employee with ID {employee.Id}");
-            }
-
-            return result;
         }
         catch (Exception ex)
         {
@@ -214,21 +341,96 @@ public class EmployeeService : IEmployeeService
     {
         try
         {
-            var employee = await _employeeRepository.GetByIdAsync(id);
-            if (employee == null)
-                throw new InvalidOperationException($"Employee with ID {id} not found");
+            var employee = await _employeeRepository.GetByIdWithDepartmentAsync(id);
+            if (employee == null || employee.IsDeleted)
+                throw new KeyNotFoundException($"Employee with ID {id} not found");
 
-            // Validate email uniqueness (excluding current employee)
-            if (!string.IsNullOrWhiteSpace(dto.Email) &&
-                !await _employeeRepository.IsEmailUniqueAsync(dto.Email, id))
+            dto.Email = dto.Email?.Trim();
+            dto.Code = dto.Code?.Trim();
+            dto.FullName = dto.FullName?.Trim();
+
+            // The email is the login credential and FullName a required column — neither may
+            // be blanked by a PUT
+            if (string.IsNullOrWhiteSpace(dto.Email))
+                throw new InvalidOperationException("Email (login name) is required");
+            if (string.IsNullOrWhiteSpace(dto.FullName))
+                throw new InvalidOperationException("Full name is required");
+
+            if (dto.DepartmentId.HasValue &&
+                await _departmentService.GetLookupByIdAsync(dto.DepartmentId.Value) == null)
+            {
+                throw new InvalidOperationException($"Department {dto.DepartmentId} does not exist");
+            }
+
+            // Login-name availability across both stores, sparing this employee's own account
+            if (!await IsUserNameAvailableAsync(dto.Email, id))
             {
                 throw new InvalidOperationException($"Email '{dto.Email}' is already in use");
             }
 
-            // Update employee fields
+            var originalCode = employee.Code;
+            if (!string.IsNullOrWhiteSpace(dto.Code) &&
+                dto.Code != originalCode &&
+                !await _employeeRepository.IsCodeUniqueAsync(dto.Code, id))
+            {
+                throw new InvalidOperationException($"Employee code '{dto.Code}' already exists");
+            }
+
+            // Update employee fields. PUT semantics (review decision 2026-08-24): the edit
+            // screen owns the whole record, so an explicit null/empty value is written —
+            // clearing a field on screen clears it in the database.
             _mapper.Map(dto, employee);
+
+            // A blank code means "no opinion", not "erase the code" (Code is uniquely indexed)
+            if (string.IsNullOrWhiteSpace(employee.Code))
+            {
+                employee.Code = originalCode;
+            }
+
             _employeeRepository.Update(employee);
             await _employeeRepository.SaveChangesAsync();
+
+            // Mirror profile changes onto the linked login account — the identity UserName IS
+            // the email, so an unsynced change would leave the old credential working.
+            // A failed mirror is a failed save: report it, never claim success over drift.
+            if (employee.FK_UserId.HasValue)
+            {
+                var mirrorResult = await _userAppService.UpdateUserDetailAsync(employee.FK_UserId.Value,
+                    new Framework.Identity.Data.Services.Interfaces.UpdateUserDto
+                    {
+                        Email = employee.Email,
+                        FullName = employee.FullName,
+                        PhoneNumber = employee.PhoneNumber
+                    });
+
+                if (mirrorResult == Guid.Empty)
+                {
+                    throw new InvalidOperationException(
+                        $"Could not update the login account for '{employee.Email}' — the saved employee and the login may have diverged");
+                }
+
+                // Role changes ride along when the request carries a role set (UC-EMP-05)
+                if (dto.Roles != null)
+                {
+                    var currentRoles = await _userAppService.GetUserRolesAsync(employee.FK_UserId.Value);
+
+                    foreach (var removed in currentRoles.Where(r => !dto.Roles.Contains(r)))
+                    {
+                        if (!await _userAppService.RemoveUserFromRoleAsync(employee.FK_UserId.Value, removed))
+                        {
+                            throw new InvalidOperationException($"Could not remove role '{removed}' from the login account");
+                        }
+                    }
+
+                    foreach (var added in dto.Roles.Where(r => !currentRoles.Contains(r)))
+                    {
+                        if (!await _userAppService.AssignUserToRoleAsync(employee.FK_UserId.Value, added))
+                        {
+                            throw new InvalidOperationException($"Could not assign role '{added}' to the login account");
+                        }
+                    }
+                }
+            }
 
             _logger.LogInformation("Employee updated successfully: {EmployeeId}", id);
 
@@ -255,7 +457,7 @@ public class EmployeeService : IEmployeeService
         try
         {
             var employee = await _employeeRepository.GetByIdAsync(id);
-            if (employee == null)
+            if (employee == null || employee.IsDeleted)
                 throw new InvalidOperationException($"Employee with ID {id} not found");
 
             employee.IsActive = false;
@@ -292,7 +494,7 @@ public class EmployeeService : IEmployeeService
         try
         {
             var employee = await _employeeRepository.GetByIdAsync(id);
-            if (employee == null)
+            if (employee == null || employee.IsDeleted)
                 throw new InvalidOperationException($"Employee with ID {id} not found");
 
             employee.IsActive = true;
@@ -329,7 +531,7 @@ public class EmployeeService : IEmployeeService
         try
         {
             var employee = await _employeeRepository.GetByIdAsync(id);
-            if (employee == null)
+            if (employee == null || employee.IsDeleted)
                 throw new InvalidOperationException($"Employee with ID {id} not found");
 
             if (!employee.FK_UserId.HasValue)
@@ -362,7 +564,7 @@ public class EmployeeService : IEmployeeService
         try
         {
             var employee = await _employeeRepository.GetByIdAsync(id);
-            if (employee == null)
+            if (employee == null || employee.IsDeleted)
                 throw new InvalidOperationException($"Employee with ID {id} not found");
 
             if (!employee.FK_UserId.HasValue)
@@ -395,7 +597,7 @@ public class EmployeeService : IEmployeeService
         try
         {
             var employee = await _employeeRepository.GetByIdAsync(id);
-            if (employee == null)
+            if (employee == null || employee.IsDeleted)
                 throw new InvalidOperationException($"Employee with ID {id} not found");
 
             if (!employee.FK_UserId.HasValue)
@@ -428,7 +630,7 @@ public class EmployeeService : IEmployeeService
         try
         {
             var employee = await _employeeRepository.GetByIdAsync(id);
-            if (employee == null)
+            if (employee == null || employee.IsDeleted)
                 throw new InvalidOperationException($"Employee with ID {id} not found");
 
             _employeeRepository.Delete(employee);
@@ -454,15 +656,7 @@ public class EmployeeService : IEmployeeService
             if (employee == null || !employee.FK_UserId.HasValue)
                 return new List<string>();
 
-            var allUsers = await _userAppService.GetUsersFilteredAsync(
-                new Framework.Identity.Data.Services.Interfaces.UserFilterDto());
-            var associatedUser = allUsers.Items.FirstOrDefault(u => u.Id == employee.FK_UserId.Value);
-
-            if (associatedUser == null)
-                return new List<string>();
-
-            var userDetail = await _userAppService.GetUserDetailAsync(associatedUser.Id);
-            return userDetail?.Roles?.ToList() ?? new List<string>();
+            return await _userAppService.GetUserRolesAsync(employee.FK_UserId.Value);
         }
         catch (Exception ex)
         {
@@ -482,8 +676,9 @@ public class EmployeeService : IEmployeeService
             var result = await GetEmployeesFilteredAsync(new EmployeeFilterDto
             {
                 SearchText = filter.SearchText,
-                Department = filter.Department,
+                DepartmentId = filter.DepartmentId,
                 Position = filter.Position,
+                Role = filter.Role,
                 IsActive = filter.IsActive,
                 Page = 1,
                 PageSize = 10000 // Export all matching records

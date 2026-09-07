@@ -1,0 +1,141 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'families.refugeeTitle' | translate"
+  [subtitle]="'families.refugeeSubtitle' | translate"
+  [icon]="'fe fe-users'">
+</app-page-header>
+
+<div class="card shadow mb-4">
+  <div class="card-body">
+    <!-- Filters (§12.S.1): الجمعية + search box + البحث عن طريق -->
+    <form [formGroup]="filterForm">
+      <div class="row mb-3">
+        <!-- الجمعية — HQ only; Charity callers are pinned server-side -->
+        <div class="col-md-3" *ngIf="isHQ">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="charityId"
+            [label]="'families.refugeeCharity'"
+            [initialData]="charityOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onCharityChange()">
+          </app-drop-down>
+        </div>
+
+        <!-- Search box — debounced 400ms -->
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="filterForm"
+            fcn="searchValue"
+            [label]="'common.search'"
+            [placeholder]="'families.refugeeSearchPlaceholder' | translate">
+          </app-input-text>
+        </div>
+
+        <!-- البحث عن طريق -->
+        <div class="col-md-3">
+          <app-drop-down
+            [fg]="filterForm"
+            fcn="searchType"
+            [label]="'families.refugeeSearchType'"
+            [initialData]="searchTypeOptions"
+            [hasDefaultValue]="true"
+            (onDropDownChanged)="onSearchTypeChange()">
+          </app-drop-down>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-12">
+          <button class="btn btn-primary" type="button" (click)="onSearch()">
+            <i class="fe fe-search mr-1"></i>
+            {{ 'common.search' | translate }}
+          </button>
+          <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary ml-2" type="button" (click)="clearFilters()">
+            <i class="fe fe-x mr-1"></i>
+            {{ 'common.clearFilters' | translate }}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow mb-4">
+  <div class="card-body">
+    <!-- Toolbar: تسجيل أسرة لاجئة (UC-REF-03) — the endpoint authorises again server-side -->
+    <div class="d-flex justify-content-end mb-3" *ngIf="canCreate">
+      <a class="btn btn-primary" routerLink="/families/refugees/create">
+        <i class="fe fe-plus mr-1"></i>
+        {{ 'families.refugeeAddFamily' | translate }}
+      </a>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Refugee Families Table (§12.S.1 column order) -->
+    <div *ngIf="!loading" class="table-responsive">
+      <table class="table table-hover table-striped">
+        <thead>
+          <tr>
+            <th>{{ 'families.refugeeSerial' | translate }}</th>
+            <th>{{ 'families.refugeeFatherName' | translate }}</th>
+            <th>{{ 'families.refugeeMotherName' | translate }}</th>
+            <th>{{ 'families.refugeeChildren' | translate }}</th>
+            <th>{{ 'families.refugeePhones' | translate }}</th>
+            <th>{{ 'families.refugeeFamilyCode' | translate }}</th>
+            <th>{{ 'families.refugeeCharity' | translate }}</th>
+            <th>{{ 'common.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let family of families; let i = index; trackBy: trackByFamilyId">
+            <td>{{ getSerial(i) }}</td>
+            <td>{{ family.fatherName || '-' }}</td>
+            <td>{{ family.motherName || '-' }}</td>
+            <td>
+              <span class="badge badge-pill badge-primary">{{ family.orphansCount || 0 }}</span>
+            </td>
+            <td>{{ family.phoneNumber || '-' }}</td>
+            <td><strong>{{ family.code || '-' }}</strong></td>
+            <td>{{ family.charityName || '-' }}</td>
+            <td>
+              <div class="btn-group">
+                <!-- UC-REF-04 — opens the §12.S.2 read-only screen -->
+                <button type="button" class="btn btn-sm btn-light"
+                        [title]="'common.view' | translate"
+                        (click)="viewRefugeeFamily(family.id)">
+                  <i class="fe fe-eye"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="families.length === 0">
+            <td colspan="8" class="text-center py-5">
+              <div class="empty-state">
+                <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
+                <p class="text-muted">{{ 'families.refugeeNoFamilies' | translate }}</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <app-pagination
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
+  </div>
+</div>

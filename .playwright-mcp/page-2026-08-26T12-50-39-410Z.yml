@@ -1,0 +1,177 @@
+- generic [ref=f57e5]:
+  - navigation [ref=f57e6]:
+    - button "" [ref=f57e7] [cursor=pointer]
+    - list [ref=f57e9]:
+      - listitem [ref=f57e10]:
+        - link "English " [ref=f57e11] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f57e12]: 
+          - text: English 
+      - listitem [ref=f57e13]:
+        - link "" [ref=f57e14] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f57e16]:
+        - link "" [ref=f57e17] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f57e20]:
+        - button [ref=f57e21] [cursor=pointer]:
+          - generic [ref=f57e22]:
+            - text: Welcome System Admin
+            - img "..." [ref=f57e23]
+          - text: 
+  - complementary [ref=f57e24]:
+    - generic [ref=f57e29]:
+      - text: 
+      - navigation [ref=f57e30]:
+        - link [ref=f57e32] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f57e33]
+        - paragraph [ref=f57e34]: Website Elements
+        - list [ref=f57e35]:
+          - listitem [ref=f57e36]:
+            - link " Home Page (current) " [ref=f57e37] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f57e38]: 
+              - generic [ref=f57e39]: Home Page
+              - generic [ref=f57e40]: (current)
+              - text: 
+            - list [ref=f57e41]:
+              - listitem [ref=f57e42]:
+                - link "Home" [ref=f57e43] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f57e44]:
+            - link " Users " [ref=f57e45] [cursor=pointer]:
+              - /url: "#user-management"
+              - generic [ref=f57e46]: 
+              - generic [ref=f57e47]: Users
+              - text: 
+          - listitem [ref=f57e48]:
+            - link " Employees " [ref=f57e49] [cursor=pointer]:
+              - /url: "#employees"
+              - generic [ref=f57e50]: 
+              - generic [ref=f57e51]: Employees
+              - text: 
+            - list [ref=f57e52]:
+              - listitem [ref=f57e53]:
+                - link "All Employees" [ref=f57e54] [cursor=pointer]:
+                  - /url: "#/employees"
+              - listitem [ref=f57e55]:
+                - link "Add Employee" [ref=f57e56] [cursor=pointer]:
+                  - /url: "#/employees/create"
+          - listitem [ref=f57e57]:
+            - link " NGOs " [ref=f57e58] [cursor=pointer]:
+              - /url: "#charities"
+              - generic [ref=f57e59]: 
+              - generic [ref=f57e60]: NGOs
+              - text: 
+          - listitem [ref=f57e61]:
+            - link " Office Projects " [ref=f57e62] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f57e63]: 
+              - generic [ref=f57e64]: Office Projects
+              - text: 
+          - listitem [ref=f57e65]:
+            - link " Housing Projects " [ref=f57e66] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f57e67]: 
+              - generic [ref=f57e68]: Housing Projects
+              - text: 
+          - listitem [ref=f57e69]:
+            - link " Seasonal Aid " [ref=f57e70] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f57e71]: 
+              - generic [ref=f57e72]: Seasonal Aid
+              - text: 
+          - listitem [ref=f57e73]:
+            - link " Incoming & Outgoing " [ref=f57e74] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f57e75]: 
+              - generic [ref=f57e76]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=f57e77]:
+            - link " Orphan Payments " [ref=f57e78] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f57e79]: 
+              - generic [ref=f57e80]: Orphan Payments
+              - text: 
+          - listitem [ref=f57e81]:
+            - link " Families " [ref=f57e82] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f57e83]: 
+              - generic [ref=f57e84]: Families
+              - text: 
+          - listitem [ref=f57e85]:
+            - link " Reports " [ref=f57e86] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f57e87]: 
+              - generic [ref=f57e88]: Reports
+              - text: 
+          - listitem [ref=f57e89]:
+            - link " General Cheques " [ref=f57e90] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f57e91]: 
+              - generic [ref=f57e92]: General Cheques
+              - text: 
+          - listitem [ref=f57e93]:
+            - link " Missions " [ref=f57e94] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f57e95]: 
+              - generic [ref=f57e96]: Missions
+              - text: 
+          - listitem [ref=f57e97]:
+            - link " Periodic Orphan Reports " [ref=f57e98] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f57e99]: 
+              - generic [ref=f57e100]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=f57e101]:
+            - link " Financial Transfers " [ref=f57e102] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f57e103]: 
+              - generic [ref=f57e104]: Financial Transfers
+              - text: 
+          - listitem [ref=f57e105]:
+            - link " Technical Support " [ref=f57e106] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f57e107]: 
+              - generic [ref=f57e108]: Technical Support
+              - text: 
+          - listitem [ref=f57e109]:
+            - link " Lookup Management " [ref=f57e110] [cursor=pointer]:
+              - /url: "#lookup-management"
+              - generic [ref=f57e111]: 
+              - generic [ref=f57e112]: Lookup Management
+              - text: 
+  - main [ref=f57e113]:
+    - generic [ref=f57e249]:
+      - generic [ref=f57e251]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f57e252]:
+          - heading "employees.assignRole" [level=3] [ref=f57e255]
+          - generic [ref=f57e256]:
+            - button "Back" [ref=f57e257] [cursor=pointer]:
+              - generic [ref=f57e258]: 
+              - text: Back
+            - button "Save" [ref=f57e259] [cursor=pointer]:
+              - generic [ref=f57e260]: 
+              - text: Save
+      - generic [ref=f57e268]:
+        - generic [ref=f57e269]:
+          - generic [ref=f57e270]: Role
+          - generic [ref=f57e273]:
+            - button " Assign Roles" [ref=f57e274] [cursor=pointer]:
+              - generic [ref=f57e275]:
+                - generic [ref=f57e276]: 
+                - text: Assign Roles
+            - button " Cancel" [ref=f57e277] [cursor=pointer]:
+              - generic [ref=f57e278]: 
+              - text: Cancel
+        - generic [ref=f57e281]:
+          - heading "Information" [level=6] [ref=f57e282]
+          - paragraph [ref=f57e283]: employees.assignRoleInfo
+  - contentinfo [ref=f57e213]:
+    - generic [ref=f57e215]:
+      - paragraph [ref=f57e217]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f57e219]: Version 1.0.0

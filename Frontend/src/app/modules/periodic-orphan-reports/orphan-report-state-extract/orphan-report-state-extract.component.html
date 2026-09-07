@@ -1,0 +1,154 @@
+<app-page-header [title]="i18nPrefix + '.title' | translate"
+                 [subtitle]="i18nPrefix + '.subtitle' | translate">
+</app-page-header>
+
+<!-- Extract criteria -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="mb-0">{{ 'periodicReports.extract.criteria' | translate }}</h6>
+    <button type="button" class="btn btn-outline-primary btn-sm" (click)="exportData()" [disabled]="loading">
+      <i class="bi bi-file-earmark-excel me-1"></i>{{ 'orphanReports.generate.export' | translate }}
+    </button>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <!-- الجمعية — HQ only (charity callers are server-pinned) -->
+      <div class="col-md-3" *ngIf="isHeadOffice">
+        <label class="form-label" for="charityId">{{ 'orphanReports.generate.charity' | translate }}</label>
+        <select id="charityId" class="form-select" [(ngModel)]="charityId" name="charityId">
+          <option value="">{{ 'common.all' | translate }}</option>
+          <option *ngFor="let charity of charities; trackBy: trackByCharityId"
+                  [ngValue]="charity.id">{{ charity.name }}</option>
+        </select>
+      </div>
+
+      <!-- رقم التقرير -->
+      <div class="col-md-3">
+        <label class="form-label" for="reportNo">{{ 'orphanReports.generate.reportNo' | translate }}</label>
+        <input type="text" class="form-control" id="reportNo" name="reportNo"
+               [(ngModel)]="reportNo"
+               [placeholder]="'orphanReports.generate.reportNoPlaceholder' | translate">
+      </div>
+
+      <!-- من تاريخ / إلى تاريخ -->
+      <div class="col-md-2">
+        <label class="form-label" for="dateFrom">{{ 'orphanReports.generate.dateFrom' | translate }}</label>
+        <input type="date" class="form-control" id="dateFrom" name="dateFrom" [(ngModel)]="dateFrom">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="dateTo">{{ 'orphanReports.generate.dateTo' | translate }}</label>
+        <input type="date" class="form-control" id="dateTo" name="dateTo" [(ngModel)]="dateTo">
+      </div>
+
+      <div class="col-md-12 text-end">
+        <button type="button" class="btn btn-primary" (click)="run()" [disabled]="loading">
+          <i class="bi bi-play-fill me-1"></i>{{ 'orphanReports.generate.run' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Results -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="mb-0">
+      {{ 'orphanReports.generate.results' | translate }}
+      <span class="badge bg-secondary ms-2" *ngIf="!loading && rows.length > 0">{{ rows.length }}</span>
+    </h6>
+    <small class="text-muted" *ngIf="!loading && totalCount > rows.length">
+      {{ 'orphanReports.generate.capped' | translate:{ shown: rows.length, total: totalCount } }}
+    </small>
+  </div>
+  <div class="card-body">
+    <app-loading *ngIf="loading" message="{{ 'common.loading' | translate }}"></app-loading>
+
+    <ng-container *ngIf="!loading">
+      <app-empty-state *ngIf="rows.length === 0"
+                       [title]="i18nPrefix + '.emptyTitle' | translate"
+                       [description]="i18nPrefix + '.emptyMessage' | translate">
+      </app-empty-state>
+
+      <div class="table-responsive" *ngIf="rows.length > 0">
+        <table class="table table-hover table-sm align-middle">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>{{ 'orphanReports.generate.columns.orphanCode' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.orphanName' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.charity' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.reportNo' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.reportDate' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.period' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.status' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.schoolType' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.school' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.degree' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.educationalLevel' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.medicalStatus' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.marriageDate' | translate }}</th>
+              <th>{{ 'orphanReports.generate.columns.deathDate' | translate }}</th>
+              <th *ngIf="state === 'refused'">{{ 'orphanReports.generate.columns.refuseReason' | translate }}</th>
+              <th>{{ 'common.actions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of pagedRows; let i = index; trackBy: trackByReportId">
+              <td>{{ serial(i) }}</td>
+              <td class="fw-bold">{{ row.orphanCode || '—' }}</td>
+              <td>{{ row.orphanName || '—' }}</td>
+              <td>{{ row.charityName || '—' }}</td>
+              <td>{{ row.reportNo || '—' }}</td>
+              <!-- Review P52 2026-08-24 (same as 9-11): null reportDate rendered an empty cell. -->
+              <td>{{ row.reportDate ? (row.reportDate | date:'yyyy-MM-dd') : '—' }}</td>
+              <td>
+                <span class="small">
+                  {{ (row.reportPeriodFrom | date:'yyyy-MM-dd') || '—' }} -
+                  {{ (row.reportPeriodTo | date:'yyyy-MM-dd') || '—' }}
+                </span>
+              </td>
+              <td>
+                <span class="badge"
+                      [ngClass]="row.isAccepted ? 'bg-success' : row.isRefused ? 'bg-danger' : 'bg-warning text-dark'">
+                  {{ 'periodicReports.status.' + (row.reviewStatus || 'pending').toLowerCase() | translate }}
+                </span>
+              </td>
+              <td>{{ row.schoolType || '—' }}</td>
+              <td>{{ row.school || '—' }}</td>
+              <td>{{ row.educationDegree || '—' }}</td>
+              <td>{{ row.educationalLevelName || '—' }}</td>
+              <td>{{ row.medicalStatus || '—' }}</td>
+              <td>{{ row.marriageDate ? (row.marriageDate | date:'yyyy-MM-dd') : '—' }}</td>
+              <td>{{ row.deathDate ? (row.deathDate | date:'yyyy-MM-dd') : '—' }}</td>
+              <!-- Review F7 2026-08-24: the refused reason is the point of this
+                   extract — make it prominent and red as the record describes. -->
+              <td *ngIf="state === 'refused'" class="text-danger fw-semibold">{{ row.refuseReason || '—' }}</td>
+              <!-- Charity hand-off: the full context one click away (§25.5 correction list) -->
+              <td>
+                <a class="btn btn-sm btn-outline-secondary" [routerLink]="['/periodic-orphan-reports', row.id]">
+                  <i class="bi bi-eye"></i>
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <nav *ngIf="rows.length > pageSize" aria-label="pagination">
+        <ul class="pagination pagination-sm justify-content-center mb-0">
+          <li class="page-item" [class.disabled]="currentPage === 1">
+            <a class="page-link" href="#" (click)="onPageChange(currentPage - 1); false">&laquo;</a>
+          </li>
+          <!-- Review P51b 2026-08-24 (same as 9-11): trackBy on the page-number *ngFor. -->
+          <li class="page-item" *ngFor="let page of [].constructor(totalPages); let i = index; trackBy: trackByPageIndex"
+              [class.active]="currentPage === i + 1">
+            <a class="page-link" href="#" (click)="onPageChange(i + 1); false">{{ i + 1 }}</a>
+          </li>
+          <li class="page-item" [class.disabled]="currentPage === totalPages">
+            <a class="page-link" href="#" (click)="onPageChange(currentPage + 1); false">&raquo;</a>
+          </li>
+        </ul>
+      </nav>
+    </ng-container>
+  </div>
+</div>

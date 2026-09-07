@@ -1,0 +1,28 @@
+<!-- §23.U.40 — the shared on-screen preview: the framed standalone document + native actions -->
+<div class="modal fade show d-block report-preview-backdrop" *ngIf="visible"
+     role="dialog" aria-modal="true" (click)="onBackdrop($event)">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ 'reports.preview.title' | translate }}</h5>
+        <button type="button" class="btn-close" (click)="close()"
+                [attr.aria-label]="'reports.preview.close' | translate"></button>
+      </div>
+      <div class="modal-body p-0">
+        <iframe #frame class="report-preview-frame" [src]="frameSrc"
+                [attr.title]="'reports.preview.title' | translate"></iframe>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="close()">
+          {{ 'reports.preview.close' | translate }}
+        </button>
+        <button type="button" class="btn btn-outline-primary" (click)="save()">
+          <i class="fe fe-download me-1"></i>{{ 'reports.preview.save' | translate }}
+        </button>
+        <button type="button" class="btn btn-primary" (click)="print()">
+          <i class="fe fe-printer me-1"></i>{{ 'reports.preview.print' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

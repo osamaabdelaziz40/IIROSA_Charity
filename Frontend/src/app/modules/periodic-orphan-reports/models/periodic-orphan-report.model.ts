@@ -5,6 +5,24 @@
 
 // ==================== PERIODIC ORPHAN REPORT MODELS ====================
 
+/** Orphan identity returned by the by-code lookup that prefaces report entry (UC-ORR-02). */
+export interface OrphanLookupDto {
+  orphanId: string;
+  code?: string;
+  fullName?: string;
+  charityId?: string;
+  charityName?: string;
+  gender?: string;
+  age?: number;
+  birthDate?: string;
+  familyId?: string;
+  familyCode?: string;
+  guardianName?: string;
+  totalReports: number;
+  pendingReports: number;
+  coded: boolean;
+}
+
 export interface PeriodicOrphanReportDto {
   id: string;
   orphanId: string;
@@ -107,6 +125,7 @@ export interface PeriodicOrphanReportDto {
   refuseReason?: string;
   refuseReasonId?: number;
   refuseReasonName?: string;
+  reviewComments?: string;
   messageId?: number;
 
   // Computed
@@ -133,17 +152,51 @@ export interface PeriodicOrphanReportListDto {
   charityId?: string;
   charityName?: string;
   prayerStatus?: string;
+  educationalLevelId?: number;
   educationalLevelName?: string;
   medicalStatus?: string;
   reviewed: boolean;
   isAccepted: boolean;
   isRefused: boolean;
+  reviewerId?: string;
   reviewerName?: string;
   reviewedDate?: string;
+  refuseReasonId?: number;
+  refuseReason?: string;
+  reviewComments?: string;
+  locked?: boolean;
   reviewStatus: string;
   married?: boolean;
   dead?: boolean;
   createdOn: string;
+
+  // §14.S.4 orphan-status wide grid (UC-ORR-09) — orphan/family/guardian flatten
+  orphanDateOfBirth?: string;
+  orphanGender?: string;
+  orphanNationalId?: string;
+  orphanPhone?: string;
+  familyCode?: string;
+  guardianName?: string;
+  guardianRelation?: string;
+  guardianNationalId?: string;
+  guardianJob?: string;
+  guardianEducationLevelName?: string;
+  regionName?: string;
+  centerName?: string;
+  cityVillage?: string;
+  address?: string;
+  homePhone?: string;
+  schoolType?: string;
+  faculty?: string;
+  school?: string;
+  marriageDate?: string;
+  deathDate?: string;
+  disease?: string;
+  disability?: string;
+  grade?: string;
+  specialization?: string;
+  educationDegree?: string;
+  updatedOn?: string;
 }
 
 export interface CreatePeriodicOrphanReportDto {
@@ -304,8 +357,11 @@ export interface ReviewPeriodicReportDto {
 
 export interface PeriodicOrphanReportFilterDto {
   searchTerm?: string;
+  orphanCode?: string;
+  orphanName?: string;
   orphanId?: string;
   charityId?: string;
+  reportNo?: string;
   reviewStatus?: string;
   reviewed?: boolean;
   isAccepted?: boolean;
@@ -318,6 +374,11 @@ export interface PeriodicOrphanReportFilterDto {
   medicalStatus?: string;
   active?: boolean;
   locked?: boolean;
+  andOr?: string;
+  schoolType?: string;
+  maritalStatus?: string;
+  educationalStatus?: string;
+  educationDegree?: string;
   pageNumber?: number;
   pageSize?: number;
   sortBy?: string;
@@ -330,7 +391,7 @@ export interface PeriodicOrphanReportSummaryDto {
   approvedReports: number;
   rejectedReports: number;
   lockedReports: number;
-  orphanId: number;
+  orphanId: string;
   orphanName?: string;
   totalReportsForOrphan: number;
 }
@@ -338,14 +399,31 @@ export interface PeriodicOrphanReportSummaryDto {
 export interface PeriodicOrphanReportPagedResult {
   items: PeriodicOrphanReportListDto[];
   totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+// 18-14 / UC-RPT-14 — status-grouped counts; pending is derived all − accepted − refused.
+// A null leg means its request failed — the tile renders "—" instead of a wrong number.
+export interface OrphanReportStatusCounts {
+  all: number | null;
+  accepted: number | null;
+  refused: number | null;
+  pending: number | null;
 }
 
 // ==================== ORPHAN SUMMARY REPORT MODELS ====================
 
 export interface OrphanReportFilterDto {
-  fromDate: string;
-  toDate: string;
+  /** Optional on the SPA side — the grouped branch (9-10) needs no window; the
+   *  numbers (9-15) and generate (9-11) branches always send both ends. */
+  fromDate?: string;
+  toDate?: string;
   charityId?: string;
+  reportNo?: string;
+  /** §14.U.15 — fill the statistics response's reportNumbers branch. */
+  includeReportNumbers?: boolean;
   regionId?: number;
   centerId?: number;
   sponsorshipStatus?: string;
@@ -363,7 +441,42 @@ export interface OrphanReportResultDto {
   metadata: OrphanReportMetadataDto;
   summary: OrphanReportSummaryDto;
   orphans: OrphanReportDto[];
+  /** §14.U.11 detailed periodic-report rows (UC-ORR-11). */
+  reports: OrphanReportDetailRow[];
+  reportsTotalCount: number;
   generatedOn: string;
+}
+
+/** One §14.U.11 detailed extract row — report dimensions + orphan identity + charity. */
+export interface OrphanReportDetailRow {
+  reportId: string;
+  reportNo?: string;
+  reportDate: string;
+  reportPeriodFrom?: string;
+  reportPeriodTo?: string;
+  orphanCode: string;
+  orphanName: string;
+  charityName?: string;
+  reviewStatus: string;
+  reviewed: boolean;
+  isAccepted: boolean;
+  isRefused: boolean;
+  refuseReason?: string;
+  schoolType?: string;
+  school?: string;
+  faculty?: string;
+  specialization?: string;
+  grade?: string;
+  educationDegree?: string;
+  educationalLevelId?: number;
+  educationalLevelName?: string;
+  medicalStatus?: string;
+  disease?: string;
+  disability?: string;
+  married?: boolean;
+  marriageDate?: string;
+  dead?: boolean;
+  deathDate?: string;
 }
 
 export interface OrphanReportMetadataDto {
@@ -525,4 +638,49 @@ export interface OrphanStatisticsDto {
   pendingCount: number;
   maleCount: number;
   femaleCount: number;
+  /** §14.S.3 grouped rows (UC-ORR-10) — one per educational status × level. */
+  groups: OrphanReportGroupCountRow[];
+  /** §14.U.15 numbers-in-period rows (UC-ORR-15) — filled when includeReportNumbers + window. */
+  reportNumbers: OrphanReportNumberRow[];
+  reportNumbersCount: number;
+  unnumberedReportsCount: number;
+}
+
+/** One §14.S.3 grouped-statistics row (UC-ORR-10). */
+export interface OrphanReportGroupCountRow {
+  educationalStatus: string;
+  educationalLevelName?: string;
+  femaleCount: number;
+  maleCount: number;
+  totalCount: number;
+}
+
+/** One §14.U.15 numbers-in-period row (UC-ORR-15). */
+export interface OrphanReportNumberRow {
+  reportId: string;
+  reportNo?: string | null;
+  orphanCode: string;
+  orphanName: string;
+  reportDate: string;
+  createdOn: string;
+  reviewStatus: string;
+}
+
+/** One document slot carried into the print payload (UC-ORR-17); bytes fetched by id (BR-12). */
+export interface OrphanReportFormAttachmentSlot {
+  /** orphanPhoto · certificate · medicalReport · deathCertificate · marriageContract */
+  slot: string;
+  id: string;
+}
+
+/**
+ * UC-ORR-17 print payload — POST /api/Reports/orphan-report-form/export/pdf. Per the
+ * client-side print ruling the endpoint returns composed data, not PDF bytes: this screen
+ * renders the official form and the browser's print-to-PDF produces the file.
+ */
+export interface OrphanReportFormPrintPayload {
+  /** Collapsed 24-template matrix: disabled|studying|not-studying + document sections. */
+  variant: string;
+  report: PeriodicOrphanReportDto;
+  attachments: OrphanReportFormAttachmentSlot[];
 }

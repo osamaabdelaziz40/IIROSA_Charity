@@ -1,0 +1,257 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'families.refugeeDetailTitle' | translate"
+  [subtitle]="family?.code || ('families.refugeeDetailSubtitle' | translate)"
+  [icon]="'fe fe-home'">
+</app-page-header>
+
+<div class="text-center py-5" *ngIf="loading">
+  <div class="spinner-border text-primary" role="status"></div>
+</div>
+
+<!-- P17 — the household read failed: an on-screen state, not just a toast -->
+<div class="card mb-4" *ngIf="!loading && loadFailed">
+  <div class="card-body text-center">
+    <p class="mb-3 text-danger">
+      <i class="fe fe-alert-circle mr-1"></i>
+      {{ 'families.refugeeDetailLoadFailed' | translate }}
+    </p>
+    <button type="button" class="btn btn-secondary" (click)="back()">
+      {{ 'common.back' | translate }}
+    </button>
+  </div>
+</div>
+
+<ng-container *ngIf="!loading && family">
+  <!-- §12.S.2 — بيانات الأسرة (read-only) -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">{{ 'families.refugeeSectionFamily' | translate }}</h5>
+    </div>
+    <div class="card-body">
+      <dl class="row detail-grid mb-0">
+        <dt class="col-md-3">{{ 'families.refugeeFamilyCode' | translate }}</dt>
+        <dd class="col-md-3">{{ family.code || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeHeadOfFamily' | translate }}</dt>
+        <dd class="col-md-3">{{ provider?.fullName || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeRegion' | translate }}</dt>
+        <dd class="col-md-3">{{ family.regionName || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeCenter' | translate }}</dt>
+        <dd class="col-md-3">{{ family.centerName || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeCityVillage' | translate }}</dt>
+        <dd class="col-md-3">{{ family.cityVillage || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeNearBy' | translate }}</dt>
+        <dd class="col-md-3">{{ family.nearBy || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeStreet' | translate }}</dt>
+        <dd class="col-md-3">{{ family.street || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeAddress' | translate }}</dt>
+        <dd class="col-md-3">{{ family.address || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeePhone' | translate }}</dt>
+        <dd class="col-md-3">{{ family.phoneNumber || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeHouseOwnership' | translate }}</dt>
+        <dd class="col-md-3">{{ family.houseOwnershipName || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeHouseStatus' | translate }}</dt>
+        <dd class="col-md-3">{{ family.houseStatusName || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeHousingType' | translate }}</dt>
+        <dd class="col-md-3">{{ family.housingTypeName || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeIncomeType' | translate }}</dt>
+        <dd class="col-md-3">{{ family.incomeTypeName || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeRentAmount' | translate }}</dt>
+        <dd class="col-md-3">{{ family.rentAmount ?? '—' }}</dd>
+
+        <!-- P15 — computed read-only displays (الدخل الكلى / نصيب الفرد / عدد الأبناء) -->
+        <dt class="col-md-3">{{ 'families.refugeeTotalIncome' | translate }}</dt>
+        <dd class="col-md-3">{{ provider?.monthlyIncome ?? '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeePerMemberShare' | translate }}</dt>
+        <dd class="col-md-3">{{ family.perMemberShare ?? '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeChildrenCount' | translate }}</dt>
+        <dd class="col-md-3">{{ orphans.length }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeNotes' | translate }}</dt>
+        <dd class="col-md-9">{{ family.notes || '—' }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <!-- §12.S.2 — بيانات المعيل (read-only) -->
+  <div class="card mb-4" *ngIf="provider">
+    <div class="card-header">
+      <h5 class="mb-0">{{ 'families.refugeeSectionProvider' | translate }}</h5>
+    </div>
+    <div class="card-body">
+      <dl class="row detail-grid mb-0">
+        <dt class="col-md-3">{{ 'families.refugeeProviderName' | translate }}</dt>
+        <dd class="col-md-3">{{ provider.fullName || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeProviderNationalId' | translate }}</dt>
+        <dd class="col-md-3">{{ provider.nationalId || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeProviderDOB' | translate }}</dt>
+        <dd class="col-md-3">{{ provider.dateOfBirth?.slice(0, 10) || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeProviderNationality' | translate }}</dt>
+        <dd class="col-md-3">{{ countryName(provider.nationalityCountryId) }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeProviderRelation' | translate }}</dt>
+        <dd class="col-md-3">{{ provider.relationshipToFamily || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeProviderReasonOfRelation' | translate }}</dt>
+        <dd class="col-md-3">{{ provider.reasonOfRelationName || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeePhone' | translate }}</dt>
+        <dd class="col-md-3">{{ provider.phone || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeProviderJob' | translate }}</dt>
+        <dd class="col-md-3">{{ provider.job || '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeProviderMonthlyIncome' | translate }}</dt>
+        <dd class="col-md-3">{{ provider.monthlyIncome ?? '—' }}</dd>
+
+        <dt class="col-md-3">{{ 'families.refugeeProviderIsAlive' | translate }}</dt>
+        <dd class="col-md-3">
+          {{ (provider.isAlive !== false ? 'common.yes' : 'common.no') | translate }}
+        </dd>
+
+        <ng-container *ngIf="provider.isAlive === false">
+          <dt class="col-md-3">{{ 'families.refugeeProviderDeathDate' | translate }}</dt>
+          <dd class="col-md-3">{{ provider.deathDate?.slice(0, 10) || '—' }}</dd>
+
+          <dt class="col-md-3">{{ 'families.refugeeProviderDeathReason' | translate }}</dt>
+          <dd class="col-md-3">{{ provider.deathReason || '—' }}</dd>
+        </ng-container>
+      </dl>
+    </div>
+  </div>
+
+  <!-- §12.S.2 — الابناء -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">{{ 'families.refugeeSectionChildren' | translate }}</h5>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive" *ngIf="orphans.length; else noChildren">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>{{ 'families.refugeeChildName' | translate }}</th>
+              <th>{{ 'families.refugeeChildDOB' | translate }}</th>
+              <th>{{ 'families.refugeeChildGender' | translate }}</th>
+              <th>{{ 'families.refugeeChildNationalId' | translate }}</th>
+              <th>{{ 'families.refugeeChildSocialStatus' | translate }}</th>
+              <th>{{ 'families.refugeeChildHealthStatus' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let child of orphans; trackBy: trackById">
+              <td>{{ child.fullName }}</td>
+              <td>{{ child.dateOfBirth?.slice(0, 10) }}</td>
+              <td>{{ child.gender }}</td>
+              <td>{{ child.nationalId || '—' }}</td>
+              <td>{{ child.socialStatusName || '—' }}</td>
+              <td>{{ child.healthStatusName || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noChildren>
+        <p class="text-muted mb-0">{{ 'families.refugeeNoChildrenStaged' | translate }}</p>
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- §12.S.2 — المرافقون -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">{{ 'families.refugeeSectionCompanions' | translate }}</h5>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive" *ngIf="relatives.length; else noCompanions">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>{{ 'families.refugeeCompanionName' | translate }}</th>
+              <th>{{ 'families.refugeeCompanionNationalId' | translate }}</th>
+              <th>{{ 'families.refugeeCompanionDOB' | translate }}</th>
+              <th>{{ 'families.refugeeCompanionGender' | translate }}</th>
+              <th>{{ 'families.refugeeCompanionHealthStatus' | translate }}</th>
+              <th>{{ 'families.refugeeCompanionRelationship' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let companion of relatives; trackBy: trackById">
+              <td>{{ companion.fullName }}</td>
+              <td>{{ companion.nationalId || '—' }}</td>
+              <td>{{ companion.dateOfBirth?.slice(0, 10) }}</td>
+              <td>{{ companion.gender }}</td>
+              <td>{{ companion.healthStatusName || '—' }}</td>
+              <td>{{ companion.notes || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noCompanions>
+        <p class="text-muted mb-0">{{ 'families.refugeeNoCompanionsStaged' | translate }}</p>
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- §12.S.2 — شبكة الشيكات — wired but empty: no family-filtered payment read exists yet
+       (OrphanPaymentsController has none); data belongs to epic 10. Gap recorded in 7-4 notes. -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">{{ 'families.refugeeChequeSection' | translate }}</h5>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>{{ 'families.refugeeChequeBatch' | translate }}</th>
+              <th>{{ 'families.refugeeChequeNumber' | translate }}</th>
+              <th>{{ 'families.refugeeChequeDate' | translate }}</th>
+              <th>{{ 'families.refugeeChequeAmount' | translate }}</th>
+              <th>{{ 'families.refugeeChequeDelivered' | translate }}</th>
+              <th>{{ 'families.refugeeChequeReceiver' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="6" class="text-muted text-center">
+                {{ 'families.refugeeChequeEmpty' | translate }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="card">
+    <div class="card-body d-flex justify-content-end">
+      <button type="button" class="btn btn-secondary ml-2 mr-2" (click)="back()">
+        {{ 'common.back' | translate }}
+      </button>
+      <button type="button" class="btn btn-primary" *ngIf="canEdit" (click)="edit()">
+        <i class="fe fe-edit mr-1"></i>
+        {{ 'families.refugeeEditMembers' | translate }}
+      </button>
+    </div>
+  </div>
+</ng-container>

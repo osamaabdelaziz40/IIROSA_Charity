@@ -30,7 +30,7 @@
   <!-- File Icon with Download Link (for non-previewable files) -->
   <ng-container *ngIf="!loading && !hasError && !isImage && !isPdf">
     <div class="file-viewer-file">
-      <a [href]="downloadUrl" target="_blank" rel="noopener" class="file-link">
+      <a role="button" style="cursor: pointer" (click)="downloadFile()" class="file-link">
         <i [class]="getFileIcon()"></i>
         <span class="file-name">{{ fileName || 'Download File' }}</span>
         <i class="fe fe-download"></i>

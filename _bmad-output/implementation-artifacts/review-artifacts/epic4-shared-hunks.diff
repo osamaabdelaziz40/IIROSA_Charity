@@ -1,0 +1,557 @@
+diff --git a/Backend/src/IIROSA.Application/Services/MissionService.cs b/Backend/src/IIROSA.Application/Services/MissionService.cs
+index 6c60f51..b5b40ab 100644
+--- a/Backend/src/IIROSA.Application/Services/MissionService.cs
++++ b/Backend/src/IIROSA.Application/Services/MissionService.cs
+@@ -2,80 +2,107 @@ using IIROSA.Application.DTOs.MissionManagement;
+ using IIROSA.Application.Interfaces;
+ using IIROSA.Domain.Entities;
+ using IIROSA.Domain.Interfaces;
++using Microsoft.EntityFrameworkCore;
+ using Microsoft.Extensions.Logging;
+ using AutoMapper;
++using FluentValidation;
++using FluentValidation.Results;
+ 
+ namespace IIROSA.Application.Services;
+ 
+ /// <summary>
+ /// Mission Service Implementation
+-/// Implements business logic for Mission management following UC-8.1 to UC-8.13
+-/// Integrates with Framework.Core for notifications and Framework.Identity for user operations
+-/// IMPORTANT: Only Admin and Super Admin roles can access this service.
+-/// Charity users are explicitly blocked from this module.
++/// Business logic for Mission management (epic 15, UC-MSN-01…09)
++///
++/// Head-office module: only Admin and Super Admin reach it. The caller's country claim, when
++/// present, scopes every read and write — a pinned caller cannot enumerate, edit or delete
++/// another country's missions by omitting the filter, and the single-record paths treat an
++/// out-of-scope row exactly like a missing one. Only the UnitOfWork saves; validators run in
++/// this layer per the platform rule.
+ /// </summary>
+ public class MissionService : IMissionService
+ {
++    /// <summary>Upper bound for the page size a client can request in one call.</summary>
++    private const int MaxPageSize = 200;
++
+     private readonly IMissionRepository _missionRepository;
++    private readonly IUnitOfWork _unitOfWork;
+     private readonly IMapper _mapper;
+     private readonly ILogger<MissionService> _logger;
++    private readonly ICurrentUserService _currentUser;
++    private readonly IValidator<CreateMissionDto> _createValidator;
++    private readonly IValidator<UpdateMissionDto> _updateValidator;
++    private readonly IValidator<RegisterMissionResultDto> _registerResultValidator;
++    private readonly IMissionTypeRepository _missionTypeRepository;
++    private readonly IMissionTimeTypeRepository _missionTimeTypeRepository;
++    private readonly IMissionInterviewTypeRepository _missionInterviewTypeRepository;
++    private readonly ICountryRepository _countryRepository;
++    private readonly IRegionRepository _regionRepository;
++    private readonly ICenterRepository _centerRepository;
++    private readonly IEmployeeService _employeeService;
+ 
+     public MissionService(
+         IMissionRepository missionRepository,
++        IUnitOfWork unitOfWork,
+         IMapper mapper,
+-        ILogger<MissionService> logger)
++        ILogger<MissionService> logger,
++        ICurrentUserService currentUser,
++        IValidator<CreateMissionDto> createValidator,
++        IValidator<UpdateMissionDto> updateValidator,
++        IValidator<RegisterMissionResultDto> registerResultValidator,
++        IMissionTypeRepository missionTypeRepository,
++        IMissionTimeTypeRepository missionTimeTypeRepository,
++        IMissionInterviewTypeRepository missionInterviewTypeRepository,
++        ICountryRepository countryRepository,
++        IRegionRepository regionRepository,
++        ICenterRepository centerRepository,
++        IEmployeeService employeeService)
+     {
+         _missionRepository = missionRepository;
++        _unitOfWork = unitOfWork;
+         _mapper = mapper;
+         _logger = logger;
++        _currentUser = currentUser;
++        _createValidator = createValidator;
++        _updateValidator = updateValidator;
++        _registerResultValidator = registerResultValidator;
++        _missionTypeRepository = missionTypeRepository;
++        _missionTimeTypeRepository = missionTimeTypeRepository;
++        _missionInterviewTypeRepository = missionInterviewTypeRepository;
++        _countryRepository = countryRepository;
++        _regionRepository = regionRepository;
++        _centerRepository = centerRepository;
++        _employeeService = employeeService;
+     }
+ 
+-    // ========== CRUD Operations ==========
++    // ========== Reads ==========
+ 
+     /// <summary>
+-    /// Get missions with filtering and pagination (UC-8.10: View Mission List)
++    /// Get missions with filtering and pagination (UC-MSN-01 / UC-MSN-02)
+     /// </summary>
+     public async Task<MissionPagedResult<MissionListDto>> GetMissionsFilteredAsync(MissionFilterDto filter)
+     {
+         try
+         {
+-            _logger.LogInformation("Retrieving missions with filter: {@Filter}", filter);
++            filter ??= new MissionFilterDto();
+ 
+-            // Build filter expression
+-            System.Linq.Expressions.Expression<Func<Mission, bool>>? filterExpression = null;
+-
+-            if (filter != null)
+-            {
+-                filterExpression = m =>
+-                    (!filter.FK_MissionTypeId.HasValue || m.FK_MissionTypeId == filter.FK_MissionTypeId.Value) &&
+-                    (!filter.FK_MissionTimeTypeId.HasValue || m.FK_MissionTimeTypeId == filter.FK_MissionTimeTypeId.Value) &&
+-                    (!filter.FK_CountryId.HasValue || m.FK_CountryId == filter.FK_CountryId.Value) &&
+-                    (!filter.FK_RegionId.HasValue || m.FK_RegionId == filter.FK_RegionId.Value) &&
+-                    (!filter.FK_CenterId.HasValue || m.FK_CenterId == filter.FK_CenterId.Value) &&
+-                    (!filter.FK_UserId.HasValue || m.FK_UserId == filter.FK_UserId.Value) &&
+-                    (!filter.IsMissionCompleted.HasValue || m.IsMissionCompleted == filter.IsMissionCompleted.Value) &&
+-                    (!filter.StartDate.HasValue || m.MissionDate >= filter.StartDate.Value) &&
+-                    (!filter.EndDate.HasValue || m.MissionDate <= filter.EndDate.Value) &&
+-                    (string.IsNullOrWhiteSpace(filter.SearchText) ||
+-                     (m.MissionTarget != null && m.MissionTarget.Contains(filter.SearchText)));
+-
+-                // Add date range filter if specified
+-                if (filter.StartDate.HasValue && filter.EndDate.HasValue)
+-                {
+-                    var startDate = filter.StartDate.Value;
+-                    var endDate = filter.EndDate.Value;
+-                    filterExpression = m => m.MissionDate >= startDate && m.MissionDate <= endDate;
+-                }
+-            }
++            ApplyCallerScope(filter);
++
++            // Paging bounds arrive from the wire — clamp before Skip/Take so a zero or
++            // negative page cannot push Skip below zero, a zero page size cannot reach the
++            // total-pages division, and no caller can ask for the whole table in one call.
++            filter.Page = Math.Max(1, filter.Page);
++            filter.PageSize = Math.Clamp(filter.PageSize, 1, MaxPageSize);
++
++            _logger.LogInformation("Retrieving missions with filter: {@Filter}", filter);
+ 
+-            // Default ordering by mission date descending
+-            // Note: Ordering is handled in the repository call
++            var filterExpression = BuildFilterExpression(filter);
+ 
+             var (items, totalCount) = await _missionRepository.GetMissionsPagedAsync(
+                 filterExpression,
+                 q => q.OrderByDescending(m => m.MissionDate),
+-                filter?.Page ?? 1,
+-                filter?.PageSize ?? 20);
++                filter.Page,
++                filter.PageSize);
+ 
+             var missionDtos = _mapper.Map<List<MissionListDto>>(items);
+ 
+diff --git a/Frontend/src/app/modules/missions/mission-form/mission-form.component.ts b/Frontend/src/app/modules/missions/mission-form/mission-form.component.ts
+index 4b490d3..277eaae 100644
+--- a/Frontend/src/app/modules/missions/mission-form/mission-form.component.ts
++++ b/Frontend/src/app/modules/missions/mission-form/mission-form.component.ts
+@@ -154,172 +164,211 @@ export class MissionFormComponent implements OnInit, OnDestroy {
+   }
+ 
+   /**
+-   * Populate form with mission data
++   * Populate the form from the detail DTO, then rehydrate the cascade selects
++   * (regions for the mission's country, centers for its region).
+    */
+-  private populateForm(mission: Mission): void {
++  private populateForm(mission: MissionDetail): void {
+     this.missionForm.patchValue({
+       missionTarget: mission.missionTarget,
+       missionDetails: mission.missionDetails || '',
+       details: mission.details || '',
+-      missionTypeId: mission.missionTypeId,
+-      missionTimeTypeId: mission.missionTimeTypeId,
+-      missionDate: mission.missionDate.split('T')[0], // Format for date input
+-      countryId: mission.countryId || null,
+-      regionId: mission.regionId || null,
+-      centerId: mission.centerId || null,
++      missionTypeId: mission.missionTypeId ?? null,
++      missionTimeTypeId: mission.missionTimeTypeId ?? null,
++      missionInterviewTypeId: mission.missionInterviewTypeId ?? null,
++      missionDate: mission.missionDate.split('T')[0],
+       missionLocation: mission.missionLocation || '',
+       village: mission.village || '',
+-      assignedTo: mission.assignedTo,
+       entityName: mission.entityName || '',
+-      conferenceName: mission.conferenceName || ''
++      conferenceName: mission.conferenceName || '',
++      assignedToUserId: mission.assignedToUserId ?? null,
++      countryId: mission.countryId ?? null
+     });
+ 
+-    // Filter regions and centers based on selected country/region
++    // Cascade: regions need the country loaded first, then patch region → load centers
+     if (mission.countryId) {
+-      this.onCountryChange();
+-    }
+-    if (mission.regionId) {
+-      this.onRegionChange();
++      this.lookupService.getRegionsByCountry(mission.countryId)
++        .pipe(takeUntil(this.destroy$))
++        .subscribe({
++          next: regions => {
++            this.regions = regions || [];
++            this.missionForm.get('regionId')?.setValue(mission.regionId ?? null);
++
++            if (mission.regionId) {
++              this.lookupService.getCentersByRegion(mission.regionId)
++                .pipe(takeUntil(this.destroy$))
++                .subscribe({
++                  next: centers => {
++                    this.centers = centers || [];
++                    this.missionForm.get('centerId')?.setValue(mission.centerId ?? null);
++                  },
++                  error: () => this.handleCatalogueError()
++                });
++            }
++          },
++          error: () => this.handleCatalogueError()
++        });
+     }
+   }
+ 
+   /**
+-   * Load lookup data
++   * Load every §20.S.2 catalogue from its real endpoint
+    */
+-  private loadLookupData(): void {
+-    // TODO: Load from actual lookup services
+-    // For now, using static data as placeholders
+-
+-    this.missionTypes = [
+-      { id: 1, name: this.translate.instant('missions.missionTypeFieldwork') },
+-      { id: 2, name: this.translate.instant('missions.missionTypeConference') },
+-      { id: 3, name: this.translate.instant('missions.missionTypeTraining') },
+-      { id: 4, name: this.translate.instant('missions.missionTypeMeeting') },
+-      { id: 5, name: this.translate.instant('missions.missionTypeInspection') },
+-      { id: 6, name: this.translate.instant('missions.missionTypeOther') }
+-    ];
++  private loadCatalogues(): void {
++    // نوع المأموريه (15-3) / نوع التوقيت (15-5)
++    this.missionService.getMissionTypes()
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({ next: (items) => (this.missionTypes = items || []), error: () => this.handleCatalogueError() });
+ 
+-    this.missionTimeTypes = [
+-      { id: 1, name: this.translate.instant('missions.missionTimeTypeOneTime') },
+-      { id: 2, name: this.translate.instant('missions.missionTimeTypeDaily') },
+-      { id: 3, name: this.translate.instant('missions.missionTimeTypeWeekly') },
+-      { id: 4, name: this.translate.instant('missions.missionTimeTypeMonthly') },
+-      { id: 5, name: this.translate.instant('missions.missionTimeTypeQuarterly') },
+-      { id: 6, name: this.translate.instant('missions.missionTimeTypeAnnually') }
+-    ];
++    this.missionService.getMissionTimeTypes()
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({ next: (items) => (this.missionTimeTypes = items || []), error: () => this.handleCatalogueError() });
+ 
+-    // TODO: Load from LookupManagementService
+-    this.countries = [];
+-    this.regions = [];
+-    this.centers = [];
++    // نوع المقابلة (15-4)
++    this.missionService.getMissionInterviewTypes()
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({ next: (items) => (this.missionInterviewTypes = items || []), error: () => this.handleCatalogueError() });
+ 
+-    // TODO: Load from UserService
+-    this.users = [];
++    // الدول / الموظفون — regions and centers load on cascade
++    this.lookupService.getCountries({ isActive: true, page: 1, pageSize: 1000 })
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({ next: (result) => (this.countries = result.items || []), error: () => this.handleCatalogueError() });
++
++    this.employeeService.getEmployees({ page: 1, pageSize: 1000, isActive: true })
++      .pipe(takeUntil(this.destroy$))
++      .subscribe({
++        next: (result) => {
++          this.employees = (result.items || []).map((employee: Employee) => ({
++            id: employee.id,
++            fullName: employee.fullName || employee.email || employee.id
++          }));
++        },
++        error: () => this.handleCatalogueError()
++      });
+   }
+ 
+   /**
+-   * Handle country change
++   * A failed catalogue load must not pass silently — the actor would face an empty
++   * dropdown with no explanation.
++   */
++  private handleCatalogueError(): void {
++    this.notification.error(this.translate.instant('missions.catalogueLoadFailed'));
++  }
++
++  /**
++   * Country changed → reload regions, reset the region/center cascade
+    */
+   onCountryChange(): void {
+     const countryId = this.missionForm.get('countryId')?.value;
++    this.regions = [];
++    this.centers = [];
++    this.missionForm.get('regionId')?.setValue(null);
++    this.missionForm.get('centerId')?.setValue(null);
++
+     if (countryId) {
+-      this.filteredRegions = this.regions.filter(r => r.id === countryId); // Placeholder logic
+-      this.missionForm.get('regionId')?.setValue(null);
+-      this.missionForm.get('centerId')?.setValue(null);
+-      this.filteredCenters = [];
+-    } else {
+-      this.filteredRegions = [];
+-      this.filteredCenters = [];
++      this.lookupService.getRegionsByCountry(countryId)
++        .pipe(takeUntil(this.destroy$))
++        .subscribe({ next: (regions) => (this.regions = regions || []), error: () => this.handleCatalogueError() });
+     }
+   }
+ 
+   /**
+-   * Handle region change
++   * Region changed → reload centers, reset center
+    */
+   onRegionChange(): void {
+     const regionId = this.missionForm.get('regionId')?.value;
++    this.centers = [];
++    this.missionForm.get('centerId')?.setValue(null);
++
+     if (regionId) {
+-      this.filteredCenters = this.centers.filter(c => c.id === regionId); // Placeholder logic
+-      this.missionForm.get('centerId')?.setValue(null);
+-    } else {
+-      this.filteredCenters = [];
++      this.lookupService.getCentersByRegion(regionId)
++        .pipe(takeUntil(this.destroy$))
++        .subscribe({ next: (centers) => (this.centers = centers || []), error: () => this.handleCatalogueError() });
+     }
+   }
+ 
+   /**
+-   * Submit form
++   * Submit — create or update with the clean wire keys
+    */
+   onSubmit(): void {
+     if (this.missionForm.invalid) {
+       this.markFormGroupTouched(this.missionForm);
++      this.notification.error(this.translate.instant('missions.fixValidationErrors'));
+       return;
+     }
+ 
+     this.saving = true;
+-
+     const formValue = this.missionForm.value;
+ 
++    const request: CreateMissionRequest = {
++      missionTarget: formValue.missionTarget,
++      missionDetails: formValue.missionDetails,
++      details: formValue.details,
++      missionTypeId: formValue.missionTypeId,
++      missionTimeTypeId: formValue.missionTimeTypeId,
++      missionInterviewTypeId: formValue.missionInterviewTypeId,
++      missionDate: formValue.missionDate,
++      countryId: formValue.countryId,
++      regionId: formValue.regionId,
++      centerId: formValue.centerId,
++      missionLocation: formValue.missionLocation,
++      village: formValue.village,
++      entityName: formValue.entityName,
++      conferenceName: formValue.conferenceName,
++      assignedToUserId: formValue.assignedToUserId
++    };
++
+     if (this.isEditMode && this.mission) {
+-      const request: UpdateMissionRequest = {
+-        missionTarget: formValue.missionTarget,
+-        missionDetails: formValue.missionDetails || undefined,
+-        details: formValue.details || undefined,
+-        missionTypeId: formValue.missionTypeId,
+-        missionTimeTypeId: formValue.missionTimeTypeId,
+-        missionDate: formValue.missionDate,
+-        countryId: formValue.countryId || undefined,
+-        regionId: formValue.regionId || undefined,
+-        centerId: formValue.centerId || undefined,
+-        missionLocation: formValue.missionLocation || undefined,
+-        village: formValue.village || undefined,
+-        assignedTo: formValue.assignedTo,
+-        entityName: formValue.entityName || undefined,
+-        conferenceName: formValue.conferenceName || undefined
+-      };
+-
+-      this.missionService.updateMission(this.mission.id, request)
++      this.missionService.updateMission(this.mission.id, request as UpdateMissionRequest)
+         .pipe(takeUntil(this.destroy$))
+         .subscribe({
+           next: () => {
++            this.notification.success(this.translate.instant('missions.missionUpdated'));
+             this.saving = false;
+             this.router.navigate(['/missions', this.mission!.id]);
+           },
+-          error: () => {
+-            this.saving = false;
+-          }
++          error: (httpError) => this.handleSaveError(httpError, 'missions.updateFailed')
+         });
+     } else {
+-      const request: CreateMissionRequest = {
+-        missionTarget: formValue.missionTarget,
+-        missionDetails: formValue.missionDetails || undefined,
+-        details: formValue.details || undefined,
+-        missionTypeId: formValue.missionTypeId,
+-        missionTimeTypeId: formValue.missionTimeTypeId,
+-        missionDate: formValue.missionDate,
+-        countryId: formValue.countryId || undefined,
+-        regionId: formValue.regionId || undefined,
+-        centerId: formValue.centerId || undefined,
+-        missionLocation: formValue.missionLocation || undefined,
+-        village: formValue.village || undefined,
+-        assignedTo: formValue.assignedTo,
+-        entityName: formValue.entityName || undefined,
+-        conferenceName: formValue.conferenceName || undefined
+-      };
+-
+       this.missionService.createMission(request)
+         .pipe(takeUntil(this.destroy$))
+         .subscribe({
+           next: () => {
++            this.notification.success(this.translate.instant('missions.missionCreated'));
+             this.saving = false;
+             this.router.navigate(['/missions']);
+           },
+-          error: () => {
+-            this.saving = false;
+-          }
++          error: (httpError) => this.handleSaveError(httpError, 'missions.createFailed')
+         });
+     }
+   }
+ 
++  /**
++   * Surface the server's field→messages map (FluentValidation via the controller's
++   * BadRequest(new { message, errors }) shape): flag each named control and toast
++   * the summary message.
++   */
++  private handleSaveError(httpError: any, fallbackKey: string): void {
++    this.saving = false;
++
++    const errors = httpError?.error?.errors;
++    if (errors && typeof errors === 'object') {
++      for (const [field, messages] of Object.entries<any>(errors)) {
++        // Server keys are PascalCase DTO names ("MissionDate") — controls are camelCase
++        const controlName = field.charAt(0).toLowerCase() + field.slice(1);
++        const control = this.missionForm.get(controlName);
++        const message = Array.isArray(messages) ? messages.join(' · ') : String(messages);
++
++        if (control) {
++          control.setErrors({ server: true, serverMessage: message });
++          control.markAsTouched();
++        }
++      }
++      this.notification.error(httpError?.error?.message || this.translate.instant(fallbackKey));
++    } else {
++      this.notification.error(httpError?.error?.message || this.translate.instant(fallbackKey));
++    }
++  }
++
+   /**
+    * Cancel and go back
+    */
+diff --git a/Frontend/src/assets/i18n/ar.json b/Frontend/src/assets/i18n/ar.json
+index d51f239..bf13809 100644
+--- a/Frontend/src/assets/i18n/ar.json
++++ b/Frontend/src/assets/i18n/ar.json
+@@ -180,7 +181,17 @@
+     "editProfile": "تعديل الملف الشخصي",
+     "assignRole": "تعيين دور",
+     "permissions": "الصلاحيات",
+-    "manageEmployees": "إدارة الموظفين"
++    "manageEmployees": "إدارة الموظفين",
++    "accountInformation": "بيانات حساب الدخول",
++    "password": "كلمة المرور",
++    "emailPlaceholder": "name@example.com",
++    "emailLoginHint": "يُستخدم هذا البريد الإلكتروني كاسم لتسجيل الدخول",
++    "codeAutoHint": "يُولَّد تلقائياً إذا تُرك فارغاً",
++    "departmentsLoadFailed": "تعذر تحميل قائمة الأقسام",
++    "rolesLoadFailed": "تعذر تحميل قائمة الأدوار",
++    "employeeLoadFailed": "تعذر تحميل بيانات الموظفين",
++    "employeeCreateFailed": "تعذر إنشاء الموظف",
++    "employeeUpdateFailed": "تعذر تحديث الموظف"
+   },
+   "charities": {
+     "title": "الجمعيات",
+@@ -732,9 +773,12 @@
+     "selectAnOption": "اختر خياراً",
+     "fixErrors": "الرجاء إصلاح الأخطاء قبل الإرسال",
+     "nameTaken": "هذا الاسم مستخدم بالفعل لجمعية أخرى",
++    "emailTaken": "هذا البريد الإلكتروني مستخدم بالفعل",
++    "weakPassword": "كلمة المرور ضعيفة — استخدم 8 أحرف على الأقل مع أرقام ورموز",
+     "invalid": "قيمة غير صالحة",
+     "fileTooLarge": "حجم الملف يتجاوز الحد الأقصى المسموح به من 10 ميغابايت",
+-    "invalidFileType": "نوع الملف غير مسموح به. فقط الصور وملفات PDF ووثائق Word مسموحة."
++    "invalidFileType": "نوع الملف غير مسموح به. فقط الصور وملفات PDF ووثائق Word مسموحة.",
++    "invalidFormat": "صيغة غير صالحة"
+   },
+   "errors": {
+     "serverError": "حدث خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.",
+diff --git a/Frontend/src/assets/i18n/en.json b/Frontend/src/assets/i18n/en.json
+index b2034da..e224db9 100644
+--- a/Frontend/src/assets/i18n/en.json
++++ b/Frontend/src/assets/i18n/en.json
+@@ -149,7 +150,32 @@
+     "notes": "Notes",
+     "personalInformation": "Personal Information",
+     "employmentInformation": "Employment Information",
+-    "manageEmployees": "Manage Employees"
++    "manageEmployees": "Manage Employees",
++    "accountInformation": "Login Account",
++    "password": "Password",
++    "emailPlaceholder": "name@example.com",
++    "emailLoginHint": "This email address is the login name for the account",
++    "codeAutoHint": "Generated automatically when left blank",
++    "departmentsLoadFailed": "Could not load departments",
++    "rolesLoadFailed": "Could not load roles",
++    "employeeLoadFailed": "Could not load employees",
++    "employeeCreateFailed": "Could not create the employee",
++    "employeeUpdateFailed": "Could not update the employee",
++    "confirmEmployeeDeletion": "Are you sure you want to delete this employee?",
++    "confirmEmployeeDeactivation": "Are you sure you want to deactivate this employee?",
++    "confirmEmployeeActivation": "Are you sure you want to activate this employee?",
++    "confirmPasswordReset": "Are you sure you want to reset this employee's password?",
++    "employeeCreated": "Employee created successfully",
++    "employeeUpdated": "Employee updated successfully",
++    "employeeDeleted": "Employee deleted successfully",
++    "employeeDeactivated": "Employee deactivated successfully",
++    "employeeActivated": "Employee activated successfully",
++    "passwordReset": "Password reset successfully",
++    "noEmployeesFound": "No employees found",
++    "searchPlaceholder": "Search by name or email",
++    "allDepartments": "All Departments",
++    "allRoles": "All Roles",
++    "allStatus": "All Statuses"
+   },
+   "charities": {
+     "title": "Charities",
+@@ -712,12 +769,16 @@
+     "phoneInvalid": "Invalid phone number",
+     "nationalIdInvalid": "Invalid National ID",
+     "completionPercentageRange": "Completion percentage must be between 0 and 100",
++    "fixErrors": "Please fix the errors before submitting",
+     "looksGood": "Looks good!",
+     "selectAnOption": "Select an option",
+     "nameTaken": "This name is already used by another charity",
++    "emailTaken": "This email address is already in use",
++    "weakPassword": "Password is too weak — use at least 8 characters with numbers and symbols",
+     "invalid": "Invalid value",
+     "fileTooLarge": "File size exceeds the maximum allowed size of 10MB",
+-    "invalidFileType": "File type is not allowed. Only images, PDF, and Word documents are accepted."
++    "invalidFileType": "File type is not allowed. Only images, PDF, and Word documents are accepted.",
++    "invalidFormat": "Invalid format"
+   },
+   "errors": {
+     "serverError": "Server error occurred. Please try again later.",

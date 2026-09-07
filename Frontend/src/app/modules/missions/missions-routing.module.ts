@@ -1,8 +1,7 @@
 /**
- * Missions Routing Module
- * Route definitions for mission management
- * All routes restricted to Admin and Super Admin roles only
- * Charity users CANNOT access any mission routes
+ * Missions Routing Module (epic 15)
+ * Route definitions for mission management — AuthGuard + PermissionGuard with
+ * Missions.* permission entries (see auth.service.ts PERMISSION_ROLES).
  */
 
 import { NgModule } from '@angular/core';
@@ -12,55 +11,56 @@ import { RouterModule, Routes } from '@angular/router';
 import { MissionListComponent } from './mission-list/mission-list.component';
 import { MissionDetailComponent } from './mission-detail/mission-detail.component';
 import { MissionFormComponent } from './mission-form/mission-form.component';
-import { MyMissionsComponent } from './my-missions/my-missions.component';
+import { MissionRegisterComponent } from './mission-register/mission-register.component';
 
 // Guards
 import { AuthGuard } from '../../core/guards/auth.guard';
+import { PermissionGuard } from '../../core/guards/permission.guard';
 
 const missionsRoutes: Routes = [
   {
     path: '',
     component: MissionListComponent,
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, PermissionGuard],
     data: {
       pageTitle: 'missions.title',
-      roles: ['Admin', 'SuperAdmin']
+      permission: 'Missions.View'
     }
   },
   {
     path: 'create',
     component: MissionFormComponent,
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, PermissionGuard],
     data: {
       pageTitle: 'missions.addMission',
-      roles: ['Admin', 'SuperAdmin']
-    }
-  },
-  {
-    path: 'my-missions',
-    component: MyMissionsComponent,
-    canActivate: [AuthGuard],
-    data: {
-      pageTitle: 'missions.myMissions',
-      roles: ['Admin', 'SuperAdmin']
+      permission: 'Missions.Create'
     }
   },
   {
     path: ':id',
     component: MissionDetailComponent,
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, PermissionGuard],
     data: {
       pageTitle: 'missions.missionDetails',
-      roles: ['Admin', 'SuperAdmin']
+      permission: 'Missions.View'
     }
   },
   {
     path: ':id/edit',
     component: MissionFormComponent,
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, PermissionGuard],
     data: {
       pageTitle: 'missions.editMission',
-      roles: ['Admin', 'SuperAdmin']
+      permission: 'Missions.Edit'
+    }
+  },
+  {
+    path: ':id/register',
+    component: MissionRegisterComponent,
+    canActivate: [AuthGuard, PermissionGuard],
+    data: {
+      pageTitle: 'missions.registerResult',
+      permission: 'Missions.Edit'
     }
   }
 ];

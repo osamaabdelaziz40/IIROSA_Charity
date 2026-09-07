@@ -8,11 +8,12 @@ import { Role } from '../../../core/models/role.model';
 import { TranslateModule } from '@ngx-translate/core';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { DropDownComponent } from '../../../shared/components';
 
 @Component({
   selector: 'app-role-assignment',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslateModule, LoadingComponent, PageHeaderComponent],
+  imports: [CommonModule, ReactiveFormsModule, TranslateModule, LoadingComponent, PageHeaderComponent, DropDownComponent],
   templateUrl: './role-assignment.component.html',
   styleUrls: ['./role-assignment.component.scss']
 })
@@ -24,6 +25,9 @@ export class RoleAssignmentComponent implements OnInit {
   selectedRole: string = '';
   employeeName: string = '';
   employeeId: string = '';
+
+  // Select2 option array ({id, name}) — id is the role NAME the API expects.
+  roleOptions: Array<{ id: string; name: string }> = [];
 
   pageActions = [
     {
@@ -70,6 +74,7 @@ export class RoleAssignmentComponent implements OnInit {
       { id: '4', name: 'Accountant', description: 'Accountant', isSystemRole: true, userCount: 0, permissions: [] },
       { id: '5', name: 'FinancialOfficer', description: 'Financial Officer', isSystemRole: true, userCount: 0, permissions: [] }
     ];
+    this.roleOptions = this.allRoles.map(role => ({ id: role.name, name: role.name }));
   }
 
   loadEmployeeData(): void {

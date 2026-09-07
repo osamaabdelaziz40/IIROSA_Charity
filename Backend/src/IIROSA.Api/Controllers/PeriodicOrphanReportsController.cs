@@ -1,36 +1,39 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
-using System.ComponentModel.DataAnnotations;
-using IIROSA.Application.Interfaces;
-using IIROSA.Application.DTOs.PeriodicOrphanReport;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using IIROSA.Application.DTOs.PeriodicOrphanReport;
+using IIROSA.Application.Exceptions;
+using IIROSA.Application.Interfaces;
 
 namespace IIROSA.Api.Controllers;
 
 /// <summary>
-/// Periodic Orphan Reports Controller
-/// Implements UC-6.11 through UC-6.17 for Periodic Orphan Reports
+/// Periodic Orphan Reports Controller — epic 9 (UC-ORR-01 … UC-ORR-17, from WAR UC-6.11–6.17).
+/// Authorisation is enforced per endpoint (roles); data scoping to the caller's
+/// charity/country is enforced in the service layer, never here.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-public class PeriodicOrphanReportsController : ControllerBase
+public class PeriodicOrphanReportsController : ApiController
 {
     private readonly IPeriodicOrphanReportService _periodicReportService;
     private readonly ILogger<PeriodicOrphanReportsController> _logger;
 
     public PeriodicOrphanReportsController(
         IPeriodicOrphanReportService periodicReportService,
+        ILogger<ApiController> baseLogger,
         ILogger<PeriodicOrphanReportsController> logger)
+        : base(baseLogger)
     {
         _periodicReportService = periodicReportService;
         _logger = logger;
     }
 
-    #region CRUD Operations (UC-6.11)
+    #region CRUD Operations (UC-ORR-03 … UC-ORR-06)
 
     /// <summary>
-    /// Create new periodic orphan report - UC-6.11
+    /// Create new periodic orphan report - UC-ORR-03
     /// </summary>
     [HttpPost]
     [Authorize(Roles = "SuperAdmin,Admin,Charity")]
@@ -40,29 +43,38 @@ public class PeriodicOrphanReportsController : ControllerBase
     {
         try
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
             var report = await _periodicReportService.CreateReportAsync(dto);
             return CreatedAtAction(nameof(GetReport), new { id = report.Id }, report);
         }
-        catch (KeyNotFoundException ex)
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
+        }
+        catch (NotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
         }
-        catch (InvalidOperationException ex)
+        catch (BusinessException ex)
         {
             return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating periodic orphan report");
-            return StatusCode(500, new { message = "Error creating periodic orphan report", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while creating the periodic report" });
         }
     }
 
     /// <summary>
-    /// Get report by ID - UC-6.11, UC-6.13, UC-6.14, UC-6.15, UC-6.16
+    /// Get report by ID - UC-ORR-04 (view a periodic report)
     /// </summary>
     [HttpGet("{id}")]
     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
@@ -81,12 +93,12 @@ public class PeriodicOrphanReportsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving periodic orphan report: {Id}", id);
-            return StatusCode(500, new { message = "Error retrieving report", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while retrieving the report" });
         }
     }
 
     /// <summary>
-    /// Update periodic orphan report - UC-6.11
+    /// Update periodic orphan report - UC-ORR-05
     /// </summary>
     [HttpPut("{id}")]
     [Authorize(Roles = "SuperAdmin,Admin,Charity")]
@@ -98,33 +110,43 @@ public class PeriodicOrphanReportsController : ControllerBase
         try
         {
             dto.Id = id;
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
             var report = await _periodicReportService.UpdateReportAsync(dto);
             return Ok(report);
         }
-        catch (KeyNotFoundException ex)
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
+        }
+        catch (NotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
         }
-        catch (InvalidOperationException ex)
+        catch (BusinessException ex)
         {
             return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating periodic orphan report: {Id}", id);
-            return StatusCode(500, new { message = "Error updating report", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while updating the report" });
         }
     }
 
     /// <summary>
-    /// Delete periodic orphan report - UC-6.11
+    /// Delete periodic orphan report (soft delete) - UC-ORR-06
     /// </summary>
     [HttpDelete("{id}")]
     [Authorize(Roles = "SuperAdmin,Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> DeleteReport(Guid id)
     {
@@ -133,27 +155,57 @@ public class PeriodicOrphanReportsController : ControllerBase
             await _periodicReportService.DeleteReportAsync(id);
             return NoContent();
         }
-        catch (KeyNotFoundException ex)
+        catch (NotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
         }
-        catch (InvalidOperationException ex)
+        catch (BusinessException ex)
         {
             return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting periodic orphan report: {Id}", id);
-            return StatusCode(500, new { message = "Error deleting report", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while deleting the report" });
         }
     }
 
     #endregion
 
-    #region Review Operations (UC-6.13)
+    #region Orphan Lookup (UC-ORR-02)
 
     /// <summary>
-    /// Review periodic report (approve or reject) - UC-6.13
+    /// Look up an orphan by sponsorship code - UC-ORR-02.
+    /// Returns the orphan identity plus report counters, or 404 when the code is
+    /// unknown or outside the caller's scope.
+    /// </summary>
+    [HttpGet("by-code/{code}")]
+    [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
+    [ProducesResponseType(typeof(OrphanLookupDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OrphanLookupDto>> GetOrphanByCode(string code)
+    {
+        try
+        {
+            var orphan = await _periodicReportService.GetOrphanByCodeAsync(code);
+            if (orphan == null)
+                return NotFound(new { message = $"No orphan found with code '{code}'" });
+
+            return Ok(orphan);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error looking up orphan by code: {Code}", code);
+            return StatusCode(500, new { message = "An error occurred while looking up the orphan" });
+        }
+    }
+
+    #endregion
+
+    #region Review Operations (UC-ORR-07, UC-ORR-08)
+
+    /// <summary>
+    /// Review periodic report (accept or refuse) - UC-ORR-07 / UC-ORR-08
     /// Only Super Admin, Admin, Accountant, and Employee can review
     /// </summary>
     [HttpPost("{id}/review")]
@@ -166,118 +218,209 @@ public class PeriodicOrphanReportsController : ControllerBase
         try
         {
             dto.ReportId = id;
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
             var report = await _periodicReportService.ReviewReportAsync(dto);
             return Ok(report);
         }
-        catch (KeyNotFoundException ex)
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
+        }
+        catch (NotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
         }
-        catch (InvalidOperationException ex)
+        catch (BusinessException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Review D4 2026-08-26: out-of-scope or non-HQ review attempts are Forbid, not 500
+            // (also covers GetScopedReportAsync's tenancy refusal).
+            return Forbid();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error reviewing periodic orphan report: {Id}", id);
-            return StatusCode(500, new { message = "Error reviewing report", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while reviewing the report" });
         }
     }
 
     #endregion
 
-    #region List and Filter Operations (UC-6.14, UC-6.15, UC-6.16)
+    #region List and Filter Operations (UC-ORR-01, UC-ORR-09, UC-ORR-12, UC-ORR-13)
 
     /// <summary>
-    /// Get periodic reports with filtering and pagination - UC-6.14, UC-6.15, UC-6.16
+    /// Get periodic reports with filtering and pagination - UC-ORR-01 / UC-ORR-09
     /// </summary>
     [HttpGet]
     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-    public async Task<ActionResult> GetReports([FromQuery] PeriodicOrphanReportFilterDto filter)
+    [ProducesResponseType(typeof(PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>>> GetReports(
+        [FromQuery] PeriodicOrphanReportFilterDto filter)
     {
         try
         {
             var result = await _periodicReportService.GetReportsAsync(filter);
-            return Ok(new { result.Items, result.TotalCount });
+            return Ok(result);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving periodic orphan reports");
-            return StatusCode(500, new { message = "Error retrieving reports", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while retrieving reports" });
         }
     }
 
     /// <summary>
-    /// Get approved reports - UC-6.14
+    /// Get accepted reports - UC-ORR-12
     /// </summary>
     [HttpGet("approved")]
     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-    public async Task<ActionResult> GetApprovedReports([FromQuery] PeriodicOrphanReportFilterDto filter)
+    [ProducesResponseType(typeof(PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>>> GetApprovedReports(
+        [FromQuery] PeriodicOrphanReportFilterDto filter)
     {
         try
         {
             var result = await _periodicReportService.GetApprovedReportsAsync(filter);
-            return Ok(new { result.Items, result.TotalCount });
+            return Ok(result);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving approved periodic orphan reports");
-            return StatusCode(500, new { message = "Error retrieving approved reports", error = ex.Message });
+            _logger.LogError(ex, "Error retrieving accepted periodic orphan reports");
+            return StatusCode(500, new { message = "An error occurred while retrieving accepted reports" });
         }
     }
 
     /// <summary>
-    /// Get rejected reports - UC-6.15
+    /// Get refused reports - UC-ORR-13
     /// </summary>
     [HttpGet("rejected")]
     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-    public async Task<ActionResult> GetRejectedReports([FromQuery] PeriodicOrphanReportFilterDto filter)
+    [ProducesResponseType(typeof(PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>>> GetRejectedReports(
+        [FromQuery] PeriodicOrphanReportFilterDto filter)
     {
         try
         {
             var result = await _periodicReportService.GetRejectedReportsAsync(filter);
-            return Ok(new { result.Items, result.TotalCount });
+            return Ok(result);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                message = "One or more fields are invalid",
+                errors = ex.Errors
+                    .GroupBy(error => error.PropertyName ?? string.Empty)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray())
+            });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving rejected periodic orphan reports");
-            return StatusCode(500, new { message = "Error retrieving rejected reports", error = ex.Message });
+            _logger.LogError(ex, "Error retrieving refused periodic orphan reports");
+            return StatusCode(500, new { message = "An error occurred while retrieving refused reports" });
         }
     }
 
     /// <summary>
-    /// Get reports by orphan - UC-6.16
-    /// Returns orphan's complete periodic report history ordered by creation date (newest first)
+    /// Get reports by orphan - UC-ORR-01 (+ UC-HOU-06 §11.S.3 through the childOrParent param)
+    /// Returns the beneficiary's complete periodic report history, newest first. Without the
+    /// discriminator param this is the epic-9 orphan read, byte-identical. childOrParent=Child
+    /// keeps the strict child filter; childOrParent=Parent resolves the housing family's
+    /// guardian (beneficiaryId = provider id) and lists the family's guardian reports.
     /// </summary>
     [HttpGet("by-orphan/{orphanId}")]
     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-    public async Task<ActionResult> GetReportsByOrphan(Guid orphanId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
+    [ProducesResponseType(typeof(PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>>> GetReportsByOrphan(
+        Guid orphanId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20,
+        [FromQuery] string? childOrParent = null)
     {
         try
         {
+            // §11.S.3 discriminator: absent → epic-9 behaviour unchanged; Child/Parent → the
+            // housing read (strict ChildOrParent filter, guardian branch for Parent).
+            if (!string.IsNullOrWhiteSpace(childOrParent))
+            {
+                if (string.Equals(childOrParent, "Child", StringComparison.OrdinalIgnoreCase))
+                {
+                    var childResult = await _periodicReportService.GetHousingBeneficiaryReportsAsync(
+                        orphanId, IIROSA.Domain.Enums.ReportBeneficiaryType.Child, pageNumber, pageSize);
+                    return Ok(childResult);
+                }
+
+                if (string.Equals(childOrParent, "Parent", StringComparison.OrdinalIgnoreCase))
+                {
+                    var parentResult = await _periodicReportService.GetHousingBeneficiaryReportsAsync(
+                        orphanId, IIROSA.Domain.Enums.ReportBeneficiaryType.Parent, pageNumber, pageSize);
+                    return Ok(parentResult);
+                }
+
+                return BadRequest(new
+                {
+                    message = "Invalid childOrParent value",
+                    errors = new { childOrParent = new[] { "childOrParent must be 'Child' or 'Parent'" } }
+                });
+            }
+
             var result = await _periodicReportService.GetReportsByOrphanAsync(orphanId, pageNumber, pageSize);
-            return Ok(new { result.Items, result.TotalCount });
+            return Ok(result);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving periodic orphan reports for orphan: {OrphanId}", orphanId);
-            return StatusCode(500, new { message = "Error retrieving orphan reports", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while retrieving the orphan's reports" });
         }
     }
 
     /// <summary>
-    /// Get orphan report summary - UC-6.16
+    /// Get orphan report counters - UC-ORR-01
     /// </summary>
     [HttpGet("by-orphan/{orphanId}/summary")]
     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
     [ProducesResponseType(typeof(PeriodicOrphanReportSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PeriodicOrphanReportSummaryDto>> GetOrphanReportSummary(Guid orphanId)
     {
         try
@@ -285,39 +428,45 @@ public class PeriodicOrphanReportsController : ControllerBase
             var summary = await _periodicReportService.GetOrphanReportSummaryAsync(orphanId);
             return Ok(summary);
         }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving orphan report summary: {OrphanId}", orphanId);
-            return StatusCode(500, new { message = "Error retrieving summary", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while retrieving the summary" });
         }
     }
 
     #endregion
 
-    #region Export Operations (UC-6.17)
+    #region Export Operations (UC-ORR-11)
 
     /// <summary>
-    /// Export periodic reports to Excel - UC-6.17
+    /// Export periodic reports to Excel - UC-ORR-11
     /// </summary>
     [HttpPost("export")]
     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
-    public async Task<IActionResult> ExportToExcel([FromBody] PeriodicOrphanReportFilterDto filter, [FromQuery] bool includeAllFields = false)
+    public async Task<IActionResult> ExportToExcel(
+        [FromBody] PeriodicOrphanReportFilterDto filter, [FromQuery] bool includeAllFields = false)
     {
         try
         {
             var content = await _periodicReportService.ExportToExcelAsync(filter, includeAllFields);
-            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "PeriodicOrphanReports.xlsx");
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "PeriodicOrphanReports.xlsx");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error exporting periodic orphan reports to Excel");
-            return StatusCode(500, new { message = "Error exporting reports", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while exporting reports" });
         }
     }
 
     /// <summary>
-    /// Export orphan's report history to Excel - UC-6.16, UC-6.17
+    /// Export orphan's report history to Excel - UC-ORR-01 / UC-ORR-11
     /// </summary>
     [HttpPost("by-orphan/{orphanId}/export")]
     [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
@@ -327,21 +476,22 @@ public class PeriodicOrphanReportsController : ControllerBase
         try
         {
             var content = await _periodicReportService.ExportOrphanHistoryToExcelAsync(orphanId);
-            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Orphan_{orphanId}_Reports.xlsx");
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"Orphan_{orphanId}_Reports.xlsx");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error exporting orphan report history to Excel: {OrphanId}", orphanId);
-            return StatusCode(500, new { message = "Error exporting history", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while exporting the history" });
         }
     }
 
     #endregion
 
-    #region Status Management (UC-6.11)
+    #region Status Management
 
     /// <summary>
-    /// Lock report - UC-6.11
+    /// Lock report (prevent modifications)
     /// </summary>
     [HttpPost("{id}/lock")]
     [Authorize(Roles = "SuperAdmin,Admin,Charity")]
@@ -354,20 +504,19 @@ public class PeriodicOrphanReportsController : ControllerBase
             await _periodicReportService.LockReportAsync(id);
             return Ok(new { message = "Report locked successfully" });
         }
-        catch (KeyNotFoundException ex)
+        catch (NotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error locking periodic orphan report: {Id}", id);
-            return StatusCode(500, new { message = "Error locking report", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while locking the report" });
         }
     }
 
     /// <summary>
-    /// Unlock report - UC-6.11
-    /// Only Super Admin and Admin can unlock
+    /// Unlock report - Only Super Admin and Admin can unlock
     /// </summary>
     [HttpPost("{id}/unlock")]
     [Authorize(Roles = "SuperAdmin,Admin")]
@@ -380,19 +529,19 @@ public class PeriodicOrphanReportsController : ControllerBase
             await _periodicReportService.UnlockReportAsync(id);
             return Ok(new { message = "Report unlocked successfully" });
         }
-        catch (KeyNotFoundException ex)
+        catch (NotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error unlocking periodic orphan report: {Id}", id);
-            return StatusCode(500, new { message = "Error unlocking report", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while unlocking the report" });
         }
     }
 
     /// <summary>
-    /// Activate report - UC-6.11
+    /// Activate report
     /// </summary>
     [HttpPost("{id}/activate")]
     [Authorize(Roles = "SuperAdmin,Admin")]
@@ -405,19 +554,19 @@ public class PeriodicOrphanReportsController : ControllerBase
             await _periodicReportService.ActivateReportAsync(id);
             return Ok(new { message = "Report activated successfully" });
         }
-        catch (KeyNotFoundException ex)
+        catch (NotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error activating periodic orphan report: {Id}", id);
-            return StatusCode(500, new { message = "Error activating report", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while activating the report" });
         }
     }
 
     /// <summary>
-    /// Deactivate report - UC-6.11
+    /// Deactivate report
     /// </summary>
     [HttpPost("{id}/deactivate")]
     [Authorize(Roles = "SuperAdmin,Admin")]
@@ -430,23 +579,23 @@ public class PeriodicOrphanReportsController : ControllerBase
             await _periodicReportService.DeactivateReportAsync(id);
             return Ok(new { message = "Report deactivated successfully" });
         }
-        catch (KeyNotFoundException ex)
+        catch (NotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deactivating periodic orphan report: {Id}", id);
-            return StatusCode(500, new { message = "Error deactivating report", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while deactivating the report" });
         }
     }
 
     #endregion
 
-    #region Helper Methods
+    #region Helper Endpoints
 
     /// <summary>
-    /// Check if report can be edited
+    /// Check if report can be edited (not locked, not accepted)
     /// </summary>
     [HttpGet("{id}/can-edit")]
     [Authorize(Roles = "SuperAdmin,Admin,Charity")]
@@ -461,7 +610,30 @@ public class PeriodicOrphanReportsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking if report can be edited: {Id}", id);
-            return StatusCode(500, new { message = "Error checking edit status", error = ex.Message });
+            return StatusCode(500, new { message = "An error occurred while checking edit status" });
+        }
+    }
+
+    /// <summary>
+    /// Check if the current user can review reports - UC-ORR-07 / UC-ORR-08 gate
+    /// </summary>
+    [HttpGet("can-review")]
+    [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public async Task<ActionResult<bool>> CanReviewReports()
+    {
+        try
+        {
+            var userId = CurrentUserId is { Length: > 0 } && Guid.TryParse(CurrentUserId, out var parsed)
+                ? parsed
+                : Guid.Empty;
+            var canReview = await _periodicReportService.CanUserReviewReportsAsync(userId);
+            return Ok(new { canReview });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking review permission");
+            return StatusCode(500, new { message = "An error occurred while checking review permission" });
         }
     }
 

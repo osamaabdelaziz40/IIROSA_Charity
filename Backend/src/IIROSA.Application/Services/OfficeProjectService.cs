@@ -4,76 +4,77 @@ using IIROSA.Domain.Entities;
 using IIROSA.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 using AutoMapper;
+using FluentValidation;
 using Framework.Core.SharedServices.Services;
-using Framework.Core.SharedServices.Dto;
 
 namespace IIROSA.Application.Services;
 
 /// <summary>
-/// OfficeProject Service Implementation
-/// Implements business logic for OfficeProject management following UC-7.1 to UC-7.14
-/// IMPORTANT: Only Admin and Super Admin roles can access this service.
-/// Charity users are explicitly blocked from this module.
+/// OfficeProject Service Implementation (UC-OFP-01…06)
+///
+/// Head-office module: only Admin and Super Admin reach it. The caller's country claim, when
+/// present, scopes every read and write — a pinned caller cannot enumerate, edit or delete
+/// another country's projects by omitting the filter, and the single-record paths treat an
+/// out-of-scope row exactly like a missing one.
 /// </summary>
 public class OfficeProjectService : IOfficeProjectService
 {
-    private readonly IIROSA.Application.Interfaces.ICharityWriteGuard _charityWriteGuard;
+    private readonly ICharityWriteGuard _charityWriteGuard;
     private readonly IOfficeProjectRepository _projectRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly ILogger<OfficeProjectService> _logger;
     private readonly AttachmentService _attachmentService;
     private readonly IAttachmentHelperService _attachmentHelperService;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IValidator<CreateOfficeProjectDto> _createValidator;
+    private readonly IValidator<UpdateOfficeProjectDto> _updateValidator;
 
     public OfficeProjectService(
-        IIROSA.Application.Interfaces.ICharityWriteGuard charityWriteGuard,
+        ICharityWriteGuard charityWriteGuard,
         IOfficeProjectRepository projectRepository,
+        IUnitOfWork unitOfWork,
         IMapper mapper,
         ILogger<OfficeProjectService> logger,
         AttachmentService attachmentService,
-        IAttachmentHelperService attachmentHelperService)
+        IAttachmentHelperService attachmentHelperService,
+        ICurrentUserService currentUser,
+        IValidator<CreateOfficeProjectDto> createValidator,
+        IValidator<UpdateOfficeProjectDto> updateValidator)
     {
         _charityWriteGuard = charityWriteGuard;
         _projectRepository = projectRepository;
+        _unitOfWork = unitOfWork;
         _mapper = mapper;
         _logger = logger;
         _attachmentService = attachmentService;
         _attachmentHelperService = attachmentHelperService;
+        _currentUser = currentUser;
+        _createValidator = createValidator;
+        _updateValidator = updateValidator;
     }
 
-    // ========== CRUD Operations ==========
+    // ========== Reads (UC-OFP-01, UC-OFP-04) ==========
 
     /// <summary>
-    /// Get projects with filtering and pagination (UC-7.10: View Project List)
+    /// Get projects with filtering and pagination (UC-OFP-01: list)
     /// </summary>
     public async Task<OfficeProjectPagedResult<OfficeProjectListDto>> GetProjectsFilteredAsync(OfficeProjectFilterDto filter)
     {
         try
         {
+            filter ??= new OfficeProjectFilterDto();
+            ApplyCallerScope(filter);
+
             _logger.LogInformation("Retrieving office projects with filter: {@Filter}", filter);
 
-            // Build filter expression
-            System.Linq.Expressions.Expression<Func<OfficeProject, bool>>? filterExpression = null;
-
-            if (filter != null)
-            {
-                filterExpression = p =>
-                    (!filter.FK_OfficeProjectTypeId.HasValue || p.FK_OfficeProjectTypeId == filter.FK_OfficeProjectTypeId.Value) &&
-                    (!filter.FK_CountryId.HasValue || p.FK_CountryId == filter.FK_CountryId.Value) &&
-                    (!filter.FK_RegionId.HasValue || p.FK_RegionId == filter.FK_RegionId.Value) &&
-                    (!filter.FK_CenterId.HasValue || p.FK_CenterId == filter.FK_CenterId.Value) &&
-                    (!filter.FK_CharityId.HasValue || p.FK_CharityId == filter.FK_CharityId.Value) &&
-                    (!filter.IsFinished.HasValue || p.IsFinished == filter.IsFinished.Value) &&
-                    (!filter.StartDate.HasValue || p.ProjectDate >= filter.StartDate.Value) &&
-                    (!filter.EndDate.HasValue || p.ProjectDate <= filter.EndDate.Value) &&
-                    (string.IsNullOrWhiteSpace(filter.DonorName) || p.DonorName != null && p.DonorName.Contains(filter.DonorName)) &&
-                    (string.IsNullOrWhiteSpace(filter.SearchText) || p.ProjectName.Contains(filter.SearchText));
-            }
+            var filterExpression = BuildFilterExpression(filter);
 
             var (items, totalCount) = await _projectRepository.GetProjectsPagedAsync(
                 filterExpression,
                 q => q.OrderByDescending(p => p.ProjectDate),
-                filter?.Page ?? 1,
-                filter?.PageSize ?? 20);
+                filter.Page,
+                filter.PageSize);
 
             var projectDtos = _mapper.Map<List<OfficeProjectListDto>>(items);
 
@@ -81,8 +82,8 @@ public class OfficeProjectService : IOfficeProjectService
             {
                 Items = projectDtos,
                 TotalCount = totalCount,
-                Page = filter?.Page ?? 1,
-                PageSize = filter?.PageSize ?? 20
+                Page = filter.Page,
+                PageSize = filter.PageSize
             };
         }
         catch (Exception ex)
@@ -93,13 +94,19 @@ public class OfficeProjectService : IOfficeProjectService
     }
 
     /// <summary>
-    /// Get project by ID (UC-7.11: View Project Details)
+    /// Get project by ID with navigations and attachments (UC-OFP-04: view)
     /// </summary>
     public async Task<OfficeProjectDetailDto?> GetProjectByIdAsync(Guid id)
     {
         try
         {
-            return await GetByIdAsync(id);
+            var project = await _projectRepository.GetByIdWithDetailsAsync(id);
+            if (project == null || !IsWithinCallerScope(project))
+            {
+                return null;
+            }
+
+            return await MapDetailWithAttachmentsAsync(project);
         }
         catch (Exception ex)
         {
@@ -108,63 +115,46 @@ public class OfficeProjectService : IOfficeProjectService
         }
     }
 
+    // ========== Writes (UC-OFP-03, UC-OFP-04, UC-OFP-05) ==========
+
     /// <summary>
-    /// Create new project (UC-7.1: Create Office Project)
+    /// Create new project (UC-OFP-03)
     /// </summary>
     public async Task<OfficeProjectDetailDto> CreateProjectAsync(CreateOfficeProjectDto dto)
     {
         // UC-CHR-07/08/09: head office can lock a charity or withdraw its add/edit rights.
         await _charityWriteGuard.EnsureCanAddAsync();
 
+        await _createValidator.ValidateAndThrowAsync(dto);
+
         try
         {
             _logger.LogInformation("Creating new office project: {@Project}", dto);
 
-            // Validate location cascade (Country → Region → Center)
-            if (dto.FK_CenterId.HasValue && !dto.FK_RegionId.HasValue)
-            {
-                throw new InvalidOperationException("Region must be specified when Center is selected");
-            }
-
-            if (dto.FK_RegionId.HasValue && !dto.FK_CountryId.HasValue)
-            {
-                throw new InvalidOperationException("Country must be specified when Region is selected");
-            }
-
-            // Process document attachment
-            Guid? documentFileId = null;
-            if (dto.Document_Attach != null && dto.Document_Attach.Any())
-            {
-                var attachment = dto.Document_Attach.FirstOrDefault(a => !string.IsNullOrEmpty(a.FileName) && a.FileData != null);
-                if (attachment != null)
-                {
-                    documentFileId = await _attachmentHelperService.SaveAttachmentAsync(attachment);
-                }
-            }
-
-            // Process report attachment
-            Guid? reportFileId = null;
-            if (dto.Report_Attach != null && dto.Report_Attach.Any())
-            {
-                var attachment = dto.Report_Attach.FirstOrDefault(a => !string.IsNullOrEmpty(a.FileName) && a.FileData != null);
-                if (attachment != null)
-                {
-                    reportFileId = await _attachmentHelperService.SaveAttachmentAsync(attachment);
-                }
-            }
-
-            // Create project entity
             var project = _mapper.Map<OfficeProject>(dto);
-            project.FK_AttachedFileId = documentFileId;
-            project.FK_ProjectReportFileId = reportFileId;
 
-            // Save to database
+            // The record's country belongs to the caller when their token pins one: default it
+            // when omitted, pin it when another country was asked for.
+            if (_currentUser.CountryId.HasValue)
+            {
+                if (dto.CountryId.HasValue && dto.CountryId.Value != _currentUser.CountryId.Value)
+                {
+                    _logger.LogWarning(
+                        "Caller pinned to country {CallerCountry} tried to file a project under country {RequestedCountry}; pinning to {CallerCountry}",
+                        _currentUser.CountryId.Value, dto.CountryId.Value, _currentUser.CountryId.Value);
+                }
+                project.FK_CountryId = _currentUser.CountryId.Value;
+            }
+
+            project.FK_AttachedFileId = await SaveFirstAttachmentAsync(dto.Document_Attach);
+            project.FK_ProjectReportFileId = await SaveFirstAttachmentAsync(dto.Report_Attach);
+
             await _projectRepository.AddAsync(project);
-            await _projectRepository.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Office project created successfully with ID: {ProjectId}", project.Id);
 
-            return await GetByIdAsync(project.Id);
+            return (await GetProjectByIdAsync(project.Id))!;
         }
         catch (Exception ex)
         {
@@ -174,39 +164,24 @@ public class OfficeProjectService : IOfficeProjectService
     }
 
     /// <summary>
-    /// Update project (UC-7.8: Update Project Details)
+    /// Update project (UC-OFP-04). Null fields are left unchanged; a finished project can still
+    /// be corrected — §18.U.04 makes completion a data field, not a lock.
     /// </summary>
     public async Task<OfficeProjectDetailDto> UpdateProjectAsync(Guid id, UpdateOfficeProjectDto dto)
     {
         // UC-CHR-07/08/09: head office can lock a charity or withdraw its add/edit rights.
         await _charityWriteGuard.EnsureCanUpdateAsync();
 
+        await _updateValidator.ValidateAndThrowAsync(dto);
+
         try
         {
             var project = await _projectRepository.GetByIdAsync(id);
-            if (project == null)
+            if (project == null || !IsWithinCallerScope(project))
             {
                 throw new InvalidOperationException($"Office project with ID {id} not found");
             }
 
-            // Validate that project is not finished
-            if (project.IsFinished)
-            {
-                throw new InvalidOperationException("Cannot update a completed project");
-            }
-
-            // Validate location cascade
-            if (dto.FK_CenterId.HasValue && !dto.FK_RegionId.HasValue)
-            {
-                throw new InvalidOperationException("Region must be specified when Center is selected");
-            }
-
-            if (dto.FK_RegionId.HasValue && !dto.FK_CountryId.HasValue)
-            {
-                throw new InvalidOperationException("Country must be specified when Region is selected");
-            }
-
-            // Update only non-null properties
             if (!string.IsNullOrWhiteSpace(dto.ProjectName))
                 project.ProjectName = dto.ProjectName;
 
@@ -222,17 +197,19 @@ public class OfficeProjectService : IOfficeProjectService
             if (dto.IsFinished.HasValue)
                 project.IsFinished = dto.IsFinished.Value;
 
-            if (dto.FK_OfficeProjectTypeId.HasValue)
-                project.FK_OfficeProjectTypeId = dto.FK_OfficeProjectTypeId.Value;
+            if (dto.OfficeProjectTypeId.HasValue)
+                project.FK_OfficeProjectTypeId = dto.OfficeProjectTypeId.Value;
 
-            if (dto.FK_CountryId.HasValue)
-                project.FK_CountryId = dto.FK_CountryId.Value;
+            // Same country rule as create: a pinned caller cannot move a record out of their
+            // country, and the cascade (region needs country) is enforced by the validator.
+            if (dto.CountryId.HasValue)
+                project.FK_CountryId = _currentUser.CountryId ?? dto.CountryId.Value;
 
-            if (dto.FK_RegionId.HasValue)
-                project.FK_RegionId = dto.FK_RegionId.Value;
+            if (dto.RegionId.HasValue)
+                project.FK_RegionId = dto.RegionId.Value;
 
-            if (dto.FK_CenterId.HasValue)
-                project.FK_CenterId = dto.FK_CenterId.Value;
+            if (dto.CenterId.HasValue)
+                project.FK_CenterId = dto.CenterId.Value;
 
             if (dto.VillageName != null)
                 project.VillageName = dto.VillageName;
@@ -252,58 +229,23 @@ public class OfficeProjectService : IOfficeProjectService
             if (dto.BeneficiariesType != null)
                 project.BeneficiariesType = dto.BeneficiariesType;
 
-            if (dto.FK_CharityId.HasValue)
-                project.FK_CharityId = dto.FK_CharityId.Value;
-
-            // Process document attachment
-            if (dto.Document_Attach != null && dto.Document_Attach.Any())
-            {
-                var newAttachment = dto.Document_Attach.FirstOrDefault(a => !string.IsNullOrEmpty(a.FileName) && a.FileData != null && !a.IsDeleted && a.IsNew);
-                var deletedAttachment = dto.Document_Attach.FirstOrDefault(a => a.IsDeleted);
-
-                if (deletedAttachment != null && project.FK_AttachedFileId.HasValue)
-                {
-                    // Delete old attachment
-                    await _attachmentService.RemoveAsync(project.FK_AttachedFileId.Value);
-                    project.FK_AttachedFileId = null;
-                }
-
-                if (newAttachment != null)
-                {
-                    // Save new attachment
-                    project.FK_AttachedFileId = await _attachmentHelperService.SaveAttachmentAsync(newAttachment, project.FK_AttachedFileId);
-                }
-            }
-
-            // Process report attachment
-            if (dto.Report_Attach != null && dto.Report_Attach.Any())
-            {
-                var newAttachment = dto.Report_Attach.FirstOrDefault(a => !string.IsNullOrEmpty(a.FileName) && a.FileData != null && !a.IsDeleted && a.IsNew);
-                var deletedAttachment = dto.Report_Attach.FirstOrDefault(a => a.IsDeleted);
-
-                if (deletedAttachment != null && project.FK_ProjectReportFileId.HasValue)
-                {
-                    // Delete old attachment
-                    await _attachmentService.RemoveAsync(project.FK_ProjectReportFileId.Value);
-                    project.FK_ProjectReportFileId = null;
-                }
-
-                if (newAttachment != null)
-                {
-                    // Save new attachment
-                    project.FK_ProjectReportFileId = await _attachmentHelperService.SaveAttachmentAsync(newAttachment, project.FK_ProjectReportFileId);
-                }
-            }
+            if (dto.CharityId.HasValue)
+                project.FK_CharityId = dto.CharityId.Value;
 
             if (dto.Notes != null)
                 project.Notes = dto.Notes;
 
+            project.FK_AttachedFileId = await ApplyAttachmentChangeAsync(
+                dto.Document_Attach, project.FK_AttachedFileId);
+            project.FK_ProjectReportFileId = await ApplyAttachmentChangeAsync(
+                dto.Report_Attach, project.FK_ProjectReportFileId);
+
             _projectRepository.Update(project);
-            await _projectRepository.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Office project updated successfully: {ProjectId}", id);
 
-            return await GetByIdAsync(project.Id);
+            return (await GetProjectByIdAsync(project.Id))!;
         }
         catch (Exception ex)
         {
@@ -313,26 +255,21 @@ public class OfficeProjectService : IOfficeProjectService
     }
 
     /// <summary>
-    /// Delete project
+    /// Delete project — soft delete (UC-OFP-05). A finished project entered in error is
+    /// deletable like any other; §18.U.05 has no completion guard.
     /// </summary>
     public async Task DeleteProjectAsync(Guid id)
     {
         try
         {
             var project = await _projectRepository.GetByIdAsync(id);
-            if (project == null)
+            if (project == null || !IsWithinCallerScope(project))
             {
                 throw new InvalidOperationException($"Office project with ID {id} not found");
             }
 
-            // Validate that project is not finished
-            if (project.IsFinished)
-            {
-                throw new InvalidOperationException("Cannot delete a completed project");
-            }
-
             _projectRepository.Delete(project);
-            await _projectRepository.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Office project deleted successfully: {ProjectId}", id);
         }
@@ -343,219 +280,15 @@ public class OfficeProjectService : IOfficeProjectService
         }
     }
 
-    // ========== Project-Specific Operations ==========
-
     /// <summary>
-    /// Set project budget (UC-7.2: Set Project Budget)
-    /// </summary>
-    public async Task SetProjectBudgetAsync(Guid id, SetProjectBudgetDto dto)
-    {
-        try
-        {
-            var project = await _projectRepository.GetByIdAsync(id);
-            if (project == null)
-            {
-                throw new InvalidOperationException($"Office project with ID {id} not found");
-            }
-
-            if (project.IsFinished)
-            {
-                throw new InvalidOperationException("Cannot modify a completed project");
-            }
-
-            project.ProjectCostEGP = dto.ProjectCostEGP;
-            project.ProjectCostSAR = dto.ProjectCostSAR;
-
-            _projectRepository.Update(project);
-            await _projectRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Project budget updated for project {ProjectId}: EGP={EGP}, SAR={SAR}", id, dto.ProjectCostEGP, dto.ProjectCostSAR);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while setting project budget for project {ProjectId}", id);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Specify project donor (UC-7.3: Specify Project Donor)
-    /// </summary>
-    public async Task SpecifyProjectDonorAsync(Guid id, SpecifyProjectDonorDto dto)
-    {
-        try
-        {
-            var project = await _projectRepository.GetByIdAsync(id);
-            if (project == null)
-            {
-                throw new InvalidOperationException($"Office project with ID {id} not found");
-            }
-
-            if (project.IsFinished)
-            {
-                throw new InvalidOperationException("Cannot modify a completed project");
-            }
-
-            project.DonorName = dto.DonorName;
-
-            _projectRepository.Update(project);
-            await _projectRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Project donor specified for project {ProjectId}: {DonorName}", id, dto.DonorName);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while specifying project donor for project {ProjectId}", id);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Set beneficiaries count (UC-7.4: Set Beneficiaries Count)
-    /// </summary>
-    public async Task SetBeneficiariesCountAsync(Guid id, SetBeneficiariesCountDto dto)
-    {
-        try
-        {
-            var project = await _projectRepository.GetByIdAsync(id);
-            if (project == null)
-            {
-                throw new InvalidOperationException($"Office project with ID {id} not found");
-            }
-
-            if (project.IsFinished)
-            {
-                throw new InvalidOperationException("Cannot modify a completed project");
-            }
-
-            project.BeneficiariesCount = dto.BeneficiariesCount;
-            project.BeneficiariesType = dto.BeneficiariesType;
-
-            _projectRepository.Update(project);
-            await _projectRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Beneficiaries count set for project {ProjectId}: {Count} of {Type}", id, dto.BeneficiariesCount, dto.BeneficiariesType);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while setting beneficiaries count for project {ProjectId}", id);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Assign project location (UC-7.5: Assign Project Location)
-    /// </summary>
-    public async Task AssignProjectLocationAsync(Guid id, AssignProjectLocationDto dto)
-    {
-        try
-        {
-            var project = await _projectRepository.GetByIdAsync(id);
-            if (project == null)
-            {
-                throw new InvalidOperationException($"Office project with ID {id} not found");
-            }
-
-            if (project.IsFinished)
-            {
-                throw new InvalidOperationException("Cannot modify a completed project");
-            }
-
-            // Validate location cascade
-            if (dto.FK_CenterId.HasValue && !dto.FK_RegionId.HasValue)
-            {
-                throw new InvalidOperationException("Region must be specified when Center is selected");
-            }
-
-            if (dto.FK_RegionId.HasValue && !dto.FK_CountryId.HasValue)
-            {
-                throw new InvalidOperationException("Country must be specified when Region is selected");
-            }
-
-            project.FK_CountryId = dto.FK_CountryId;
-            project.FK_RegionId = dto.FK_RegionId;
-            project.FK_CenterId = dto.FK_CenterId;
-            project.VillageName = dto.VillageName;
-
-            _projectRepository.Update(project);
-            await _projectRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Project location updated for project {ProjectId}", id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while assigning project location for project {ProjectId}", id);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Attach project document (UC-7.6: Attach Project Documents)
-    /// </summary>
-    public async Task AttachProjectDocumentAsync(Guid id, AttachProjectDocumentDto dto)
-    {
-        try
-        {
-            var project = await _projectRepository.GetByIdAsync(id);
-            if (project == null)
-            {
-                throw new InvalidOperationException($"Office project with ID {id} not found");
-            }
-
-            // Allow document attachment even for finished projects
-
-            project.FK_AttachedFileId = dto.FK_AttachedFileId;
-
-            _projectRepository.Update(project);
-            await _projectRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Project document attached for project {ProjectId}: DocumentType={DocumentType}", id, dto.DocumentType);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while attaching project document for project {ProjectId}", id);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Upload project report (UC-7.7: Upload Project Report)
-    /// </summary>
-    public async Task UploadProjectReportAsync(Guid id, UploadProjectReportDto dto)
-    {
-        try
-        {
-            var project = await _projectRepository.GetByIdAsync(id);
-            if (project == null)
-            {
-                throw new InvalidOperationException($"Office project with ID {id} not found");
-            }
-
-            // Allow report upload even for finished projects
-
-            project.FK_ProjectReportFileId = dto.FK_ProjectReportFileId;
-
-            _projectRepository.Update(project);
-            await _projectRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Project report uploaded for project {ProjectId}: ReportType={ReportType}", id, dto.ReportType);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while uploading project report for project {ProjectId}", id);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Mark project as completed (UC-7.9: Mark Project as Completed)
+    /// Mark project as completed (module completion tracking, feeds the progress view)
     /// </summary>
     public async Task MarkProjectAsCompletedAsync(Guid id, MarkProjectCompletedDto dto)
     {
         try
         {
             var project = await _projectRepository.GetByIdAsync(id);
-            if (project == null)
+            if (project == null || !IsWithinCallerScope(project))
             {
                 throw new InvalidOperationException($"Office project with ID {id} not found");
             }
@@ -569,7 +302,7 @@ public class OfficeProjectService : IOfficeProjectService
             project.ProjectEndDate = dto.ProjectEndDate;
 
             _projectRepository.Update(project);
-            await _projectRepository.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Project marked as completed: {ProjectId}", id);
         }
@@ -580,165 +313,12 @@ public class OfficeProjectService : IOfficeProjectService
         }
     }
 
-    /// <summary>
-    /// Set project dates (UC-7.13: Set Project Dates)
-    /// </summary>
-    public async Task SetProjectDatesAsync(Guid id, SetProjectDatesDto dto)
-    {
-        try
-        {
-            var project = await _projectRepository.GetByIdAsync(id);
-            if (project == null)
-            {
-                throw new InvalidOperationException($"Office project with ID {id} not found");
-            }
-
-            if (project.IsFinished)
-            {
-                throw new InvalidOperationException("Cannot modify a completed project");
-            }
-
-            project.ProjectDate = dto.ProjectDate;
-            project.ProjectEndDate = dto.ProjectEndDate;
-
-            _projectRepository.Update(project);
-            await _projectRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Project dates updated for project {ProjectId}: Start={StartDate}, End={EndDate}", id, dto.ProjectDate, dto.ProjectEndDate);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while setting project dates for project {ProjectId}", id);
-            throw;
-        }
-    }
+    // ========== Report (UC-OFP-06) ==========
 
     /// <summary>
-    /// Assign project to charity (UC-7.14: Assign Project to Charity)
-    /// </summary>
-    public async Task AssignProjectToCharityAsync(Guid id, AssignProjectToCharityDto dto)
-    {
-        try
-        {
-            var project = await _projectRepository.GetByIdAsync(id);
-            if (project == null)
-            {
-                throw new InvalidOperationException($"Office project with ID {id} not found");
-            }
-
-            var previousCharityId = project.FK_CharityId;
-            project.FK_CharityId = dto.FK_CharityId;
-
-            _projectRepository.Update(project);
-            await _projectRepository.SaveChangesAsync();
-
-            _logger.LogInformation("Project assigned to charity for project {ProjectId}: CharityId={CharityId}", id, dto.FK_CharityId);
-
-            // TODO: Send notification to charity
-            _logger.LogInformation("TODO: Send notification to charity {CharityId} for project assignment", dto.FK_CharityId);
-
-            // Notify previous charity if changed
-            if (previousCharityId.HasValue && previousCharityId.Value != dto.FK_CharityId)
-            {
-                _logger.LogInformation("TODO: Send notification to previous charity {CharityId} for project reassignment", previousCharityId.Value);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while assigning project to charity for project {ProjectId}", id);
-            throw;
-        }
-    }
-
-    // ========== View Operations ==========
-
-    /// <summary>
-    /// Get projects assigned to a specific charity (UC-7.14)
-    /// </summary>
-    public async Task<OfficeProjectPagedResult<OfficeProjectListDto>> GetProjectsByCharityAsync(Guid charityId, OfficeProjectFilterDto filter)
-    {
-        try
-        {
-            _logger.LogInformation("Retrieving office projects for charity {CharityId}", charityId);
-
-            filter.FK_CharityId = charityId;
-            return await GetProjectsFilteredAsync(filter);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving office projects for charity {CharityId}", charityId);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Get project status summary (UC-7.12: Track Project Progress)
-    /// </summary>
-    public async Task<OfficeProjectStatusSummaryDto> GetProjectStatusSummaryAsync()
-    {
-        try
-        {
-            var allProjects = await _projectRepository.GetAllAsync();
-
-            var summary = new OfficeProjectStatusSummaryDto
-            {
-                OngoingCount = allProjects.Count(p => !p.IsFinished),
-                CompletedCount = allProjects.Count(p => p.IsFinished),
-                TotalCount = allProjects.Count(),
-                TotalCostEGP = allProjects.Where(p => p.ProjectCostEGP.HasValue).Sum(p => p.ProjectCostEGP),
-                TotalCostSAR = allProjects.Where(p => p.ProjectCostSAR.HasValue).Sum(p => p.ProjectCostSAR),
-                TotalBeneficiaries = allProjects.Where(p => p.BeneficiariesCount.HasValue).Sum(p => p.BeneficiariesCount)
-            };
-
-            _logger.LogInformation("Office project status summary retrieved: {@Summary}", summary);
-
-            return summary;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving office project status summary");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Get ongoing projects
-    /// </summary>
-    public async Task<List<OfficeProjectListDto>> GetOngoingProjectsAsync()
-    {
-        try
-        {
-            var ongoingProjects = await _projectRepository.GetOngoingProjectsAsync();
-            return _mapper.Map<List<OfficeProjectListDto>>(ongoingProjects);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving ongoing office projects");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Get completed projects
-    /// </summary>
-    public async Task<List<OfficeProjectListDto>> GetCompletedProjectsAsync()
-    {
-        try
-        {
-            var completedProjects = await _projectRepository.GetCompletedProjectsAsync();
-            return _mapper.Map<List<OfficeProjectListDto>>(completedProjects);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while retrieving completed office projects");
-            throw;
-        }
-    }
-
-    // ========== Export ==========
-
-    /// <summary>
-    /// Export projects to Excel (UC-7.10: Export to Excel)
+    /// Export projects to Excel (UC-OFP-06). Columns follow §18.S.1: الرقم، اسم المشروع، اسم
+    /// المتبرع، التكلفه بالجنيه، التكلفه بالريال، الجمعيه. The caller's country scope applies —
+    /// the report cannot be used to read around it.
     /// </summary>
     public async Task<byte[]> ExportProjectsToExcelAsync(OfficeProjectFilterDto filter)
     {
@@ -746,7 +326,6 @@ public class OfficeProjectService : IOfficeProjectService
         {
             _logger.LogInformation("Exporting office projects to Excel with filter: {@Filter}", filter);
 
-            // Get all projects (without pagination for export)
             var exportFilter = filter ?? new OfficeProjectFilterDto();
             exportFilter.Page = 1;
             exportFilter.PageSize = int.MaxValue;
@@ -755,53 +334,36 @@ public class OfficeProjectService : IOfficeProjectService
 
             using (var package = new OfficeOpenXml.ExcelPackage())
             {
-                var worksheet = package.Workbook.Worksheets.Add("Office Projects");
+                var worksheet = package.Workbook.Worksheets.Add("المشاريع التنموية");
 
-                // Add headers
-                worksheet.Cells[1, 1].Value = "Project Name";
-                worksheet.Cells[1, 2].Value = "Project Date";
-                worksheet.Cells[1, 3].Value = "Project Type";
-                worksheet.Cells[1, 4].Value = "Country";
-                worksheet.Cells[1, 5].Value = "Region";
-                worksheet.Cells[1, 6].Value = "Center";
-                worksheet.Cells[1, 7].Value = "Village";
-                worksheet.Cells[1, 8].Value = "Cost (EGP)";
-                worksheet.Cells[1, 9].Value = "Cost (SAR)";
-                worksheet.Cells[1, 10].Value = "Donor";
-                worksheet.Cells[1, 11].Value = "Beneficiaries";
-                worksheet.Cells[1, 12].Value = "Charity";
-                worksheet.Cells[1, 13].Value = "Status";
+                worksheet.Cells[1, 1].Value = "الرقم";
+                worksheet.Cells[1, 2].Value = "اسم المشروع";
+                worksheet.Cells[1, 3].Value = "اسم المتبرع";
+                worksheet.Cells[1, 4].Value = "التكلفه بالجنيه";
+                worksheet.Cells[1, 5].Value = "التكلفه بالريال";
+                worksheet.Cells[1, 6].Value = "الجمعيه";
 
-                // Style header row
-                using (var range = worksheet.Cells[1, 1, 1, 13])
+                using (var range = worksheet.Cells[1, 1, 1, 6])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
                     range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
                 }
 
-                // Add data rows
-                int row = 2;
+                var row = 2;
+                var serial = 1;
                 foreach (var project in result.Items)
                 {
-                    worksheet.Cells[row, 1].Value = project.ProjectName;
-                    worksheet.Cells[row, 2].Value = project.ProjectDate.ToString("yyyy-MM-dd");
-                    worksheet.Cells[row, 3].Value = project.ProjectType ?? "";
-                    worksheet.Cells[row, 4].Value = project.CountryName ?? "";
-                    worksheet.Cells[row, 5].Value = project.Region ?? "";
-                    worksheet.Cells[row, 6].Value = project.Center ?? "";
-                    worksheet.Cells[row, 7].Value = project.Village ?? "";
-                    worksheet.Cells[row, 8].Value = project.ProjectCostEGP?.ToString("F2") ?? "";
-                    worksheet.Cells[row, 9].Value = project.ProjectCostSAR?.ToString("F2") ?? "";
-                    worksheet.Cells[row, 10].Value = project.DonorName ?? "";
-                    worksheet.Cells[row, 11].Value = project.BeneficiariesCount?.ToString() ?? "";
-                    worksheet.Cells[row, 12].Value = project.AssignedCharity ?? "";
-                    worksheet.Cells[row, 13].Value = project.IsFinished ? "Completed" : "Ongoing";
+                    worksheet.Cells[row, 1].Value = serial++;
+                    worksheet.Cells[row, 2].Value = project.ProjectName;
+                    worksheet.Cells[row, 3].Value = project.DonorName ?? "";
+                    worksheet.Cells[row, 4].Value = project.ProjectCostEGP;
+                    worksheet.Cells[row, 5].Value = project.ProjectCostSAR;
+                    worksheet.Cells[row, 6].Value = project.AssignedCharity ?? "";
                     row++;
                 }
 
-                // Auto-fit columns
-                worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+                worksheet.Cells[1, 1, row - 1, 6].AutoFitColumns();
 
                 return package.GetAsByteArray();
             }
@@ -816,52 +378,130 @@ public class OfficeProjectService : IOfficeProjectService
     #region Private Helper Methods
 
     /// <summary>
-    /// Private helper method to get project by ID with attachments loaded
+    /// Pins the filter's country to the caller's country claim. The module is head-office only;
+    /// a caller whose token carries no country claim reads every country.
     /// </summary>
-    private async Task<OfficeProjectDetailDto?> GetByIdAsync(Guid id)
+    private void ApplyCallerScope(OfficeProjectFilterDto filter)
     {
-        var project = await _projectRepository.GetByIdAsync(id);
-        if (project == null) return null;
-
-        var dto = _mapper.Map<OfficeProjectDetailDto>(project);
-
-        // Load document attachment if FK_AttachedFileId exists
-        if (project.FK_AttachedFileId.HasValue)
+        var callerCountry = _currentUser.CountryId;
+        if (!callerCountry.HasValue)
         {
-            var attachments = await _attachmentService.GetAttachmentAsync(new List<Guid> { project.FK_AttachedFileId.Value });
-            if (attachments != null && attachments.Any())
-            {
-                dto.Document_Attach = attachments.Select(a => new Framework.Core.SharedServices.Dto.AttachmentDto
-                {
-                    Id = a.Id,
-                    FileName = a.FileName,
-                    ContentType = a.ContentType,
-                    FilePath = a.FilePath,
-                    Extension = a.Extension.TrimStart('.'),
-                    FileData = a.AttachmentContent.FileContent
-                }).ToList();
-            }
+            return;
         }
 
-        // Load report attachment if FK_ProjectReportFileId exists
+        if (filter.CountryId.HasValue && filter.CountryId.Value != callerCountry.Value)
+        {
+            _logger.LogWarning(
+                "Caller pinned to country {CallerCountry} requested country {RequestedCountry}; pinning to {CallerCountry}",
+                callerCountry.Value, filter.CountryId.Value, callerCountry.Value);
+        }
+
+        filter.CountryId = callerCountry;
+    }
+
+    /// <summary>
+    /// Whether the record is visible to the caller: a caller without a country claim sees
+    /// everything; a pinned caller sees only their own country's rows.
+    /// </summary>
+    private bool IsWithinCallerScope(OfficeProject project)
+    {
+        var callerCountry = _currentUser.CountryId;
+        return !callerCountry.HasValue || project.FK_CountryId == callerCountry.Value;
+    }
+
+    private static System.Linq.Expressions.Expression<Func<OfficeProject, bool>>? BuildFilterExpression(OfficeProjectFilterDto filter)
+    {
+        return p =>
+            (!filter.OfficeProjectTypeId.HasValue || p.FK_OfficeProjectTypeId == filter.OfficeProjectTypeId.Value) &&
+            (!filter.CountryId.HasValue || p.FK_CountryId == filter.CountryId.Value) &&
+            (!filter.RegionId.HasValue || p.FK_RegionId == filter.RegionId.Value) &&
+            (!filter.CenterId.HasValue || p.FK_CenterId == filter.CenterId.Value) &&
+            (!filter.CharityId.HasValue || p.FK_CharityId == filter.CharityId.Value) &&
+            (!filter.IsFinished.HasValue || p.IsFinished == filter.IsFinished.Value) &&
+            (!filter.StartDate.HasValue || p.ProjectDate >= filter.StartDate.Value) &&
+            (!filter.EndDate.HasValue || p.ProjectDate <= filter.EndDate.Value) &&
+            (string.IsNullOrWhiteSpace(filter.DonorName) || p.DonorName != null && p.DonorName.Contains(filter.DonorName)) &&
+            (string.IsNullOrWhiteSpace(filter.SearchText) || p.ProjectName.Contains(filter.SearchText));
+    }
+
+    /// <summary>
+    /// Create path: persist the first real upload in the list, if any.
+    /// </summary>
+    private async Task<Guid?> SaveFirstAttachmentAsync(List<Framework.Core.SharedServices.Dto.AttachmentDto>? attachments)
+    {
+        var attachment = attachments?.FirstOrDefault(a => !string.IsNullOrEmpty(a.FileName) && a.FileData != null);
+        return attachment == null
+            ? null
+            : await _attachmentHelperService.SaveAttachmentAsync(attachment);
+    }
+
+    /// <summary>
+    /// Update path: honour an explicit delete of the current attachment, then a replacement
+    /// upload, mirroring the shared attachment component's flags.
+    /// </summary>
+    private async Task<Guid?> ApplyAttachmentChangeAsync(
+        List<Framework.Core.SharedServices.Dto.AttachmentDto>? attachments,
+        Guid? currentFileId)
+    {
+        if (attachments == null || !attachments.Any())
+        {
+            return currentFileId;
+        }
+
+        if (attachments.Any(a => a.IsDeleted) && currentFileId.HasValue)
+        {
+            await _attachmentService.RemoveAsync(currentFileId.Value);
+            currentFileId = null;
+        }
+
+        var newAttachment = attachments.FirstOrDefault(a =>
+            !string.IsNullOrEmpty(a.FileName) && a.FileData != null && !a.IsDeleted && a.IsNew);
+
+        if (newAttachment != null)
+        {
+            currentFileId = await _attachmentHelperService.SaveAttachmentAsync(newAttachment, currentFileId);
+        }
+
+        return currentFileId;
+    }
+
+    /// <summary>
+    /// Map the detail DTO and load its two attachment lists from storage.
+    /// </summary>
+    private async Task<OfficeProjectDetailDto> MapDetailWithAttachmentsAsync(OfficeProject project)
+    {
+        var dto = _mapper.Map<OfficeProjectDetailDto>(project);
+
+        if (project.FK_AttachedFileId.HasValue)
+        {
+            dto.Document_Attach = await LoadAttachmentListAsync(project.FK_AttachedFileId.Value);
+        }
+
         if (project.FK_ProjectReportFileId.HasValue)
         {
-            var attachments = await _attachmentService.GetAttachmentAsync(new List<Guid> { project.FK_ProjectReportFileId.Value });
-            if (attachments != null && attachments.Any())
-            {
-                dto.Report_Attach = attachments.Select(a => new Framework.Core.SharedServices.Dto.AttachmentDto
-                {
-                    Id = a.Id,
-                    FileName = a.FileName,
-                    ContentType = a.ContentType,
-                    FilePath = a.FilePath,
-                    Extension = a.Extension.TrimStart('.'),
-                    FileData = a.AttachmentContent.FileContent
-                }).ToList();
-            }
+            dto.Report_Attach = await LoadAttachmentListAsync(project.FK_ProjectReportFileId.Value);
         }
 
         return dto;
+    }
+
+    private async Task<List<Framework.Core.SharedServices.Dto.AttachmentDto>?> LoadAttachmentListAsync(Guid fileId)
+    {
+        var attachments = await _attachmentService.GetAttachmentAsync(new List<Guid> { fileId });
+        if (attachments == null || !attachments.Any())
+        {
+            return null;
+        }
+
+        return attachments.Select(a => new Framework.Core.SharedServices.Dto.AttachmentDto
+        {
+            Id = a.Id,
+            FileName = a.FileName,
+            ContentType = a.ContentType,
+            FilePath = a.FilePath,
+            Extension = a.Extension.TrimStart('.'),
+            FileData = a.AttachmentContent.FileContent
+        }).ToList();
     }
 
     #endregion

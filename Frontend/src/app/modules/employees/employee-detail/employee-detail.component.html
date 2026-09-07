@@ -32,7 +32,7 @@
                 <table class="table table-sm table-borderless">
                   <tr>
                     <th>{{ 'employees.employeeCode' | translate }}:</th>
-                    <td>{{ employee.employeeCode || '-' }}</td>
+                    <td>{{ employee.code || '-' }}</td>
                   </tr>
                   <tr>
                     <th>{{ 'employees.fullName' | translate }}:</th>
@@ -71,6 +71,14 @@
                     <td>{{ employee.address || '-' }}</td>
                   </tr>
                   <tr>
+                    <th>{{ 'employees.loginAccount' | translate }}:</th>
+                    <td>
+                      <span class="badge" [ngClass]="employee.hasAccount ? 'badge-success' : 'badge-secondary'">
+                        {{ (employee.hasAccount ? 'employees.hasAccount' : 'employees.noAccount') | translate }}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
                     <th>{{ 'common.status' | translate }}:</th>
                     <td>
                       <span class="badge" [ngClass]="employee.isActive ? 'badge-success' : 'badge-danger'">
@@ -102,7 +110,7 @@
                   </tr>
                   <tr>
                     <th>{{ 'employees.department' | translate }}:</th>
-                    <td>{{ employee.department || '-' }}</td>
+                    <td>{{ employee.departmentName || '-' }}</td>
                   </tr>
                   <tr>
                     <th>{{ 'employees.hireDate' | translate }}:</th>
@@ -110,7 +118,7 @@
                   </tr>
                   <tr>
                     <th>{{ 'employees.salary' | translate }}:</th>
-                    <td>{{ employee.salary ? (employee.salary | currency:'USD') : '-' }}</td>
+                    <td>{{ employee.salary != null ? (employee.salary | currency:'USD') : '-' }}</td>
                   </tr>
                 </table>
               </div>

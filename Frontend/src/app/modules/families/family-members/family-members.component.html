@@ -1,0 +1,177 @@
+<app-page-header [title]="'families.members.title' | translate" [subtitle]="family?.code || ''"></app-page-header>
+
+<div class="container-fluid family-members">
+  <!-- Family banner -->
+  <div class="card mb-3" *ngIf="family">
+    <div class="card-body d-flex align-items-center justify-content-between flex-wrap">
+      <div>
+        <h5 class="mb-1">{{ family.code }}</h5>
+        <span class="text-muted" *ngIf="family.charityName">{{ family.charityName }}</span>
+      </div>
+      <a [routerLink]="['/families', familyId]" class="btn btn-outline-secondary btn-sm">
+        <i class="fe fe-arrow-left mr-1"></i>{{ 'families.members.backToFamily' | translate }}
+      </a>
+    </div>
+  </div>
+
+  <!-- Members grid (§10.S.3): الاسم · الرقم القومى · الصفة · الكود · عمليات -->
+  <div class="card">
+    <div class="card-header">
+      <h5 class="card-title mb-0">{{ 'families.members.gridTitle' | translate }}</h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="text-center py-5" *ngIf="loading">
+        <div class="spinner-border text-primary" role="status"></div>
+      </div>
+
+      <div class="table-responsive" *ngIf="!loading">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>{{ 'families.members.colName' | translate }}</th>
+              <th>{{ 'families.members.colNationalId' | translate }}</th>
+              <th>{{ 'families.members.colRelation' | translate }}</th>
+              <th>{{ 'families.members.colCode' | translate }}</th>
+              <th>{{ 'families.members.colActions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Guardian / provider row (UC-FAM-08, الصفة = العائل) — movable like an orphan;
+                 HQ roles also get the UC-FAM-13 remove-link action (حذف كفالة العائل). -->
+            <tr *ngIf="family?.provider as provider">
+              <td>{{ provider.fullName }}</td>
+              <td>{{ provider.nationalId || '-' }}</td>
+              <td>{{ 'families.members.relationProvider' | translate }}</td>
+              <td>{{ family?.code || '-' }}</td>
+              <td>
+                <button class="btn btn-sm btn-outline-primary" (click)="openMoveModal(provider, 2)"
+                        [title]="'families.members.move' | translate">
+                  <i class="fe fe-corner-up-right"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger ml-1" *ngIf="canRemoveLink"
+                        (click)="openDeleteModal()"
+                        [title]="'families.members.removeLink' | translate">
+                  <i class="fe fe-trash-2"></i>
+                </button>
+              </td>
+            </tr>
+
+            <!-- Father / mother rows render read-only (spec moves orphans and guardians only). -->
+            <tr *ngIf="family?.father as father">
+              <td>{{ father.fullName }}</td>
+              <td>{{ father.nationalId || '-' }}</td>
+              <td>{{ 'families.members.relationFather' | translate }}</td>
+              <td>{{ family?.code || '-' }}</td>
+              <td></td>
+            </tr>
+            <tr *ngIf="family?.mother as mother">
+              <td>{{ mother.fullName }}</td>
+              <td>{{ mother.nationalId || '-' }}</td>
+              <td>{{ 'families.members.relationMother' | translate }}</td>
+              <td>{{ family?.code || '-' }}</td>
+              <td></td>
+            </tr>
+
+            <tr *ngFor="let orphan of orphans; trackBy: trackByOrphan">
+              <td>{{ orphan.fullName }}</td>
+              <td>{{ orphan.nationalId || '-' }}</td>
+              <td>{{ 'families.members.relationOrphan' | translate }}</td>
+              <td>{{ orphan.code || '-' }}</td>
+              <td>
+                <button class="btn btn-sm btn-outline-primary" (click)="openMoveModal(orphan, 1)"
+                        [title]="'families.members.move' | translate">
+                  <i class="fe fe-corner-up-right"></i>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="loadError">
+              <td colspan="5" class="text-center text-danger py-4">
+                {{ 'families.members.loadFailed' | translate }}
+              </td>
+            </tr>
+            <tr *ngIf="!loading && !loadError && orphans.length === 0 && !family?.provider && !family?.father && !family?.mother">
+              <td colspan="5" class="text-center text-muted py-4">
+                {{ 'families.members.noMembers' | translate }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Move modal «هل انت متاكد من نقل ؟» -->
+<div class="modal-backdrop" *ngIf="showMoveModal"></div>
+<div class="modal-dialog" *ngIf="showMoveModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">{{ 'families.members.moveTitle' | translate }}</h5>
+      <button type="button" class="close" (click)="closeMoveModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info">
+        {{ 'families.members.moveMemberName' | translate }}: <strong>{{ moveTarget?.fullName }}</strong>
+      </div>
+
+      <div class="form-group">
+        <label>{{ 'families.members.targetFamilyCode' | translate }}</label>
+        <input type="text" class="form-control" name="moveTargetCode"
+               [(ngModel)]="moveTargetCode"
+               [placeholder]="'families.members.targetFamilyCodePlaceholder' | translate" />
+        <small class="form-text text-muted">{{ 'families.members.targetFamilyCodeHint' | translate }}</small>
+      </div>
+
+      <div class="form-group">
+        <label>{{ 'families.members.justification' | translate }}</label>
+        <textarea class="form-control" name="moveJustification" rows="3"
+                  [(ngModel)]="moveJustification"
+                  [placeholder]="'families.members.justificationPlaceholder' | translate"></textarea>
+        <small class="form-text text-muted">{{ 'families.members.justificationHint' | translate }}</small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeMoveModal()">
+        {{ 'families.members.cancel' | translate }}
+      </button>
+      <button type="button" class="btn btn-primary" [disabled]="moving" (click)="submitMove()">
+        <span class="spinner-border spinner-border-sm mr-1" *ngIf="moving"></span>
+        {{ 'families.members.confirmMove' | translate }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete-link modal «هل انت متاكد من حذف ؟» (UC-FAM-13 حذف كفالة العائل, §10.S.3) -->
+<div class="modal-backdrop" *ngIf="showDeleteModal"></div>
+<div class="modal-dialog" *ngIf="showDeleteModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">{{ 'families.members.removeLinkTitle' | translate }}</h5>
+      <button type="button" class="close" (click)="closeDeleteModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warning">
+        {{ 'families.members.removeLinkHint' | translate }}
+        <strong>{{ family?.provider?.fullName }}</strong>
+      </div>
+
+      <div class="form-group">
+        <label>{{ 'families.members.removeLinkComment' | translate }}</label>
+        <textarea class="form-control" name="deleteComment" rows="3" maxlength="500"
+                  [(ngModel)]="deleteComment"
+                  [placeholder]="'families.members.removeLinkCommentPlaceholder' | translate"></textarea>
+        <small class="form-text text-muted">{{ 'families.members.removeLinkCommentHint' | translate }}</small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeDeleteModal()">
+        {{ 'families.members.cancel' | translate }}
+      </button>
+      <button type="button" class="btn btn-danger" [disabled]="removing" (click)="submitRemoveLink()">
+        <span class="spinner-border spinner-border-sm mr-1" *ngIf="removing"></span>
+        {{ 'families.members.confirmRemoveLink' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

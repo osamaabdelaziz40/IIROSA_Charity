@@ -17,13 +17,13 @@
           <i class="fe fe-arrow-left mr-1"></i>
           {{ 'common.back' | translate }}
         </button>
-        <h2 class="page-title">{{ campaign.campaignName }}</h2>
+        <h2 class="page-title">{{ campaign.name }}</h2>
         <div class="d-flex align-items-center gap-2">
           <span class="badge" [ngClass]="getCampaignTypeClass(campaign.campaignType)">
             {{ 'seasonalAid.campaignTypes.' + campaign.campaignType | translate }}
           </span>
           <span class="badge" [ngClass]="getStatusBadgeClass()">
-            {{ getStatusText() }}
+            {{ getStatusText() | translate }}
           </span>
         </div>
       </div>
@@ -43,8 +43,8 @@
       </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="row mb-4" *ngIf="statistics">
+    <!-- Statistics Cards — computed from the campaign record itself; there is no separate statistics endpoint -->
+    <div class="row mb-4">
       <div class="col-md-3">
         <div class="card stat-card">
           <div class="card-body">
@@ -53,7 +53,7 @@
             </div>
             <div class="stat-details">
               <h6 class="stat-title">{{ 'seasonalAid.totalBeneficiaries' | translate }}</h6>
-              <h3 class="stat-value">{{ statistics.totalBeneficiaries }}</h3>
+              <h3 class="stat-value">{{ campaign.registeredBeneficiariesCount }}</h3>
             </div>
           </div>
         </div>
@@ -66,7 +66,7 @@
             </div>
             <div class="stat-details">
               <h6 class="stat-title">{{ 'seasonalAid.distributedBeneficiaries' | translate }}</h6>
-              <h3 class="stat-value">{{ statistics.distributedBeneficiaries }}</h3>
+              <h3 class="stat-value">{{ campaign.distributedBeneficiariesCount }}</h3>
             </div>
           </div>
         </div>
@@ -79,7 +79,7 @@
             </div>
             <div class="stat-details">
               <h6 class="stat-title">{{ 'seasonalAid.totalBudget' | translate }}</h6>
-              <h3 class="stat-value">{{ statistics.totalBudget | number }} {{ campaign.budgetCurrency }}</h3>
+              <h3 class="stat-value">{{ campaign.totalBudget | number }} {{ campaign.budgetCurrency }}</h3>
             </div>
           </div>
         </div>
@@ -93,7 +93,7 @@
             <div class="stat-details">
               <h6 class="stat-title">{{ 'seasonalAid.distributedAmount' | translate }}</h6>
               <h3 class="stat-value" [ngClass]="getBudgetUtilizationClass()">
-                {{ statistics.distributedAmount | number }} {{ campaign.budgetCurrency }}
+                {{ campaign.distributedBudget | number }} {{ campaign.budgetCurrency }}
               </h3>
             </div>
           </div>
@@ -114,7 +114,7 @@
               <div class="col-md-6">
                 <div class="info-group">
                   <label>{{ 'seasonalAid.campaignName' | translate }}</label>
-                  <div>{{ campaign.campaignName }}</div>
+                  <div>{{ campaign.name }}</div>
                 </div>
                 <div class="info-group">
                   <label>{{ 'seasonalAid.campaignType' | translate }}</label>
@@ -131,16 +131,16 @@
                 <div class="info-group">
                   <label>{{ 'seasonalAid.assignedCharity' | translate }}</label>
                   <div>
-                    {{ campaign.assignedCharityName || ('seasonalAid.allCharities' | translate) }}
+                    {{ campaign.charityName || ('seasonalAid.allCharities' | translate) }}
                   </div>
                 </div>
                 <div class="info-group">
                   <label>{{ 'seasonalAid.maximumFamilies' | translate }}</label>
-                  <div>{{ campaign.maximumFamilies || ('common.unlimited' | translate) }}</div>
+                  <div>{{ campaign.maximumFamilies || ('seasonalAid.unlimited' | translate) }}</div>
                 </div>
                 <div class="info-group">
                   <label>{{ 'seasonalAid.familyType' | translate }}</label>
-                  <div>{{ 'seasonalAid.familyTypes.' + campaign.familyType | translate }}</div>
+                  <div>{{ 'seasonalAid.familyTypes.' + familyTypeKey(campaign.familyType) | translate }}</div>
                 </div>
               </div>
             </div>
@@ -208,15 +208,15 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let beneficiary of beneficiaries">
+                  <tr *ngFor="let beneficiary of beneficiaries; trackBy: trackByBeneficiary">
                     <td>{{ beneficiary.familyCode }}</td>
                     <td>{{ beneficiary.familyAddress }}</td>
                     <td>{{ beneficiary.charityName }}</td>
-                    <td>{{ beneficiary.orphanCount }}</td>
-                    <td>{{ beneficiary.allocatedAmount | number }} {{ campaign.budgetCurrency }}</td>
+                    <td>{{ beneficiary.orphansCount }}</td>
+                    <td>{{ beneficiary.allocationAmount | number }} {{ beneficiary.currency }}</td>
                     <td>
-                      <span class="badge" [ngClass]="getDistributionStatusClass(beneficiary.distributionStatus)">
-                        {{ 'seasonalAid.distributionStatuses.' + beneficiary.distributionStatus | translate }}
+                      <span class="badge" [ngClass]="getDistributionStatusClass(beneficiary)">
+                        {{ getDistributionStatusKey(beneficiary) | translate }}
                       </span>
                     </td>
                   </tr>
@@ -249,17 +249,17 @@
               <label>{{ 'seasonalAid.perFamilyAllocation' | translate }}</label>
               <div class="text-value">{{ campaign.perFamilyAllocation | number }} {{ campaign.budgetCurrency }}</div>
             </div>
-            <div class="info-group" *ngIf="statistics">
+            <div class="info-group">
               <label>{{ 'seasonalAid.allocatedAmount' | translate }}</label>
-              <div class="text-value">{{ statistics.allocatedAmount | number }} {{ campaign.budgetCurrency }}</div>
+              <div class="text-value">{{ campaign.allocatedBudget | number }} {{ campaign.budgetCurrency }}</div>
             </div>
-            <div class="info-group" *ngIf="statistics">
+            <div class="info-group">
               <label>{{ 'seasonalAid.distributedAmount' | translate }}</label>
-              <div class="text-value">{{ statistics.distributedAmount | number }} {{ campaign.budgetCurrency }}</div>
+              <div class="text-value">{{ campaign.distributedBudget | number }} {{ campaign.budgetCurrency }}</div>
             </div>
-            <div class="info-group" *ngIf="statistics">
+            <div class="info-group">
               <label>{{ 'seasonalAid.remainingBudget' | translate }}</label>
-              <div class="text-value">{{ statistics.remainingBudget | number }} {{ campaign.budgetCurrency }}</div>
+              <div class="text-value">{{ campaign.remainingBudget | number }} {{ campaign.budgetCurrency }}</div>
             </div>
           </div>
         </div>
@@ -272,15 +272,15 @@
           <div class="card-body">
             <div class="info-group">
               <label>{{ 'seasonalAid.country' | translate }}</label>
-              <div>{{ campaign.country }}</div>
+              <div>{{ campaign.countryName || ('common.all' | translate) }}</div>
             </div>
             <div class="info-group">
-              <label>{{ 'seasonalAid.regions' | translate }}</label>
-              <div>{{ campaign.regions.length > 0 ? campaign.regions.join(', ') : ('common.all' | translate) }}</div>
+              <label>{{ 'seasonalAid.region' | translate }}</label>
+              <div>{{ campaign.regionName || ('common.all' | translate) }}</div>
             </div>
             <div class="info-group">
-              <label>{{ 'seasonalAid.centers' | translate }}</label>
-              <div>{{ campaign.centers.length > 0 ? campaign.centers.join(', ') : ('common.all' | translate) }}</div>
+              <label>{{ 'seasonalAid.center' | translate }}</label>
+              <div>{{ campaign.centerName || ('common.all' | translate) }}</div>
             </div>
           </div>
         </div>

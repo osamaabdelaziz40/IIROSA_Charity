@@ -1,0 +1,20 @@
+<!-- §23.U.26 — a thin command page: two variants, no filters (a blank form needs none). -->
+<div class="card shadow-sm survey-questionnaire-card">
+  <div class="card-body">
+    <h5 class="card-title">{{ 'reports.surveyQuestionnaire.title' | translate }}</h5>
+    <p class="text-muted">{{ 'reports.surveyQuestionnaire.subtitle' | translate }}</p>
+
+    <div class="d-flex flex-wrap gap-2">
+      <!-- طباعة الاستبانة — the family variant (default) -->
+      <button type="button" class="btn btn-primary" [disabled]="printing" (click)="printFamily()">
+        <i class="bi bi-printer"></i>
+        {{ 'reports.surveyQuestionnaire.printFamily' | translate }}
+      </button>
+      <!-- نسخة الأرامل — the widow variant -->
+      <button type="button" class="btn btn-outline-secondary" [disabled]="printing" (click)="printWidow()">
+        <i class="bi bi-printer"></i>
+        {{ 'reports.surveyQuestionnaire.printWidow' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

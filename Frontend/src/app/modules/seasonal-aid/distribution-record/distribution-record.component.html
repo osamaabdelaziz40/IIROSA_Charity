@@ -9,7 +9,7 @@
       <i class="fe fe-package mr-2"></i>
       {{ 'seasonalAid.recordDistribution' | translate }}
     </h2>
-    <p class="text-muted" *ngIf="campaign">{{ campaign.campaignName }}</p>
+    <p class="text-muted" *ngIf="campaign">{{ campaign.name }}</p>
   </div>
 
   <!-- Loading State -->
@@ -81,6 +81,30 @@
       </div>
     </div>
 
+    <!-- 18-34 (§23.U.34) — the campaign's three distribution sheets: family cards (cut-line
+         grid), the primary list officers carry, and the geography-grouped secondary list.
+         Data rides the screen's own beneficiaries load; empty campaign ⇒ message, no file. -->
+    <div class="d-flex justify-content-start mb-4 gap-2 flex-wrap">
+      <button type="button" class="btn btn-outline-secondary"
+              (click)="printFamilyCards()" [disabled]="sheetPrinting !== null">
+        <i class="fe fe-credit-card mr-1" *ngIf="sheetPrinting !== 'cards'; else cardsSpin"></i>
+        <ng-template #cardsSpin><span class="spinner-border spinner-border-sm mr-1"></span></ng-template>
+        {{ 'seasonalAid.sheets.cardsTitle' | translate }}
+      </button>
+      <button type="button" class="btn btn-outline-secondary"
+              (click)="printPrimaryList()" [disabled]="sheetPrinting !== null">
+        <i class="fe fe-list mr-1" *ngIf="sheetPrinting !== 'primary'; else primarySpin"></i>
+        <ng-template #primarySpin><span class="spinner-border spinner-border-sm mr-1"></span></ng-template>
+        {{ 'seasonalAid.sheets.primaryTitle' | translate }}
+      </button>
+      <button type="button" class="btn btn-outline-secondary"
+              (click)="printSecondaryList()" [disabled]="sheetPrinting !== null">
+        <i class="fe fe-map mr-1" *ngIf="sheetPrinting !== 'secondary'; else secondarySpin"></i>
+        <ng-template #secondarySpin><span class="spinner-border spinner-border-sm mr-1"></span></ng-template>
+        {{ 'seasonalAid.sheets.secondaryTitle' | translate }}
+      </button>
+    </div>
+
     <div class="row">
       <!-- Pending Beneficiaries -->
       <div class="col-md-6">
@@ -92,17 +116,17 @@
           <div class="card-body">
             <div class="beneficiary-list">
               <div class="beneficiary-item"
-                   *ngFor="let beneficiary of getPendingBeneficiaries()">
+                   *ngFor="let beneficiary of getPendingBeneficiaries(); trackBy: trackByBeneficiary">
                 <div class="beneficiary-info">
                   <div class="beneficiary-code">{{ beneficiary.familyCode }}</div>
                   <div class="beneficiary-details">
                     <i class="fe fe-map-pin"></i> {{ beneficiary.familyAddress }}
                   </div>
                   <div class="beneficiary-details">
-                    <i class="fe fe-users"></i> {{ beneficiary.orphanCount }} {{ 'seasonalAid.orphans' | translate }}
+                    <i class="fe fe-users"></i> {{ beneficiary.orphansCount }} {{ 'seasonalAid.orphans' | translate }}
                   </div>
                   <div class="beneficiary-amount">
-                    {{ beneficiary.allocatedAmount | number }} {{ campaign.budgetCurrency }}
+                    {{ beneficiary.allocationAmount | number }} {{ beneficiary.currency }}
                   </div>
                 </div>
                 <div class="beneficiary-actions">
@@ -132,7 +156,7 @@
           </div>
           <div class="card-body">
             <div class="distribution-list">
-              <div class="distribution-item" *ngFor="let distribution of distributions">
+              <div class="distribution-item" *ngFor="let distribution of distributions; trackBy: trackByDistribution">
                 <div class="distribution-info">
                   <div class="distribution-code">{{ distribution.familyCode }}</div>
                   <div class="distribution-details">
@@ -142,11 +166,17 @@
                     <i class="fe fe-user"></i> {{ distribution.receivedBy }}
                   </div>
                   <div class="distribution-amount">
-                    {{ distribution.amountDistributed | number }} {{ campaign.budgetCurrency }}
+                    {{ distribution.amountDistributed | number }} {{ distribution.currency }}
                   </div>
                 </div>
                 <div class="distribution-status">
-                  <span class="badge badge-success">{{ 'seasonalAid.distributed' | translate }}</span>
+                  <span class="badge badge-success mr-2">{{ 'seasonalAid.distributed' | translate }}</span>
+                  <!-- UC-PRJ-13: طباعة إيذون الاستلام -->
+                  <button class="btn btn-sm btn-outline-primary"
+                          [title]="'seasonalAid.printReceipt' | translate"
+                          (click)="printDistribution(distribution)">
+                    <i class="fe fe-printer"></i>
+                  </button>
                 </div>
               </div>
 
@@ -176,7 +206,7 @@
             <div class="alert alert-info" *ngIf="currentBeneficiary">
               <strong>{{ currentBeneficiary.familyCode }}</strong><br>
               {{ currentBeneficiary.familyAddress }}<br>
-              {{ 'seasonalAid.allocation' | translate }}: {{ currentBeneficiary.allocatedAmount | number }} {{ campaign.budgetCurrency }}
+              {{ 'seasonalAid.allocation' | translate }}: {{ currentBeneficiary.allocationAmount | number }} {{ currentBeneficiary.currency }}
             </div>
 
             <!-- Distribution Date -->
@@ -206,6 +236,22 @@
               [label]="'seasonalAid.receivedBy'"
               [placeholder]="'seasonalAid.receivedByPlaceholder' | translate"
               [required]="true">
+            </app-input-text>
+
+            <!-- Recipient Relationship -->
+            <app-input-text
+              [fg]="distributionForm"
+              fcn="recipientRelationship"
+              [label]="'seasonalAid.recipientRelationship'"
+              [placeholder]="'seasonalAid.recipientRelationshipPlaceholder' | translate">
+            </app-input-text>
+
+            <!-- Distribution Method -->
+            <app-input-text
+              [fg]="distributionForm"
+              fcn="distributionMethod"
+              [label]="'seasonalAid.distributionMethod'"
+              [placeholder]="'seasonalAid.distributionMethodPlaceholder' | translate">
             </app-input-text>
 
             <!-- Notes -->

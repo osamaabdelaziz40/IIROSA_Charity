@@ -39,6 +39,11 @@ public class CreateOrphanPaymentDto
     /// </summary>
     public DateTime? GroupDate { get; set; }
 
+    /// <summary>
+    /// Distribution start date تاريخ بدء التوزيع (§15.S.2 mandatory)
+    /// </summary>
+    public DateTime? PaymentDate { get; set; }
+
     // Financial Information
     /// <summary>
     /// Exchange rate for reporting purposes (e.g., 0.21 for SAR to EGP)
@@ -76,34 +81,7 @@ public class CreateOrphanPaymentDto
     [StringLength(2000, ErrorMessage = "Notes cannot exceed 2000 characters")]
     public string? Notes { get; set; }
 
-    // Filtering Options (for UI pre-selection, not stored in entity)
-    /// <summary>
-    /// Charity filter for orphan selection
-    /// </summary>
-    public int? CharityId { get; set; }
-
-    /// <summary>
-    /// Region filter for orphan selection
-    /// </summary>
-    public int? RegionId { get; set; }
-
-    /// <summary>
-    /// Center filter for orphan selection
-    /// </summary>
-    public int? CenterId { get; set; }
-
-    /// <summary>
-    /// Sponsorship status filter (Sponsored, Unsponsored, All)
-    /// </summary>
-    public string? SponsorshipStatus { get; set; }
-
-    /// <summary>
-    /// Age range filter - from
-    /// </summary>
-    public int? AgeFrom { get; set; }
-
-    /// <summary>
-    /// Age range filter - to
-    /// </summary>
-    public int? AgeTo { get; set; }
+    // 10-2 defect 6 trim: the UI filter fields (CharityId/RegionId/CenterId/SponsorshipStatus/
+    // AgeFrom/AgeTo) were never persisted and never echoed back — the enrolment screen runs its
+    // own live filter query (GET {id}/available-orphans), so they are removed from the wire.
 }

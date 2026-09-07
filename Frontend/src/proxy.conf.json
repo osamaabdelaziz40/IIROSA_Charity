@@ -1,11 +1,11 @@
 {
-  "/api/*": {
+  "/api": {
     "target": "https://localhost:60960",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
-  "/hubs/*": {
+  "/hubs": {
     "target": "https://localhost:60960",
     "secure": false,
     "changeOrigin": true,

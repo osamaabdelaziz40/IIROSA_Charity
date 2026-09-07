@@ -1,7 +1,7 @@
 namespace IIROSA.Application.DTOs.IncomingOutgoing;
 
 /// <summary>
-/// Base Outgoing Letter DTO
+/// Outgoing letter detail DTO (epic 16, UC-COR-14)
 /// </summary>
 public class OutgoingDto
 {
@@ -9,59 +9,64 @@ public class OutgoingDto
     public int? Serial { get; set; }
     public string Subject { get; set; } = string.Empty;
     public DateTime? Date { get; set; }
-    public string? OutGoingNumber { get; set; }
-    public string OutGoingId { get; set; } = string.Empty;
-    public string? Body { get; set; }
     public int? Year { get; set; }
-    public int? Fk_DepartmentId { get; set; }
+    public int? DepartmentId { get; set; }
     public string? DepartmentName { get; set; }
     public Guid? UploadedFileId { get; set; }
     public string? UploadedFileName { get; set; }
     public int? OutgoingCategoryId { get; set; }
     public string? CategoryName { get; set; }
     public Guid? IncomingId { get; set; }
+    public string? IncomingLetterNumber { get; set; }
     public string? IncomingLetterSubject { get; set; }
+    public Guid? CharityId { get; set; }
+    public string? CharityName { get; set; }
+    public List<OutgoingOrphanDto> Orphans { get; set; } = new();
     public DateTime CreatedOn { get; set; }
     public DateTime UpdatedOn { get; set; }
 }
 
 /// <summary>
-/// Create Outgoing Letter DTO
+/// An orphan report attached to an outgoing letter (§21.S.6 — rendered on the
+/// UC-COR-14 detail screen: أسم اليتيم · كود اليتيم).
 /// </summary>
-public class CreateOutgoingDto
+public class OutgoingOrphanDto
 {
-    public string Subject { get; set; } = string.Empty;
-    public DateTime? Date { get; set; }
-    public string? OutGoingNumber { get; set; }
-    public string OutGoingId { get; set; } = string.Empty;
-    public string? Body { get; set; }
-    public int? Year { get; set; }
-    public int? Fk_DepartmentId { get; set; }
-    public Guid? UploadedFileId { get; set; }
-    public int? OutgoingCategoryId { get; set; }
-    public Guid? IncomingId { get; set; }
+    public Guid OrphanId { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
 }
 
 /// <summary>
-/// Update Outgoing Letter DTO
+/// Register an outgoing letter (epic 16, UC-COR-13 / §21.S.5). Serial is allocated
+/// server-side per charity + year — it is never accepted from the payload.
+/// </summary>
+public class CreateOutgoingDto
+{
+    public int? DepartmentId { get; set; }
+    public DateTime? Date { get; set; }
+    public string Subject { get; set; } = string.Empty;
+    public int? OutgoingCategoryId { get; set; }
+    public Guid? IncomingId { get; set; }
+    public Guid? UploadedFileId { get; set; }
+}
+
+/// <summary>
+/// Update an outgoing letter (epic 16, UC-COR-15). Serial / charity ownership are immutable.
 /// </summary>
 public class UpdateOutgoingDto
 {
     public Guid Id { get; set; }
-    public string Subject { get; set; } = string.Empty;
+    public int? DepartmentId { get; set; }
     public DateTime? Date { get; set; }
-    public string? OutGoingNumber { get; set; }
-    public string OutGoingId { get; set; } = string.Empty;
-    public string? Body { get; set; }
-    public int? Year { get; set; }
-    public int? Fk_DepartmentId { get; set; }
-    public Guid? UploadedFileId { get; set; }
+    public string Subject { get; set; } = string.Empty;
     public int? OutgoingCategoryId { get; set; }
     public Guid? IncomingId { get; set; }
+    public Guid? UploadedFileId { get; set; }
 }
 
 /// <summary>
-/// Outgoing Letter List DTO
+/// Outgoing letter list row (epic 16, UC-COR-10 / §21.S.4 grid)
 /// </summary>
 public class OutgoingListDto
 {
@@ -69,31 +74,33 @@ public class OutgoingListDto
     public int? Serial { get; set; }
     public string Subject { get; set; } = string.Empty;
     public DateTime? Date { get; set; }
-    public string OutGoingId { get; set; } = string.Empty;
-    public string? OutGoingNumber { get; set; }
-    public string? DepartmentName { get; set; }
-    public string? CategoryName { get; set; }
     public int? Year { get; set; }
+    public string? DepartmentName { get; set; }
+    public int? OutgoingCategoryId { get; set; }
+    public string? CategoryName { get; set; }
     public bool HasReply { get; set; }
+    public string? IncomingLetterNumber { get; set; }
+    public Guid? UploadedFileId { get; set; }
+    public string? UploadedFileName { get; set; }
     public DateTime CreatedOn { get; set; }
 }
 
 /// <summary>
-/// Outgoing Letter Filter DTO
-/// Implements filter requirements from UC-12.6
+/// Outgoing letter filter (epic 16, UC-COR-10 / UC-COR-11 — §21.S.4 search criteria)
 /// </summary>
 public class OutgoingFilterDto
 {
     public int PageNumber { get; set; } = 1;
-    public int PageSize { get; set; } = 10;
+    public int PageSize { get; set; } = 20;
     public string? SearchTerm { get; set; }
-    public DateTime? StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
+    public int? Serial { get; set; }
     public int? DepartmentId { get; set; }
     public int? CategoryId { get; set; }
     public int? Year { get; set; }
-    public Guid? CreatedByUserId { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
     public bool? HasReply { get; set; }
-    public string? SortBy { get; set; } = "Date"; // Date, Serial, Subject, OutGoingId
-    public string? SortOrder { get; set; } = "Descending"; // Ascending, Descending
+    public Guid? CharityId { get; set; }
+    public string? SortBy { get; set; } = "Date";
+    public string? SortOrder { get; set; } = "desc";
 }

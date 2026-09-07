@@ -53,70 +53,14 @@ public class SupportTicketRepository : Repository<SupportTicket>, ISupportTicket
     // Admin Queries (UC-13.4: View All Tickets)
     public async Task<(IEnumerable<SupportTicket> Items, int TotalCount)> GetAllTicketsPagedAsync(SupportTicketFilterDto filter)
     {
-        var query = _dbSet
-            .Include(t => t.Category)
-            .Include(t => t.Priority)
-            .Include(t => t.Status)
-            .AsQueryable();
-
-        // Apply filters
-        if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
-        {
-            query = query.Where(t =>
-                t.Title.Contains(filter.SearchTerm) ||
-                t.Message.Contains(filter.SearchTerm));
-        }
-
-        if (filter.CategoryId.HasValue)
-        {
-            query = query.Where(t => t.CategoryId == filter.CategoryId.Value);
-        }
-
-        if (filter.PriorityId.HasValue)
-        {
-            query = query.Where(t => t.PriorityId == filter.PriorityId.Value);
-        }
-
-        if (filter.StatusId.HasValue)
-        {
-            query = query.Where(t => t.StatusId == filter.StatusId.Value);
-        }
-
-        if (filter.IsSolved.HasValue)
-        {
-            query = query.Where(t => t.IsSolved == filter.IsSolved.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(filter.AssignedTo))
-        {
-            query = query.Where(t => t.AssignedTo == filter.AssignedTo);
-        }
-
-        if (!string.IsNullOrWhiteSpace(filter.CreatedByUserId))
-        {
-            query = query.Where(t => t.CreatedByUserId == filter.CreatedByUserId);
-        }
-
-        if (filter.StartDate.HasValue)
-        {
-            query = query.Where(t => t.CreatedOn >= filter.StartDate.Value);
-        }
-
-        if (filter.EndDate.HasValue)
-        {
-            query = query.Where(t => t.CreatedOn <= filter.EndDate.Value);
-        }
-
-        // Apply sorting
-        query = ApplySorting(query, filter.SortBy, filter.SortDirection);
-
-        var totalCount = await query.CountAsync();
-        var items = await query
-            .Skip((filter.PageNumber - 1) * filter.PageSize)
-            .Take(filter.PageSize)
-            .ToListAsync();
-
-        return (items, totalCount);
+        // Delegates to the primitive overload so both shapes share one filter/sort pipeline.
+        return await GetAllTicketsPagedAsync(
+            filter.PageNumber, filter.PageSize,
+            filter.CategoryId, filter.PriorityId, filter.StatusId,
+            filter.CreatedByUserId, filter.AssignedTo,
+            filter.StartDate, filter.EndDate,
+            filter.IsSolved, filter.SearchTerm,
+            filter.SortBy, filter.SortDirection);
     }
 
     // Search and Filter (UC-13.9: Search Tickets)
@@ -317,33 +261,33 @@ public class SupportTicketRepository : Repository<SupportTicket>, ISupportTicket
     // Private helper for sorting
     private IQueryable<SupportTicket> ApplySorting(IQueryable<SupportTicket> query, string? sortBy, string? sortDirection)
     {
+        // Accept both "asc"/"desc" (frontend) and "ascending"/"descending" (legacy callers) —
+        // previously "asc" fell through to descending.
+        var ascending = sortDirection?.ToLower() is "asc" or "ascending";
         return sortBy?.ToLower() switch
         {
-            "title" => sortDirection?.ToLower() == "ascending"
-                ? query.OrderBy(t => t.Title)
-                : query.OrderByDescending(t => t.Title),
-            "createdon" => sortDirection?.ToLower() == "ascending"
-                ? query.OrderBy(t => t.CreatedOn)
-                : query.OrderByDescending(t => t.CreatedOn),
-            "updatedon" => sortDirection?.ToLower() == "ascending"
-                ? query.OrderBy(t => t.UpdatedOn)
-                : query.OrderByDescending(t => t.UpdatedOn),
-            "priority" => sortDirection?.ToLower() == "ascending"
-                ? query.OrderBy(t => t.PriorityId)
-                : query.OrderByDescending(t => t.PriorityId),
-            "status" => sortDirection?.ToLower() == "ascending"
-                ? query.OrderBy(t => t.StatusId)
-                : query.OrderByDescending(t => t.StatusId),
+            "title" => ascending ? query.OrderBy(t => t.Title) : query.OrderByDescending(t => t.Title),
+            "createdon" => ascending ? query.OrderBy(t => t.CreatedOn) : query.OrderByDescending(t => t.CreatedOn),
+            "updatedon" => ascending ? query.OrderBy(t => t.UpdatedOn) : query.OrderByDescending(t => t.UpdatedOn),
+            "priority" => ascending ? query.OrderBy(t => t.PriorityId) : query.OrderByDescending(t => t.PriorityId),
+            "status" => ascending ? query.OrderBy(t => t.StatusId) : query.OrderByDescending(t => t.StatusId),
             _ => query.OrderByDescending(t => t.CreatedOn)
         };
     }
 
     // Interface-compliant methods
     public async Task<(IEnumerable<SupportTicket> Items, int TotalCount)> GetAllTicketsPagedAsync(
-        int page, int pageSize, int? categoryId = null, int? priorityId = null, int? statusId = null,
-        string? createdByUserId = null, DateTime? startDate = null, DateTime? endDate = null)
+        int pageNumber, int pageSize,
+        int? categoryId = null, int? priorityId = null, int? statusId = null,
+        string? createdByUserId = null, string? assignedTo = null,
+        DateTime? startDate = null, DateTime? endDate = null,
+        bool? isSolved = null, string? searchTerm = null,
+        string? sortBy = null, string? sortDirection = null)
     {
         var query = IncludeAllNavigationProperties();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+            query = query.Where(t => t.Title.Contains(searchTerm) || t.Message.Contains(searchTerm));
 
         if (categoryId.HasValue)
             query = query.Where(t => t.CategoryId == categoryId.Value);
@@ -357,17 +301,24 @@ public class SupportTicketRepository : Repository<SupportTicket>, ISupportTicket
         if (!string.IsNullOrWhiteSpace(createdByUserId))
             query = query.Where(t => t.CreatedByUserId == createdByUserId);
 
+        if (!string.IsNullOrWhiteSpace(assignedTo))
+            query = query.Where(t => t.AssignedTo == assignedTo);
+
+        if (isSolved.HasValue)
+            query = query.Where(t => t.IsSolved == isSolved.Value);
+
         if (startDate.HasValue)
             query = query.Where(t => t.CreatedOn >= startDate.Value);
 
         if (endDate.HasValue)
             query = query.Where(t => t.CreatedOn <= endDate.Value);
 
+        query = ApplySorting(query, sortBy, sortDirection);
+
         var totalCount = await query.CountAsync();
 
         var items = await query
-            .OrderByDescending(t => t.CreatedOn)
-            .Skip((page - 1) * pageSize)
+            .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 

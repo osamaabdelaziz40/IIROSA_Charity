@@ -27,16 +27,13 @@
             <form [formGroup]="roleForm">
               <div class="row">
                 <div class="col-md-6">
-                  <div class="form-group">
-                    <label>{{ 'userManagement.role' | translate }} <span class="text-danger">*</span></label>
-                    <select class="form-control" formControlName="roleName" [ngClass]="{'is-invalid': roleForm.get('roleName')?.invalid && roleForm.get('roleName')?.touched}">
-                      <option value="">Select Role</option>
-                      <option *ngFor="let role of allRoles" [value]="role.name">{{ role.name }}</option>
-                    </select>
-                    <div class="invalid-feedback" *ngIf="roleForm.get('roleName')?.invalid && roleForm.get('roleName')?.touched">
-                      {{ 'validation.required' | translate }}
-                    </div>
-                  </div>
+                  <app-drop-down
+                    [fg]="roleForm"
+                    fcn="roleName"
+                    [label]="'userManagement.role'"
+                    [initialData]="roleOptions"
+                    [placeholder]="'validation.selectAnOption' | translate">
+                  </app-drop-down>
 
                   <div class="form-group">
                     <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="submitting">

@@ -10,6 +10,10 @@ public class SupportTicketListDto
     public string Title { get; set; } = string.Empty;
 
     // Lookup Properties
+    // StatusId — the list row actions gate solve/close on it; previously only StatusName
+    // was returned, so `item.statusId !== closedStatusId` was always true and the actions
+    // showed on already-closed rows.
+    public int StatusId { get; set; }
     public string CategoryName { get; set; } = string.Empty;
     public string PriorityName { get; set; } = string.Empty;
     public string StatusName { get; set; } = string.Empty;

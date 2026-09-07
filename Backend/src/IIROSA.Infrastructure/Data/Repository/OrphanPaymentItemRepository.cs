@@ -80,5 +80,18 @@ public class OrphanPaymentItemRepository : Repository<OrphanPaymentItem>, IOrpha
             .ToListAsync();
     }
 
+    public async Task<List<Guid>> GetGroupIdsByCharityAsync(Guid charityId)
+    {
+        // An orphan belongs to its own charity or its family's (uncoded orphans carry the family's)
+        return await _dbSet
+            .Where(opi => !opi.IsDeleted &&
+                          opi.Orphan != null &&
+                          (opi.Orphan.FK_CharityId == charityId ||
+                           (opi.Orphan.Family != null && opi.Orphan.Family.FK_CharityId == charityId)))
+            .Select(opi => opi.OrphanPaymentId)
+            .Distinct()
+            .ToListAsync();
+    }
+
     #endregion
 }

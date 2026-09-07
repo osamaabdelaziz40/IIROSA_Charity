@@ -14,6 +14,12 @@ public interface ISupportTicketService
     // UC-13.2: Attach File to Ticket (handled as update)
     Task<SupportTicketDto> AttachFileToTicketAsync(Guid ticketId, string fileName, string filePath, long fileSize);
 
+    // UC-CST-04: Update Support Ticket (Admin/Super Admin only)
+    Task<SupportTicketDto> UpdateTicketAsync(UpdateSupportTicketDto dto, string userId);
+
+    // Ticket form lookups (categories, priorities, statuses)
+    Task<TicketLookupsDto> GetTicketLookupsAsync();
+
     // UC-13.3: View My Tickets
     Task<(IEnumerable<SupportTicketListDto> Items, int TotalCount)> GetMyTicketsAsync(string userId, SupportTicketFilterDto filter);
 
@@ -29,8 +35,8 @@ public interface ISupportTicketService
     // UC-13.7: Add Ticket Response (Admin/Super Admin only)
     Task<TicketResponseDto> AddTicketResponseAsync(CreateTicketResponseDto dto, string responderUserId, string responderName, string responderEmail);
 
-    // UC-13.8: View Ticket Details
-    Task<SupportTicketDetailDto> GetTicketDetailsAsync(Guid ticketId, string userId);
+    // UC-13.8: View Ticket Details (isAdmin bypasses the creator-only access check)
+    Task<SupportTicketDetailDto> GetTicketDetailsAsync(Guid ticketId, string userId, bool isAdmin = false);
 
     // UC-13.9: Search Tickets (Admin/Super Admin only)
     Task<(IEnumerable<SupportTicketListDto> Items, int TotalCount)> SearchTicketsAsync(SupportTicketFilterDto filter);
@@ -42,7 +48,7 @@ public interface ISupportTicketService
     Task<SupportTicketDto?> GetByIdAsync(Guid id);
     Task<SupportTicketDto?> GetByCodeAsync(string code);
     Task<bool> HasUserAccessAsync(Guid ticketId, string userId);
-    Task DeleteTicketAsync(Guid id);
+    Task DeleteTicketAsync(Guid id, string deletedBy);
 
     // Assignment
     Task AssignTicketAsync(Guid ticketId, string assignedToUserId);

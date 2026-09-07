@@ -1,0 +1,220 @@
+- generic [ref=f3e12]:
+  - navigation [ref=f3e13]:
+    - button "" [ref=f3e14] [cursor=pointer]
+    - list [ref=f3e16]:
+      - listitem [ref=f3e17]:
+        - link "العربية " [ref=f3e18] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f3e19]: 
+          - text: العربية 
+      - listitem [ref=f3e20]:
+        - link "" [ref=f3e21] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f3e23]:
+        - link "" [ref=f3e24] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f3e27]:
+        - button [ref=f3e28] [cursor=pointer]:
+          - generic [ref=f3e29]:
+            - text: مرحبا System Admin
+            - img "..." [ref=f3e30]
+          - text: 
+  - complementary [ref=f3e31]:
+    - generic [ref=f3e36]:
+      - text: 
+      - navigation [ref=f3e37]:
+        - link [ref=f3e39] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f3e40]
+        - paragraph [ref=f3e41]: عناصر الموقع
+        - list [ref=f3e42]:
+          - listitem [ref=f3e43]:
+            - link " الصفحة الرئيسية (current) " [ref=f3e44] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f3e45]: 
+              - generic [ref=f3e46]: الصفحة الرئيسية
+              - generic [ref=f3e47]: (current)
+              - text: 
+            - list [ref=f3e48]:
+              - listitem [ref=f3e49]:
+                - link "الرئيسية" [ref=f3e50] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f3e51]:
+            - link " الإعدادات " [ref=f3e52] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=f3e53]: 
+              - generic [ref=f3e54]: الإعدادات
+              - text: 
+          - listitem [ref=f3e55]:
+            - link " الدعم الفني " [ref=f3e56] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f3e57]: 
+              - generic [ref=f3e58]: الدعم الفني
+              - text: 
+          - listitem [ref=f3e59]:
+            - link " مدفوعات الأيتام " [ref=f3e60] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f3e61]: 
+              - generic [ref=f3e62]: مدفوعات الأيتام
+              - text: 
+            - list [ref=f3e63]:
+              - listitem [ref=f3e64]:
+                - link "إدارة مجموعات المدفوعات" [ref=f3e65] [cursor=pointer]:
+                  - /url: "#/orphan-payments"
+              - listitem [ref=f3e66]:
+                - link "إضافة مجموعة مدفوعات جديدة" [ref=f3e67] [cursor=pointer]:
+                  - /url: "#/orphan-payments/create"
+          - listitem [ref=f3e68]:
+            - link " مشاريع المكتب " [ref=f3e69] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f3e70]: 
+              - generic [ref=f3e71]: مشاريع المكتب
+              - text: 
+          - listitem [ref=f3e72]:
+            - link " مشاريع الإسكان " [ref=f3e73] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f3e74]: 
+              - generic [ref=f3e75]: مشاريع الإسكان
+              - text: 
+          - listitem [ref=f3e76]:
+            - link " المساعدات الموسمية " [ref=f3e77] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f3e78]: 
+              - generic [ref=f3e79]: المساعدات الموسمية
+              - text: 
+          - listitem [ref=f3e80]:
+            - link " الوارد والصادر " [ref=f3e81] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f3e82]: 
+              - generic [ref=f3e83]: الوارد والصادر
+              - text: 
+          - listitem [ref=f3e84]:
+            - link " الأسر " [ref=f3e85] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f3e86]: 
+              - generic [ref=f3e87]: الأسر
+              - text: 
+          - listitem [ref=f3e88]:
+            - link " التقارير " [ref=f3e89] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f3e90]: 
+              - generic [ref=f3e91]: التقارير
+              - text: 
+          - listitem [ref=f3e92]:
+            - link " الشيكات العامة " [ref=f3e93] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f3e94]: 
+              - generic [ref=f3e95]: الشيكات العامة
+              - text: 
+          - listitem [ref=f3e96]:
+            - link " المهام " [ref=f3e97] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f3e98]: 
+              - generic [ref=f3e99]: المهام
+              - text: 
+          - listitem [ref=f3e100]:
+            - link " التقارير الدورية للأيتام " [ref=f3e101] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f3e102]: 
+              - generic [ref=f3e103]: التقارير الدورية للأيتام
+              - text: 
+          - listitem [ref=f3e104]:
+            - link " الحوالات المالية " [ref=f3e105] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f3e106]: 
+              - generic [ref=f3e107]: الحوالات المالية
+              - text: 
+  - main [ref=f3e108]:
+    - generic [ref=f3e110]:
+      - navigation "breadcrumb" [ref=f3e112]:
+        - list [ref=f3e113]:
+          - listitem [ref=f3e114]:
+            - link "الرئيسية" [ref=f3e115] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=f3e116]:
+            - text: /
+            - link "مدفوعات الأيتام" [ref=f3e117] [cursor=pointer]:
+              - /url: "#/orphan-payments"
+          - listitem [ref=f3e118]:
+            - text: /
+            - generic [ref=f3e119]: إضافة مجموعة مدفوعات جديدة
+      - generic [ref=f3e121]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f3e122]:
+          - heading "إضافة مجموعة مدفوعات جديدة" [level=3] [ref=f3e125]
+          - button "إلغاء" [ref=f3e127] [cursor=pointer]
+      - generic [ref=f3e133]:
+        - heading "المعلومات الأساسية" [level=5] [ref=f3e135]
+        - generic [ref=f3e136]:
+          - generic [ref=f3e138]:
+            - generic [ref=f3e139]: اسم المجموعة
+            - textbox "اسم المجموعة" [ref=f3e140]:
+              - /placeholder: "أدخل اسم مجموعة المدفوعات (مثال: يناير 2026 - المنطقة أ)"
+          - generic [ref=f3e143]:
+            - generic [ref=f3e144]: الجمعية
+            - combobox [ref=f3e147] [cursor=pointer]:
+              - textbox "كل الجمعيات" [ref=f3e148]
+        - generic [ref=f3e151]:
+          - generic [ref=f3e152]: رقم المجموعة
+          - combobox "رقم المجموعة" [ref=f3e153]:
+            - option "توليد تلقائي" [selected]
+            - option "BP-202609-0001"
+          - text: يتم توليد رقم الدفعة تلقائيًا عند الحفظ إذا تُرك فارغًا
+          - button " إضافة رقم مجموعة" [ref=f3e155] [cursor=pointer]:
+            - generic [ref=f3e156]: 
+            - text: إضافة رقم مجموعة
+        - generic [ref=f3e159]:
+          - generic [ref=f3e160]: الوصف
+          - textbox "الوصف" [ref=f3e161]:
+            - /placeholder: أدخل وصف المجموعة (اختياري)
+        - generic [ref=f3e162]:
+          - generic [ref=f3e164]:
+            - generic [ref=f3e165]: فترة الدفع من
+            - textbox "فترة الدفع من" [ref=f3e166]: 2026-09-07
+          - generic [ref=f3e168]:
+            - generic [ref=f3e169]: فترة الدفع إلى
+            - textbox "فترة الدفع إلى" [ref=f3e170]: 2026-09-07
+          - generic [ref=f3e172]:
+            - generic [ref=f3e173]: تاريخ المجموعة
+            - textbox "تاريخ المجموعة" [ref=f3e174]: 2026-09-07
+          - generic [ref=f3e176]:
+            - generic [ref=f3e177]: تاريخ بدء التوزيع
+            - textbox "تاريخ بدء التوزيع" [ref=f3e178]: 2026-09-07
+        - heading "المعلومات المالية" [level=5] [ref=f3e180]
+        - generic [ref=f3e181]:
+          - generic [ref=f3e183]:
+            - generic [ref=f3e184]: سعر الصرف
+            - generic [ref=f3e185]:
+              - spinbutton "سعر الصرف" [ref=f3e186]
+              - generic [ref=f3e188]:
+                - generic "يستخدم لحسابات التقارير فقط"
+            - text: السعر المستخدم لتحويل المبالغ في التقارير
+          - generic [ref=f3e191]:
+            - generic [ref=f3e192]: العملة
+            - combobox [ref=f3e195] [cursor=pointer]:
+              - textbox "EGP - Egyptian Pound" [ref=f3e196]
+          - generic [ref=f3e199]:
+            - checkbox "قفل سعر الصرف" [ref=f3e200]
+            - generic [ref=f3e201]: قفل سعر الصرف
+            - generic [ref=f3e202]: يمنع التغييرات العرضية لسعر الصرف
+        - heading "الإعدادات" [level=5] [ref=f3e204]
+        - generic [ref=f3e207]:
+          - generic [ref=f3e208]: ترتيب العرض
+          - spinbutton "ترتيب العرض" [ref=f3e209]: "0"
+        - generic [ref=f3e212]:
+          - generic [ref=f3e213]: ملاحظات
+          - textbox "ملاحظات" [ref=f3e214]:
+            - /placeholder: أدخل ملاحظات إضافية (اختياري)
+        - generic [ref=f3e215]:
+          - button " حفظ" [disabled] [ref=f3e216] [cursor=pointer]:
+            - generic [ref=f3e217]: 
+            - text: حفظ
+          - button " إلغاء" [ref=f3e218] [cursor=pointer]:
+            - generic [ref=f3e219]: 
+            - text: إلغاء
+  - contentinfo [ref=f3e220]:
+    - generic [ref=f3e222]:
+      - paragraph [ref=f3e224]: © 2026 IIROSA. جميع الحقوق محفوظة
+      - paragraph [ref=f3e226]: الإصدار 1.0.0

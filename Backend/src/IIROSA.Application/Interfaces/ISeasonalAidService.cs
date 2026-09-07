@@ -19,8 +19,12 @@ public interface ISeasonalAidService
 
     // UC-9.4: Register Beneficiary for Aid
     Task<(int RegisteredCount, decimal TotalAllocation, decimal BudgetImpact)> RegisterBeneficiariesAsync(CreateSeasonalAidBeneficiaryDto dto);
+    Task<UpdateBeneficiariesResultDto> UpdateCampaignBeneficiariesAsync(Guid campaignId, UpdateSeasonalAidBeneficiariesDto dto);
     Task<(IEnumerable<SeasonalAidBeneficiaryDto> Items, int TotalCount)> GetEligibleFamiliesAsync(EligibleFamiliesFilterDto filter);
     Task RemoveBeneficiaryAsync(Guid beneficiaryId);
+
+    // UC-PRJ-08: Confirm a family received the assistance (تأكيد استلام الأسرة)
+    Task SetFamilyReceivedFlagAsync(Guid familyId, SetFamilyReceivedFlagDto dto);
 
     // UC-9.5: Record Aid Distribution
     Task<SeasonalAidDistributionDto> RecordDistributionAsync(CreateSeasonalAidDistributionDto dto);

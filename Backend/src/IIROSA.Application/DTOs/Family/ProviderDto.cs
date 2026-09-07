@@ -17,6 +17,32 @@ public class ProviderDto
     public string? Job { get; set; }
     public decimal? MonthlyIncome { get; set; }
     public string? Notes { get; set; }
+
+    // Refugee register extensions (epic 7, UC-REF-03 §12.S.2 اضافة معيل)
+    public DateTime? DateOfBirth { get; set; }
+    public int? NationalityCountryId { get; set; }
+    public bool? IsAlive { get; set; }
+    public DateTime? DeathDate { get; set; }
+    /// <summary>Cause of death — closed set: طبيعية / مرض / حادث (static list on the form)</summary>
+    public string? DeathReason { get; set; }
+    public int? ReasonOfRelationId { get; set; }
+    public string? ReasonOfRelationName { get; set; }
+
+    // Housing register extensions (epic 6, UC-HOU-03 §11.S.2 اضافة معيل)
+    public int? RelationId { get; set; }
+    public string? RelationName { get; set; }
+    /// <summary>Main relation — closed set: الاب / الام</summary>
+    public string? MainRelation { get; set; }
+    public int? SocialStatusId { get; set; }
+    public string? SocialStatusName { get; set; }
+    public int? HealthStatusId { get; set; }
+    public string? HealthStatusName { get; set; }
+    public int? EducationLevelId { get; set; }
+    public string? EducationLevelName { get; set; }
+    public bool? WidowSponsorship { get; set; }
+    public bool? AnotherSponsor { get; set; }
+    public bool? MotherIsMar { get; set; }
+    public bool? IsCaring { get; set; }
 }
 
 /// <summary>
@@ -50,6 +76,30 @@ public class CreateProviderDto
 
     [StringLength(2000, ErrorMessage = "Notes cannot exceed 2000 characters")]
     public string? Notes { get; set; }
+
+    // Refugee register extensions (epic 7, UC-REF-03 §12.S.2 اضافة معيل)
+    public DateTime? DateOfBirth { get; set; }
+    public int? NationalityCountryId { get; set; }
+    public bool? IsAlive { get; set; }
+    public DateTime? DeathDate { get; set; }
+    /// <summary>Cause of death — closed set: طبيعية / مرض / حادث (static list on the form)</summary>
+    [StringLength(100, ErrorMessage = "Death reason cannot exceed 100 characters")]
+    public string? DeathReason { get; set; }
+    public int? ReasonOfRelationId { get; set; }
+
+    // Housing register extensions (epic 6, UC-HOU-03 §11.S.2 اضافة معيل)
+    /// <summary>Relation kind (نوعها) — lookup Relation</summary>
+    public int? RelationId { get; set; }
+    /// <summary>Main relation — closed set: الاب / الام</summary>
+    [StringLength(20, ErrorMessage = "Main relation cannot exceed 20 characters")]
+    public string? MainRelation { get; set; }
+    public int? SocialStatusId { get; set; }
+    public int? HealthStatusId { get; set; }
+    public int? EducationLevelId { get; set; }
+    public bool? WidowSponsorship { get; set; }
+    public bool? AnotherSponsor { get; set; }
+    public bool? MotherIsMar { get; set; }
+    public bool? IsCaring { get; set; }
 }
 
 /// <summary>
@@ -82,4 +132,25 @@ public class UpdateProviderDto
 
     [StringLength(2000, ErrorMessage = "Notes cannot exceed 2000 characters")]
     public string? Notes { get; set; }
+
+    // Refugee register extensions (epic 7, UC-REF-03 §12.S.2 اضافة معيل)
+    public DateTime? DateOfBirth { get; set; }
+    public int? NationalityCountryId { get; set; }
+    public bool? IsAlive { get; set; }
+    public DateTime? DeathDate { get; set; }
+    [StringLength(100, ErrorMessage = "Death reason cannot exceed 100 characters")]
+    public string? DeathReason { get; set; }
+    public int? ReasonOfRelationId { get; set; }
+
+    // Housing register extensions (epic 6, UC-HOU-03 §11.S.2 اضافة معيل)
+    public int? RelationId { get; set; }
+    [StringLength(20, ErrorMessage = "Main relation cannot exceed 20 characters")]
+    public string? MainRelation { get; set; }
+    public int? SocialStatusId { get; set; }
+    public int? HealthStatusId { get; set; }
+    public int? EducationLevelId { get; set; }
+    public bool? WidowSponsorship { get; set; }
+    public bool? AnotherSponsor { get; set; }
+    public bool? MotherIsMar { get; set; }
+    public bool? IsCaring { get; set; }
 }

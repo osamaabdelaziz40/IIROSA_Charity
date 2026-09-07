@@ -1,0 +1,447 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'housingProjects.reports.form.title' | translate"
+  [subtitle]="headerName"
+  [icon]="'fe fe-file-plus'"
+  [actions]="pageActions">
+</app-page-header>
+
+<div class="card">
+  <div class="card-body">
+    <!-- Family/beneficiary context — the 6-7 gate resolves before the form renders -->
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <form *ngIf="!loading" [formGroup]="reportForm" (ngSubmit)="save()">
+      <!-- ==================== §11.S.4 header — تاريخ التقرير · رقم التقرير · الجمعية · العمر ==================== -->
+      <div class="section mb-4">
+        <h5 class="section-title">
+          <i class="fe fe-user me-2"></i>
+          <span>{{ 'housingProjects.reports.form.sections.header' | translate }}</span>
+        </h5>
+
+        <!-- The 6-7 resolved beneficiary — read-only (الاسم · العمر · الكود · يخص) -->
+        <div class="border rounded p-3 bg-light mb-3">
+          <div class="row g-2 align-items-center">
+            <div class="col-md-4">
+              <small class="text-muted d-block">{{ 'housingProjects.reports.beneficiary' | translate }}</small>
+              <span class="fw-bold">{{ headerName }}</span>
+            </div>
+            <div class="col-md-2">
+              <small class="text-muted d-block">{{ 'housingProjects.reports.summary.age' | translate }}</small>
+              <span>{{ headerAge != null ? headerAge : '—' }}</span>
+            </div>
+            <div class="col-md-2" *ngIf="headerCode">
+              <small class="text-muted d-block">{{ 'housingProjects.reports.filters.code' | translate }}</small>
+              <span>{{ headerCode }}</span>
+            </div>
+            <div class="col-md-2">
+              <small class="text-muted d-block">{{ 'housingProjects.reports.summary.type' | translate }}</small>
+              <span>{{ headerBeneficiaryTypeLabel }}</span>
+            </div>
+            <div class="col-md-2">
+              <small class="text-muted d-block">{{ 'housingProjects.filters.charity' | translate }}</small>
+              <span>{{ headerCharity || '—' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.reportDate' | translate }} *</label>
+            <input type="date" class="form-control" formControlName="reportDate">
+            <div class="invalid-feedback d-block" *ngIf="serverErrors['reportDate']">
+              {{ serverErrors['reportDate'] }}
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <!-- رقم التقرير — server-generated (POR-year-seq), read-only -->
+            <label class="form-label">{{ 'housingProjects.reports.columns.reportNo' | translate }}</label>
+            <input type="text" class="form-control" formControlName="reportNo" readonly>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.reportPeriodFrom' | translate }}</label>
+            <input type="date" class="form-control" formControlName="reportPeriodFrom">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.reportPeriodTo' | translate }}</label>
+            <input type="date" class="form-control" formControlName="reportPeriodTo">
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== الحالة الصحية ==================== -->
+      <div class="section mb-4">
+        <h5 class="section-title">
+          <i class="fe fe-heart me-2"></i>
+          <span>{{ 'housingProjects.reports.form.sections.health' | translate }}</span>
+        </h5>
+
+        <div class="row g-3">
+          <!-- الحالة الصحية — سليم / معاق / مريض (HealthstaueFun on-change reveals) -->
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.health.label' | translate }}</label>
+            <select class="form-select" formControlName="medicalStatus">
+              <option value="">{{ 'validation.selectAnOption' | translate }}</option>
+              <option *ngFor="let option of healthStatuses; trackBy: trackByOptionValue" [value]="option.value">
+                {{ option.labelKey | translate }}
+              </option>
+            </select>
+          </div>
+
+          <!-- نوع المرض — revealed when مريض -->
+          <div class="col-md-4" *ngIf="isSick">
+            <label class="form-label">{{ 'housingProjects.reports.form.health.disease' | translate }}</label>
+            <input type="text" class="form-control" formControlName="disease">
+          </div>
+
+          <!-- نوع الاعاقة — revealed when معاق (حركية / بصرية / سمعية / ذهنية) -->
+          <div class="col-md-4" *ngIf="isDisabled">
+            <label class="form-label">{{ 'housingProjects.reports.form.health.disabilityType' | translate }}</label>
+            <select class="form-select" formControlName="disability">
+              <option value="">{{ 'validation.selectAnOption' | translate }}</option>
+              <option *ngFor="let option of disabilityTypes; trackBy: trackByOptionValue" [value]="option.value">
+                {{ option.labelKey | translate }}
+              </option>
+            </select>
+          </div>
+
+          <!-- تفاصيل الاعاقة — revealed when معاق -->
+          <div class="col-md-8" *ngIf="isDisabled">
+            <label class="form-label">{{ 'housingProjects.reports.form.health.disabilityDetails' | translate }}</label>
+            <textarea class="form-control" rows="2" formControlName="disabilityDescription"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== الحالة التعليمية ==================== -->
+      <div class="section mb-4">
+        <h5 class="section-title">
+          <i class="fe fe-book me-2"></i>
+          <span>{{ 'housingProjects.reports.form.sections.education' | translate }}</span>
+        </h5>
+
+        <div class="row g-3">
+          <!-- المرحلة الدراسية — EducationalLevels lookup -->
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.education.level' | translate }}</label>
+            <select class="form-select" formControlName="educationalLevelId">
+              <option [ngValue]="null">{{ 'validation.selectAnOption' | translate }}</option>
+              <option *ngFor="let level of educationLevels; trackBy: trackByLookupId" [ngValue]="level.id">
+                {{ level.name }}
+              </option>
+            </select>
+          </div>
+
+          <!-- الصف الدراسي -->
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.education.gradeClass' | translate }}</label>
+            <input type="text" class="form-control" formControlName="grade">
+          </div>
+
+          <!-- اسم الموسسة التعليمية -->
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.education.school' | translate }}</label>
+            <input type="text" class="form-control" formControlName="school">
+          </div>
+
+          <!-- نوع التعليم — حكومي / أهلي -->
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.education.schoolType' | translate }}</label>
+            <select class="form-select" formControlName="schoolType">
+              <option value="">{{ 'validation.selectAnOption' | translate }}</option>
+              <option *ngFor="let option of schoolTypes; trackBy: trackByOptionValue" [value]="option.value">
+                {{ option.labelKey | translate }}
+              </option>
+            </select>
+          </div>
+
+          <!-- السنه الدراسيه -->
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.education.schoolYear' | translate }}</label>
+            <input type="number" class="form-control" formControlName="educationalYear">
+          </div>
+
+          <!-- اخر تقدير — ممتاز / جيدجدا / جيد / مقبول / ضعيف -->
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.education.lastGrade' | translate }}</label>
+            <select class="form-select" formControlName="educationDegree">
+              <option value="">{{ 'validation.selectAnOption' | translate }}</option>
+              <option *ngFor="let option of grades; trackBy: trackByOptionValue" [value]="option.value">
+                {{ option.labelKey | translate }}
+              </option>
+            </select>
+          </div>
+
+          <!-- الكلية -->
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.education.faculty' | translate }}</label>
+            <input type="text" class="form-control" formControlName="faculty">
+          </div>
+
+          <!-- القسم -->
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.education.department' | translate }}</label>
+            <input type="text" class="form-control" formControlName="department">
+          </div>
+
+          <!-- التخصص -->
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.education.specialization' | translate }}</label>
+            <input type="text" class="form-control" formControlName="specialization">
+          </div>
+
+          <!-- sp الحالة — حاصل على شهادة / ترك الدراسة (ChildWorkingStatuschanged reveals) -->
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.education.workingStatus' | translate }}</label>
+            <select class="form-select" [(ngModel)]="workingStatus"
+                   (change)="onWorkingStatusChanged()" [ngModelOptions]="{ standalone: true }">
+              <option value="">{{ 'validation.selectAnOption' | translate }}</option>
+              <option *ngFor="let option of workingStatuses; trackBy: trackByOptionValue" [value]="option.value">
+                {{ option.labelKey | translate }}
+              </option>
+            </select>
+          </div>
+
+          <!-- تاريخ ترك الدراسة — revealed by ترك الدراسة -->
+          <div class="col-md-4" *ngIf="workingStatus === 'ترك الدراسة'">
+            <label class="form-label">{{ 'housingProjects.reports.form.education.leftStudyYear' | translate }}</label>
+            <input type="number" class="form-control" formControlName="dropOutYear" min="1900" max="2100">
+          </div>
+
+          <!-- اخر مرحله دراسيه — revealed by حاصل على شهادة -->
+          <div class="col-md-4" *ngIf="workingStatus === 'حاصل على شهادة'">
+            <label class="form-label">{{ 'housingProjects.reports.form.education.lastLevel' | translate }}</label>
+            <input type="text" class="form-control" formControlName="highestEducationalLevel">
+          </div>
+
+          <!-- تاريخ الحصول عليه — revealed by حاصل على شهادة -->
+          <div class="col-md-4" *ngIf="workingStatus === 'حاصل على شهادة'">
+            <label class="form-label">{{ 'housingProjects.reports.form.education.qualificationYear' | translate }}</label>
+            <input type="number" class="form-control" formControlName="highestEducationalLevelYear" min="1900" max="2100">
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== الملفات المطلوبه ==================== -->
+      <div class="section mb-4">
+        <h5 class="section-title">
+          <i class="fe fe-paperclip me-2"></i>
+          <span>{{ 'housingProjects.reports.form.sections.files' | translate }}</span>
+        </h5>
+
+        <div class="row g-3">
+          <!-- الصوره MANDATORY (png/jpg/jpeg) + certificate/medical/death/marriage optional -->
+          <div class="col-md-6" *ngFor="let slot of imageSlots; trackBy: trackBySlotControl">
+            <label class="form-label">
+              {{ slot.labelKey | translate }}<span class="text-danger" *ngIf="slot.required"> *</span>
+            </label>
+            <app-attachment
+              [maxFiles]="1"
+              [accept]="'image/*'"
+              [multiple]="false"
+              (onFileSelect)="onImageSelected(slot.control, $event)"
+              (onFileRemove)="onImageRemoved(slot.control)">
+            </app-attachment>
+            <div class="invalid-feedback d-block"
+                 *ngIf="reportForm.get(slot.control)?.touched && reportForm.get(slot.control)?.hasError('required')">
+              {{ 'housingProjects.reports.form.errors.photoRequired' | translate }}
+            </div>
+            <div class="invalid-feedback d-block" *ngIf="serverErrors[slot.control]">
+              {{ serverErrors[slot.control] }}
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" formControlName="missingDocuments" id="missingDocuments">
+              <label class="form-check-label" for="missingDocuments">
+                {{ 'housingProjects.reports.form.files.missingDocuments' | translate }}
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-8">
+            <label class="form-label">{{ 'housingProjects.reports.form.files.missingDocumentsName' | translate }}</label>
+            <input type="text" class="form-control" formControlName="missingDocumentsName">
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== الانشطة والبرامج ==================== -->
+      <div class="section mb-4">
+        <h5 class="section-title">
+          <i class="fe fe-award me-2"></i>
+          <span>{{ 'housingProjects.reports.form.sections.activities' | translate }}</span>
+        </h5>
+
+        <div class="row g-3">
+          <!-- الهوايات التى يمارسها — closed set -->
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.activities.hobbies' | translate }}</label>
+            <select class="form-select" formControlName="hobby">
+              <option value="">{{ 'validation.selectAnOption' | translate }}</option>
+              <option *ngFor="let option of hobbies; trackBy: trackByOptionValue" [value]="option.value">
+                {{ option.labelKey | translate }}
+              </option>
+            </select>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.activities.courseName' | translate }}</label>
+            <input type="text" class="form-control" formControlName="courseName">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.activities.sportName' | translate }}</label>
+            <input type="text" class="form-control" formControlName="sportName">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">{{ 'housingProjects.reports.form.activities.professionName' | translate }}</label>
+            <input type="text" class="form-control" formControlName="professionName">
+          </div>
+
+          <!-- الرساله للكافل — free text (MessageReasons catalogue arrives with epic 19) -->
+          <div class="col-md-8">
+            <label class="form-label">{{ 'housingProjects.reports.form.activities.sponsorMessage' | translate }}</label>
+            <textarea class="form-control" rows="2" formControlName="orphanMessage"></textarea>
+          </div>
+
+          <!-- تزوج / تاريخ الزواج (MarriedFun) -->
+          <div class="col-md-4">
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" formControlName="married" id="married">
+              <label class="form-check-label" for="married">
+                {{ 'housingProjects.reports.form.activities.married' | translate }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-4" *ngIf="reportForm.get('married')?.value">
+            <label class="form-label">{{ 'housingProjects.reports.form.activities.marriageDate' | translate }}</label>
+            <input type="date" class="form-control" formControlName="marriageDate">
+          </div>
+
+          <!-- توفى / تاريخ الوفاة (DieFun) -->
+          <div class="col-md-4">
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" formControlName="dead" id="dead">
+              <label class="form-check-label" for="dead">
+                {{ 'housingProjects.reports.form.activities.dead' | translate }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-4" *ngIf="reportForm.get('dead')?.value">
+            <label class="form-label">{{ 'housingProjects.reports.form.activities.deathDate' | translate }}</label>
+            <input type="date" class="form-control" formControlName="deathDate">
+          </div>
+
+          <!-- الموافقه / رفض + سبب الرفض — stored as data (workflow endpoints are 9-7/9-8) -->
+          <div class="col-md-4">
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" formControlName="isAccepted" id="isAccepted">
+              <label class="form-check-label" for="isAccepted">
+                {{ 'housingProjects.reports.form.activities.accept' | translate }}
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" formControlName="isRefused" id="isRefused">
+              <label class="form-check-label" for="isRefused">
+                {{ 'housingProjects.reports.form.activities.refuse' | translate }}
+              </label>
+            </div>
+          </div>
+
+          <!-- سبب الرفض — mandatory when refused (RefuseReasons lookup, epic-9 catalogue) -->
+          <div class="col-md-4" *ngIf="isRefusedFlag">
+            <label class="form-label">{{ 'housingProjects.reports.form.activities.refuseReason' | translate }} *</label>
+            <select class="form-select" formControlName="refuseReasonId">
+              <option [ngValue]="null">{{ 'validation.selectAnOption' | translate }}</option>
+              <option *ngFor="let reason of refuseReasons; trackBy: trackByLookupId" [ngValue]="reason.id">
+                {{ reason.name }}
+              </option>
+            </select>
+            <div class="invalid-feedback d-block"
+                 *ngIf="reportForm.get('refuseReasonId')?.touched && reportForm.get('refuseReasonId')?.hasError('required')">
+              {{ 'housingProjects.reports.form.errors.refuseReasonRequired' | translate }}
+            </div>
+          </div>
+
+          <!-- طلب كفالة طالب يتيم (IsOrphanStudentFun) + the funding block -->
+          <div class="col-md-4">
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" formControlName="isOrphanStudent" id="isOrphanStudent">
+              <label class="form-check-label" for="isOrphanStudent">
+                {{ 'housingProjects.reports.form.activities.isOrphanStudent' | translate }}
+              </label>
+            </div>
+          </div>
+
+          <ng-container *ngIf="isStudentRequest">
+            <div class="col-md-3">
+              <label class="form-label">{{ 'housingProjects.reports.form.activities.annualFee' | translate }} *</label>
+              <input type="number" class="form-control" formControlName="annualFeeForStudy" min="0" step="0.01">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">{{ 'housingProjects.reports.form.activities.studyingYears' | translate }}</label>
+              <input type="number" class="form-control" formControlName="studyingYears" min="0" max="30">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">{{ 'housingProjects.reports.form.activities.restStudyingYears' | translate }}</label>
+              <input type="number" class="form-control" formControlName="restStudyingYears" min="0" max="30">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">{{ 'housingProjects.reports.form.activities.graduationYear' | translate }}</label>
+              <input type="number" class="form-control" formControlName="graduationYear" min="1900" max="2100">
+            </div>
+          </ng-container>
+        </div>
+      </div>
+
+      <!-- Server-side errors summary (15-6 errors-map) -->
+      <div class="alert alert-danger" *ngIf="serverErrorsKeys.length > 0">
+        <ul class="mb-0">
+          <li *ngFor="let key of serverErrorsKeys">{{ serverErrors[key] }}</li>
+        </ul>
+      </div>
+
+      <!-- §14.U.5 — locked/accepted reports cannot be edited -->
+      <div class="alert alert-warning" *ngIf="editBlocked">
+        <i class="fe fe-lock me-2"></i>
+        {{ 'periodicReports.cannotEditOldReport' | translate }}
+      </div>
+
+      <!-- حفظ per §11.S.4 (new reports: always enabled; print stays epic 18) -->
+      <div class="d-flex justify-content-between">
+        <div class="btn-group">
+          <button type="button" class="btn btn-light" disabled
+                  [title]="'housingProjects.reports.commands.printDisabled' | translate">
+            <i class="fe fe-printer"></i>
+          </button>
+        </div>
+
+        <div>
+          <button type="button" class="btn btn-secondary me-2" (click)="cancel()">
+            <i class="fe fe-x me-1"></i>
+            {{ 'common.cancel' | translate }}
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving || editBlocked">
+            <i class="fe fe-save me-1" *ngIf="!saving"></i>
+            <span class="spinner-border spinner-border-sm me-1" *ngIf="saving" role="status"></span>
+            {{ 'common.save' | translate }}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
