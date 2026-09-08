@@ -1,0 +1,210 @@
+- generic [ref=e5]:
+  - navigation [ref=e6]:
+    - button [ref=e7] [cursor=pointer]
+    - list [ref=e9]:
+      - listitem [ref=e10]:
+        - link "English " [ref=e11] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=e12]:
+        - link "" [ref=e13] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=e15]:
+        - link [ref=e16] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=e18]:
+        - button [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]:
+            - text: Welcome System Admin
+            - img "..." [ref=e21]
+          - text: 
+  - complementary [ref=e22]:
+    - navigation [ref=e23]:
+      - link [ref=e25] [cursor=pointer]:
+        - /url: "#/"
+        - img "IIROSA Logo" [ref=e26]
+      - paragraph [ref=e27]: Website Elements
+      - list [ref=e28]:
+        - listitem [ref=e29]:
+          - link "Home Page (current) " [ref=e30] [cursor=pointer]:
+            - /url: "#dashboard"
+            - generic [ref=e31]: Home Page
+            - generic [ref=e32]: (current)
+            - text: 
+          - list [ref=e33]:
+            - listitem [ref=e34]:
+              - link "Home" [ref=e35] [cursor=pointer]:
+                - /url: "#/"
+        - listitem [ref=e36]:
+          - link "Settings " [ref=e37] [cursor=pointer]:
+            - /url: "#settings"
+            - generic [ref=e38]: Settings
+            - text: 
+        - listitem [ref=e39]:
+          - link "Technical Support " [ref=e40] [cursor=pointer]:
+            - /url: "#technical-support"
+            - generic [ref=e41]: Technical Support
+            - text: 
+        - listitem [ref=e42]:
+          - link "Missions " [ref=e43] [cursor=pointer]:
+            - /url: "#missions"
+            - generic [ref=e44]: Missions
+            - text: 
+        - listitem [ref=e45]:
+          - link "Orphan Payments " [ref=e46] [cursor=pointer]:
+            - /url: "#orphan-payments"
+            - generic [ref=e47]: Orphan Payments
+            - text: 
+        - listitem [ref=e48]:
+          - link "Office Projects " [ref=e49] [cursor=pointer]:
+            - /url: "#office-development-projects"
+            - generic [ref=e50]: Office Projects
+            - text: 
+        - listitem [ref=e51]:
+          - link "Housing Projects " [ref=e52] [cursor=pointer]:
+            - /url: "#housing-projects"
+            - generic [ref=e53]: Housing Projects
+            - text: 
+        - listitem [ref=e54]:
+          - link "Seasonal Aid " [ref=e55] [cursor=pointer]:
+            - /url: "#seasonal-aid"
+            - generic [ref=e56]: Seasonal Aid
+            - text: 
+          - list [ref=e57]:
+            - listitem [ref=e58]:
+              - link "All Seasonal Aid" [ref=e59] [cursor=pointer]:
+                - /url: "#/seasonal-aid"
+            - listitem [ref=e60]:
+              - link "Add Seasonal Aid" [ref=e61] [cursor=pointer]:
+                - /url: "#/seasonal-aid/create"
+        - listitem [ref=e62]:
+          - link "Incoming & Outgoing " [ref=e63] [cursor=pointer]:
+            - /url: "#incoming-outgoing"
+            - generic [ref=e64]: Incoming & Outgoing
+            - text: 
+        - listitem [ref=e65]:
+          - link "Families " [ref=e66] [cursor=pointer]:
+            - /url: "#families"
+            - generic [ref=e67]: Families
+            - text: 
+        - listitem [ref=e68]:
+          - link "Reports " [ref=e69] [cursor=pointer]:
+            - /url: "#reports"
+            - generic [ref=e70]: Reports
+            - text: 
+        - listitem [ref=e71]:
+          - link "General Cheques " [ref=e72] [cursor=pointer]:
+            - /url: "#general-checks"
+            - generic [ref=e73]: General Cheques
+            - text: 
+        - listitem [ref=e74]:
+          - link "Periodic Orphan Reports " [ref=e75] [cursor=pointer]:
+            - /url: "#periodic-orphan-reports"
+            - generic [ref=e76]: Periodic Orphan Reports
+            - text: 
+        - listitem [ref=e77]:
+          - link "Financial Transfers " [ref=e78] [cursor=pointer]:
+            - /url: "#hq-transfers"
+            - generic [ref=e79]: Financial Transfers
+            - text: 
+  - main [ref=e80]:
+    - generic [ref=e82]:
+      - navigation "breadcrumb" [ref=e84]:
+        - list [ref=e85]:
+          - listitem [ref=e86]:
+            - link "Home" [ref=e87] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=e88]:
+            - text: /
+            - link "Seasonal Aid" [ref=e89] [cursor=pointer]:
+              - /url: "#/seasonal-aid"
+          - listitem [ref=e90]:
+            - text: /
+            - generic [ref=e91]: Create Campaign
+      - generic [ref=e93]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=e94]:
+          - heading "Create Campaign" [level=3] [ref=e97]
+          - button "Cancel" [ref=e99] [cursor=pointer]
+      - generic [ref=e101]:
+        - generic [ref=e102]:
+          - heading "Basic Information" [level=4] [ref=e104]
+          - generic [ref=e105]:
+            - generic [ref=e106]:
+              - generic [ref=e109]:
+                - generic [ref=e110]: Campaign Name *
+                - textbox "Campaign Name *" [ref=e111]:
+                  - /placeholder: Enter campaign name (e.g., Ramadan 2026 Aid)
+              - generic [ref=e114]:
+                - generic [ref=e115]: Campaign Type *
+                - combobox [ref=e118] [cursor=pointer]:
+                  - textbox "Ramadan" [ref=e119]
+            - generic [ref=e123]:
+              - generic [ref=e124]: Description
+              - textbox "Description" [ref=e125]:
+                - /placeholder: Enter campaign description
+        - generic [ref=e126]:
+          - heading "Campaign Period" [level=4] [ref=e128]
+          - generic [ref=e130]:
+            - generic [ref=e133]:
+              - generic [ref=e134]: Start Date *
+              - textbox "Start Date *" [ref=e136]:
+                - /placeholder: MM/DD/YYYY
+            - generic [ref=e141]:
+              - generic [ref=e142]: End Date *
+              - textbox "End Date *" [ref=e144]:
+                - /placeholder: MM/DD/YYYY
+        - generic [ref=e147]:
+          - heading "Financial Information" [level=4] [ref=e149]
+          - generic [ref=e151]:
+            - generic [ref=e154]:
+              - generic [ref=e155]: Total Budget *
+              - spinbutton "Total Budget *" [ref=e156]
+            - generic [ref=e159]:
+              - generic [ref=e160]: Currency *
+              - combobox [ref=e163] [cursor=pointer]:
+                - textbox "EGP" [ref=e164]
+            - generic [ref=e167]:
+              - generic [ref=e168]: Per Family Allocation *
+              - spinbutton "Per Family Allocation *" [ref=e169]
+        - generic [ref=e170]:
+          - heading "Geographic Scope" [level=4] [ref=e172]
+          - generic [ref=e174]:
+            - generic [ref=e175]: Country
+            - generic [ref=e181]:
+              - generic [ref=e182]: Region
+              - combobox [disabled] [ref=e185]:
+                - textbox [disabled] [ref=e186]
+            - generic [ref=e189]:
+              - generic [ref=e190]: Center
+              - combobox [disabled] [ref=e193]:
+                - textbox [disabled] [ref=e194]
+        - generic [ref=e195]:
+          - heading "Beneficiary Criteria" [level=4] [ref=e197]
+          - generic [ref=e199]:
+            - generic [ref=e202]:
+              - generic [ref=e203]: Maximum Families
+              - spinbutton "Maximum Families" [ref=e204]
+            - generic [ref=e207]:
+              - generic [ref=e208]: Family Type
+              - combobox [ref=e211] [cursor=pointer]:
+                - textbox "All Families" [ref=e212]
+            - generic [ref=e215]:
+              - generic [ref=e216]: Age Range From
+              - spinbutton "Age Range From" [ref=e217]
+            - generic [ref=e220]:
+              - generic [ref=e221]: Age Range To
+              - spinbutton "Age Range To" [ref=e222]
+        - generic [ref=e223]:
+          - heading "Status" [level=4] [ref=e225]
+          - generic [ref=e229]:
+            - checkbox "Is Active" [checked] [ref=e230]
+            - generic [ref=e231]: Is Active
+        - generic [ref=e233]:
+          - button "Create" [ref=e234] [cursor=pointer]
+          - button "Cancel" [ref=e235] [cursor=pointer]
+  - contentinfo [ref=e236]:
+    - generic [ref=e238]:
+      - paragraph [ref=e240]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=e242]: Version 1.0.0

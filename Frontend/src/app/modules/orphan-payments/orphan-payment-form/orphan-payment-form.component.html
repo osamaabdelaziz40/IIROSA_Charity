@@ -5,314 +5,328 @@
   [actions]="pageActions">
 </app-page-header>
 
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-12">
-      <div class="card shadow" *ngIf="!loading">
-        <div class="card-body">
-          <form [formGroup]="form" (ngSubmit)="onSubmit()">
-            <!-- Basic Information Section -->
-            <div class="col-12">
-              <h5 class="mb-3">{{ 'orphanPayments.basicInformation' | translate }}</h5>
-            </div>
+<!-- One card per section (mission-form card idiom); fields unchanged. -->
+<div class="container-fluid" *ngIf="!loading">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()">
 
-            <div class="row">
-              <!-- Group Name -->
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label for="groupName" class="required-field">
-                    {{ 'orphanPayments.groupName' | translate }}
-                  </label>
-                  <input type="text"
-                         id="groupName"
-                         class="form-control"
-                         formControlName="groupName"
-                         [placeholder]="'orphanPayments.groupNamePlaceholder' | translate"
-                         [class.is-invalid]="hasError('groupName', 'required') || !!serverErrors['groupName']">
-                  <div class="invalid-feedback" *ngIf="hasError('groupName', 'required')">
-                    {{ 'validation.required' | translate }}
-                  </div>
-                  <div class="invalid-feedback" *ngIf="serverErrors['groupName']">{{ serverErrors['groupName'] }}</div>
-                </div>
-              </div>
-
-              <!-- HQ-only charity filter for the batch picker (§15.S.1/§15.S.2 الجمعية) —
-                   Select2 like office-development-projects; narrows the selector
-                   server-side. A charity user's scope comes from the JWT. -->
-              <div class="col-md-6" *ngIf="isHqUser">
-                <app-drop-down [fg]="filterForm"
-                               fcn="charityId"
-                               [label]="'orphanPayments.charity'"
-                               [placeholder]="'orphanPayments.allCharities' | translate"
-                               [hasDefaultValue]="false"
-                               [initialData]="filterCharityOptions"
-                               (onDropDownChanged)="onFilterCharityChanged($event)">
-                </app-drop-down>
-              </div>
-            </div>
-
-            <!-- Batch Number — 10-6 (UC-PAY-06): selector fed by /batch-numbers.
-                 Kept a native select: the "auto" option must stay re-selectable and
-                 numeric batch numbers would be coerced by the Select2 wrapper. -->
-            <div class="row">
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label for="batchNo">{{ 'orphanPayments.batchNumber' | translate }}</label>
-                  <select class="form-control"
-                          id="batchNo"
-                          formControlName="batchNo"
-                          *ngIf="!showBatchNumberInput">
-                    <option value="">{{ 'orphanPayments.batchNumberAutoOption' | translate }}</option>
-                    <option *ngFor="let b of batchOptions; trackBy: trackByBatchNo"
-                            [value]="b.batchNo">{{ b.batchNo }}</option>
-                  </select>
-                  <div class="input-group" *ngIf="showBatchNumberInput">
-                    <input type="text"
-                           id="batchNoInput"
-                           class="form-control"
-                           formControlName="batchNo"
-                           [placeholder]="'orphanPayments.batchNumberPlaceholder' | translate">
-                    <button type="button"
-                            class="btn btn-outline-secondary"
-                            (click)="toggleBatchNumberInput()"
-                            [title]="'orphanPayments.backToBatchList' | translate">
-                      <i class="fe fe-list"></i>
-                    </button>
-                  </div>
-                  <small class="text-muted" *ngIf="!form.get('batchNo')?.value">
-                    {{ 'orphanPayments.batchNumberAutoHint' | translate }}
-                  </small>
-                  <div class="invalid-feedback" *ngIf="serverErrors['batchNo']">{{ serverErrors['batchNo'] }}</div>
-                  <div class="input-group mt-1" *ngIf="!showBatchNumberInput">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" (click)="toggleBatchNumberInput()">
-                      <i class="fe fe-plus mr-1"></i>
-                      {{ 'orphanPayments.addBatchNumber' | translate }}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Description -->
-            <div class="row">
-              <div class="col-md-12">
-                <div class="form-group">
-                  <label for="description">{{ 'orphanPayments.description' | translate }}</label>
-                  <textarea id="description"
-                            class="form-control"
-                            formControlName="description"
-                            rows="2"
-                            [placeholder]="'orphanPayments.descriptionPlaceholder' | translate"></textarea>
-                </div>
-              </div>
-            </div>
-
-            <!-- Dates -->
-            <div class="row">
-              <div class="col-md-6 col-xl-3">
-                <div class="form-group">
-                  <label for="paymentPeriodFrom" class="required-field">
-                    {{ 'orphanPayments.paymentPeriodFrom' | translate }}
-                  </label>
-                  <input type="date"
-                         id="paymentPeriodFrom"
-                         class="form-control"
-                         formControlName="paymentPeriodFrom"
-                         [class.is-invalid]="hasError('paymentPeriodFrom', 'required') || !!serverErrors['paymentPeriodFrom']">
-                  <div class="invalid-feedback" *ngIf="hasError('paymentPeriodFrom', 'required')">
-                    {{ 'validation.required' | translate }}
-                  </div>
-                  <div class="invalid-feedback" *ngIf="serverErrors['paymentPeriodFrom']">{{ serverErrors['paymentPeriodFrom'] }}</div>
-                </div>
-              </div>
-              <div class="col-md-6 col-xl-3">
-                <div class="form-group">
-                  <label for="paymentPeriodTo" class="required-field">
-                    {{ 'orphanPayments.paymentPeriodTo' | translate }}
-                  </label>
-                  <input type="date"
-                         id="paymentPeriodTo"
-                         class="form-control"
-                         formControlName="paymentPeriodTo"
-                         [class.is-invalid]="hasError('paymentPeriodTo', 'required')">
-                  <div class="invalid-feedback" *ngIf="hasError('paymentPeriodTo', 'required')">
-                    {{ 'validation.required' | translate }}
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-6 col-xl-3">
-                <div class="form-group">
-                  <label for="groupDate" class="required-field">
-                    {{ 'orphanPayments.groupDate' | translate }}
-                  </label>
-                  <input type="date"
-                         id="groupDate"
-                         class="form-control"
-                         formControlName="groupDate"
-                         [class.is-invalid]="hasError('groupDate', 'required')">
-                  <div class="invalid-feedback" *ngIf="hasError('groupDate', 'required')">
-                    {{ 'validation.required' | translate }}
-                  </div>
-                </div>
-              </div>
-              <!-- تاريخ بدء التوزيع — §15.S.2 mandatory (10-2) -->
-              <div class="col-md-6 col-xl-3">
-                <div class="form-group">
-                  <label for="paymentDate" class="required-field">
-                    {{ 'orphanPayments.paymentDate' | translate }}
-                  </label>
-                  <input type="date"
-                         id="paymentDate"
-                         class="form-control"
-                         formControlName="paymentDate"
-                         [class.is-invalid]="hasError('paymentDate', 'required') || !!serverErrors['paymentDate']">
-                  <div class="invalid-feedback" *ngIf="hasError('paymentDate', 'required')">
-                    {{ 'validation.required' | translate }}
-                  </div>
-                  <div class="invalid-feedback" *ngIf="serverErrors['paymentDate']">{{ serverErrors['paymentDate'] }}</div>
-                </div>
-              </div>
-
-              <!-- Date Range Error (group-level validator error) -->
-              <div class="col-12" *ngIf="form.hasError('dateRangeInvalid')">
-                <div class="alert alert-danger">
-                  <i class="fe fe-alert-circle mr-2"></i>
-                  {{ 'orphanPayments.dateRangeInvalid' | translate }}
-                </div>
-              </div>
-
-              <!-- 10-4: general business refusal (e.g. exchange-rate lock) — plain 400 { message } -->
-              <div class="col-12" *ngIf="serverMessage">
-                <div class="alert alert-warning">
-                  <i class="fe fe-lock mr-2"></i>
-                  {{ serverMessage }}
-                </div>
-              </div>
-            </div>
-
-            <!-- 10-2 trim: "Filtering Options" section removed — the server never persisted
-                 charity/region/center pre-selection, so the controls were decorative.
-                 The enrolment screen carries its own live filter sidebar. -->
-
-            <!-- Financial Information Section -->
-            <div class="col-12 mt-4">
-              <h5 class="mb-3">{{ 'orphanPayments.financialInformation' | translate }}</h5>
-            </div>
-
-            <div class="row">
-              <!-- Exchange Rate -->
-              <div class="col-md-4">
-                <div class="form-group">
-                  <label for="exchangeRate">{{ 'orphanPayments.exchangeRate' | translate }}</label>
-                  <div class="input-group">
-                    <input type="number"
-                           id="exchangeRate"
-                           class="form-control"
-                           formControlName="exchangeRate"
-                           [placeholder]="'orphanPayments.exchangeRatePlaceholder' | translate"
-                           step="0.01"
-                           [disabled]="isExchangeRateLocked()">
-                    <div class="input-group-append">
-                      <span class="input-group-text">
-                        <i class="fe fe-info-circle" [title]="'orphanPayments.exchangeRateHelp' | translate"></i>
-                      </span>
-                    </div>
-                  </div>
-                  <small class="text-muted">{{ 'orphanPayments.exchangeRateHelpText' | translate }}</small>
-                </div>
-              </div>
-
-              <!-- Currency — shared Select2 dropdown -->
-              <div class="col-md-4">
-                <app-drop-down [fg]="form"
-                               fcn="currency"
-                               [label]="'orphanPayments.currency'"
-                               [hasDefaultValue]="false"
-                               [initialData]="currencyDropdownOptions"
-                               [disabled]="isExchangeRateLocked()">
-                </app-drop-down>
-              </div>
-
-              <!-- Don't Remove Rate -->
-              <div class="col-md-4">
-                <div class="form-group">
-                  <div class="form-check">
-                    <input class="form-check-input"
-                           type="checkbox"
-                           id="dontRemoveRate"
-                           formControlName="dontRemoveRate"
-                           (change)="onDontRemoveRateChange(form.get('dontRemoveRate')?.value)">
-                    <label class="form-check-label" for="dontRemoveRate">
-                      {{ 'orphanPayments.dontRemoveRate' | translate }}
-                    </label>
-                    <small class="d-block text-muted mt-1">
-                      {{ 'orphanPayments.dontRemoveRateHelp' | translate }}
-                    </small>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Settings Section -->
-            <div class="col-12 mt-4">
-              <h5 class="mb-3">{{ 'orphanPayments.settings' | translate }}</h5>
-            </div>
-
-            <div class="row">
-              <!-- Show Order -->
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label for="showOrder">{{ 'orphanPayments.showOrder' | translate }}</label>
-                  <input type="number"
-                         id="showOrder"
-                         class="form-control"
-                         formControlName="showOrder">
-                </div>
-              </div>
-            </div>
-
-            <!-- Notes -->
-            <div class="row">
-              <div class="col-md-12">
-                <div class="form-group">
-                  <label for="notes">{{ 'orphanPayments.notes' | translate }}</label>
-                  <textarea id="notes"
-                            class="form-control"
-                            formControlName="notes"
-                            rows="3"
-                            [placeholder]="'orphanPayments.notesPlaceholder' | translate"></textarea>
-                </div>
-              </div>
-            </div>
-
-            <!-- Form Actions -->
-            <div class="col-12 mt-4">
-              <button type="submit"
-                      class="btn btn-primary"
-                      [disabled]="saving || form.invalid">
-                <i class="fe fe-save mr-1" *ngIf="!saving"></i>
-                <span class="spinner-border spinner-border-sm mr-1" *ngIf="saving"></span>
-                {{ 'common.save' | translate }}
-              </button>
-              <button type="button"
-                      class="btn btn-secondary ml-2"
-                      (click)="onCancel()"
-                      [disabled]="saving">
-                <i class="fe fe-x mr-1"></i>
-                {{ 'common.cancel' | translate }}
-              </button>
-            </div>
-          </form>
-        </div>
+    <!-- Basic Information Section -->
+    <div class="card shadow mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-info mr-2"></i>
+          {{ 'orphanPayments.basicInformation' | translate }}
+        </h4>
       </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- Group Name -->
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="groupName" class="required-field">
+                {{ 'orphanPayments.groupName' | translate }}
+              </label>
+              <input type="text"
+                     id="groupName"
+                     class="form-control"
+                     formControlName="groupName"
+                     [placeholder]="'orphanPayments.groupNamePlaceholder' | translate"
+                     [class.is-invalid]="hasError('groupName', 'required') || !!serverErrors['groupName']">
+              <div class="invalid-feedback" *ngIf="hasError('groupName', 'required')">
+                {{ 'validation.required' | translate }}
+              </div>
+              <div class="invalid-feedback" *ngIf="serverErrors['groupName']">{{ serverErrors['groupName'] }}</div>
+            </div>
+          </div>
 
-      <!-- Loading State -->
-      <div *ngIf="loading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="sr-only">{{ 'common.loading' | translate }}</span>
+          <!-- HQ-only charity filter for the batch picker (§15.S.1/§15.S.2 الجمعية) —
+               Select2 like office-development-projects; narrows the selector
+               server-side. A charity user's scope comes from the JWT. -->
+          <div class="col-md-6" *ngIf="isHqUser">
+            <app-drop-down [fg]="filterForm"
+                           fcn="charityId"
+                           [label]="'orphanPayments.charity'"
+                           [placeholder]="'orphanPayments.allCharities' | translate"
+                           [hasDefaultValue]="false"
+                           [initialData]="filterCharityOptions"
+                           (onDropDownChanged)="onFilterCharityChanged($event)">
+            </app-drop-down>
+          </div>
         </div>
-        <p class="mt-3 text-muted">{{ 'common.loading' | translate }}...</p>
+
+        <!-- Batch Number — 10-6 (UC-PAY-06): selector fed by /batch-numbers.
+             Kept a native select: the "auto" option must stay re-selectable and
+             numeric batch numbers would be coerced by the Select2 wrapper. -->
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="batchNo">{{ 'orphanPayments.batchNumber' | translate }}</label>
+              <select class="form-control"
+                      id="batchNo"
+                      formControlName="batchNo"
+                      *ngIf="!showBatchNumberInput">
+                <option value="">{{ 'orphanPayments.batchNumberAutoOption' | translate }}</option>
+                <option *ngFor="let b of batchOptions; trackBy: trackByBatchNo"
+                        [value]="b.batchNo">{{ b.batchNo }}</option>
+              </select>
+              <div class="input-group" *ngIf="showBatchNumberInput">
+                <input type="text"
+                       id="batchNoInput"
+                       class="form-control"
+                       formControlName="batchNo"
+                       [placeholder]="'orphanPayments.batchNumberPlaceholder' | translate">
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        (click)="toggleBatchNumberInput()"
+                        [title]="'orphanPayments.backToBatchList' | translate">
+                  <i class="fe fe-list"></i>
+                </button>
+              </div>
+              <small class="text-muted" *ngIf="!form.get('batchNo')?.value">
+                {{ 'orphanPayments.batchNumberAutoHint' | translate }}
+              </small>
+              <div class="invalid-feedback" *ngIf="serverErrors['batchNo']">{{ serverErrors['batchNo'] }}</div>
+              <div class="input-group mt-1" *ngIf="!showBatchNumberInput">
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="toggleBatchNumberInput()">
+                  <i class="fe fe-plus mr-1"></i>
+                  {{ 'orphanPayments.addBatchNumber' | translate }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="row">
+          <div class="col-md-12">
+            <div class="form-group">
+              <label for="description">{{ 'orphanPayments.description' | translate }}</label>
+              <textarea id="description"
+                        class="form-control"
+                        formControlName="description"
+                        rows="2"
+                        [placeholder]="'orphanPayments.descriptionPlaceholder' | translate"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dates -->
+        <div class="row">
+          <div class="col-md-6 col-xl-3">
+            <div class="form-group">
+              <label for="paymentPeriodFrom" class="required-field">
+                {{ 'orphanPayments.paymentPeriodFrom' | translate }}
+              </label>
+              <input type="date"
+                     id="paymentPeriodFrom"
+                     class="form-control"
+                     formControlName="paymentPeriodFrom"
+                     [class.is-invalid]="hasError('paymentPeriodFrom', 'required') || !!serverErrors['paymentPeriodFrom']">
+              <div class="invalid-feedback" *ngIf="hasError('paymentPeriodFrom', 'required')">
+                {{ 'validation.required' | translate }}
+              </div>
+              <div class="invalid-feedback" *ngIf="serverErrors['paymentPeriodFrom']">{{ serverErrors['paymentPeriodFrom'] }}</div>
+            </div>
+          </div>
+          <div class="col-md-6 col-xl-3">
+            <div class="form-group">
+              <label for="paymentPeriodTo" class="required-field">
+                {{ 'orphanPayments.paymentPeriodTo' | translate }}
+              </label>
+              <input type="date"
+                     id="paymentPeriodTo"
+                     class="form-control"
+                     formControlName="paymentPeriodTo"
+                     [class.is-invalid]="hasError('paymentPeriodTo', 'required')">
+              <div class="invalid-feedback" *ngIf="hasError('paymentPeriodTo', 'required')">
+                {{ 'validation.required' | translate }}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-xl-3">
+            <div class="form-group">
+              <label for="groupDate" class="required-field">
+                {{ 'orphanPayments.groupDate' | translate }}
+              </label>
+              <input type="date"
+                     id="groupDate"
+                     class="form-control"
+                     formControlName="groupDate"
+                     [class.is-invalid]="hasError('groupDate', 'required')">
+              <div class="invalid-feedback" *ngIf="hasError('groupDate', 'required')">
+                {{ 'validation.required' | translate }}
+              </div>
+            </div>
+          </div>
+          <!-- تاريخ بدء التوزيع — §15.S.2 mandatory (10-2) -->
+          <div class="col-md-6 col-xl-3">
+            <div class="form-group">
+              <label for="paymentDate" class="required-field">
+                {{ 'orphanPayments.paymentDate' | translate }}
+              </label>
+              <input type="date"
+                     id="paymentDate"
+                     class="form-control"
+                     formControlName="paymentDate"
+                     [class.is-invalid]="hasError('paymentDate', 'required') || !!serverErrors['paymentDate']">
+              <div class="invalid-feedback" *ngIf="hasError('paymentDate', 'required')">
+                {{ 'validation.required' | translate }}
+              </div>
+              <div class="invalid-feedback" *ngIf="serverErrors['paymentDate']">{{ serverErrors['paymentDate'] }}</div>
+            </div>
+          </div>
+
+          <!-- Date Range Error (group-level validator error) -->
+          <div class="col-12" *ngIf="form.hasError('dateRangeInvalid')">
+            <div class="alert alert-danger">
+              <i class="fe fe-alert-circle mr-2"></i>
+              {{ 'orphanPayments.dateRangeInvalid' | translate }}
+            </div>
+          </div>
+
+          <!-- 10-4: general business refusal (e.g. exchange-rate lock) — plain 400 { message } -->
+          <div class="col-12" *ngIf="serverMessage">
+            <div class="alert alert-warning">
+              <i class="fe fe-lock mr-2"></i>
+              {{ serverMessage }}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+
+    <!-- 10-2 trim: "Filtering Options" section removed — the server never persisted
+         charity/region/center pre-selection, so the controls were decorative.
+         The enrolment screen carries its own live filter sidebar. -->
+
+    <!-- Financial Information Section -->
+    <div class="card shadow mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-dollar-sign mr-2"></i>
+          {{ 'orphanPayments.financialInformation' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- Exchange Rate -->
+          <div class="col-md-4">
+            <div class="form-group">
+              <label for="exchangeRate">{{ 'orphanPayments.exchangeRate' | translate }}</label>
+              <div class="input-group">
+                <input type="number"
+                       id="exchangeRate"
+                       class="form-control"
+                       formControlName="exchangeRate"
+                       [placeholder]="'orphanPayments.exchangeRatePlaceholder' | translate"
+                       step="0.01"
+                       [disabled]="isExchangeRateLocked()">
+                <div class="input-group-append">
+                  <span class="input-group-text">
+                    <i class="fe fe-info-circle" [title]="'orphanPayments.exchangeRateHelp' | translate"></i>
+                  </span>
+                </div>
+              </div>
+              <small class="text-muted">{{ 'orphanPayments.exchangeRateHelpText' | translate }}</small>
+            </div>
+          </div>
+
+          <!-- Currency — shared Select2 dropdown -->
+          <div class="col-md-4">
+            <app-drop-down [fg]="form"
+                           fcn="currency"
+                           [label]="'orphanPayments.currency'"
+                           [hasDefaultValue]="false"
+                           [initialData]="currencyDropdownOptions"
+                           [disabled]="isExchangeRateLocked()">
+            </app-drop-down>
+          </div>
+
+          <!-- Don't Remove Rate -->
+          <div class="col-md-4">
+            <div class="form-group">
+              <div class="form-check">
+                <input class="form-check-input"
+                       type="checkbox"
+                       id="dontRemoveRate"
+                       formControlName="dontRemoveRate"
+                       (change)="onDontRemoveRateChange(form.get('dontRemoveRate')?.value)">
+                <label class="form-check-label" for="dontRemoveRate">
+                  {{ 'orphanPayments.dontRemoveRate' | translate }}
+                </label>
+                <small class="d-block text-muted mt-1">
+                  {{ 'orphanPayments.dontRemoveRateHelp' | translate }}
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Section -->
+    <div class="card shadow mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-settings mr-2"></i>
+          {{ 'orphanPayments.settings' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- Show Order -->
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="showOrder">{{ 'orphanPayments.showOrder' | translate }}</label>
+              <input type="number"
+                     id="showOrder"
+                     class="form-control"
+                     formControlName="showOrder">
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="row">
+          <div class="col-md-12">
+            <div class="form-group">
+              <label for="notes">{{ 'orphanPayments.notes' | translate }}</label>
+              <textarea id="notes"
+                        class="form-control"
+                        formControlName="notes"
+                        rows="3"
+                        [placeholder]="'orphanPayments.notesPlaceholder' | translate"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="card shadow mb-4">
+      <div class="card-body">
+        <button type="submit"
+                class="btn btn-primary"
+                [disabled]="saving || form.invalid">
+          <i class="fe fe-save mr-1" *ngIf="!saving"></i>
+          <span class="spinner-border spinner-border-sm mr-1" *ngIf="saving"></span>
+          {{ 'common.save' | translate }}
+        </button>
+        <button type="button"
+                class="btn btn-secondary ml-2"
+                (click)="onCancel()"
+                [disabled]="saving">
+          <i class="fe fe-x mr-1"></i>
+          {{ 'common.cancel' | translate }}
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Loading State -->
+<div *ngIf="loading" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">{{ 'common.loading' | translate }}</span>
   </div>
+  <p class="mt-3 text-muted">{{ 'common.loading' | translate }}...</p>
 </div>

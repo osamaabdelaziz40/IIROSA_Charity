@@ -39,10 +39,6 @@ export class OutgoingLetterFormComponent implements OnInit, OnDestroy {
   loading = false;
   saving = false;
 
-  // The advisory next serial (UC-COR-12) — read-only; the server allocates the
-  // definitive serial per charity + year inside the create transaction.
-  nextSerialTxt = '';
-
   // Lookup data
   allDepartments: DepartmentDto[] = [];
   allIncomingLetters: IncomingListDto[] = [];
@@ -136,7 +132,7 @@ export class OutgoingLetterFormComponent implements OnInit, OnDestroy {
   private loadNextSerial(year?: number): void {
     this.outgoingService.getNextSerial(year).subscribe({
       next: result => {
-        this.nextSerialTxt = result.serialTxt;
+        this.letterForm.get('serial')?.setValue(result.serialTxt);
       },
       error: (error: any) => console.error('Error loading next serial:', error)
     });
@@ -144,7 +140,9 @@ export class OutgoingLetterFormComponent implements OnInit, OnDestroy {
 
   private createForm(): FormGroup {
     return this.fb.group({
-      // §21.S.5 field contract — the serial is read-only and server-allocated
+      // §21.S.5 field contract — the serial is read-only and server-allocated;
+      // create mode shows the advisory next serial (UC-COR-12), edit the stored one.
+      serial: [''],
       departmentId: [null, Validators.required],
       date: ['', Validators.required],
       subject: ['', [Validators.required, Validators.maxLength(500)]],
@@ -216,10 +214,10 @@ export class OutgoingLetterFormComponent implements OnInit, OnDestroy {
   }
 
   private patchForm(letter: OutgoingDto): void {
-    this.nextSerialTxt = letter.serial != null ? String(letter.serial).padStart(4, '0') : '';
     this.attachmentFileId = letter.uploadedFileId || null;
 
     this.letterForm.patchValue({
+      serial: letter.serial != null ? String(letter.serial).padStart(4, '0') : '',
       departmentId: letter.departmentId ?? null,
       date: this.toDateInput(letter.date),
       subject: letter.subject,

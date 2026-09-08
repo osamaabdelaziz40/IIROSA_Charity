@@ -5,224 +5,266 @@
   [actions]="pageActions">
 </app-page-header>
 
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-12">
-      <div class="card shadow" *ngIf="!loading">
-        <div class="card-body">
-          <form [formGroup]="campaignForm" (ngSubmit)="onSubmit()">
-            <!-- Basic Information Section -->
-            <h5 class="mb-3">{{ 'seasonalAid.basicInformation' | translate }}</h5>
+<!-- One card per section (mission-form card idiom); every field is a shared
+     component — app-input-text / app-drop-down — per the platform rule. -->
+<div class="container-fluid" *ngIf="!loading">
+  <form [formGroup]="campaignForm" (ngSubmit)="onSubmit()">
 
-            <div class="row">
-              <div class="col-md-6">
-                <app-input-text
-                  [fg]="campaignForm"
-                  fcn="name"
-                  [label]="'seasonalAid.campaignName'"
-                  [placeholder]="'seasonalAid.campaignNamePlaceholder' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-6">
-                <app-drop-down
-                  [fg]="campaignForm"
-                  fcn="campaignType"
-                  [label]="'seasonalAid.campaignType'"
-                  [initialData]="campaignTypeOptions">
-                </app-drop-down>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="col-md-12">
-                <app-input-text
-                  [fg]="campaignForm"
-                  fcn="description"
-                  [label]="'seasonalAid.description'"
-                  type="textarea"
-                  [rows]="3"
-                  [placeholder]="'seasonalAid.descriptionPlaceholder' | translate">
-                </app-input-text>
-              </div>
-            </div>
-
-            <!-- Campaign Period Section -->
-            <h5 class="mb-3 mt-4">{{ 'seasonalAid.campaignPeriod' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-6">
-                <app-input-text
-                  [fg]="campaignForm"
-                  fcn="startDate"
-                  [label]="'seasonalAid.startDate'"
-                  type="date-picker">
-                </app-input-text>
-              </div>
-              <div class="col-md-6">
-                <app-input-text
-                  [fg]="campaignForm"
-                  fcn="endDate"
-                  [label]="'seasonalAid.endDate'"
-                  type="date-picker">
-                </app-input-text>
-              </div>
-            </div>
-
-            <!-- Financial Information Section -->
-            <h5 class="mb-3 mt-4">{{ 'seasonalAid.financialInformation' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="campaignForm"
-                  fcn="totalBudget"
-                  [label]="'seasonalAid.totalBudget'"
-                  type="number"
-                  [min]="0"
-                  [step]="0.01"
-                  [placeholder]="'seasonalAid.totalBudgetPlaceholder' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-4">
-                <app-drop-down
-                  [fg]="campaignForm"
-                  fcn="budgetCurrency"
-                  [label]="'seasonalAid.currency'"
-                  [initialData]="currencyOptions">
-                </app-drop-down>
-              </div>
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="campaignForm"
-                  fcn="perFamilyAllocation"
-                  [label]="'seasonalAid.perFamilyAllocation'"
-                  type="number"
-                  [min]="0"
-                  [step]="0.01"
-                  [placeholder]="'seasonalAid.perFamilyAllocationPlaceholder' | translate">
-                </app-input-text>
-              </div>
-            </div>
-
-            <!-- Geographic Scope Section -->
-            <h5 class="mb-3 mt-4">{{ 'seasonalAid.geographicScope' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-4">
-                <app-drop-down
-                  [fg]="campaignForm"
-                  fcn="countryId"
-                  [label]="'seasonalAid.country'"
-                  [initialData]="countryOptions"
-                  (onDropDownChanged)="onCountryDropDownChanged($event)">
-                </app-drop-down>
-              </div>
-              <div class="col-md-4">
-                <app-drop-down
-                  [fg]="campaignForm"
-                  fcn="regionId"
-                  [label]="'seasonalAid.region'"
-                  [initialData]="regionOptions"
-                  [disabled]="!campaignForm.get('countryId')?.value || regionOptions.length === 0"
-                  (onDropDownChanged)="onRegionDropDownChanged($event)">
-                </app-drop-down>
-              </div>
-              <div class="col-md-4">
-                <app-drop-down
-                  [fg]="campaignForm"
-                  fcn="centerId"
-                  [label]="'seasonalAid.center'"
-                  [initialData]="centerOptions"
-                  [disabled]="!campaignForm.get('regionId')?.value || centerOptions.length === 0">
-                </app-drop-down>
-              </div>
-            </div>
-
-            <!-- Beneficiary Criteria Section -->
-            <h5 class="mb-3 mt-4">{{ 'seasonalAid.beneficiaryCriteria' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-4">
-                <app-input-text
-                  [fg]="campaignForm"
-                  fcn="maximumFamilies"
-                  [label]="'seasonalAid.maximumFamilies'"
-                  type="number"
-                  [min]="1"
-                  [placeholder]="'seasonalAid.maximumFamiliesPlaceholder' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-4">
-                <app-drop-down
-                  [fg]="campaignForm"
-                  fcn="familyType"
-                  [label]="'seasonalAid.familyType'"
-                  [initialData]="familyTypeOptions">
-                </app-drop-down>
-              </div>
-              <div class="col-md-2">
-                <app-input-text
-                  [fg]="campaignForm"
-                  fcn="minChildrenAge"
-                  [label]="'seasonalAid.ageRangeFrom'"
-                  type="number"
-                  [min]="0"
-                  [max]="18"
-                  [placeholder]="'seasonalAid.ageRangeFromPlaceholder' | translate">
-                </app-input-text>
-              </div>
-              <div class="col-md-2">
-                <app-input-text
-                  [fg]="campaignForm"
-                  fcn="maxChildrenAge"
-                  [label]="'seasonalAid.ageRangeTo'"
-                  type="number"
-                  [min]="0"
-                  [max]="18"
-                  [placeholder]="'seasonalAid.ageRangeToPlaceholder' | translate">
-                </app-input-text>
-              </div>
-            </div>
-
-            <!-- Status Section -->
-            <h5 class="mb-3 mt-4">{{ 'seasonalAid.status' | translate }}</h5>
-
-            <div class="row">
-              <div class="col-md-6">
-                <div class="custom-control custom-checkbox">
-                  <input type="checkbox" class="custom-control-input" id="isActive" formControlName="isActive">
-                  <label class="custom-control-label" for="isActive">
-                    {{ 'seasonalAid.isActive' | translate }}
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <!-- Form Actions -->
-            <div class="mt-4">
-              <div class="form-group">
-                <button type="submit" class="btn btn-primary" [disabled]="saving">
-                  <i class="fe fe-save mr-1" *ngIf="!saving"></i>
-                  <span class="spinner-border spinner-border-sm mr-1" *ngIf="saving"></span>
-                  {{ isEditMode ? ('common.save' | translate) : ('common.create' | translate) }}
-                </button>
-                <button type="button" class="btn btn-secondary ml-2" (click)="onCancel()" [disabled]="saving">
-                  <i class="fe fe-x mr-1"></i>
-                  {{ 'common.cancel' | translate }}
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
+    <!-- Basic Information Section -->
+    <div class="card shadow mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-info mr-2"></i>
+          {{ 'seasonalAid.basicInformation' | translate }}
+        </h4>
       </div>
-
-      <!-- Loading State -->
-      <div *ngIf="loading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <app-input-text
+              [fg]="campaignForm"
+              fcn="name"
+              [label]="'seasonalAid.campaignName'"
+              [placeholder]="'seasonalAid.campaignNamePlaceholder' | translate">
+            </app-input-text>
+          </div>
+          <div class="col-md-6">
+            <app-drop-down
+              [fg]="campaignForm"
+              fcn="campaignType"
+              [label]="'seasonalAid.campaignType'"
+              [initialData]="campaignTypeOptions">
+            </app-drop-down>
+          </div>
         </div>
-        <p class="mt-3 text-muted">{{ 'common.loading' | translate }}...</p>
+        <div class="row">
+          <div class="col-md-12">
+            <app-input-text
+              [fg]="campaignForm"
+              fcn="description"
+              [label]="'seasonalAid.description'"
+              type="textarea"
+              [rows]="3"
+              [placeholder]="'seasonalAid.descriptionPlaceholder' | translate">
+            </app-input-text>
+          </div>
+        </div>
       </div>
     </div>
+
+    <!-- Campaign Period Section -->
+    <div class="card shadow mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-calendar mr-2"></i>
+          {{ 'seasonalAid.campaignPeriod' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <app-input-text
+              [fg]="campaignForm"
+              fcn="startDate"
+              [label]="'seasonalAid.startDate'"
+              type="date-picker">
+            </app-input-text>
+          </div>
+          <div class="col-md-6">
+            <app-input-text
+              [fg]="campaignForm"
+              fcn="endDate"
+              [label]="'seasonalAid.endDate'"
+              type="date-picker">
+            </app-input-text>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial Information Section -->
+    <div class="card shadow mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-dollar-sign mr-2"></i>
+          {{ 'seasonalAid.financialInformation' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4">
+            <app-input-text
+              [fg]="campaignForm"
+              fcn="totalBudget"
+              [label]="'seasonalAid.totalBudget'"
+              type="number"
+              [min]="0"
+              [step]="0.01"
+              [placeholder]="'seasonalAid.totalBudgetPlaceholder' | translate">
+            </app-input-text>
+          </div>
+          <div class="col-md-4">
+            <app-drop-down
+              [fg]="campaignForm"
+              fcn="budgetCurrency"
+              [label]="'seasonalAid.currency'"
+              [initialData]="currencyOptions">
+            </app-drop-down>
+          </div>
+          <div class="col-md-4">
+            <app-input-text
+              [fg]="campaignForm"
+              fcn="perFamilyAllocation"
+              [label]="'seasonalAid.perFamilyAllocation'"
+              type="number"
+              [min]="0"
+              [step]="0.01"
+              [placeholder]="'seasonalAid.perFamilyAllocationPlaceholder' | translate">
+            </app-input-text>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Geographic Scope Section (country → region → center cascade) -->
+    <div class="card shadow mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-map-pin mr-2"></i>
+          {{ 'seasonalAid.geographicScope' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4">
+            <app-drop-down
+              [fg]="campaignForm"
+              fcn="countryId"
+              [label]="'seasonalAid.country'"
+              [initialData]="countryOptions"
+              (onDropDownChanged)="onCountryDropDownChanged($event)">
+            </app-drop-down>
+          </div>
+          <div class="col-md-4">
+            <app-drop-down
+              [fg]="campaignForm"
+              fcn="regionId"
+              [label]="'seasonalAid.region'"
+              [initialData]="regionOptions"
+              [disabled]="!campaignForm.get('countryId')?.value || regionOptions.length === 0"
+              (onDropDownChanged)="onRegionDropDownChanged($event)">
+            </app-drop-down>
+          </div>
+          <div class="col-md-4">
+            <app-drop-down
+              [fg]="campaignForm"
+              fcn="centerId"
+              [label]="'seasonalAid.center'"
+              [initialData]="centerOptions"
+              [disabled]="!campaignForm.get('regionId')?.value || centerOptions.length === 0">
+            </app-drop-down>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Beneficiary Criteria Section -->
+    <div class="card shadow mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-users mr-2"></i>
+          {{ 'seasonalAid.beneficiaryCriteria' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4">
+            <app-input-text
+              [fg]="campaignForm"
+              fcn="maximumFamilies"
+              [label]="'seasonalAid.maximumFamilies'"
+              type="number"
+              [min]="1"
+              [placeholder]="'seasonalAid.maximumFamiliesPlaceholder' | translate">
+            </app-input-text>
+          </div>
+          <div class="col-md-4">
+            <app-drop-down
+              [fg]="campaignForm"
+              fcn="familyType"
+              [label]="'seasonalAid.familyType'"
+              [initialData]="familyTypeOptions">
+            </app-drop-down>
+          </div>
+          <div class="col-md-2">
+            <app-input-text
+              [fg]="campaignForm"
+              fcn="minChildrenAge"
+              [label]="'seasonalAid.ageRangeFrom'"
+              type="number"
+              [min]="0"
+              [max]="18"
+              [placeholder]="'seasonalAid.ageRangeFromPlaceholder' | translate">
+            </app-input-text>
+          </div>
+          <div class="col-md-2">
+            <app-input-text
+              [fg]="campaignForm"
+              fcn="maxChildrenAge"
+              [label]="'seasonalAid.ageRangeTo'"
+              type="number"
+              [min]="0"
+              [max]="18"
+              [placeholder]="'seasonalAid.ageRangeToPlaceholder' | translate">
+            </app-input-text>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Section -->
+    <div class="card shadow mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-activity mr-2"></i>
+          {{ 'seasonalAid.status' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="custom-control custom-checkbox">
+              <input type="checkbox" class="custom-control-input" id="isActive" formControlName="isActive">
+              <label class="custom-control-label" for="isActive">
+                {{ 'seasonalAid.isActive' | translate }}
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="card shadow mb-4">
+      <div class="card-body">
+        <button type="submit" class="btn btn-primary" [disabled]="saving">
+          <i class="fe fe-save mr-1" *ngIf="!saving"></i>
+          <span class="spinner-border spinner-border-sm mr-1" *ngIf="saving"></span>
+          {{ isEditMode ? ('common.save' | translate) : ('common.create' | translate) }}
+        </button>
+        <button type="button" class="btn btn-secondary ml-2" (click)="onCancel()" [disabled]="saving">
+          <i class="fe fe-x mr-1"></i>
+          {{ 'common.cancel' | translate }}
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Loading State -->
+<div *ngIf="loading" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">{{ 'common.loading' | translate }}</span>
   </div>
+  <p class="mt-3 text-muted">{{ 'common.loading' | translate }}...</p>
 </div>

@@ -1,39 +1,3 @@
-.form-section {
-  margin-bottom: 2rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--border-color);
-
-  &:last-of-type {
-    border-bottom: none;
-  }
-
-  .form-section-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 1.5rem;
-    color: var(--primary);
-    display: flex;
-    align-items: center;
-
-    i {
-      margin-right: 0.5rem;
-      font-size: 1.25rem;
-    }
-  }
-}
-
-.form-actions {
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  gap: 0.5rem;
-
-  .btn {
-    min-width: 120px;
-  }
-}
-
 .form-check {
   padding: 0.75rem 0;
   margin-bottom: 0.5rem;
@@ -69,13 +33,6 @@
 
 // RTL Support
 [dir='rtl'] {
-  .form-section-title {
-    i {
-      margin-right: 0;
-      margin-left: 0.5rem;
-    }
-  }
-
   .form-check-label {
     margin-left: 0;
     margin-right: 0.5rem;

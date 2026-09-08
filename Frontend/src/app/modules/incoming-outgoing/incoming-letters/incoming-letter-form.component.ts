@@ -39,10 +39,6 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
   loading = false;
   saving = false;
 
-  // The advisory next serial (UC-COR-03) — read-only; the server allocates the
-  // definitive serial per charity + year inside the create transaction.
-  nextSerialTxt = '';
-
   // Lookup data
   allDepartments: DepartmentDto[] = [];
   allUsers: User[] = [];
@@ -152,7 +148,7 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
   private loadNextSerial(year?: number): void {
     this.incomingService.getNextSerial(year).subscribe({
       next: result => {
-        this.nextSerialTxt = result.serialTxt;
+        this.letterForm.get('serial')?.setValue(result.serialTxt);
       },
       error: (error: any) => console.error('Error loading next serial:', error)
     });
@@ -160,7 +156,9 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
 
   private createForm(): FormGroup {
     return this.fb.group({
-      // §21.S.2 field contract — the serial is read-only and server-allocated.
+      // §21.S.2 field contract — the serial is read-only and server-allocated;
+      // create mode shows the advisory next serial (UC-COR-03), edit the stored one.
+      serial: [''],
       // Review P3/P5: letter number, letter date and status are mandatory on the
       // server — require them here too so an emptiness never reaches the 400.
       date: ['', Validators.required],
@@ -209,10 +207,10 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
   }
 
   private patchForm(letter: IncomingDto): void {
-    this.nextSerialTxt = letter.serialTxt || '';
     this.attachmentFileId = letter.uploadedFileId || null;
 
     this.letterForm.patchValue({
+      serial: letter.serialTxt || '',
       date: this.toDateInput(letter.date),
       letterNumber: letter.letterNumber || '',
       letterDate: this.toDateInput(letter.letterDate),

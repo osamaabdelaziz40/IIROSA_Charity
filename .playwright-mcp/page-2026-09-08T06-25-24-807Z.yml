@@ -1,0 +1,393 @@
+- generic [ref=e5]:
+  - navigation [ref=e6]:
+    - button [ref=e7] [cursor=pointer]
+    - list [ref=e9]:
+      - listitem [ref=e10]:
+        - link "English " [ref=e11] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=e12]:
+        - link "" [ref=e13] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=e15]:
+        - link [ref=e16] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=e18]:
+        - button [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]:
+            - text: Welcome Osama Abdelaziz
+            - img "..." [ref=e21]
+          - text: 
+  - complementary [ref=e22]:
+    - navigation [ref=e23]:
+      - link [ref=e25] [cursor=pointer]:
+        - /url: "#/"
+        - img "IIROSA Logo" [ref=e26]
+      - paragraph [ref=e27]: Website Elements
+      - list [ref=e28]:
+        - listitem [ref=e29]:
+          - link "Home Page (current) " [ref=e30] [cursor=pointer]:
+            - /url: "#dashboard"
+            - generic [ref=e31]: Home Page
+            - generic [ref=e32]: (current)
+            - text: 
+          - list [ref=e33]:
+            - listitem [ref=e34]:
+              - link "Home" [ref=e35] [cursor=pointer]:
+                - /url: "#/"
+        - listitem [ref=e36]:
+          - link "Settings " [ref=e37] [cursor=pointer]:
+            - /url: "#settings"
+            - generic [ref=e38]: Settings
+            - text: 
+        - listitem [ref=e39]:
+          - link "Technical Support " [ref=e40] [cursor=pointer]:
+            - /url: "#technical-support"
+            - generic [ref=e41]: Technical Support
+            - text: 
+        - listitem [ref=e42]:
+          - link "Missions " [ref=e43] [cursor=pointer]:
+            - /url: "#missions"
+            - generic [ref=e44]: Missions
+            - text: 
+        - listitem [ref=e45]:
+          - link "Orphan Payments " [ref=e46] [cursor=pointer]:
+            - /url: "#orphan-payments"
+            - generic [ref=e47]: Orphan Payments
+            - text: 
+        - listitem [ref=e48]:
+          - link "Office Projects " [ref=e49] [cursor=pointer]:
+            - /url: "#office-development-projects"
+            - generic [ref=e50]: Office Projects
+            - text: 
+        - listitem [ref=e51]:
+          - link "Housing Projects " [ref=e52] [cursor=pointer]:
+            - /url: "#housing-projects"
+            - generic [ref=e53]: Housing Projects
+            - text: 
+          - list [ref=e54]:
+            - listitem [ref=e55]:
+              - link "All Housing Projects" [ref=e56] [cursor=pointer]:
+                - /url: "#/housing-projects"
+            - listitem [ref=e57]:
+              - link "Add Housing Project" [ref=e58] [cursor=pointer]:
+                - /url: "#/housing-projects/create"
+        - listitem [ref=e59]:
+          - link "Seasonal Aid " [ref=e60] [cursor=pointer]:
+            - /url: "#seasonal-aid"
+            - generic [ref=e61]: Seasonal Aid
+            - text: 
+        - listitem [ref=e62]:
+          - link "Incoming & Outgoing " [ref=e63] [cursor=pointer]:
+            - /url: "#incoming-outgoing"
+            - generic [ref=e64]: Incoming & Outgoing
+            - text: 
+        - listitem [ref=e65]:
+          - link "Families " [ref=e66] [cursor=pointer]:
+            - /url: "#families"
+            - generic [ref=e67]: Families
+            - text: 
+        - listitem [ref=e68]:
+          - link "Reports " [ref=e69] [cursor=pointer]:
+            - /url: "#reports"
+            - generic [ref=e70]: Reports
+            - text: 
+        - listitem [ref=e71]:
+          - link "General Cheques " [ref=e72] [cursor=pointer]:
+            - /url: "#general-checks"
+            - generic [ref=e73]: General Cheques
+            - text: 
+        - listitem [ref=e74]:
+          - link "Periodic Orphan Reports " [ref=e75] [cursor=pointer]:
+            - /url: "#periodic-orphan-reports"
+            - generic [ref=e76]: Periodic Orphan Reports
+            - text: 
+        - listitem [ref=e77]:
+          - link "Financial Transfers " [ref=e78] [cursor=pointer]:
+            - /url: "#hq-transfers"
+            - generic [ref=e79]: Financial Transfers
+            - text: 
+  - main [ref=e80]:
+    - generic [ref=e82]:
+      - navigation "breadcrumb" [ref=e84]:
+        - list [ref=e85]:
+          - listitem [ref=e86]:
+            - link "Home" [ref=e87] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=e88]:
+            - text: /
+            - link "Housing Families" [ref=e89] [cursor=pointer]:
+              - /url: "#/housing-projects"
+          - listitem [ref=e90]:
+            - text: /
+            - generic [ref=e91]: Add Housing Family
+      - generic [ref=e93]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=e94]:
+          - generic [ref=e96]:
+            - heading "Add Housing Family" [level=3] [ref=e97]
+            - paragraph [ref=e98]: Register of families housed in organisation-owned buildings
+          - generic [ref=e99]:
+            - button "Save" [ref=e100] [cursor=pointer]
+            - button "Cancel" [ref=e101] [cursor=pointer]
+      - generic [ref=e102]:
+        - generic [ref=e103]:
+          - generic [ref=e104]:
+            - heading "Family data" [level=4] [ref=e106]
+            - generic [ref=e108]:
+              - generic [ref=e111]:
+                - generic [ref=e112]: Charity *
+                - combobox [ref=e115] [cursor=pointer]:
+                  - textbox "dga" [ref=e116]
+              - generic [ref=e119]:
+                - generic [ref=e120]: Register code
+                - textbox "Register code" [ref=e121]:
+                  - /placeholder: Auto-generated when left empty
+              - generic [ref=e124]:
+                - generic [ref=e125]: Village / Quarter *
+                - textbox "Village / Quarter *" [ref=e126]:
+                  - /placeholder: ""
+          - generic [ref=e127]:
+            - heading "Location" [level=4] [ref=e129]
+            - generic [ref=e130]:
+              - generic [ref=e131]:
+                - generic [ref=e132]: Country *
+                - generic [ref=e138]:
+                  - generic [ref=e139]: Region / Governorate *
+                  - combobox [ref=e142] [cursor=pointer]:
+                    - textbox [ref=e143]
+                - generic [ref=e146]:
+                  - generic [ref=e147]: Center / City *
+                  - combobox [ref=e150] [cursor=pointer]:
+                    - textbox [ref=e151]
+              - generic [ref=e152]:
+                - generic [ref=e155]:
+                  - generic [ref=e156]: Nearby landmark
+                  - textbox "Nearby landmark" [ref=e157]:
+                    - /placeholder: ""
+                - generic [ref=e160]:
+                  - generic [ref=e161]: Street
+                  - textbox "Street" [ref=e162]:
+                    - /placeholder: ""
+                - generic [ref=e165]:
+                  - generic [ref=e166]: Detailed address *
+                  - textbox "Detailed address *" [ref=e167]:
+                    - /placeholder: ""
+          - generic [ref=e168]:
+            - heading "Housing & income" [level=4] [ref=e170]
+            - generic [ref=e171]:
+              - generic [ref=e172]:
+                - generic [ref=e175]:
+                  - generic [ref=e176]: Building No. *
+                  - combobox [ref=e179] [cursor=pointer]:
+                    - textbox "العماره رقم 7" [ref=e180]
+                - generic [ref=e183]:
+                  - generic [ref=e184]: Flat No. *
+                  - combobox [ref=e187] [cursor=pointer]:
+                    - textbox [ref=e188]
+                - generic [ref=e191]:
+                  - generic [ref=e192]: Rent amount *
+                  - spinbutton "Rent amount *" [ref=e193]
+              - generic [ref=e194]:
+                - generic [ref=e195]: Income type *
+                - generic [ref=e201]:
+                  - generic [ref=e202]: Researcher notes
+                  - textbox "Researcher notes Notes" [ref=e203]:
+                    - /placeholder: ""
+          - generic [ref=e204]:
+            - heading "Computed data" [level=4] [ref=e206]
+            - generic [ref=e208]:
+              - generic [ref=e210]:
+                - generic [ref=e211]: Children count
+                - textbox [ref=e212]: "0"
+              - generic [ref=e214]:
+                - generic [ref=e215]: Total income
+                - textbox [ref=e216]: "0"
+              - generic [ref=e218]:
+                - generic [ref=e219]: Share per member
+                - textbox [ref=e220]: "0"
+        - generic [ref=e221]:
+          - generic [ref=e222]:
+            - heading "Contact numbers" [level=4] [ref=e223]
+            - button "Add number" [ref=e224] [cursor=pointer]
+          - table [ref=e227]:
+            - rowgroup [ref=e228]:
+              - row [ref=e229]:
+                - columnheader "Number" [ref=e230]
+                - columnheader "Belongs to" [ref=e231]
+                - columnheader "Default?" [ref=e232]
+                - columnheader [ref=e233]
+            - rowgroup [ref=e234]:
+              - row [ref=e235]:
+                - cell [ref=e236]:
+                  - textbox [ref=e237]
+                - cell [ref=e238]:
+                  - combobox [ref=e243] [cursor=pointer]:
+                    - textbox [ref=e244]
+                - cell [ref=e245]:
+                  - checkbox [checked] [ref=e246]
+                - cell [ref=e247]:
+                  - button [ref=e248] [cursor=pointer]
+        - generic [ref=e249]:
+          - generic [ref=e250]:
+            - heading "Family relation" [level=4] [ref=e252]
+            - generic [ref=e254]:
+              - generic [ref=e255]: Reason *
+              - generic [ref=e259]: Relation kind *
+              - generic [ref=e265]:
+                - generic [ref=e266]: Relation *
+                - combobox [ref=e269] [cursor=pointer]:
+                  - textbox [ref=e270]
+          - generic [ref=e271]:
+            - heading "Guardian name" [level=4] [ref=e273]
+            - generic [ref=e275]:
+              - generic [ref=e278]:
+                - generic [ref=e279]: First name *
+                - textbox "First name *" [ref=e280]:
+                  - /placeholder: ""
+              - generic [ref=e283]:
+                - generic [ref=e284]: Second name *
+                - textbox "Second name *" [ref=e285]:
+                  - /placeholder: ""
+              - generic [ref=e288]:
+                - generic [ref=e289]: Third name *
+                - textbox "Third name *" [ref=e290]:
+                  - /placeholder: ""
+              - generic [ref=e293]:
+                - generic [ref=e294]: Fourth name *
+                - textbox "Fourth name *" [ref=e295]:
+                  - /placeholder: ""
+          - generic [ref=e296]:
+            - heading "Personal data" [level=4] [ref=e298]
+            - generic [ref=e299]:
+              - generic [ref=e300]:
+                - generic [ref=e303]:
+                  - generic [ref=e304]: Family name
+                  - textbox "Family name" [ref=e305]:
+                    - /placeholder: ""
+                - generic [ref=e306]: Nationality *
+                - generic [ref=e312]:
+                  - generic [ref=e313]: Date of birth *
+                  - textbox "Date of birth * Date of birth *" [ref=e314]:
+                    - /placeholder: ""
+              - generic [ref=e315]:
+                - generic [ref=e318]:
+                  - generic [ref=e319]: National ID *
+                  - textbox "National ID *" [ref=e320]:
+                    - /placeholder: ""
+                - generic [ref=e323]:
+                  - generic [ref=e324]: Occupation *
+                  - textbox "Occupation *" [ref=e325]:
+                    - /placeholder: ""
+                - generic [ref=e328]:
+                  - generic [ref=e329]: Phone *
+                  - textbox "Phone *" [ref=e330]:
+                    - /placeholder: ""
+          - generic [ref=e331]:
+            - heading "Income & status" [level=4] [ref=e333]
+            - generic [ref=e334]:
+              - generic [ref=e335]:
+                - generic [ref=e338]:
+                  - generic [ref=e339]: Monthly income
+                  - spinbutton "Monthly income" [ref=e340]
+                - generic [ref=e341]: Education level *
+                - generic [ref=e345]: Social status *
+              - generic [ref=e349]:
+                - generic [ref=e350]: Health status *
+                - generic [ref=e355]:
+                  - generic [ref=e356]: Care flags
+                  - generic [ref=e357]:
+                    - checkbox "Widow sponsorship" [ref=e358]
+                    - generic [ref=e359]: Widow sponsorship
+                  - generic [ref=e360]:
+                    - checkbox "Another sponsor" [ref=e361]
+                    - generic [ref=e362]: Another sponsor
+                  - generic [ref=e363]:
+                    - checkbox "Mother is married" [ref=e364]
+                    - generic [ref=e365]: Mother is married
+                  - generic [ref=e366]:
+                    - checkbox "Is the carer" [ref=e367]
+                    - generic [ref=e368]: Is the carer
+              - button "Done" [ref=e370] [cursor=pointer]
+        - generic [ref=e371]:
+          - generic [ref=e372]:
+            - heading "Basic data" [level=4] [ref=e374]
+            - generic [ref=e375]:
+              - generic [ref=e376]:
+                - generic [ref=e379]:
+                  - generic [ref=e380]: Date of birth *
+                  - textbox [ref=e381]
+                - generic [ref=e383]:
+                  - generic [ref=e384]: National ID *
+                  - textbox [ref=e385]
+                - generic [ref=e388]:
+                  - generic [ref=e389]: First name *
+                  - textbox "First name *" [ref=e390]:
+                    - /placeholder: ""
+              - generic [ref=e394]:
+                - generic [ref=e395]: Gender *
+                - combobox [ref=e398] [cursor=pointer]:
+                  - textbox [ref=e399]
+          - generic [ref=e400]:
+            - heading "Health & social status" [level=4] [ref=e402]
+            - generic [ref=e404]:
+              - generic [ref=e405]: Health status *
+              - generic [ref=e409]: Social status *
+          - generic [ref=e413]:
+            - heading "Education data" [level=4] [ref=e415]
+            - generic [ref=e416]:
+              - generic [ref=e417]:
+                - generic [ref=e418]: Education stage *
+                - generic [ref=e424]:
+                  - generic [ref=e425]: Grade / class *
+                  - textbox "Grade / class *" [ref=e426]:
+                    - /placeholder: ""
+                - generic [ref=e429]:
+                  - generic [ref=e430]: Occupation *
+                  - textbox "Occupation *" [ref=e431]:
+                    - /placeholder: ""
+              - generic [ref=e432]:
+                - generic [ref=e433]: Educational qualification *
+                - generic [ref=e439]:
+                  - generic [ref=e440]: Department *
+                  - textbox "Department *" [ref=e441]:
+                    - /placeholder: ""
+                - generic [ref=e444]:
+                  - generic [ref=e445]: Faculty *
+                  - textbox "Faculty *" [ref=e446]:
+                    - /placeholder: ""
+              - generic [ref=e450]:
+                - generic [ref=e451]: Educational institution *
+                - textbox "Educational institution *" [ref=e452]:
+                  - /placeholder: ""
+          - generic [ref=e453]:
+            - heading "Required attachments" [level=4] [ref=e455]
+            - generic [ref=e457]:
+              - generic [ref=e459]:
+                - generic [ref=e460]: Personal photo
+                - generic [ref=e464]:
+                  - paragraph [ref=e465]: Drag & drop files here
+                  - paragraph [ref=e466]: or
+                  - generic [ref=e467] [cursor=pointer]: Browse
+              - generic [ref=e469]:
+                - generic [ref=e470]: Birth certificate photo
+                - generic [ref=e474]:
+                  - paragraph [ref=e475]: Drag & drop files here
+                  - paragraph [ref=e476]: or
+                  - generic [ref=e477] [cursor=pointer]: Browse
+              - generic [ref=e479]:
+                - generic [ref=e480]: Enrollment proof photo
+                - generic [ref=e484]:
+                  - paragraph [ref=e485]: Drag & drop files here
+                  - paragraph [ref=e486]: or
+                  - generic [ref=e487] [cursor=pointer]: Browse
+          - generic [ref=e489]:
+            - generic [ref=e493]:
+              - generic [ref=e494]: Notes
+              - textbox [ref=e495]
+            - button "Add" [ref=e497] [cursor=pointer]
+  - contentinfo [ref=e498]:
+    - generic [ref=e500]:
+      - paragraph [ref=e502]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=e504]: Version 1.0.0

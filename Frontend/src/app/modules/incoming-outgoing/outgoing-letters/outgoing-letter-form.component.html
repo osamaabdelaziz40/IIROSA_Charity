@@ -6,134 +6,178 @@
   [actions]="pageActions">
 </app-page-header>
 
-<div class="card" *ngIf="!loading">
-  <div class="card-body">
-    <form [formGroup]="letterForm" (ngSubmit)="onSubmit()">
-      <div class="row">
-        <!-- Serial (UC-COR-12 — advisory, server-allocated, read-only) -->
-        <div class="col-md-4">
-          <div class="form-group">
-            <label class="form-label">{{ 'incomingOutgoing.serial' | translate }}</label>
-            <input type="text" class="form-control" [value]="nextSerialTxt" readonly />
+<!-- One card per form section (mission-form card idiom); every field is a
+     shared component — app-input-text / app-drop-down / app-attachment-input. -->
+<div class="container-fluid" *ngIf="!loading">
+  <form [formGroup]="letterForm" (ngSubmit)="onSubmit()">
+
+    <!-- Letter Information Section -->
+    <div class="card shadow mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-file-text mr-2"></i>
+          {{ 'incomingOutgoing.letterInformation' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- Serial (UC-COR-12 — advisory, server-allocated, read-only) -->
+          <div class="col-md-4">
+            <app-input-text
+              [fg]="letterForm"
+              fcn="serial"
+              [label]="'incomingOutgoing.serial'"
+              [readonly]="true"
+              [helpText]="'incomingOutgoing.serialAutoAllocated'">
+            </app-input-text>
+          </div>
+
+          <!-- Routing Department (Required — UC-COR-08) -->
+          <div class="col-md-4">
+            <app-drop-down
+              [fg]="letterForm"
+              fcn="departmentId"
+              [label]="'incomingOutgoing.department'"
+              [placeholder]="'incomingOutgoing.selectDepartment' | translate"
+              [initialData]="departmentOptions">
+            </app-drop-down>
+          </div>
+
+          <!-- Date (Required) -->
+          <div class="col-md-4">
+            <app-input-text
+              [fg]="letterForm"
+              fcn="date"
+              [label]="'incomingOutgoing.date'"
+              type="date"
+              [required]="true">
+            </app-input-text>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Classification & Linking Section (تصنيف موضوع الصادر · ردا علي خطاب) -->
+    <div class="card shadow mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-tag mr-2"></i>
+          {{ 'incomingOutgoing.classificationAndLinking' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- Category (Required — UC-COR-17 catalogue) -->
+          <div class="col-md-4">
+            <app-drop-down
+              [fg]="letterForm"
+              fcn="outgoingCategoryId"
+              [label]="'incomingOutgoing.category'"
+              [initialData]="categoryOptions">
+            </app-drop-down>
+          </div>
+
+          <!-- Reply To Incoming (ردا علي خطاب — optional per §21.S.5's `(+ -)` empty option, review P4) -->
+          <div class="col-md-8">
+            <app-drop-down
+              [fg]="letterForm"
+              fcn="incomingId"
+              [label]="'incomingOutgoing.replyToIncoming'"
+              [initialData]="incomingLetterOptions"
+              (onDropDownChanged)="onIncomingChange()">
+            </app-drop-down>
           </div>
         </div>
 
-        <!-- Routing Department (Required — UC-COR-08) -->
-        <div class="col-md-4">
-          <app-drop-down
-            [fg]="letterForm"
-            fcn="departmentId"
-            [label]="'incomingOutgoing.department'"
-            [placeholder]="'incomingOutgoing.selectDepartment' | translate"
-            [initialData]="departmentOptions">
-          </app-drop-down>
-        </div>
-
-        <!-- Date (Required) -->
-        <div class="col-md-4">
-          <app-input-text
-            [fg]="letterForm"
-            fcn="date"
-            [label]="'incomingOutgoing.date'"
-            type="date"
-            [required]="true">
-          </app-input-text>
-        </div>
-      </div>
-
-      <div class="row">
-        <!-- Category (Required — UC-COR-17 catalogue) -->
-        <div class="col-md-4">
-          <app-drop-down
-            [fg]="letterForm"
-            fcn="outgoingCategoryId"
-            [label]="'incomingOutgoing.category'"
-            [initialData]="categoryOptions">
-          </app-drop-down>
-        </div>
-
-        <!-- Reply To Incoming (ردا علي خطاب — optional per §21.S.5's `(+ -)` empty option, review P4) -->
-        <div class="col-md-8">
-          <app-drop-down
-            [fg]="letterForm"
-            fcn="incomingId"
-            [label]="'incomingOutgoing.replyToIncoming'"
-            [initialData]="incomingLetterOptions"
-            (onDropDownChanged)="onIncomingChange()">
-          </app-drop-down>
-        </div>
-      </div>
-
-      <!-- Selected incoming letter summary (§21.S.5 DisplayIncominData) -->
-      <div class="row" *ngIf="selectedIncoming">
-        <div class="col-md-12">
-          <div class="alert alert-light border">
-            <div class="row">
-              <div class="col-md-3">
-                <label class="text-muted small mb-1">{{ 'incomingOutgoing.serial' | translate }}</label>
-                <div class="font-weight-semibold">{{ selectedIncoming.serialTxt || '-' }}</div>
-              </div>
-              <div class="col-md-3">
-                <label class="text-muted small mb-1">{{ 'incomingOutgoing.letterNumber' | translate }}</label>
-                <div class="font-weight-semibold">{{ selectedIncoming.letterNumber || '-' }}</div>
-              </div>
-              <div class="col-md-6">
-                <label class="text-muted small mb-1">{{ 'incomingOutgoing.subject' | translate }}</label>
-                <div class="font-weight-semibold">{{ selectedIncoming.subject }}</div>
+        <!-- Selected incoming letter summary (§21.S.5 DisplayIncominData) -->
+        <div class="row" *ngIf="selectedIncoming">
+          <div class="col-md-12">
+            <div class="alert alert-light border">
+              <div class="row">
+                <div class="col-md-3">
+                  <label class="text-muted small mb-1">{{ 'incomingOutgoing.serial' | translate }}</label>
+                  <div class="font-weight-semibold">{{ selectedIncoming.serialTxt || '-' }}</div>
+                </div>
+                <div class="col-md-3">
+                  <label class="text-muted small mb-1">{{ 'incomingOutgoing.letterNumber' | translate }}</label>
+                  <div class="font-weight-semibold">{{ selectedIncoming.letterNumber || '-' }}</div>
+                </div>
+                <div class="col-md-6">
+                  <label class="text-muted small mb-1">{{ 'incomingOutgoing.subject' | translate }}</label>
+                  <div class="font-weight-semibold">{{ selectedIncoming.subject }}</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Subject / البيان (Required) -->
-      <div class="row">
-        <div class="col-md-12">
-          <app-input-text
-            [fg]="letterForm"
-            fcn="subject"
-            [label]="'incomingOutgoing.subject'"
-            [placeholder]="'incomingOutgoing.subjectPlaceholder' | translate"
-            type="textarea"
-            [rows]="3"
-            [required]="true">
-          </app-input-text>
-        </div>
+    <!-- Letter Content Section -->
+    <div class="card shadow mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-edit-3 mr-2"></i>
+          {{ 'incomingOutgoing.letterContent' | translate }}
+        </h4>
       </div>
-
-      <!-- File Attachment (PDF, optional) -->
-      <div class="row">
-        <div class="col-md-12">
-          <label class="form-label">
-            {{ 'incomingOutgoing.attachedFile' | translate }}
-          </label>
-          <app-attachment-input
-            [fileType]="attachmentFileType.Document"
-            [existingFileId]="attachmentFileId"
-            (fileIdChange)="onAttachmentChange($event)"
-            [acceptedFileTypes]="[attachmentFileType.Document]">
-          </app-attachment-input>
-        </div>
-      </div>
-
-      <!-- Form Actions -->
-      <div class="row mt-4">
-        <div class="col-md-12">
-          <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-secondary" (click)="cancel()">
-              <i class="fe fe-x mr-1"></i>
-              {{ 'common.cancel' | translate }}
-            </button>
-            <button type="submit" class="btn btn-primary" [disabled]="saving">
-              <i class="fe fe-save mr-1" *ngIf="!saving"></i>
-              <i class="fe fe-spinner fe-spin mr-1" *ngIf="saving"></i>
-              {{ saving ? ('common.saving' | translate) : ('common.save' | translate) }}
-            </button>
+      <div class="card-body">
+        <!-- Subject / البيان (Required) -->
+        <div class="row">
+          <div class="col-md-12">
+            <app-input-text
+              [fg]="letterForm"
+              fcn="subject"
+              [label]="'incomingOutgoing.subject'"
+              [placeholder]="'incomingOutgoing.subjectPlaceholder' | translate"
+              type="textarea"
+              [rows]="3"
+              [required]="true">
+            </app-input-text>
           </div>
         </div>
       </div>
-    </form>
-  </div>
+    </div>
+
+    <!-- Attachments Section -->
+    <div class="card shadow mb-4">
+      <div class="card-header">
+        <h4 class="mb-0">
+          <i class="fe fe-paperclip mr-2"></i>
+          {{ 'incomingOutgoing.attachments' | translate }}
+        </h4>
+      </div>
+      <div class="card-body">
+        <!-- File Attachment (PDF, optional) -->
+        <div class="row">
+          <div class="col-md-12">
+            <app-attachment-input
+              [labelKey]="'incomingOutgoing.attachedFile'"
+              [fileType]="attachmentFileType.Document"
+              [existingFileId]="attachmentFileId"
+              (fileIdChange)="onAttachmentChange($event)"
+              [acceptedFileTypes]="[attachmentFileType.Document]">
+            </app-attachment-input>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="card shadow mb-4">
+      <div class="card-body d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-secondary" (click)="cancel()">
+          <i class="fe fe-x mr-1"></i>
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving">
+          <i class="fe fe-save mr-1" *ngIf="!saving"></i>
+          <i class="fe fe-spinner fe-spin mr-1" *ngIf="saving"></i>
+          {{ saving ? ('common.saving' | translate) : ('common.save' | translate) }}
+        </button>
+      </div>
+    </div>
+  </form>
 </div>
 
 <!-- Loading State -->

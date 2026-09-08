@@ -149,11 +149,13 @@
                   (click)="viewMission(mission.id)">
                   <i class="fe fe-eye"></i>
                 </button>
+                <!-- Completed missions are immutable (15-7) — the edit action is
+                     hidden, not disabled, matching the register-result action. -->
                 <button
                   type="button"
                   class="btn btn-sm btn-light"
+                  *ngIf="!mission.isMissionCompleted"
                   [title]="'missions.editThisMission' | translate"
-                  [disabled]="mission.isMissionCompleted"
                   (click)="editMission(mission.id)">
                   <i class="fe fe-edit"></i>
                 </button>

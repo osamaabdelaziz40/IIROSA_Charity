@@ -421,31 +421,6 @@ export class MissionFormComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Check if field is invalid
-   */
-  isFieldInvalid(fieldName: string): boolean {
-    const field = this.missionForm.get(fieldName);
-    return field ? field.invalid && (field.dirty || field.touched) : false;
-  }
-
-  /**
-   * Get field error message — client required or the server's own text
-   */
-  getFieldError(fieldName: string): string {
-    const field = this.missionForm.get(fieldName);
-    if (!field || !field.errors) return '';
-
-    if (field.errors['server']) {
-      return field.errors['server'] || this.translate.instant('validation.invalid');
-    }
-    if (field.errors['required']) {
-      return this.translate.instant('validation.required');
-    }
-
-    return '';
-  }
-
-  /**
    * Mark all fields as touched
    */
   private markFormGroupTouched(formGroup: FormGroup): void {

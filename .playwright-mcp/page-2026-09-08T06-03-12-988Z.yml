@@ -1,0 +1,155 @@
+- generic [ref=f3e5]:
+  - navigation [ref=f3e6]:
+    - button "" [ref=f3e7] [cursor=pointer]
+    - list [ref=f3e9]:
+      - listitem [ref=f3e10]:
+        - link "English " [ref=f3e11] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f3e12]: 
+          - text: English 
+      - listitem [ref=f3e13]:
+        - link "" [ref=f3e14] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f3e16]:
+        - link "" [ref=f3e17] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f3e20]:
+        - button [ref=f3e21] [cursor=pointer]:
+          - generic [ref=f3e22]:
+            - text: Welcome System Admin
+            - img "..." [ref=f3e23]
+          - text: 
+  - complementary [ref=f3e24]:
+    - generic [ref=f3e29]:
+      - text: 
+      - navigation [ref=f3e30]:
+        - link [ref=f3e32] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f3e33]
+        - paragraph [ref=f3e34]: Website Elements
+        - list [ref=f3e35]:
+          - listitem [ref=f3e36]:
+            - link " Home Page (current) " [ref=f3e37] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f3e38]: 
+              - generic [ref=f3e39]: Home Page
+              - generic [ref=f3e40]: (current)
+              - text: 
+            - list [ref=f3e41]:
+              - listitem [ref=f3e42]:
+                - link "Home" [ref=f3e43] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f3e44]:
+            - link " Settings " [ref=f3e45] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=f3e46]: 
+              - generic [ref=f3e47]: Settings
+              - text: 
+          - listitem [ref=f3e48]:
+            - link " Technical Support " [ref=f3e49] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f3e50]: 
+              - generic [ref=f3e51]: Technical Support
+              - text: 
+          - listitem [ref=f3e52]:
+            - link " Missions " [ref=f3e53] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f3e54]: 
+              - generic [ref=f3e55]: Missions
+              - text: 
+            - list [ref=f3e56]:
+              - listitem [ref=f3e57]:
+                - link "All Missions" [ref=f3e58] [cursor=pointer]:
+                  - /url: "#/missions"
+              - listitem [ref=f3e59]:
+                - link "Add Mission" [ref=f3e60] [cursor=pointer]:
+                  - /url: "#/missions/create"
+          - listitem [ref=f3e61]:
+            - link " Orphan Payments " [ref=f3e62] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f3e63]: 
+              - generic [ref=f3e64]: Orphan Payments
+              - text: 
+          - listitem [ref=f3e65]:
+            - link " Office Projects " [ref=f3e66] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f3e67]: 
+              - generic [ref=f3e68]: Office Projects
+              - text: 
+          - listitem [ref=f3e69]:
+            - link " Housing Projects " [ref=f3e70] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f3e71]: 
+              - generic [ref=f3e72]: Housing Projects
+              - text: 
+          - listitem [ref=f3e73]:
+            - link " Seasonal Aid " [ref=f3e74] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f3e75]: 
+              - generic [ref=f3e76]: Seasonal Aid
+              - text: 
+          - listitem [ref=f3e77]:
+            - link " Incoming & Outgoing " [ref=f3e78] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f3e79]: 
+              - generic [ref=f3e80]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=f3e81]:
+            - link " Families " [ref=f3e82] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f3e83]: 
+              - generic [ref=f3e84]: Families
+              - text: 
+          - listitem [ref=f3e85]:
+            - link " Reports " [ref=f3e86] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f3e87]: 
+              - generic [ref=f3e88]: Reports
+              - text: 
+          - listitem [ref=f3e89]:
+            - link " General Cheques " [ref=f3e90] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f3e91]: 
+              - generic [ref=f3e92]: General Cheques
+              - text: 
+          - listitem [ref=f3e93]:
+            - link " Periodic Orphan Reports " [ref=f3e94] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f3e95]: 
+              - generic [ref=f3e96]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=f3e97]:
+            - link " Financial Transfers " [ref=f3e98] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f3e99]: 
+              - generic [ref=f3e100]: Financial Transfers
+              - text: 
+  - main [ref=f3e101]:
+    - generic [ref=f3e235]:
+      - navigation "breadcrumb" [ref=f3e237]:
+        - list [ref=f3e238]:
+          - listitem [ref=f3e239]:
+            - link "Home" [ref=f3e240] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=f3e241]:
+            - text: /
+            - link "Missions" [ref=f3e242] [cursor=pointer]:
+              - /url: "#/missions"
+          - listitem [ref=f3e243]:
+            - text: /
+            - generic [ref=f3e244]: Edit Mission
+      - generic [ref=f3e246]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f3e247]:
+          - heading "Edit Mission" [level=3] [ref=f3e250]
+          - button "Cancel" [ref=f3e252] [cursor=pointer]
+      - generic [ref=f3e253]:
+        - status [ref=f3e254]:
+          - generic [ref=f3e255]: Loading...
+        - paragraph [ref=f3e256]: Loading......
+  - contentinfo [ref=f3e228]:
+    - generic [ref=f3e230]:
+      - paragraph [ref=f3e232]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f3e234]: Version 1.0.0

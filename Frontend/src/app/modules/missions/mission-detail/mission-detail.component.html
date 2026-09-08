@@ -38,9 +38,11 @@
         </div>
         <div class="col-auto">
           <div class="btn-group">
+            <!-- Completed missions are immutable (15-7) — hide the edit action,
+                 matching the register-result action beside it. -->
             <button class="btn btn-outline-primary"
+                    *ngIf="canEdit()"
                     (click)="editMission()"
-                    [disabled]="!canEdit()"
                     [title]="'missions.editThisMission' | translate">
               <i class="fe fe-edit mr-1"></i>
               {{ 'missions.editMission' | translate }}
