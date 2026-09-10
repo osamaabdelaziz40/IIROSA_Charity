@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import type { ApexOptions } from 'apexcharts';
 import { BreadcrumbComponent, BreadcrumbItem, ApexChartComponent } from '../../shared/components';
+import { SelectedCharityService } from '../../core/services/selected-charity.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -16,6 +17,12 @@ export class DashboardComponent {
   breadcrumbs: BreadcrumbItem[] = [
     { label: 'common.home', url: '/dashboard' }
   ];
+
+  // Header charity switcher selection — null (card hidden) when "All
+  // Charities"/nothing is chosen.
+  selectedCharity$ = this.selectedCharityService.selectedCharity$;
+
+  constructor(private selectedCharityService: SelectedCharityService) {}
 
   // Dashboard statistics
   stats = {

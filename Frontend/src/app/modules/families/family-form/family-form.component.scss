@@ -10,3 +10,16 @@
 .custom-control {
   margin-bottom: 0.5rem;
 }
+
+/* Collapsible section cards with composite headers (Other Provider, Relatives) —
+   same behaviour as the shared app-collapsible-card, kept manual because their
+   headers carry a Save button / count badge. */
+.card-header.section-toggle {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(128, 128, 128, 0.08);
+  }
+}

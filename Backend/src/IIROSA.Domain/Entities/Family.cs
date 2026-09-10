@@ -193,6 +193,34 @@ public class Family : FullAuditedEntity
     /// </summary>
     public int? IncomeTypeId { get; set; }
 
+    // Family data extensions (معلومات الأسرة) — income / children / project block.
+    // Nullable: a family row without the block is untouched.
+
+    /// <summary>
+    /// Income value (قيمة الدخل)
+    /// </summary>
+    public decimal? IncomeValue { get; set; }
+
+    /// <summary>
+    /// Total income (الدخل الكلى)
+    /// </summary>
+    public decimal? TotalIncome { get; set; }
+
+    /// <summary>
+    /// Children count (عدد الأبناء)
+    /// </summary>
+    public int? ChildrenCount { get; set; }
+
+    /// <summary>
+    /// Does the family own a project (هل الأسرة تمتلك مشروع)
+    /// </summary>
+    public bool HasProject { get; set; } = false;
+
+    /// <summary>
+    /// Family project status (حالة المشروع) — lookup FamilyProjectStatus
+    /// </summary>
+    public int? FamilyProjectStatusId { get; set; }
+
     // Navigation Properties
     public virtual Country? Country { get; set; }
     public virtual City? City { get; set; }
@@ -211,6 +239,7 @@ public class Family : FullAuditedEntity
     public virtual ICollection<Provider> Providers { get; set; } = new List<Provider>();
     public virtual ICollection<Relative> Relatives { get; set; } = new List<Relative>();
     public virtual ICollection<Orphan> Orphans { get; set; } = new List<Orphan>();
+    public virtual ICollection<FamilyPhone> Phones { get; set; } = new List<FamilyPhone>();
 
     // Refugee register navigations (epic 7)
     public virtual Region? Region { get; set; }
@@ -218,4 +247,5 @@ public class Family : FullAuditedEntity
     public virtual HouseOwnership? HouseOwnership { get; set; }
     public virtual HouseStatus? HouseStatus { get; set; }
     public virtual IncomeType? IncomeType { get; set; }
+    public virtual Lookups.FamilyProjectStatus? FamilyProjectStatus { get; set; }
 }

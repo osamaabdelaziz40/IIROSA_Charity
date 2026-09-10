@@ -6,20 +6,14 @@
   [actions]="pageActions">
 </app-page-header>
 
-<!-- One card per form section (mission-form card idiom); every field is a
-     shared component — app-input-text / app-drop-down / app-attachment-input. -->
+<!-- One collapsed accordion card per form section (shared app-collapsible-card);
+     every field is a shared component — app-input-text / app-drop-down /
+     app-attachment-input. -->
 <div class="container-fluid" *ngIf="!loading">
   <form [formGroup]="letterForm" (ngSubmit)="onSubmit()">
 
     <!-- Letter Information Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-file-text mr-2"></i>
-          {{ 'incomingOutgoing.letterInformation' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="incomingOutgoing.letterInformation" icon="fe-file-text">
         <div class="row">
           <!-- Serial (UC-COR-12 — advisory, server-allocated, read-only) -->
           <div class="col-md-4">
@@ -54,18 +48,10 @@
             </app-input-text>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Classification & Linking Section (تصنيف موضوع الصادر · ردا علي خطاب) -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-tag mr-2"></i>
-          {{ 'incomingOutgoing.classificationAndLinking' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="incomingOutgoing.classificationAndLinking" icon="fe-tag">
         <div class="row">
           <!-- Category (Required — UC-COR-17 catalogue) -->
           <div class="col-md-4">
@@ -110,18 +96,10 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Letter Content Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-edit-3 mr-2"></i>
-          {{ 'incomingOutgoing.letterContent' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="incomingOutgoing.letterContent" icon="fe-edit-3">
         <!-- Subject / البيان (Required) -->
         <div class="row">
           <div class="col-md-12">
@@ -136,18 +114,10 @@
             </app-input-text>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Attachments Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-paperclip mr-2"></i>
-          {{ 'incomingOutgoing.attachments' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="incomingOutgoing.attachments" icon="fe-paperclip">
         <!-- File Attachment (PDF, optional) -->
         <div class="row">
           <div class="col-md-12">
@@ -160,10 +130,9 @@
             </app-attachment-input>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
-    <!-- Form Actions -->
+    <!-- Form Actions (always visible — not a collapsible section) -->
     <div class="card shadow mb-4">
       <div class="card-body d-flex justify-content-end gap-2">
         <button type="button" class="btn btn-secondary" (click)="cancel()">

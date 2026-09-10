@@ -1,6 +1,7 @@
 using IIROSA.Application.DTOs.Charity;
 using IIROSA.Domain.Contracts.Persistence;
 using IIROSA.Domain.Entities;
+using IIROSA.Domain.Entities.Lookups;
 using IIROSA.Domain.Interfaces;
 using IIROSA.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -308,6 +309,64 @@ public class CharityRepository : Repository<Charity>, ICharityRepository
     {
         return await _context.Set<Sponsor>()
             .CountAsync(s => s.FK_CharityId == charityId && !s.IsDeleted);
+    }
+
+    public async Task<(int Total, int Active, int Locked, int ReceivingDonations, int AddedThisMonth,
+        List<(int CountryId, string? NameAr, string? NameEn, int Count)> ByCountry)> GetRegisterStatisticsAsync(
+        int? countryId = null, Guid? charityId = null)
+    {
+        var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var query = _dbSet.AsNoTracking().Where(c => !c.IsDeleted);
+        if (charityId.HasValue)
+        {
+            query = query.Where(c => c.Id == charityId.Value);
+        }
+        if (countryId.HasValue)
+        {
+            query = query.Where(c => c.CountryId == countryId.Value);
+        }
+
+        // One grouped round-trip for every scalar card; null when the scope matches no rows.
+        var totals = await query
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                Active = g.Count(c => c.IsActive),
+                Locked = g.Count(c => c.IsLocked),
+                ReceivingDonations = g.Count(c => c.ReceivingDonations),
+                AddedThisMonth = g.Count(c => c.CreatedOn >= monthStart)
+            })
+            .FirstOrDefaultAsync();
+
+        // By-country breakdown — group on the FK then resolve names from the lookup table,
+        // which keeps the grouping translatable and authoritative for both languages.
+        var byCountryRows = await query
+            .Where(c => c.CountryId != null)
+            .GroupBy(c => c.CountryId)
+            .Select(g => new { CountryId = g.Key!.Value, Count = g.Count() })
+            .OrderByDescending(x => x.Count)
+            .ToListAsync();
+
+        var countryIds = byCountryRows.Select(r => r.CountryId).ToList();
+        var countryNames = await _context.Set<Country>()
+            .Where(c => countryIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => new { c.NameAr, c.NameEn });
+
+        return (
+            totals?.Total ?? 0,
+            totals?.Active ?? 0,
+            totals?.Locked ?? 0,
+            totals?.ReceivingDonations ?? 0,
+            totals?.AddedThisMonth ?? 0,
+            byCountryRows
+                .Select(r =>
+                {
+                    var names = countryNames.GetValueOrDefault(r.CountryId);
+                    return (r.CountryId, names?.NameAr, names?.NameEn, r.Count);
+                })
+                .ToList());
     }
 
     #endregion

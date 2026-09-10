@@ -96,6 +96,11 @@ public interface IHealthStatusRepository : ILookupRepository<HealthStatus>
     // Orphan reference data (UC-ORP-11) — GetActiveAsync covers the orphan-form dropdown
 }
 
+public interface IDeathReasonRepository : ILookupRepository<DeathReason>
+{
+    // Cause-of-death catalogue (طبيعية / مرض / حادث) — GetActiveAsync covers the father/mother death-reason dropdowns
+}
+
 public interface IRefuseReasonRepository : ILookupRepository<RefuseReason>
 {
     // Periodic report refusal catalogue (epic 9, UC-ORR-08) — GetActiveAsync covers the refusal drop-down
@@ -129,6 +134,11 @@ public interface IReasonOfRelRepository : ILookupRepository<ReasonOfRel>
 
 /// <summary>نوع السكن — shared catalogue (§12.S.2 refugee form / legacy Family.HousingTypeId)</summary>
 public interface IHousingTypeRepository : ILookupRepository<HousingType>
+{
+}
+
+/// <summary>حالة المشروع — family data extension catalogue (يوجد مشروع قائم / مشروع جديد)</summary>
+public interface IFamilyProjectStatusRepository : ILookupRepository<FamilyProjectStatus>
 {
 }
 

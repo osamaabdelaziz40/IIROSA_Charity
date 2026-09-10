@@ -438,6 +438,33 @@ public class UpdateHealthStatusDto
 }
 
 /// <summary>
+/// Death-reason DTOs (سبب الوفاة — father/mother death details)
+/// </summary>
+public class DeathReasonDto : LookupDto
+{
+}
+
+public class CreateDeathReasonDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateDeathReasonDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+/// <summary>
 /// Refuse-reason DTOs (epic 9, UC-ORR-08 — periodic report refusal catalogue)
 /// </summary>
 public class RefuseReasonDto : LookupDto
@@ -529,6 +556,31 @@ public class CreateIncomeTypeDto
 }
 
 public class UpdateIncomeTypeDto
+{
+    public string? Name { get; set; }
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool? IsActive { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+/// <summary>حالة المشروع — family data extension catalogue (يوجد مشروع قائم / مشروع جديد)</summary>
+public class FamilyProjectStatusDto : LookupDto
+{
+}
+
+public class CreateFamilyProjectStatusDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string? NameEn { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; } = 0;
+}
+
+public class UpdateFamilyProjectStatusDto
 {
     public string? Name { get; set; }
     public string? NameAr { get; set; }

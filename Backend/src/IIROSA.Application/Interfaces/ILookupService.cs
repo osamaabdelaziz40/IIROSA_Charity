@@ -90,6 +90,10 @@ public interface IHealthStatusService : ILookupService<HealthStatusDto, HealthSt
 {
 }
 
+public interface IDeathReasonService : ILookupService<DeathReasonDto, DeathReasonDto, CreateDeathReasonDto, UpdateDeathReasonDto>
+{
+}
+
 public interface IRefuseReasonService : ILookupService<RefuseReasonDto, RefuseReasonDto, CreateRefuseReasonDto, UpdateRefuseReasonDto>
 {
 }
@@ -122,6 +126,11 @@ public interface IReasonOfRelService : ILookupService<ReasonOfRelDto, ReasonOfRe
 
 /// <summary>نوع السكن — shared catalogue (§12.S.2 refugee form)</summary>
 public interface IHousingTypeService : ILookupService<HousingTypeDto, HousingTypeDto, CreateHousingTypeDto, UpdateHousingTypeDto>
+{
+}
+
+/// <summary>حالة المشروع — family data extension catalogue (يوجد مشروع قائم / مشروع جديد)</summary>
+public interface IFamilyProjectStatusService : ILookupService<FamilyProjectStatusDto, FamilyProjectStatusDto, CreateFamilyProjectStatusDto, UpdateFamilyProjectStatusDto>
 {
 }
 

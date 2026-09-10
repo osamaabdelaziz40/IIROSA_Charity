@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, AbstractControl, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -12,7 +12,7 @@ import { NotificationService } from '../../../core/services/notification.service
 import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
 import { CountryDto } from '../../lookup-management/models/lookup.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
+import { BreadcrumbComponent, BreadcrumbItem, CollapsibleCardComponent } from '../../../shared/components';
 import { SharedModule } from '../../../shared/shared.module';
 import {
   CreateFamilyDto, UpdateFamilyDto, UpdateProviderDto, UpdateOrphanDto, UpdateRelativeDto
@@ -58,6 +58,17 @@ export class RefugeeFamilyFormComponent implements OnInit, OnDestroy {
   companionsForm!: FormArray;
 
   saving = false;
+
+  // Collapsible section cards — every section starts collapsed. Family/Provider
+  // render through the shared app-collapsible-card; Children/Companions collapse
+  // manually because their headers carry the Add buttons.
+  sections: Record<'children' | 'companions', boolean> = { children: false, companions: false };
+
+  @ViewChildren(CollapsibleCardComponent) collapsibleCards?: QueryList<CollapsibleCardComponent>;
+
+  toggleSection(key: 'children' | 'companions'): void {
+    this.sections[key] = !this.sections[key];
+  }
 
   /** UC-REF-04 edit mode — set when the route carries :id (refugees/:id/edit) */
   editMode = false;
@@ -589,6 +600,11 @@ export class RefugeeFamilyFormComponent implements OnInit, OnDestroy {
     this.familyForm.markAllAsTouched();
     this.providerForm.markAllAsTouched();
     if (this.familyForm.invalid || this.providerForm.invalid || this.childrenForm.invalid || this.companionsForm.invalid) {
+      // Reveal collapsed sections — the red fields must not stay hidden behind
+      // collapsed headers while the toast points at them.
+      this.collapsibleCards?.forEach(card => card.open());
+      this.sections.children = true;
+      this.sections.companions = true;
       this.notification.warning(this.translate.instant('families.refugeeFormIncomplete'));
       return;
     }

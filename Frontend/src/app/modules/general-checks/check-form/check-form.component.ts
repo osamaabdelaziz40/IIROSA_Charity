@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -17,7 +17,7 @@ import {
   CreateCheckRequest,
   UpdateCheckRequest
 } from '../models/check.model';
-import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
+import { BreadcrumbComponent, BreadcrumbItem, CollapsibleCardComponent } from '../../../shared/components';
 import { SharedModule } from '../../../shared/shared.module';
 import { DropDownComponent } from '../../../shared/components/drop-down/drop-down.component';
 
@@ -78,6 +78,10 @@ export class CheckFormComponent implements OnInit, OnDestroy {
   loading = false;
 
   isHeadOffice = false;
+
+  /** Collapsible section cards — expanded on a failed submit/print to reveal
+   *  the red fields hidden inside collapsed cards. */
+  @ViewChildren(CollapsibleCardComponent) collapsibleCards?: QueryList<CollapsibleCardComponent>;
 
   bankOptions: Array<{ id: number; name: string }> = [];
   currencyOptions: Array<{ id: string; name: string }> = [];
@@ -336,6 +340,7 @@ export class CheckFormComponent implements OnInit, OnDestroy {
    */
   printCheque(egyptian: boolean): void {
     if (this.checkForm.invalid) {
+      this.collapsibleCards?.forEach(c => c.open());
       this.notification.error(this.translate.instant('validation.fixErrors'));
       return;
     }
@@ -379,6 +384,7 @@ export class CheckFormComponent implements OnInit, OnDestroy {
   onSubmit(): void {
     if (this.checkForm.invalid) {
       this.checkForm.markAllAsTouched();
+      this.collapsibleCards?.forEach(c => c.open());
       this.notification.error(this.translate.instant('validation.fixErrors'));
       return;
     }

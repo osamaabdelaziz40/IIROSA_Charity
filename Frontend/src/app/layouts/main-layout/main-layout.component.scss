@@ -1,3 +1,22 @@
+/* Header charity switcher (select2) — replaces the old search form.
+   Flex-centres the widget inside the topnav and keeps the navbar height stable. */
+.charity-switcher {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .charity-switcher {
+    /* Let the widget shrink instead of pushing the user menu off-screen. */
+    overflow: hidden;
+
+    .select2-container {
+      max-width: 160px;
+    }
+  }
+}
+
 /* Sidebar Collapse Styles */
 .wrapper.sidebar-collapsed {
   .sidebar-left {

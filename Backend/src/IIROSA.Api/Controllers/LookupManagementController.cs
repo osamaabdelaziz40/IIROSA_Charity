@@ -35,6 +35,7 @@ public class LookupManagementController : ControllerBase
     private readonly INGOTypeService _ngoTypeService;
     private readonly IEducationLevelService _educationLevelService;
     private readonly IHealthStatusService _healthStatusService;
+    private readonly IDeathReasonService _deathReasonService;
     private readonly IRefuseReasonService _refuseReasonService;
     // Refugee register lookups (epic 7, UC-REF-03)
     private readonly IHouseOwnershipService _houseOwnershipService;
@@ -44,6 +45,8 @@ public class LookupManagementController : ControllerBase
     private readonly IRelationService _relationService;
     private readonly IReasonOfRelService _reasonOfRelService;
     private readonly IHousingTypeService _housingTypeService;
+    // Family data extension catalogue (§4 معلومات الأسرة)
+    private readonly IFamilyProjectStatusService _familyProjectStatusService;
     // Guardian reference data (epic 19, UC-SYS-05)
     private readonly IMaritalStatusService _maritalStatusService;
     // Guardian job / profession catalogue (epic 19, UC-SYS-09)
@@ -74,6 +77,7 @@ public class LookupManagementController : ControllerBase
         INGOTypeService ngoTypeService,
         IEducationLevelService educationLevelService,
         IHealthStatusService healthStatusService,
+        IDeathReasonService deathReasonService,
         IRefuseReasonService refuseReasonService,
         IHouseOwnershipService houseOwnershipService,
         IHouseStatusService houseStatusService,
@@ -82,6 +86,7 @@ public class LookupManagementController : ControllerBase
         IRelationService relationService,
         IReasonOfRelService reasonOfRelService,
         IHousingTypeService housingTypeService,
+        IFamilyProjectStatusService familyProjectStatusService,
         IMaritalStatusService maritalStatusService,
         IJobService jobService,
         ILookupManagementService lookupManagementService,
@@ -102,6 +107,7 @@ public class LookupManagementController : ControllerBase
         _ngoTypeService = ngoTypeService;
         _educationLevelService = educationLevelService;
         _healthStatusService = healthStatusService;
+        _deathReasonService = deathReasonService;
         _refuseReasonService = refuseReasonService;
         _houseOwnershipService = houseOwnershipService;
         _houseStatusService = houseStatusService;
@@ -110,6 +116,7 @@ public class LookupManagementController : ControllerBase
         _relationService = relationService;
         _reasonOfRelService = reasonOfRelService;
         _housingTypeService = housingTypeService;
+        _familyProjectStatusService = familyProjectStatusService;
         _maritalStatusService = maritalStatusService;
         _jobService = jobService;
         _lookupManagementService = lookupManagementService;
@@ -1691,6 +1698,32 @@ public class LookupManagementController : ControllerBase
     }
 
     /// <summary>
+    /// Get all active death reasons for the father/mother death-reason dropdown (سبب الوفاة:
+    /// طبيعية / مرض / حادث). Global reference data — no charity scoping; an empty list is a
+    /// valid answer.
+    /// </summary>
+    [HttpGet("death-reasons")]
+    public async Task<ActionResult<List<DeathReasonDto>>> GetDeathReasons()
+    {
+        try
+        {
+            var filter = new LookupFilterDto
+            {
+                IsActive = true,
+                Page = 1,
+                PageSize = DropdownPageSize // Get all active reasons
+            };
+            var result = await _deathReasonService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving death reasons");
+            return StatusCode(500, new { message = "An error occurred while retrieving death reasons" });
+        }
+    }
+
+    /// <summary>
     /// Get all active refuse reasons for the periodic report refusal dropdown (epic 9, UC-ORR-08).
     /// Global reference data — no charity scoping; an empty list is a valid answer.
     /// </summary>
@@ -1767,6 +1800,464 @@ public class LookupManagementController : ControllerBase
         {
             _logger.LogError(ex, "Error occurred while retrieving income types");
             return StatusCode(500, new { message = "An error occurred while retrieving income types" });
+        }
+    }
+
+    // ==================== FAMILY DATA EXTENSION REFERENCE DATA (§4 معلومات الأسرة) ====================
+    // The family form's new drop-downs + their lookup-management CRUD screens (UC-14).
+
+    /// <summary>Family project statuses — حالة المشروع (هل الأسرة تمتلك مشروع)</summary>
+    [HttpGet("family-project-statuses")]
+    public async Task<ActionResult<List<FamilyProjectStatusDto>>> GetFamilyProjectStatuses()
+    {
+        try
+        {
+            var filter = new LookupFilterDto { IsActive = true, Page = 1, PageSize = DropdownPageSize };
+            var result = await _familyProjectStatusService.GetLookupItemsAsync(filter);
+            return Ok(result.Items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving family project statuses");
+            return StatusCode(500, new { message = "An error occurred while retrieving family project statuses" });
+        }
+    }
+
+    /// <summary>
+    /// House ownerships with filtering and pagination — the lookup-management screen
+    /// (UC-14.5). Unlike the dropdown action above, inactive rows are visible here.
+    /// </summary>
+    [HttpGet("house-ownerships/items")]
+    public async Task<ActionResult<LookupPagedResult<HouseOwnershipDto>>> GetHouseOwnershipsItems([FromQuery] LookupFilterDto filter)
+    {
+        try
+        {
+            var result = await _houseOwnershipService.GetLookupItemsAsync(filter);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving house ownerships");
+            return StatusCode(500, new { message = "An error occurred while retrieving house ownerships" });
+        }
+    }
+
+    /// <summary>Get house ownership by ID</summary>
+    [HttpGet("house-ownerships/{id:int}")]
+    public async Task<ActionResult<HouseOwnershipDto>> GetHouseOwnership(int id)
+    {
+        try
+        {
+            var ownership = await _houseOwnershipService.GetLookupByIdAsync(id);
+            if (ownership == null)
+            {
+                return NotFound(new { message = "House ownership not found" });
+            }
+
+            return Ok(ownership);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving house ownership {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving house ownership" });
+        }
+    }
+
+    /// <summary>Create house ownership</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPost("house-ownerships")]
+    public async Task<ActionResult<HouseOwnershipDto>> CreateHouseOwnership([FromBody] CreateHouseOwnershipDto model)
+    {
+        try
+        {
+            var ownership = await _houseOwnershipService.CreateLookupAsync(model);
+            return CreatedAtAction(nameof(GetHouseOwnership), new { id = ownership.Id }, ownership);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while creating house ownership");
+            return StatusCode(500, new { message = "An error occurred while creating house ownership" });
+        }
+    }
+
+    /// <summary>Update house ownership</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPut("house-ownerships/{id:int}")]
+    public async Task<ActionResult<HouseOwnershipDto>> UpdateHouseOwnership(int id, [FromBody] UpdateHouseOwnershipDto model)
+    {
+        try
+        {
+            var ownership = await _houseOwnershipService.UpdateLookupAsync(id, model);
+            return Ok(ownership);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while updating house ownership {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while updating house ownership" });
+        }
+    }
+
+    /// <summary>Delete house ownership</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpDelete("house-ownerships/{id:int}")]
+    public async Task<ActionResult> DeleteHouseOwnership(int id)
+    {
+        try
+        {
+            await _houseOwnershipService.DeleteLookupAsync(id);
+            _logger.LogInformation("House ownership {Id} deleted", id);
+            return Ok(new { message = "House ownership deleted successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            return BadRequest(new { message = "Cannot delete this house ownership because families reference it" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deleting house ownership {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while deleting house ownership" });
+        }
+    }
+
+    /// <summary>Activate house ownership</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPatch("house-ownerships/{id:int}/activate")]
+    public async Task<ActionResult> ActivateHouseOwnership(int id)
+    {
+        try
+        {
+            await _houseOwnershipService.ActivateLookupAsync(id);
+            return Ok(new { message = "House ownership activated successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while activating house ownership {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while activating house ownership" });
+        }
+    }
+
+    /// <summary>Deactivate house ownership</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPatch("house-ownerships/{id:int}/deactivate")]
+    public async Task<ActionResult> DeactivateHouseOwnership(int id)
+    {
+        try
+        {
+            await _houseOwnershipService.DeactivateLookupAsync(id);
+            return Ok(new { message = "House ownership deactivated successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deactivating house ownership {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while deactivating house ownership" });
+        }
+    }
+
+    /// <summary>
+    /// Income types with filtering and pagination — the lookup-management screen
+    /// (UC-14.5). Unlike the dropdown action above, inactive rows are visible here.
+    /// </summary>
+    [HttpGet("income-types/items")]
+    public async Task<ActionResult<LookupPagedResult<IncomeTypeDto>>> GetIncomeTypesItems([FromQuery] LookupFilterDto filter)
+    {
+        try
+        {
+            var result = await _incomeTypeService.GetLookupItemsAsync(filter);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving income types");
+            return StatusCode(500, new { message = "An error occurred while retrieving income types" });
+        }
+    }
+
+    /// <summary>Get income type by ID</summary>
+    [HttpGet("income-types/{id:int}")]
+    public async Task<ActionResult<IncomeTypeDto>> GetIncomeType(int id)
+    {
+        try
+        {
+            var incomeType = await _incomeTypeService.GetLookupByIdAsync(id);
+            if (incomeType == null)
+            {
+                return NotFound(new { message = "Income type not found" });
+            }
+
+            return Ok(incomeType);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving income type {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving income type" });
+        }
+    }
+
+    /// <summary>Create income type</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPost("income-types")]
+    public async Task<ActionResult<IncomeTypeDto>> CreateIncomeType([FromBody] CreateIncomeTypeDto model)
+    {
+        try
+        {
+            var incomeType = await _incomeTypeService.CreateLookupAsync(model);
+            return CreatedAtAction(nameof(GetIncomeType), new { id = incomeType.Id }, incomeType);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while creating income type");
+            return StatusCode(500, new { message = "An error occurred while creating income type" });
+        }
+    }
+
+    /// <summary>Update income type</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPut("income-types/{id:int}")]
+    public async Task<ActionResult<IncomeTypeDto>> UpdateIncomeType(int id, [FromBody] UpdateIncomeTypeDto model)
+    {
+        try
+        {
+            var incomeType = await _incomeTypeService.UpdateLookupAsync(id, model);
+            return Ok(incomeType);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while updating income type {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while updating income type" });
+        }
+    }
+
+    /// <summary>Delete income type</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpDelete("income-types/{id:int}")]
+    public async Task<ActionResult> DeleteIncomeType(int id)
+    {
+        try
+        {
+            await _incomeTypeService.DeleteLookupAsync(id);
+            _logger.LogInformation("Income type {Id} deleted", id);
+            return Ok(new { message = "Income type deleted successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            return BadRequest(new { message = "Cannot delete this income type because families reference it" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deleting income type {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while deleting income type" });
+        }
+    }
+
+    /// <summary>Activate income type</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPatch("income-types/{id:int}/activate")]
+    public async Task<ActionResult> ActivateIncomeType(int id)
+    {
+        try
+        {
+            await _incomeTypeService.ActivateLookupAsync(id);
+            return Ok(new { message = "Income type activated successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while activating income type {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while activating income type" });
+        }
+    }
+
+    /// <summary>Deactivate income type</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPatch("income-types/{id:int}/deactivate")]
+    public async Task<ActionResult> DeactivateIncomeType(int id)
+    {
+        try
+        {
+            await _incomeTypeService.DeactivateLookupAsync(id);
+            return Ok(new { message = "Income type deactivated successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deactivating income type {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while deactivating income type" });
+        }
+    }
+
+    /// <summary>
+    /// Family project statuses with filtering and pagination — the lookup-management
+    /// screen (UC-14.5). Unlike the dropdown action above, inactive rows are visible here.
+    /// </summary>
+    [HttpGet("family-project-statuses/items")]
+    public async Task<ActionResult<LookupPagedResult<FamilyProjectStatusDto>>> GetFamilyProjectStatusesItems([FromQuery] LookupFilterDto filter)
+    {
+        try
+        {
+            var result = await _familyProjectStatusService.GetLookupItemsAsync(filter);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving family project statuses");
+            return StatusCode(500, new { message = "An error occurred while retrieving family project statuses" });
+        }
+    }
+
+    /// <summary>Get family project status by ID</summary>
+    [HttpGet("family-project-statuses/{id:int}")]
+    public async Task<ActionResult<FamilyProjectStatusDto>> GetFamilyProjectStatus(int id)
+    {
+        try
+        {
+            var status = await _familyProjectStatusService.GetLookupByIdAsync(id);
+            if (status == null)
+            {
+                return NotFound(new { message = "Family project status not found" });
+            }
+
+            return Ok(status);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving family project status {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving family project status" });
+        }
+    }
+
+    /// <summary>Create family project status</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPost("family-project-statuses")]
+    public async Task<ActionResult<FamilyProjectStatusDto>> CreateFamilyProjectStatus([FromBody] CreateFamilyProjectStatusDto model)
+    {
+        try
+        {
+            var status = await _familyProjectStatusService.CreateLookupAsync(model);
+            return CreatedAtAction(nameof(GetFamilyProjectStatus), new { id = status.Id }, status);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while creating family project status");
+            return StatusCode(500, new { message = "An error occurred while creating family project status" });
+        }
+    }
+
+    /// <summary>Update family project status</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPut("family-project-statuses/{id:int}")]
+    public async Task<ActionResult<FamilyProjectStatusDto>> UpdateFamilyProjectStatus(int id, [FromBody] UpdateFamilyProjectStatusDto model)
+    {
+        try
+        {
+            var status = await _familyProjectStatusService.UpdateLookupAsync(id, model);
+            return Ok(status);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while updating family project status {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while updating family project status" });
+        }
+    }
+
+    /// <summary>Delete family project status</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpDelete("family-project-statuses/{id:int}")]
+    public async Task<ActionResult> DeleteFamilyProjectStatus(int id)
+    {
+        try
+        {
+            await _familyProjectStatusService.DeleteLookupAsync(id);
+            _logger.LogInformation("Family project status {Id} deleted", id);
+            return Ok(new { message = "Family project status deleted successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            return BadRequest(new { message = "Cannot delete this family project status because families reference it" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deleting family project status {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while deleting family project status" });
+        }
+    }
+
+    /// <summary>Activate family project status</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPatch("family-project-statuses/{id:int}/activate")]
+    public async Task<ActionResult> ActivateFamilyProjectStatus(int id)
+    {
+        try
+        {
+            await _familyProjectStatusService.ActivateLookupAsync(id);
+            return Ok(new { message = "Family project status activated successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while activating family project status {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while activating family project status" });
+        }
+    }
+
+    /// <summary>Deactivate family project status</summary>
+    [Authorize(Policy = "SuperAdminOnly")]
+    [HttpPatch("family-project-statuses/{id:int}/deactivate")]
+    public async Task<ActionResult> DeactivateFamilyProjectStatus(int id)
+    {
+        try
+        {
+            await _familyProjectStatusService.DeactivateLookupAsync(id);
+            return Ok(new { message = "Family project status deactivated successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while deactivating family project status {Id}", id);
+            return StatusCode(500, new { message = "An error occurred while deactivating family project status" });
         }
     }
 

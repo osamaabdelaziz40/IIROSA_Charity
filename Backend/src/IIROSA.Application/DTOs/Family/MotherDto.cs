@@ -10,7 +10,13 @@ public class MotherDto
     public Guid Id { get; set; }
     public Guid? FamilyId { get; set; }
     public string FullName { get; set; } = string.Empty;
+    public string? FirstName { get; set; }
+    public string? SecondName { get; set; }
+    public string? ThirdName { get; set; }
+    public string? FamilyName { get; set; }
     public string NationalId { get; set; } = string.Empty;
+    public int? NationalityCountryId { get; set; }
+    public string? NationalityName { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public string? PlaceOfBirth { get; set; }
     public int? EducationLevelId { get; set; }
@@ -23,6 +29,11 @@ public class MotherDto
     public bool IsAlive { get; set; }
     public bool IsProvider { get; set; }
     public DateTime? DeathDate { get; set; }
+    public int? DeathReasonId { get; set; }
+    public string? DeathReasonName { get; set; }
+    public Guid? DeathCertificateAttachmentId { get; set; }
+    public string? MezaCard { get; set; }
+    public DateTime? MezaCardExpirationDate { get; set; }
     public string? Notes { get; set; }
 }
 
@@ -38,6 +49,20 @@ public class CreateMotherDto
     [Required(ErrorMessage = "National ID is required")]
     [StringLength(50, ErrorMessage = "National ID cannot exceed 50 characters")]
     public string NationalId { get; set; } = string.Empty;
+
+    [StringLength(100, ErrorMessage = "First name cannot exceed 100 characters")]
+    public string? FirstName { get; set; }
+
+    [StringLength(100, ErrorMessage = "Second name cannot exceed 100 characters")]
+    public string? SecondName { get; set; }
+
+    [StringLength(100, ErrorMessage = "Third name cannot exceed 100 characters")]
+    public string? ThirdName { get; set; }
+
+    [StringLength(100, ErrorMessage = "Family name cannot exceed 100 characters")]
+    public string? FamilyName { get; set; }
+
+    public int? NationalityCountryId { get; set; }
 
     [Required(ErrorMessage = "Date of birth is required")]
     public DateTime DateOfBirth { get; set; }
@@ -63,6 +88,15 @@ public class CreateMotherDto
 
     public DateTime? DeathDate { get; set; }
 
+    public int? DeathReasonId { get; set; }
+
+    public Guid? DeathCertificateAttachmentId { get; set; }
+
+    [StringLength(50, ErrorMessage = "Meza card cannot exceed 50 characters")]
+    public string? MezaCard { get; set; }
+
+    public DateTime? MezaCardExpirationDate { get; set; }
+
     [StringLength(2000, ErrorMessage = "Notes cannot exceed 2000 characters")]
     public string? Notes { get; set; }
 }
@@ -81,6 +115,20 @@ public class UpdateMotherDto
 
     [StringLength(50, ErrorMessage = "National ID cannot exceed 50 characters")]
     public string? NationalId { get; set; }
+
+    [StringLength(100, ErrorMessage = "First name cannot exceed 100 characters")]
+    public string? FirstName { get; set; }
+
+    [StringLength(100, ErrorMessage = "Second name cannot exceed 100 characters")]
+    public string? SecondName { get; set; }
+
+    [StringLength(100, ErrorMessage = "Third name cannot exceed 100 characters")]
+    public string? ThirdName { get; set; }
+
+    [StringLength(100, ErrorMessage = "Family name cannot exceed 100 characters")]
+    public string? FamilyName { get; set; }
+
+    public int? NationalityCountryId { get; set; }
 
     public DateTime? DateOfBirth { get; set; }
 
@@ -104,6 +152,15 @@ public class UpdateMotherDto
     public bool? IsProvider { get; set; }
 
     public DateTime? DeathDate { get; set; }
+
+    public int? DeathReasonId { get; set; }
+
+    public Guid? DeathCertificateAttachmentId { get; set; }
+
+    [StringLength(50, ErrorMessage = "Meza card cannot exceed 50 characters")]
+    public string? MezaCard { get; set; }
+
+    public DateTime? MezaCardExpirationDate { get; set; }
 
     [StringLength(2000, ErrorMessage = "Notes cannot exceed 2000 characters")]
     public string? Notes { get; set; }

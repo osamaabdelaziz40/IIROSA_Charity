@@ -51,6 +51,8 @@ public class FatherRepository : Repository<Father>, IFatherRepository
         return _dbSet
             .Include(f => f.Family)
             .Include(f => f.EducationLevel)
-            .Include(f => f.HealthStatus);
+            .Include(f => f.HealthStatus)
+            .Include(f => f.Country)
+            .Include(f => f.DeathReason);
     }
 }

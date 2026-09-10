@@ -19,12 +19,18 @@ public class FamilyProfile : Profile
         // Father
         CreateMap<Father, FatherDto>()
             .ForMember(dest => dest.EducationLevelName, opt => opt.MapFrom(src => src.EducationLevel != null ? src.EducationLevel.NameAr ?? src.EducationLevel.NameEn : null))
-            .ForMember(dest => dest.HealthStatusName, opt => opt.MapFrom(src => src.HealthStatus != null ? src.HealthStatus.NameAr ?? src.HealthStatus.NameEn : null));
+            .ForMember(dest => dest.HealthStatusName, opt => opt.MapFrom(src => src.HealthStatus != null ? src.HealthStatus.NameAr ?? src.HealthStatus.NameEn : null))
+            .ForMember(dest => dest.NationalityName, opt => opt.MapFrom(src => src.Country != null ? src.Country.NameAr ?? src.Country.NameEn : null))
+            .ForMember(dest => dest.DeathReasonName, opt => opt.MapFrom(src => src.DeathReason != null ? src.DeathReason.NameAr ?? src.DeathReason.NameEn : null));
 
         CreateMap<CreateFatherDto, Father>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.FamilyId, opt => opt.Ignore())
             .ForMember(dest => dest.Family, opt => opt.Ignore())
+            .ForMember(dest => dest.Country, opt => opt.Ignore())
+            .ForMember(dest => dest.EducationLevel, opt => opt.Ignore())
+            .ForMember(dest => dest.HealthStatus, opt => opt.Ignore())
+            .ForMember(dest => dest.DeathReason, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.Events, opt => opt.Ignore());
@@ -32,12 +38,18 @@ public class FamilyProfile : Profile
         // Mother
         CreateMap<Mother, MotherDto>()
             .ForMember(dest => dest.EducationLevelName, opt => opt.MapFrom(src => src.EducationLevel != null ? src.EducationLevel.NameAr ?? src.EducationLevel.NameEn : null))
-            .ForMember(dest => dest.HealthStatusName, opt => opt.MapFrom(src => src.HealthStatus != null ? src.HealthStatus.NameAr ?? src.HealthStatus.NameEn : null));
+            .ForMember(dest => dest.HealthStatusName, opt => opt.MapFrom(src => src.HealthStatus != null ? src.HealthStatus.NameAr ?? src.HealthStatus.NameEn : null))
+            .ForMember(dest => dest.NationalityName, opt => opt.MapFrom(src => src.Country != null ? src.Country.NameAr ?? src.Country.NameEn : null))
+            .ForMember(dest => dest.DeathReasonName, opt => opt.MapFrom(src => src.DeathReason != null ? src.DeathReason.NameAr ?? src.DeathReason.NameEn : null));
 
         CreateMap<CreateMotherDto, Mother>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.FamilyId, opt => opt.Ignore())
             .ForMember(dest => dest.Family, opt => opt.Ignore())
+            .ForMember(dest => dest.Country, opt => opt.Ignore())
+            .ForMember(dest => dest.EducationLevel, opt => opt.Ignore())
+            .ForMember(dest => dest.HealthStatus, opt => opt.Ignore())
+            .ForMember(dest => dest.DeathReason, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.Events, opt => opt.Ignore());

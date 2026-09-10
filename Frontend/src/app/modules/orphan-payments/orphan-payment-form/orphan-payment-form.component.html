@@ -5,19 +5,12 @@
   [actions]="pageActions">
 </app-page-header>
 
-<!-- One card per section (mission-form card idiom); fields unchanged. -->
+<!-- One collapsed accordion card per section (mission-form card idiom); fields unchanged. -->
 <div class="container-fluid" *ngIf="!loading">
   <form [formGroup]="form" (ngSubmit)="onSubmit()">
 
     <!-- Basic Information Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-info mr-2"></i>
-          {{ 'orphanPayments.basicInformation' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="orphanPayments.basicInformation" icon="fe-info">
         <div class="row">
           <!-- Group Name -->
           <div class="col-md-6">
@@ -30,10 +23,8 @@
                      class="form-control"
                      formControlName="groupName"
                      [placeholder]="'orphanPayments.groupNamePlaceholder' | translate"
-                     [class.is-invalid]="hasError('groupName', 'required') || !!serverErrors['groupName']">
-              <div class="invalid-feedback" *ngIf="hasError('groupName', 'required')">
-                {{ 'validation.required' | translate }}
-              </div>
+                     [class.is-invalid]="!!fieldError('groupName') || !!serverErrors['groupName']">
+              <div class="invalid-feedback" *ngIf="fieldError('groupName') as err">{{ err }}</div>
               <div class="invalid-feedback" *ngIf="serverErrors['groupName']">{{ serverErrors['groupName'] }}</div>
             </div>
           </div>
@@ -54,17 +45,20 @@
         </div>
 
         <!-- Batch Number — 10-6 (UC-PAY-06): selector fed by /batch-numbers.
-             Kept a native select: the "auto" option must stay re-selectable and
-             numeric batch numbers would be coerced by the Select2 wrapper. -->
+             كل الحقول اجباريه: the batch is mandatory (§15.S.2 رقم الدفعة), so the
+             selector carries a disabled placeholder and manual entry stays available
+             via the toggle. Kept a native select: numeric batch numbers would be
+             coerced by the Select2 wrapper. -->
         <div class="row">
           <div class="col-md-6">
             <div class="form-group">
-              <label for="batchNo">{{ 'orphanPayments.batchNumber' | translate }}</label>
+              <label for="batchNo" class="required-field">{{ 'orphanPayments.batchNumber' | translate }}</label>
               <select class="form-control"
                       id="batchNo"
                       formControlName="batchNo"
+                      [class.is-invalid]="!!fieldError('batchNo') || !!serverErrors['batchNo']"
                       *ngIf="!showBatchNumberInput">
-                <option value="">{{ 'orphanPayments.batchNumberAutoOption' | translate }}</option>
+                <option value="" disabled>{{ 'orphanPayments.batchNumberSelectPlaceholder' | translate }}</option>
                 <option *ngFor="let b of batchOptions; trackBy: trackByBatchNo"
                         [value]="b.batchNo">{{ b.batchNo }}</option>
               </select>
@@ -73,7 +67,8 @@
                        id="batchNoInput"
                        class="form-control"
                        formControlName="batchNo"
-                       [placeholder]="'orphanPayments.batchNumberPlaceholder' | translate">
+                       [placeholder]="'orphanPayments.batchNumberPlaceholder' | translate"
+                       [class.is-invalid]="!!fieldError('batchNo') || !!serverErrors['batchNo']">
                 <button type="button"
                         class="btn btn-outline-secondary"
                         (click)="toggleBatchNumberInput()"
@@ -81,9 +76,7 @@
                   <i class="fe fe-list"></i>
                 </button>
               </div>
-              <small class="text-muted" *ngIf="!form.get('batchNo')?.value">
-                {{ 'orphanPayments.batchNumberAutoHint' | translate }}
-              </small>
+              <div class="invalid-feedback" *ngIf="fieldError('batchNo') as err">{{ err }}</div>
               <div class="invalid-feedback" *ngIf="serverErrors['batchNo']">{{ serverErrors['batchNo'] }}</div>
               <div class="input-group mt-1" *ngIf="!showBatchNumberInput">
                 <button type="button" class="btn btn-outline-secondary btn-sm" (click)="toggleBatchNumberInput()">
@@ -99,12 +92,15 @@
         <div class="row">
           <div class="col-md-12">
             <div class="form-group">
-              <label for="description">{{ 'orphanPayments.description' | translate }}</label>
+              <label for="description" class="required-field">{{ 'orphanPayments.description' | translate }}</label>
               <textarea id="description"
                         class="form-control"
                         formControlName="description"
                         rows="2"
-                        [placeholder]="'orphanPayments.descriptionPlaceholder' | translate"></textarea>
+                        [placeholder]="'orphanPayments.descriptionPlaceholder' | translate"
+                        [class.is-invalid]="!!fieldError('description') || !!serverErrors['description']"></textarea>
+              <div class="invalid-feedback" *ngIf="fieldError('description') as err">{{ err }}</div>
+              <div class="invalid-feedback" *ngIf="serverErrors['description']">{{ serverErrors['description'] }}</div>
             </div>
           </div>
         </div>
@@ -120,10 +116,8 @@
                      id="paymentPeriodFrom"
                      class="form-control"
                      formControlName="paymentPeriodFrom"
-                     [class.is-invalid]="hasError('paymentPeriodFrom', 'required') || !!serverErrors['paymentPeriodFrom']">
-              <div class="invalid-feedback" *ngIf="hasError('paymentPeriodFrom', 'required')">
-                {{ 'validation.required' | translate }}
-              </div>
+                     [class.is-invalid]="!!fieldError('paymentPeriodFrom') || !!serverErrors['paymentPeriodFrom']">
+              <div class="invalid-feedback" *ngIf="fieldError('paymentPeriodFrom') as err">{{ err }}</div>
               <div class="invalid-feedback" *ngIf="serverErrors['paymentPeriodFrom']">{{ serverErrors['paymentPeriodFrom'] }}</div>
             </div>
           </div>
@@ -136,10 +130,9 @@
                      id="paymentPeriodTo"
                      class="form-control"
                      formControlName="paymentPeriodTo"
-                     [class.is-invalid]="hasError('paymentPeriodTo', 'required')">
-              <div class="invalid-feedback" *ngIf="hasError('paymentPeriodTo', 'required')">
-                {{ 'validation.required' | translate }}
-              </div>
+                     [class.is-invalid]="!!fieldError('paymentPeriodTo') || !!serverErrors['paymentPeriodTo']">
+              <div class="invalid-feedback" *ngIf="fieldError('paymentPeriodTo') as err">{{ err }}</div>
+              <div class="invalid-feedback" *ngIf="serverErrors['paymentPeriodTo']">{{ serverErrors['paymentPeriodTo'] }}</div>
             </div>
           </div>
           <div class="col-md-6 col-xl-3">
@@ -151,10 +144,9 @@
                      id="groupDate"
                      class="form-control"
                      formControlName="groupDate"
-                     [class.is-invalid]="hasError('groupDate', 'required')">
-              <div class="invalid-feedback" *ngIf="hasError('groupDate', 'required')">
-                {{ 'validation.required' | translate }}
-              </div>
+                     [class.is-invalid]="!!fieldError('groupDate') || !!serverErrors['groupDate']">
+              <div class="invalid-feedback" *ngIf="fieldError('groupDate') as err">{{ err }}</div>
+              <div class="invalid-feedback" *ngIf="serverErrors['groupDate']">{{ serverErrors['groupDate'] }}</div>
             </div>
           </div>
           <!-- تاريخ بدء التوزيع — §15.S.2 mandatory (10-2) -->
@@ -167,10 +159,8 @@
                      id="paymentDate"
                      class="form-control"
                      formControlName="paymentDate"
-                     [class.is-invalid]="hasError('paymentDate', 'required') || !!serverErrors['paymentDate']">
-              <div class="invalid-feedback" *ngIf="hasError('paymentDate', 'required')">
-                {{ 'validation.required' | translate }}
-              </div>
+                     [class.is-invalid]="!!fieldError('paymentDate') || !!serverErrors['paymentDate']">
+              <div class="invalid-feedback" *ngIf="fieldError('paymentDate') as err">{{ err }}</div>
               <div class="invalid-feedback" *ngIf="serverErrors['paymentDate']">{{ serverErrors['paymentDate'] }}</div>
             </div>
           </div>
@@ -191,34 +181,27 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- 10-2 trim: "Filtering Options" section removed — the server never persisted
          charity/region/center pre-selection, so the controls were decorative.
          The enrolment screen carries its own live filter sidebar. -->
 
     <!-- Financial Information Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-dollar-sign mr-2"></i>
-          {{ 'orphanPayments.financialInformation' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="orphanPayments.financialInformation" icon="fe-dollar-sign">
         <div class="row">
           <!-- Exchange Rate -->
           <div class="col-md-4">
             <div class="form-group">
-              <label for="exchangeRate">{{ 'orphanPayments.exchangeRate' | translate }}</label>
-              <div class="input-group">
+              <label for="exchangeRate" class="required-field">{{ 'orphanPayments.exchangeRate' | translate }}</label>
+              <div class="input-group" [class.is-invalid]="!!fieldError('exchangeRate') || !!serverErrors['exchangeRate']">
                 <input type="number"
                        id="exchangeRate"
                        class="form-control"
                        formControlName="exchangeRate"
                        [placeholder]="'orphanPayments.exchangeRatePlaceholder' | translate"
                        step="0.01"
+                       [class.is-invalid]="!!fieldError('exchangeRate') || !!serverErrors['exchangeRate']"
                        [disabled]="isExchangeRateLocked()">
                 <div class="input-group-append">
                   <span class="input-group-text">
@@ -226,11 +209,14 @@
                   </span>
                 </div>
               </div>
+              <div class="invalid-feedback" *ngIf="fieldError('exchangeRate') as err">{{ err }}</div>
+              <div class="invalid-feedback" *ngIf="serverErrors['exchangeRate']">{{ serverErrors['exchangeRate'] }}</div>
               <small class="text-muted">{{ 'orphanPayments.exchangeRateHelpText' | translate }}</small>
             </div>
           </div>
 
-          <!-- Currency — shared Select2 dropdown -->
+          <!-- Currency — shared Select2 dropdown; the required validator makes the
+               shared component render the red asterisk and its own message div. -->
           <div class="col-md-4">
             <app-drop-down [fg]="form"
                            fcn="currency"
@@ -260,27 +246,22 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Settings Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-settings mr-2"></i>
-          {{ 'orphanPayments.settings' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="orphanPayments.settings" icon="fe-settings">
         <div class="row">
           <!-- Show Order -->
           <div class="col-md-6">
             <div class="form-group">
-              <label for="showOrder">{{ 'orphanPayments.showOrder' | translate }}</label>
+              <label for="showOrder" class="required-field">{{ 'orphanPayments.showOrder' | translate }}</label>
               <input type="number"
                      id="showOrder"
                      class="form-control"
-                     formControlName="showOrder">
+                     formControlName="showOrder"
+                     [class.is-invalid]="!!fieldError('showOrder') || !!serverErrors['showOrder']">
+              <div class="invalid-feedback" *ngIf="fieldError('showOrder') as err">{{ err }}</div>
+              <div class="invalid-feedback" *ngIf="serverErrors['showOrder']">{{ serverErrors['showOrder'] }}</div>
             </div>
           </div>
         </div>
@@ -289,24 +270,28 @@
         <div class="row">
           <div class="col-md-12">
             <div class="form-group">
-              <label for="notes">{{ 'orphanPayments.notes' | translate }}</label>
+              <label for="notes" class="required-field">{{ 'orphanPayments.notes' | translate }}</label>
               <textarea id="notes"
                         class="form-control"
                         formControlName="notes"
                         rows="3"
-                        [placeholder]="'orphanPayments.notesPlaceholder' | translate"></textarea>
+                        [placeholder]="'orphanPayments.notesPlaceholder' | translate"
+                        [class.is-invalid]="!!fieldError('notes') || !!serverErrors['notes']"></textarea>
+              <div class="invalid-feedback" *ngIf="fieldError('notes') as err">{{ err }}</div>
+              <div class="invalid-feedback" *ngIf="serverErrors['notes']">{{ serverErrors['notes'] }}</div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
-    <!-- Form Actions -->
+    <!-- Form Actions (always visible — not a collapsible section) -->
     <div class="card shadow mb-4">
       <div class="card-body">
+        <!-- Not disabled on form.invalid (missions-form behaviour): the click must
+             mark every control touched so each field shows its message. -->
         <button type="submit"
                 class="btn btn-primary"
-                [disabled]="saving || form.invalid">
+                [disabled]="saving">
           <i class="fe fe-save mr-1" *ngIf="!saving"></i>
           <span class="spinner-border spinner-border-sm mr-1" *ngIf="saving"></span>
           {{ 'common.save' | translate }}

@@ -363,6 +363,11 @@ export class FamilyDetailComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** §4 phone rows are keyed by their stored id, not list position. */
+  trackPhoneById(index: number, phone: { id?: string }): string {
+    return phone.id ?? String(index);
+  }
+
   getLivingConditionText(livingCondition?: string): string {
     if (!livingCondition) return '-';
     switch (livingCondition) {

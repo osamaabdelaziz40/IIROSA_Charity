@@ -219,3 +219,20 @@ Marked `done` on 2026-08-19 by explicit user decision, with these gaps open:
    tenant's family register reads as empty. Verify before production.
 3. **The seeded `Charity@IIROSA.com` account has no `CharityId`** and no seeded charity links to
    it, so it now correctly sees an empty register. Update the seed data or link it to a charity.
+
+## Change log
+
+- 2026-09-10 — **Statistics band added to the list screen** (re-platform extension requested by
+  the user; no WAR.IIROSA precedent). `GET /api/Charities/statistics`
+  (`[Authorize(Roles = "SuperAdmin,Admin,Charity")]`, literal route above `{id}`) →
+  `ICharityService.GetStatisticsAsync()` → `ICharityRepository.GetRegisterStatisticsAsync()`:
+  one grouped aggregate pass over the scoped live rows (total / active / inactive / locked /
+  receiving-donations / added-this-month) plus a by-country FK grouping with lookup-resolved
+  NameAr/NameEn. Tenancy rides `ApplyCallerScope` with a blank filter verbatim — charity caller
+  sees own-record counts, country-pinned HQ their country, unscopeable callers zeros, so the band
+  can never claim a row the grid under it would hide. Frontend: six cards + per-country pills on
+  `charity-list`, register-scoped (NOT filter-reactive), refreshed after activate/deactivate,
+  lock/unlock and delete; load failure keeps the band hidden without blocking the grid. The dead
+  `charities.statistics` string in ar/en i18n (no consumer) became the key namespace with its old
+  label preserved as `.title`. No schema change — no migration. Verified: solution build 0
+  errors, `npm run build` green. Docs: §8.S.1 screen spec + §8.U.1 scenario updated.

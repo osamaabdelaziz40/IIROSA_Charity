@@ -66,16 +66,69 @@
 
         <div class="row mt-3">
           <div class="col-md-4">
-            <label class="text-muted small">{{ 'families.phone' | translate }}</label>
-            <div>{{ family.phone || '-' }}</div>
-          </div>
-          <div class="col-md-4">
             <label class="text-muted small">{{ 'families.livingCondition' | translate }}</label>
             <div>{{ getLivingConditionText(family.livingCondition) }}</div>
           </div>
           <div class="col-md-4">
             <label class="text-muted small">{{ 'families.housingType' | translate }}</label>
             <div>{{ getHousingTypeText(family.housingType) }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="text-muted small">{{ 'families.houseOwnership' | translate }}</label>
+            <div>{{ family.houseOwnershipName || '-' }}</div>
+          </div>
+        </div>
+
+        <!-- §4 income block -->
+        <div class="row mt-3">
+          <div class="col-md-4">
+            <label class="text-muted small">{{ 'families.incomeType' | translate }}</label>
+            <div>{{ family.incomeTypeName || '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="text-muted small">{{ 'families.incomeValue' | translate }}</label>
+            <div>{{ family.incomeValue ?? '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="text-muted small">{{ 'families.totalIncome' | translate }}</label>
+            <div>{{ family.totalIncome ?? '-' }}</div>
+          </div>
+        </div>
+
+        <div class="row mt-3">
+          <div class="col-md-4">
+            <label class="text-muted small">{{ 'families.childrenCount' | translate }}</label>
+            <div>{{ family.childrenCount ?? '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="text-muted small">{{ 'families.perMemberShare' | translate }}</label>
+            <div>{{ family.perMemberShare ?? '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="text-muted small">{{ 'families.hasProject' | translate }}</label>
+            <div>
+              {{ (family.hasProject ? 'common.yes' : 'common.no') | translate }}
+              <span class="text-muted" *ngIf="family.hasProject && family.familyProjectStatusName">
+                ({{ family.familyProjectStatusName }})
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- §4 أرقام التواصل — the default row carries a star; pre-multi-phone families fall
+             back to the mirrored single number -->
+        <div class="row mt-3">
+          <div class="col-md-12">
+            <label class="text-muted small">{{ 'families.phones' | translate }}</label>
+            <div>
+              <span *ngIf="!family.phones || family.phones.length === 0">{{ family.phone || '-' }}</span>
+              <span *ngFor="let p of family.phones; trackBy: trackPhoneById"
+                    class="badge badge-light border mr-1 mb-1">
+                {{ p.number }}
+                <i *ngIf="p.isDefault" class="fe fe-star ml-1"
+                   [title]="'families.defaultPhone' | translate"></i>
+              </span>
+            </div>
           </div>
         </div>
 
@@ -165,9 +218,16 @@
 
         <div class="row mt-2">
           <div class="col-md-6">
-            <label class="text-muted small">{{ 'families.healthStatus' | translate }}</label>
-            <div>{{ father.healthStatus || '-' }}</div>
+            <label class="text-muted small">{{ 'families.nationality' | translate }}</label>
+            <div>{{ father.nationalityName || '-' }}</div>
           </div>
+          <div class="col-md-6">
+            <label class="text-muted small">{{ 'families.healthStatus' | translate }}</label>
+            <div>{{ father.healthStatusName || father.healthStatus || '-' }}</div>
+          </div>
+        </div>
+
+        <div class="row mt-2">
           <div class="col-md-6">
             <label class="text-muted small">{{ 'families.phone' | translate }}</label>
             <div>{{ father.phone || '-' }}</div>
@@ -233,9 +293,16 @@
 
         <div class="row mt-2">
           <div class="col-md-6">
-            <label class="text-muted small">{{ 'families.healthStatus' | translate }}</label>
-            <div>{{ mother.healthStatus || '-' }}</div>
+            <label class="text-muted small">{{ 'families.nationality' | translate }}</label>
+            <div>{{ mother.nationalityName || '-' }}</div>
           </div>
+          <div class="col-md-6">
+            <label class="text-muted small">{{ 'families.healthStatus' | translate }}</label>
+            <div>{{ mother.healthStatusName || mother.healthStatus || '-' }}</div>
+          </div>
+        </div>
+
+        <div class="row mt-2">
           <div class="col-md-6">
             <label class="text-muted small">{{ 'families.phone' | translate }}</label>
             <div>{{ mother.phone || '-' }}</div>

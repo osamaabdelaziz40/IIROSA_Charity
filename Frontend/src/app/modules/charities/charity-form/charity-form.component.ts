@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl, AbstractControl, AsyncValidatorFn, ValidationErrors } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -8,7 +8,7 @@ import { LookupManagementService } from '../../lookup-management/services/lookup
 import { CountryDto, RegionDto, CenterDto } from '../../lookup-management/models/lookup.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { BreadcrumbComponent, BreadcrumbItem, AttachmentInputComponent } from '../../../shared/components';
+import { BreadcrumbComponent, BreadcrumbItem, AttachmentInputComponent, CollapsibleCardComponent } from '../../../shared/components';
 import { TranslateModule, TranslateService, LangChangeEvent } from '@ngx-translate/core';
 import { CreateCharityDto, UpdateCharityDto, CharityDto, AttachmentDto } from '../models/charity.model';
 import { SharedModule, AttachmentFileType } from '../../../shared/shared.module';
@@ -44,6 +44,10 @@ export class CharityFormComponent implements OnInit, OnDestroy {
   charityId: string | null = null;
   loading = false;
   saving = false;
+
+  // Collapsible section cards — opened programmatically after a failed submit
+  // so invalid fields hidden in collapsed cards are revealed
+  @ViewChildren(CollapsibleCardComponent) collapsibleCards?: QueryList<CollapsibleCardComponent>;
 
   // Lookup data
   allCountries: CountryDto[] = [];
@@ -667,6 +671,8 @@ debugger;
 
     if (this.charityForm.invalid) {
       this.markFormGroupTouched(this.charityForm);
+      // Reveal the collapsed cards hiding the invalid fields
+      this.collapsibleCards?.forEach(card => card.open());
       this.notification.error(this.translate.instant('charities.fixValidationErrors'));
       return;
     }

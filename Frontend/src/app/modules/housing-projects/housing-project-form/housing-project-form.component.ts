@@ -12,7 +12,7 @@
  * immutable on the update path and any charity field is ignored server-side).
  */
 
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -39,7 +39,8 @@ import { AttachmentService } from '../../../core/services/attachment.service';
 import {
   BreadcrumbComponent,
   BreadcrumbItem,
-  PageHeaderComponent
+  PageHeaderComponent,
+  CollapsibleCardComponent
 } from '../../../shared/components';
 import { AttachmentComponent } from '../../../shared/components/attachment/attachment.component';
 import { SharedModule } from '../../../shared/shared.module';
@@ -140,6 +141,17 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
   editMode = false;
   familyId: string | null = null;
   loading = false;
+
+  // Collapsible section cards — sections whose header carries extra content
+  // (edit note / add-row button / saved badge) collapse manually; the plain
+  // ones use the shared app-collapsible-card. A failed submit re-expands all.
+  sections: Record<'family' | 'phones' | 'guardianRelation', boolean> = {
+    family: false,
+    phones: false,
+    guardianRelation: false
+  };
+
+  @ViewChildren(CollapsibleCardComponent) collapsibleCards?: QueryList<CollapsibleCardComponent>;
 
   pageActions = [
     {
@@ -667,10 +679,22 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
       .trim();
   }
 
+  /** Toggle a manual-collapse section card (header click). */
+  toggleSection(section: 'family' | 'phones' | 'guardianRelation'): void {
+    this.sections[section] = !this.sections[section];
+  }
+
+  /** Reveal every collapsed card — a failed submit must not hide the red fields. */
+  private expandAllSections(): void {
+    this.sections = { family: true, phones: true, guardianRelation: true };
+    this.collapsibleCards?.forEach(card => card.open());
+  }
+
   /** تم — accept the entry form into the captured rows (add, or update the edited row). */
   confirmGuardian(): void {
     this.guardianForm.markAllAsTouched();
     if (this.guardianForm.invalid) {
+      this.expandAllSections();
       this.notification.error(this.translate.instant('housingProjects.form.messages.fixErrors'));
       return;
     }
@@ -755,6 +779,7 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
   addChild(): void {
     this.childForm.markAllAsTouched();
     if (this.childForm.invalid) {
+      this.expandAllSections();
       this.notification.error(this.translate.instant('housingProjects.form.messages.fixErrors'));
       return;
     }
@@ -842,6 +867,7 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
     }
 
     if (this.familyForm.invalid || this.phoneArray.invalid) {
+      this.expandAllSections();
       this.notification.error(this.translate.instant('housingProjects.form.messages.fixErrors'));
       return;
     }
@@ -850,6 +876,7 @@ export class HousingProjectFormComponent implements OnInit, OnDestroy {
     // the entry form may sit empty between captures (the rows are the source of truth).
     if (this.guardians.length === 0) {
       this.guardianForm.markAllAsTouched();
+      this.expandAllSections();
       this.notification.error(this.translate.instant('housingProjects.form.messages.guardianRequired'));
       return;
     }

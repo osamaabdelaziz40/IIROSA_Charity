@@ -54,6 +54,16 @@ public class FamilyDto
     public int? IncomeTypeId { get; set; }
     public string? IncomeTypeName { get; set; }
 
+    // Family data extension (§4 معلومات الأسرة) — shared across registers
+    public decimal? IncomeValue { get; set; }
+    public decimal? TotalIncome { get; set; }
+    public int? ChildrenCount { get; set; }
+    public bool HasProject { get; set; }
+    public int? FamilyProjectStatusId { get; set; }
+    public string? FamilyProjectStatusName { get; set; }
+    /// <summary>Contact numbers (multi phone), default-first.</summary>
+    public List<FamilyPhoneDto> Phones { get; set; } = new();
+
     // Housing register allocation (epic 6, §11.S.2) — null on non-housing rows
     public int? HousingBuildingId { get; set; }
     public string? HousingBuildingName { get; set; }
@@ -61,12 +71,21 @@ public class FamilyDto
     public string? HousingFlatName { get; set; }
 
     /// <summary>
-    /// نصيب الفرد — computed read-only (§12.S.2): MonthlyIncome / FamilyMembersCount; not a column.
+    /// نصيب الفرد — computed read-only: (TotalIncome ?? MonthlyIncome) / (ChildrenCount ??
+    /// FamilyMembersCount); not a column. Falls back to the §12.S.2 refugee behaviour when
+    /// the family-data extension fields are not set.
     /// </summary>
-    public decimal? PerMemberShare =>
-        FamilyMembersCount > 0 && MonthlyIncome.HasValue
-            ? Math.Round(MonthlyIncome.Value / FamilyMembersCount, 2)
-            : null;
+    public decimal? PerMemberShare
+    {
+        get
+        {
+            var income = TotalIncome ?? MonthlyIncome;
+            var divisor = ChildrenCount ?? FamilyMembersCount;
+            return divisor > 0 && income.HasValue
+                ? Math.Round(income.Value / divisor, 2)
+                : null;
+        }
+    }
 
     // Audit fields (inherited from FullAuditedEntity)
     public DateTime CreatedOn { get; set; }

@@ -5,318 +5,256 @@
   [actions]="pageActions">
 </app-page-header>
 
-<!-- One card per section (mission-form card idiom); every field is a
-     shared component — app-input-text / app-drop-down — per the platform rule. -->
+<!-- One collapsed accordion card per section (app-collapsible-card — headers
+     toggle the body, collapsed by default; a failed submit re-expands them);
+     every field is a shared component — app-input-text / app-drop-down — per
+     the platform rule. -->
 <div class="container-fluid" *ngIf="!loading">
   <form [formGroup]="projectForm" (ngSubmit)="onSubmit()">
 
     <!-- Basic Information Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-info mr-2"></i>
-          {{ 'officeDevelopmentProjects.basicInformation' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <app-input-text
-              [fg]="projectForm"
-              fcn="projectName"
-              [label]="'officeDevelopmentProjects.projectName'"
-              [placeholder]="'officeDevelopmentProjects.enterProjectName' | translate">
-            </app-input-text>
-          </div>
-          <div class="col-md-6">
-            <app-input-text
-              [fg]="projectForm"
-              fcn="projectDate"
-              [label]="'officeDevelopmentProjects.projectDate'"
-              type="date-picker">
-            </app-input-text>
-          </div>
+    <app-collapsible-card [titleKey]="'officeDevelopmentProjects.basicInformation'" [icon]="'fe-info'">
+      <div class="row">
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="projectForm"
+            fcn="projectName"
+            [label]="'officeDevelopmentProjects.projectName'"
+            [placeholder]="'officeDevelopmentProjects.enterProjectName' | translate">
+          </app-input-text>
         </div>
-        <div class="row">
-          <div class="col-md-12">
-            <app-input-text
-              [fg]="projectForm"
-              fcn="projectHint"
-              [label]="'officeDevelopmentProjects.projectHint'"
-              type="textarea"
-              [rows]="3"
-              [placeholder]="'officeDevelopmentProjects.enterProjectDescription' | translate">
-            </app-input-text>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-md-6">
-            <app-input-text
-              [fg]="projectForm"
-              fcn="projectEndDate"
-              [label]="'officeDevelopmentProjects.projectEndDate'"
-              type="date-picker">
-            </app-input-text>
-          </div>
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="projectForm"
+            fcn="projectDate"
+            [label]="'officeDevelopmentProjects.projectDate'"
+            type="date-picker">
+          </app-input-text>
         </div>
       </div>
-    </div>
+      <div class="row">
+        <div class="col-md-12">
+          <app-input-text
+            [fg]="projectForm"
+            fcn="projectHint"
+            [label]="'officeDevelopmentProjects.projectHint'"
+            type="textarea"
+            [rows]="3"
+            [placeholder]="'officeDevelopmentProjects.enterProjectDescription' | translate">
+          </app-input-text>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="projectForm"
+            fcn="projectEndDate"
+            [label]="'officeDevelopmentProjects.projectEndDate'"
+            type="date-picker">
+          </app-input-text>
+        </div>
+      </div>
+    </app-collapsible-card>
 
     <!-- Project Classification Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-layers mr-2"></i>
-          {{ 'officeDevelopmentProjects.projectClassification' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <app-drop-down
-              [fg]="projectForm"
-              fcn="officeProjectTypeId"
-              [label]="'officeDevelopmentProjects.officeProjectType'"
-              [initialData]="projectTypeOptions"
-              (onDropDownChanged)="onProjectTypeDropDownChanged($event)">
-            </app-drop-down>
-          </div>
+    <app-collapsible-card [titleKey]="'officeDevelopmentProjects.projectClassification'" [icon]="'fe-layers'">
+      <div class="row">
+        <div class="col-md-6">
+          <app-drop-down
+            [fg]="projectForm"
+            fcn="officeProjectTypeId"
+            [label]="'officeDevelopmentProjects.officeProjectType'"
+            [initialData]="projectTypeOptions"
+            (onDropDownChanged)="onProjectTypeDropDownChanged($event)">
+          </app-drop-down>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Location Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-map-pin mr-2"></i>
-          {{ 'officeDevelopmentProjects.location' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-3">
-            <app-drop-down
-              [fg]="projectForm"
-              fcn="countryId"
-              [label]="'officeDevelopmentProjects.country'"
-              [initialData]="countryOptions"
-              (onDropDownChanged)="onCountryDropDownChanged($event)">
-            </app-drop-down>
-          </div>
-          <div class="col-md-3">
-            <app-drop-down
-              [fg]="projectForm"
-              fcn="regionId"
-              [label]="'officeDevelopmentProjects.region'"
-              [initialData]="filteredRegions"
-              [disabled]="!projectForm.get('countryId')?.value || filteredRegions.length === 0"
-              (onDropDownChanged)="onRegionDropDownChanged($event)">
-            </app-drop-down>
-          </div>
-          <div class="col-md-3">
-            <app-drop-down
-              [fg]="projectForm"
-              fcn="centerId"
-              [label]="'officeDevelopmentProjects.center'"
-              [initialData]="filteredCenters"
-              [disabled]="!projectForm.get('regionId')?.value || filteredCenters.length === 0">
-            </app-drop-down>
-          </div>
-          <div class="col-md-3">
-            <app-input-text
-              [fg]="projectForm"
-              fcn="villageName"
-              [label]="'officeDevelopmentProjects.villageName'"
-              [placeholder]="'officeDevelopmentProjects.enterVillageName' | translate">
-            </app-input-text>
-          </div>
+    <app-collapsible-card [titleKey]="'officeDevelopmentProjects.location'" [icon]="'fe-map-pin'">
+      <div class="row">
+        <div class="col-md-3">
+          <app-drop-down
+            [fg]="projectForm"
+            fcn="countryId"
+            [label]="'officeDevelopmentProjects.country'"
+            [initialData]="countryOptions"
+            (onDropDownChanged)="onCountryDropDownChanged($event)">
+          </app-drop-down>
+        </div>
+        <div class="col-md-3">
+          <app-drop-down
+            [fg]="projectForm"
+            fcn="regionId"
+            [label]="'officeDevelopmentProjects.region'"
+            [initialData]="filteredRegions"
+            [disabled]="!projectForm.get('countryId')?.value || filteredRegions.length === 0"
+            (onDropDownChanged)="onRegionDropDownChanged($event)">
+          </app-drop-down>
+        </div>
+        <div class="col-md-3">
+          <app-drop-down
+            [fg]="projectForm"
+            fcn="centerId"
+            [label]="'officeDevelopmentProjects.center'"
+            [initialData]="filteredCenters"
+            [disabled]="!projectForm.get('regionId')?.value || filteredCenters.length === 0">
+          </app-drop-down>
+        </div>
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="projectForm"
+            fcn="villageName"
+            [label]="'officeDevelopmentProjects.villageName'"
+            [placeholder]="'officeDevelopmentProjects.enterVillageName' | translate">
+          </app-input-text>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Financial Information Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-dollar-sign mr-2"></i>
-          {{ 'officeDevelopmentProjects.financialInformation' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-4">
-            <app-input-text
-              [fg]="projectForm"
-              fcn="projectCostEGP"
-              [label]="'officeDevelopmentProjects.projectCostEGP'"
-              type="number"
-              [min]="0"
-              [step]="0.01"
-              [placeholder]="'officeDevelopmentProjects.enterCostEGP' | translate">
-            </app-input-text>
-          </div>
-          <div class="col-md-4">
-            <app-input-text
-              [fg]="projectForm"
-              fcn="projectCostSAR"
-              [label]="'officeDevelopmentProjects.projectCostSAR'"
-              type="number"
-              [min]="0"
-              [step]="0.01"
-              [placeholder]="'officeDevelopmentProjects.enterCostSAR' | translate">
-            </app-input-text>
-          </div>
-          <div class="col-md-4">
-            <app-input-text
-              [fg]="projectForm"
-              fcn="donorName"
-              [label]="'officeDevelopmentProjects.donorName'"
-              [placeholder]="'officeDevelopmentProjects.enterDonorName' | translate">
-            </app-input-text>
-          </div>
+    <app-collapsible-card [titleKey]="'officeDevelopmentProjects.financialInformation'" [icon]="'fe-dollar-sign'">
+      <div class="row">
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="projectForm"
+            fcn="projectCostEGP"
+            [label]="'officeDevelopmentProjects.projectCostEGP'"
+            type="number"
+            [min]="0"
+            [step]="0.01"
+            [placeholder]="'officeDevelopmentProjects.enterCostEGP' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="projectForm"
+            fcn="projectCostSAR"
+            [label]="'officeDevelopmentProjects.projectCostSAR'"
+            type="number"
+            [min]="0"
+            [step]="0.01"
+            [placeholder]="'officeDevelopmentProjects.enterCostSAR' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="projectForm"
+            fcn="donorName"
+            [label]="'officeDevelopmentProjects.donorName'"
+            [placeholder]="'officeDevelopmentProjects.enterDonorName' | translate">
+          </app-input-text>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Beneficiaries Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-users mr-2"></i>
-          {{ 'officeDevelopmentProjects.beneficiaries' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <app-input-text
-              [fg]="projectForm"
-              fcn="beneficiariesCount"
-              [label]="'officeDevelopmentProjects.beneficiariesCount'"
-              type="number"
-              [min]="1"
-              [placeholder]="'officeDevelopmentProjects.enterBeneficiariesCount' | translate">
-            </app-input-text>
-          </div>
-          <div class="col-md-6">
-            <app-drop-down
-              [fg]="projectForm"
-              fcn="beneficiariesType"
-              [label]="'officeDevelopmentProjects.beneficiariesType'"
-              [initialData]="beneficiaryTypeOptions"
-              (onDropDownChanged)="onBeneficiaryTypeDropDownChanged($event)">
-            </app-drop-down>
-          </div>
+    <app-collapsible-card [titleKey]="'officeDevelopmentProjects.beneficiaries'" [icon]="'fe-users'">
+      <div class="row">
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="projectForm"
+            fcn="beneficiariesCount"
+            [label]="'officeDevelopmentProjects.beneficiariesCount'"
+            type="number"
+            [min]="1"
+            [placeholder]="'officeDevelopmentProjects.enterBeneficiariesCount' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-6">
+          <app-drop-down
+            [fg]="projectForm"
+            fcn="beneficiariesType"
+            [label]="'officeDevelopmentProjects.beneficiariesType'"
+            [initialData]="beneficiaryTypeOptions"
+            (onDropDownChanged)="onBeneficiaryTypeDropDownChanged($event)">
+          </app-drop-down>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Charity Assignment Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-link mr-2"></i>
-          {{ 'officeDevelopmentProjects.charityAssignment' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <app-drop-down
-              [fg]="projectForm"
-              fcn="assignedCharityId"
-              [label]="'officeDevelopmentProjects.assignedCharity'"
-              [initialData]="charityOptions"
-              (onDropDownChanged)="onCharityDropDownChanged($event)">
-            </app-drop-down>
-          </div>
+    <app-collapsible-card [titleKey]="'officeDevelopmentProjects.charityAssignment'" [icon]="'fe-link'">
+      <div class="row">
+        <div class="col-md-6">
+          <app-drop-down
+            [fg]="projectForm"
+            fcn="assignedCharityId"
+            [label]="'officeDevelopmentProjects.assignedCharity'"
+            [initialData]="charityOptions"
+            (onDropDownChanged)="onCharityDropDownChanged($event)">
+          </app-drop-down>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Documents Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-file-text mr-2"></i>
-          {{ 'officeDevelopmentProjects.documents' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <app-attachment-input
-              [labelKey]="'officeDevelopmentProjects.attachedFile'"
-              [controls]="'document_Attach'"
-              [acceptedFileTypes]="[attachmentFileType.Document]"
-              [languageSelection]="false"
-              [descriptionEnable]="false"
-              [attachments]="documentAttachList"
-              [displayDiscription]="false"
-              [viewOnly]="false"
-              [isRequired]="false"
-              [maxFilesNumber]="5"
-              [form]="projectForm"
-              (attachmentsChange)="onDocumentAttachmentChange($event)">
-            </app-attachment-input>
-          </div>
-          <div class="col-md-6">
-            <app-attachment-input
-              [labelKey]="'officeDevelopmentProjects.projectReportFile'"
-              [controls]="'report_Attach'"
-              [acceptedFileTypes]="[attachmentFileType.Document]"
-              [languageSelection]="false"
-              [descriptionEnable]="false"
-              [attachments]="reportAttachList"
-              [displayDiscription]="false"
-              [viewOnly]="false"
-              [isRequired]="false"
-              [maxFilesNumber]="5"
-              [form]="projectForm"
-              (attachmentsChange)="onReportAttachmentChange($event)">
-            </app-attachment-input>
-          </div>
+    <app-collapsible-card [titleKey]="'officeDevelopmentProjects.documents'" [icon]="'fe-file-text'">
+      <div class="row">
+        <div class="col-md-6">
+          <app-attachment-input
+            [labelKey]="'officeDevelopmentProjects.attachedFile'"
+            [controls]="'document_Attach'"
+            [acceptedFileTypes]="[attachmentFileType.Document]"
+            [languageSelection]="false"
+            [descriptionEnable]="false"
+            [attachments]="documentAttachList"
+            [displayDiscription]="false"
+            [viewOnly]="false"
+            [isRequired]="false"
+            [maxFilesNumber]="5"
+            [form]="projectForm"
+            (attachmentsChange)="onDocumentAttachmentChange($event)">
+          </app-attachment-input>
+        </div>
+        <div class="col-md-6">
+          <app-attachment-input
+            [labelKey]="'officeDevelopmentProjects.projectReportFile'"
+            [controls]="'report_Attach'"
+            [acceptedFileTypes]="[attachmentFileType.Document]"
+            [languageSelection]="false"
+            [descriptionEnable]="false"
+            [attachments]="reportAttachList"
+            [displayDiscription]="false"
+            [viewOnly]="false"
+            [isRequired]="false"
+            [maxFilesNumber]="5"
+            [form]="projectForm"
+            (attachmentsChange)="onReportAttachmentChange($event)">
+          </app-attachment-input>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Status Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-check-circle mr-2"></i>
-          {{ 'officeDevelopmentProjects.status' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-12">
-            <div class="form-check">
-              <input type="checkbox" class="form-check-input" id="isFinished" formControlName="isFinished">
-              <label class="form-check-label" for="isFinished">
-                {{ 'officeDevelopmentProjects.isFinished' | translate }}
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div class="row mt-3">
-          <div class="col-md-12">
-            <app-input-text
-              [fg]="projectForm"
-              fcn="notes"
-              [label]="'officeDevelopmentProjects.notes'"
-              type="textarea"
-              [rows]="3"
-              [placeholder]="'officeDevelopmentProjects.enterNotes' | translate">
-            </app-input-text>
+    <app-collapsible-card [titleKey]="'officeDevelopmentProjects.status'" [icon]="'fe-check-circle'">
+      <div class="row">
+        <div class="col-md-12">
+          <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="isFinished" formControlName="isFinished">
+            <label class="form-check-label" for="isFinished">
+              {{ 'officeDevelopmentProjects.isFinished' | translate }}
+            </label>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Form Actions -->
+      <div class="row mt-3">
+        <div class="col-md-12">
+          <app-input-text
+            [fg]="projectForm"
+            fcn="notes"
+            [label]="'officeDevelopmentProjects.notes'"
+            type="textarea"
+            [rows]="3"
+            [placeholder]="'officeDevelopmentProjects.enterNotes' | translate">
+          </app-input-text>
+        </div>
+      </div>
+    </app-collapsible-card>
+
+    <!-- Form Actions (always visible — not collapsible) -->
     <div class="card shadow mb-4">
       <div class="card-body">
         <button type="submit" class="btn btn-primary" [disabled]="saving">

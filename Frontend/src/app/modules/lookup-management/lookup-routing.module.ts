@@ -9,6 +9,7 @@ import { OfficeProjectTypesListComponent } from './office-project-types/office-p
 import { HousingBuildingsListComponent } from './housing-buildings/housing-buildings-list.component';
 import { HousingFlatsListComponent } from './housing-flats/housing-flats-list.component';
 import { OutgoingCategoriesListComponent } from './outgoing-categories/outgoing-categories-list.component';
+import { SimpleLookupListComponent } from './simple-lookups/simple-lookup-list.component';
 
 const routes: Routes = [
   {
@@ -46,6 +47,21 @@ const routes: Routes = [
   {
     path: 'outgoing-categories',
     component: OutgoingCategoriesListComponent
+  },
+  {
+    path: 'house-ownerships',
+    component: SimpleLookupListComponent,
+    data: { table: 'house-ownerships' }
+  },
+  {
+    path: 'income-types',
+    component: SimpleLookupListComponent,
+    data: { table: 'income-types' }
+  },
+  {
+    path: 'family-project-statuses',
+    component: SimpleLookupListComponent,
+    data: { table: 'family-project-statuses' }
   }
 ];
 

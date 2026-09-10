@@ -648,6 +648,17 @@ public class HealthStatusService : LookupServiceBase<HealthStatus, HealthStatusD
     }
 }
 
+public class DeathReasonService : LookupServiceBase<DeathReason, DeathReasonDto, CreateDeathReasonDto, UpdateDeathReasonDto>, IDeathReasonService
+{
+    public DeathReasonService(
+        IDeathReasonRepository repository,
+        IMapper mapper,
+        ILogger<DeathReasonService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
 public class RefuseReasonService : LookupServiceBase<RefuseReason, RefuseReasonDto, CreateRefuseReasonDto, UpdateRefuseReasonDto>, IRefuseReasonService
 {
     public RefuseReasonService(
@@ -722,6 +733,18 @@ public class ReasonOfRelService : LookupServiceBase<ReasonOfRel, ReasonOfRelDto,
         IReasonOfRelRepository repository,
         IMapper mapper,
         ILogger<ReasonOfRelService> logger)
+        : base(repository, mapper, logger)
+    {
+    }
+}
+
+/// <summary>حالة المشروع — family data extension catalogue (يوجد مشروع قائم / مشروع جديد)</summary>
+public class FamilyProjectStatusService : LookupServiceBase<FamilyProjectStatus, FamilyProjectStatusDto, CreateFamilyProjectStatusDto, UpdateFamilyProjectStatusDto>, IFamilyProjectStatusService
+{
+    public FamilyProjectStatusService(
+        IFamilyProjectStatusRepository repository,
+        IMapper mapper,
+        ILogger<FamilyProjectStatusService> logger)
         : base(repository, mapper, logger)
     {
     }

@@ -9,6 +9,9 @@
       <div class="card-body">
         <form [formGroup]="checkForm" (ngSubmit)="onSubmit()">
 
+          <!-- §16.S.2 — cheque information (charity selector for head office included) -->
+          <app-collapsible-card titleKey="generalChecks.checkInformation" icon="fe-file-text">
+
           <!-- Charity (head office only; a charity user's cheque is stamped server-side) -->
           <div class="row" *ngIf="isHeadOffice && !isEdit">
             <div class="col-md-6">
@@ -25,8 +28,6 @@
             </div>
           </div>
 
-          <!-- §16.S.2 — cheque information -->
-          <h6 class="text-muted text-uppercase small mb-3">{{ 'generalChecks.checkInformation' | translate }}</h6>
           <div class="row">
             <div class="col-md-6">
               <div class="form-group">
@@ -83,8 +84,10 @@
             </div>
           </div>
 
+          </app-collapsible-card>
+
           <!-- Beneficiary (UC-CHQ-05 type-ahead on the reusable table) -->
-          <h6 class="text-muted text-uppercase small mb-3 mt-4">{{ 'generalChecks.beneficiaryInformation' | translate }}</h6>
+          <app-collapsible-card titleKey="generalChecks.beneficiaryInformation" icon="fe-user">
           <div class="row">
             <div class="col-md-6">
               <div class="form-group position-relative">
@@ -136,8 +139,10 @@
             </div>
           </div>
 
+          </app-collapsible-card>
+
           <!-- Financial (UC-CHQ-07 تفقيط) -->
-          <h6 class="text-muted text-uppercase small mb-3 mt-4">{{ 'generalChecks.financialInformation' | translate }}</h6>
+          <app-collapsible-card titleKey="generalChecks.financialInformation" icon="fe-dollar-sign">
           <div class="row">
             <div class="col-md-4">
               <div class="form-group">
@@ -199,8 +204,10 @@
             </div>
           </div>
 
+          </app-collapsible-card>
+
           <!-- §16.S.2 — optional flags -->
-          <h6 class="text-muted text-uppercase small mb-3 mt-4">{{ 'generalChecks.flags' | translate }}</h6>
+          <app-collapsible-card titleKey="generalChecks.flags" icon="fe-flag">
           <div class="row">
             <div class="col-12">
               <div class="d-flex flex-wrap">
@@ -230,7 +237,9 @@
             </div>
           </div>
 
-          <!-- Commands: طباعة / طباعة مصري / حفظ -->
+          </app-collapsible-card>
+
+          <!-- Commands (always visible): طباعة / طباعة مصري / حفظ -->
           <div class="card-footer bg-white border-0 d-flex justify-content-end gap-2 px-0">
             <button type="button" class="btn btn-outline-secondary" (click)="printCheque(false)">
               <i class="fe fe-printer mr-1"></i> {{ 'generalChecks.print' | translate }}

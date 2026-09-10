@@ -21,9 +21,34 @@ public class Mother : FullAuditedEntity
     public string FullName { get; set; } = string.Empty;
 
     /// <summary>
+    /// First name (الاسم الأول) — legacy WAR.IIROSA four-part name, §10 اضافة معيل
+    /// </summary>
+    public string? FirstName { get; set; }
+
+    /// <summary>
+    /// Second name (الاسم الثانى)
+    /// </summary>
+    public string? SecondName { get; set; }
+
+    /// <summary>
+    /// Third name (الاسم الثالث)
+    /// </summary>
+    public string? ThirdName { get; set; }
+
+    /// <summary>
+    /// Family name (إسم الأسرة)
+    /// </summary>
+    public string? FamilyName { get; set; }
+
+    /// <summary>
     /// National ID or Passport number (Required)
     /// </summary>
     public string NationalId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Nationality (الجنسية) — lookup Country
+    /// </summary>
+    public int? NationalityCountryId { get; set; }
 
     /// <summary>
     /// Date of birth
@@ -76,6 +101,26 @@ public class Mother : FullAuditedEntity
     public DateTime? DeathDate { get; set; }
 
     /// <summary>
+    /// Cause of death (سبب الوفاة) — lookup DeathReason (طبيعية / مرض / حادث)
+    /// </summary>
+    public int? DeathReasonId { get; set; }
+
+    /// <summary>
+    /// Death certificate image (صوره شهاده الوفاه) — framework attachment id
+    /// </summary>
+    public Guid? DeathCertificateAttachmentId { get; set; }
+
+    /// <summary>
+    /// Meza card number (رقم كارت ميزه)
+    /// </summary>
+    public string? MezaCard { get; set; }
+
+    /// <summary>
+    /// Meza card expiry date (تاريخ انتهاء الكارت)
+    /// </summary>
+    public DateTime? MezaCardExpirationDate { get; set; }
+
+    /// <summary>
     /// Additional notes
     /// </summary>
     public string? Notes { get; set; }
@@ -84,4 +129,6 @@ public class Mother : FullAuditedEntity
     public virtual Family? Family { get; set; }
     public virtual EducationLevel? EducationLevel { get; set; }
     public virtual HealthStatus? HealthStatus { get; set; }
+    public virtual Lookups.Country? Country { get; set; }
+    public virtual Lookups.DeathReason? DeathReason { get; set; }
 }

@@ -25,6 +25,19 @@ public class MotherConfiguration : IEntityTypeConfiguration<Mother>
             .IsRequired()
             .HasMaxLength(50);
 
+        // ========== Four-part name (§10 اضافة معيل — legacy WAR.IIROSA) ==========
+        builder.Property(x => x.FirstName)
+            .HasMaxLength(100);
+
+        builder.Property(x => x.SecondName)
+            .HasMaxLength(100);
+
+        builder.Property(x => x.ThirdName)
+            .HasMaxLength(100);
+
+        builder.Property(x => x.FamilyName)
+            .HasMaxLength(100);
+
         builder.Property(x => x.DateOfBirth);
 
         builder.Property(x => x.PlaceOfBirth)
@@ -50,6 +63,15 @@ public class MotherConfiguration : IEntityTypeConfiguration<Mother>
 
         builder.Property(x => x.DeathDate);
 
+        builder.Property(x => x.DeathReasonId);
+
+        builder.Property(x => x.DeathCertificateAttachmentId);
+
+        builder.Property(x => x.MezaCard)
+            .HasMaxLength(50);
+
+        builder.Property(x => x.MezaCardExpirationDate);
+
         builder.Property(x => x.Notes)
             .HasMaxLength(1000);
 
@@ -67,6 +89,17 @@ public class MotherConfiguration : IEntityTypeConfiguration<Mother>
         builder.HasOne(x => x.HealthStatus)
             .WithMany()
             .HasForeignKey(x => x.HealthStatusId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ========== Nationality / death reason (§10 اضافة معيل) ==========
+        builder.HasOne(x => x.Country)
+            .WithMany()
+            .HasForeignKey(x => x.NationalityCountryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.DeathReason)
+            .WithMany()
+            .HasForeignKey(x => x.DeathReasonId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // ========== Indexes ==========

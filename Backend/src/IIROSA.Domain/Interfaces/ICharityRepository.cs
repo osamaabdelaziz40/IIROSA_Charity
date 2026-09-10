@@ -52,6 +52,15 @@ public interface ICharityRepository : IRepository<Charity>
     Task<int> GetOrphanCountAsync(Guid charityId);
     Task<int> GetSponsorCountAsync(Guid charityId);
 
+    /// <summary>
+    /// Register-level aggregate for the UC-3.10 statistics band — grouped passes over the
+    /// scoped live rows rather than one count query per card. <paramref name="charityId"/>
+    /// and <paramref name="countryId"/> narrow the same way the paged list's filters do.
+    /// </summary>
+    Task<(int Total, int Active, int Locked, int ReceivingDonations, int AddedThisMonth,
+        List<(int CountryId, string? NameAr, string? NameEn, int Count)> ByCountry)>
+        GetRegisterStatisticsAsync(int? countryId = null, Guid? charityId = null);
+
     // Bulk Operations
     Task AddRangeAsync(IEnumerable<Charity> charities);
     void UpdateRange(IEnumerable<Charity> charities);

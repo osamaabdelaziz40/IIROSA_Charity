@@ -4,230 +4,183 @@
   [actions]="pageActions">
 </app-page-header>
 
-<!-- One card per §20.S.2 section (mission-detail card idiom); every field is a
-     shared component — app-input-text / app-drop-down — per the platform rule. -->
+<!-- One collapsed accordion card per §20.S.2 section (mission-detail card idiom),
+     via the shared app-collapsible-card. Every field is a shared component —
+     app-input-text / app-drop-down — per the platform rule. -->
 <div class="container-fluid" *ngIf="!loading">
   <form [formGroup]="missionForm" (ngSubmit)="onSubmit()">
 
     <!-- Basic Information Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-info mr-2"></i>
-          {{ 'missions.basicInformation' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-12">
-            <app-input-text
-              [fg]="missionForm"
-              fcn="missionTarget"
-              [label]="'missions.missionTarget'"
-              [placeholder]="'missions.enterMissionTarget' | translate">
-            </app-input-text>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-md-12">
-            <app-input-text
-              [fg]="missionForm"
-              fcn="missionDetails"
-              [label]="'missions.missionDetails'"
-              [placeholder]="'missions.enterMissionDetails' | translate"
-              type="textarea"
-              [rows]="3">
-            </app-input-text>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-md-12">
-            <app-input-text
-              [fg]="missionForm"
-              fcn="details"
-              [label]="'missions.details'"
-              [placeholder]="'missions.enterAdditionalNotes' | translate"
-              type="textarea"
-              [rows]="2">
-            </app-input-text>
-          </div>
+    <app-collapsible-card titleKey="missions.basicInformation" icon="fe-info">
+      <div class="row">
+        <div class="col-md-12">
+          <app-input-text
+            [fg]="missionForm"
+            fcn="missionTarget"
+            [label]="'missions.missionTarget'"
+            [placeholder]="'missions.enterMissionTarget' | translate">
+          </app-input-text>
         </div>
       </div>
-    </div>
+      <div class="row">
+        <div class="col-md-12">
+          <app-input-text
+            [fg]="missionForm"
+            fcn="missionDetails"
+            [label]="'missions.missionDetails'"
+            [placeholder]="'missions.enterMissionDetails' | translate"
+            type="textarea"
+            [rows]="3">
+          </app-input-text>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12">
+          <app-input-text
+            [fg]="missionForm"
+            fcn="details"
+            [label]="'missions.details'"
+            [placeholder]="'missions.enterAdditionalNotes' | translate"
+            type="textarea"
+            [rows]="2">
+          </app-input-text>
+        </div>
+      </div>
+    </app-collapsible-card>
 
     <!-- Classification Section (نوع المأموريه · نوع المقابلة · نوع التوقيت) -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-tag mr-2"></i>
-          {{ 'missions.classification' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-4">
-            <app-drop-down [fg]="missionForm"
-                           fcn="missionTypeId"
-                           [label]="'missions.missionType'"
-                           [placeholder]="'missions.selectMissionType' | translate"
-                           [initialData]="missionTypeOptions">
-            </app-drop-down>
-          </div>
-          <div class="col-md-4">
-            <app-drop-down [fg]="missionForm"
-                           fcn="missionInterviewTypeId"
-                           [label]="'missions.missionInterviewType'"
-                           [placeholder]="'missions.selectMissionInterviewType' | translate"
-                           [initialData]="missionInterviewTypeOptions">
-            </app-drop-down>
-          </div>
-          <div class="col-md-4">
-            <app-drop-down [fg]="missionForm"
-                           fcn="missionTimeTypeId"
-                           [label]="'missions.missionTimeType'"
-                           [placeholder]="'missions.selectMissionTimeType' | translate"
-                           [initialData]="missionTimeTypeOptions">
-            </app-drop-down>
-          </div>
+    <app-collapsible-card titleKey="missions.classification" icon="fe-tag">
+      <div class="row">
+        <div class="col-md-4">
+          <app-drop-down [fg]="missionForm"
+                         fcn="missionTypeId"
+                         [label]="'missions.missionType'"
+                         [placeholder]="'missions.selectMissionType' | translate"
+                         [initialData]="missionTypeOptions">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down [fg]="missionForm"
+                         fcn="missionInterviewTypeId"
+                         [label]="'missions.missionInterviewType'"
+                         [placeholder]="'missions.selectMissionInterviewType' | translate"
+                         [initialData]="missionInterviewTypeOptions">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down [fg]="missionForm"
+                         fcn="missionTimeTypeId"
+                         [label]="'missions.missionTimeType'"
+                         [placeholder]="'missions.selectMissionTimeType' | translate"
+                         [initialData]="missionTimeTypeOptions">
+          </app-drop-down>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Scheduling Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-calendar mr-2"></i>
-          {{ 'missions.scheduling' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <app-input-text
-              [fg]="missionForm"
-              fcn="missionDate"
-              [label]="'missions.missionDate'"
-              type="date">
-            </app-input-text>
-          </div>
+    <app-collapsible-card titleKey="missions.scheduling" icon="fe-calendar">
+      <div class="row">
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="missionForm"
+            fcn="missionDate"
+            [label]="'missions.missionDate'"
+            type="date">
+          </app-input-text>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Location Section (country → region → center cascade) -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-map-pin mr-2"></i>
-          {{ 'missions.location' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-4">
-            <app-drop-down [fg]="missionForm"
-                           fcn="countryId"
-                           [label]="'missions.country'"
-                           [placeholder]="'missions.selectCountry' | translate"
-                           [initialData]="countries"
-                           (onDropDownChanged)="onCountryChanged($event)">
-            </app-drop-down>
-          </div>
-          <div class="col-md-4">
-            <app-drop-down [fg]="missionForm"
-                           fcn="regionId"
-                           [label]="'missions.region'"
-                           [placeholder]="'missions.selectRegion' | translate"
-                           [initialData]="regions"
-                           [disabled]="!missionForm.get('countryId')?.value || regions.length === 0"
-                           (onDropDownChanged)="onRegionChanged($event)">
-            </app-drop-down>
-          </div>
-          <div class="col-md-4">
-            <app-drop-down [fg]="missionForm"
-                           fcn="centerId"
-                           [label]="'missions.center'"
-                           [placeholder]="'missions.selectCenter' | translate"
-                           [initialData]="centers"
-                           [disabled]="!missionForm.get('regionId')?.value || centers.length === 0">
-            </app-drop-down>
-          </div>
+    <app-collapsible-card titleKey="missions.location" icon="fe-map-pin">
+      <div class="row">
+        <div class="col-md-4">
+          <app-drop-down [fg]="missionForm"
+                         fcn="countryId"
+                         [label]="'missions.country'"
+                         [placeholder]="'missions.selectCountry' | translate"
+                         [initialData]="countries"
+                         (onDropDownChanged)="onCountryChanged($event)">
+          </app-drop-down>
         </div>
-        <div class="row">
-          <div class="col-md-6">
-            <app-input-text
-              [fg]="missionForm"
-              fcn="missionLocation"
-              [label]="'missions.missionLocation'"
-              [placeholder]="'missions.enterMissionLocation' | translate">
-            </app-input-text>
-          </div>
-          <div class="col-md-6">
-            <app-input-text
-              [fg]="missionForm"
-              fcn="village"
-              [label]="'missions.village'"
-              [placeholder]="'missions.enterVillage' | translate">
-            </app-input-text>
-          </div>
+        <div class="col-md-4">
+          <app-drop-down [fg]="missionForm"
+                         fcn="regionId"
+                         [label]="'missions.region'"
+                         [placeholder]="'missions.selectRegion' | translate"
+                         [initialData]="regions"
+                         [disabled]="!missionForm.get('countryId')?.value || regions.length === 0"
+                         (onDropDownChanged)="onRegionChanged($event)">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down [fg]="missionForm"
+                         fcn="centerId"
+                         [label]="'missions.center'"
+                         [placeholder]="'missions.selectCenter' | translate"
+                         [initialData]="centers"
+                         [disabled]="!missionForm.get('regionId')?.value || centers.length === 0">
+          </app-drop-down>
         </div>
       </div>
-    </div>
+      <div class="row">
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="missionForm"
+            fcn="missionLocation"
+            [label]="'missions.missionLocation'"
+            [placeholder]="'missions.enterMissionLocation' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="missionForm"
+            fcn="village"
+            [label]="'missions.village'"
+            [placeholder]="'missions.enterVillage' | translate">
+          </app-input-text>
+        </div>
+      </div>
+    </app-collapsible-card>
 
     <!-- Assignment Section (الموظف المسئول) -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-user mr-2"></i>
-          {{ 'missions.assignment' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <app-drop-down [fg]="missionForm"
-                           fcn="assignedToUserId"
-                           [label]="'missions.assignedTo'"
-                           [placeholder]="'missions.selectAssignedUser' | translate"
-                           [initialData]="userOptions">
-            </app-drop-down>
-          </div>
+    <app-collapsible-card titleKey="missions.assignment" icon="fe-user">
+      <div class="row">
+        <div class="col-md-6">
+          <app-drop-down [fg]="missionForm"
+                         fcn="assignedToUserId"
+                         [label]="'missions.assignedTo'"
+                         [placeholder]="'missions.selectAssignedUser' | translate"
+                         [initialData]="userOptions">
+          </app-drop-down>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Event Information Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-calendar mr-2"></i>
-          {{ 'missions.eventInformation' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <app-input-text
-              [fg]="missionForm"
-              fcn="entityName"
-              [label]="'missions.organizingEntity'"
-              [placeholder]="'missions.enterEntityName' | translate">
-            </app-input-text>
-          </div>
-          <div class="col-md-6">
-            <app-input-text
-              [fg]="missionForm"
-              fcn="conferenceName"
-              [label]="'missions.conferenceName'"
-              [placeholder]="'missions.enterConferenceName' | translate">
-            </app-input-text>
-          </div>
+    <app-collapsible-card titleKey="missions.eventInformation" icon="fe-calendar">
+      <div class="row">
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="missionForm"
+            fcn="entityName"
+            [label]="'missions.organizingEntity'"
+            [placeholder]="'missions.enterEntityName' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="missionForm"
+            fcn="conferenceName"
+            [label]="'missions.conferenceName'"
+            [placeholder]="'missions.enterConferenceName' | translate">
+          </app-input-text>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
-    <!-- Form Actions -->
+    <!-- Form Actions (always visible — not a collapsible section) -->
     <div class="card shadow mb-4">
       <div class="card-body">
         <button type="submit" class="btn btn-primary" [disabled]="saving">

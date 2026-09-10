@@ -9,6 +9,7 @@ export { ModalComponent } from './modal/modal.component';
 export { ConfirmDialogComponent } from './confirm-dialog/confirm-dialog.component';
 export { ApexChartComponent } from './apex-chart/apex-chart.component';
 export { DropDownComponent } from './drop-down/drop-down.component';
+export { CollapsibleCardComponent } from './collapsible-card/collapsible-card.component';
 export { SessionExtensionDialogComponent } from './session-extension-dialog/session-extension-dialog.component';
 export { SessionTimeoutHandlerComponent } from './session-timeout-handler/session-timeout-handler.component';
 export { InputTextComponent } from './text-input/text-input.component';

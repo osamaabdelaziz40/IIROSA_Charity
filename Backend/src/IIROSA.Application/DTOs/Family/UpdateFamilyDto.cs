@@ -156,4 +156,38 @@ public class UpdateFamilyDto
     /// Income type (نوع الدخل)
     /// </summary>
     public int? IncomeTypeId { get; set; }
+
+    // Family data extension (§4 معلومات الأسرة) — shared across registers, patch-style like the rest
+
+    /// <summary>
+    /// Income value (قيمة الدخل)
+    /// </summary>
+    public decimal? IncomeValue { get; set; }
+
+    /// <summary>
+    /// Total income (الدخل الكلى)
+    /// </summary>
+    public decimal? TotalIncome { get; set; }
+
+    /// <summary>
+    /// Children count (عدد الأبناء)
+    /// </summary>
+    public int? ChildrenCount { get; set; }
+
+    /// <summary>
+    /// Does the family own a project (هل الأسرة تمتلك مشروع) — null ⇒ unchanged
+    /// </summary>
+    public bool? HasProject { get; set; }
+
+    /// <summary>
+    /// Family project status (حالة المشروع) — lookup FamilyProjectStatus
+    /// </summary>
+    public int? FamilyProjectStatusId { get; set; }
+
+    /// <summary>
+    /// Contact numbers (multi phone) — full replace sync keyed by nothing (client sends the
+    /// complete live set); absent ⇒ phones untouched. The service mirrors the default into
+    /// <see cref="PhoneNumber"/> for legacy consumers.
+    /// </summary>
+    public List<CreateFamilyPhoneDto>? Phones { get; set; }
 }

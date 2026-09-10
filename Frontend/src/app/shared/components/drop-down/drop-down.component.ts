@@ -47,19 +47,30 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
   groupedData: Array<{ group?: string; items: Array<LookupBase> }> = []
   select2Instance: any = null
   isRequired: boolean = false
+
+  /** Per-instance suffix for the select's DOM id. Father and mother forms bind the same
+   *  fcn (nationalityCountryId, healthStatusId…), and select2 keys its global element
+   *  store by the select's id — with a shared id, the second form's init found the first
+   *  form's fresh instance through the store and destroyed it: whichever form finished
+   *  initializing last left the other with no widget at all. */
+  private static nextUid = 0
+  readonly uid = ++DropDownComponent.nextUid
+
+  /** DOM id of the rendered select — fcn/id plus the instance suffix, always unique. */
+  get selectId(): string {
+    return `${this.id || this.fcn}-${this.uid}`
+  }
   private previousDisabledState: boolean | null = null
-  private isInitializing: boolean = false
+  /** Monotonic rebuild token — only the latest scheduled cycle may touch the widget. */
+  private reinitSeq = 0
+  /** One-shot guard for buildWidget's self-heal retry (no retry recursion). */
+  private rebuildRetried = false
   private select2UnavailableWarningShown: boolean = false
 
   constructor(private lookupService: LookupService, private el: ElementRef, private translate: TranslateService) {
   }
 
   ngOnChanges() {
-    // Skip changes during initialization to prevent loops
-    if (this.isInitializing) {
-      return
-    }
-
     // Handle disabled state change - only when it actually changes
     if (this.previousDisabledState !== this.disabled) {
       this.updateDisabledState()
@@ -77,20 +88,12 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
       if (this.sameItems(this.data, this.initialData)) {
         return
       }
+      // Never drop a real content change: the old isInitializing window could
+      // swallow an options arrival that landed mid-cycle, leaving the dropdown
+      // on stale options forever. Assign now; the widget rebuild is serialized.
       this.data = this.initialData
       this.processGroupedData()
-      // Re-initialize Select2 when data changes, but only if view is ready
-      // Use a flag to ensure we don't initialize before view is ready
-      setTimeout(() => {
-        this.isInitializing = true
-        if (this.select2Instance) {
-          this.destroySelect2()
-        }
-        this.initSelect2()
-        setTimeout(() => {
-          this.isInitializing = false
-        }, 150)
-      }, 50)
+      this.scheduleReinit()
     }
   }
 
@@ -180,163 +183,196 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
     // Initialize Select2 even with no data yet: cascading dropdowns (region/center) start
     // empty and fill in later. Skipping initialization leaves them as bare native selects
     // next to the styled select2 widgets — a visibly broken-looking filter row.
-    this.initSelect2()
+    this.scheduleReinit()
   }
 
-  private initSelect2() {
-    // Wait for Angular to finish rendering
+  /**
+   * Serialized rebuild entry point — every trigger (view init, option-data arrival,
+   * url fetch) funnels through here, and each call supersedes any cycle still in
+   * flight. The previous choreography ran independent setTimeout chains per trigger
+   * that could interleave: one cycle's teardown landing after another's build left a
+   * half-destroyed instance on the element, select2's constructor then ran its
+   * internal destroy on it, threw, and killed the whole callback — the field was
+   * left with no widget at all (father/mother الجنسية and الحالة الصحية on the
+   * family edit form rendered as an empty gap).
+   */
+  private scheduleReinit() {
+    const seq = ++this.reinitSeq
     setTimeout(() => {
-      // Check if jQuery and Select2 are available
-      if (typeof $ === 'undefined' || !$.fn.select2) {
-        if (!this.select2UnavailableWarningShown) {
-          console.warn('[DropDown] jQuery or Select2 is not loaded. Dropdowns will use native select elements.')
-          this.select2UnavailableWarningShown = true
-        }
-        return
+      if (seq !== this.reinitSeq) {
+        return  // superseded — the newer cycle performs the rebuild
       }
-
-      const selectElement = $(this.el.nativeElement).find('select.select2')
-      if (selectElement.length) {
-        // Always destroy and re-create to ensure fresh event handlers. Destroy
-        // whatever select2 lives on the element now — tracked or not — because
-        // interleaved init cycles (ngAfterViewInit + ngOnChanges + disabled
-        // changes, each behind its own setTimeout) can get out of order and
-        // leave an instance we no longer hold a reference to.
-        if (selectElement.data('select2')) {
-          try { selectElement.select2('destroy') } catch (e) { /* already torn down */ }
+      this.teardownWidget()
+      // Let Angular render the fresh <option> list before the widget reads it.
+      setTimeout(() => {
+        if (seq !== this.reinitSeq) {
+          return
         }
-        this.select2Instance = null
-
-        // A destroy that threw mid-cycle (or an init that ran while the select
-        // was already hidden by a previous widget) leaves orphaned 1px-wide
-        // .select2-container spans stacked inside this host. They are invisible
-        // but appear in the accessibility tree as extra comboboxes and can
-        // intercept clicks. After the destroy above, every container still in
-        // the host is such an orphan — remove them before creating the new one.
-        $(this.el.nativeElement).find('.select2-container').remove()
-
-        // Un-hide the native select so the fresh widget measures its width from
-        // a visible element (select2-hidden-accessible is left behind when a
-        // destroy is skipped; it also breaks the fallback native control).
-        selectElement.removeClass('select2-hidden-accessible').removeAttr('aria-hidden')
-
-        // select2('destroy') removes the widget's own listeners but NOT the custom
-        // jQuery handlers we bound on this element. Every rebuild cycle (view init,
-        // data arrival, disabled toggles) stacked another set, so one selection fired
-        // select2:select N times — duplicated control writes and cascade emits.
-        // jQuery .off only touches jQuery handlers; the Angular (change) listener in
-        // the template and ReactiveForms hooks are native listeners and survive.
-        selectElement.off('select2:select select2:unselect change')
-
-        // Initialize Select2 with Bootstrap 4 theme
-        this.select2Instance = selectElement.select2({
-          theme: 'bootstrap4',
-          width: '100%',
-          dropdownParent: $(this.el.nativeElement),
-          placeholder: this.placeholder || this.translate.instant('validation.selectAnOption'),
-          multiple: this.multiple,
-          closeOnSelect: !this.multiple  // Keep dropdown open for multi-select
-        })
-
-        // Handle Select2 select event (after selection is complete)
-        this.select2Instance.on('select2:select', (e: any) => {
-          const selectedData = e.params.data
-          const control = this.fg.get(this.fcn)
-          if (control) {
-            // Ensure ID is clean (no whitespace, proper type)
-            const cleanId = this.toOptionId(selectedData.id)
-            if (this.multiple) {
-              // For multi-select, add to array
-              const currentValue = control.value || []
-              const newValue = [...currentValue, cleanId]
-              control.setValue(newValue)
-              control.markAsDirty()
-              this.emitSelectedValues(newValue)
-            } else {
-              control.setValue(cleanId)
-              control.markAsDirty()
-              this.emitSelectedValue(cleanId)
-            }
-          }
-        })
-
-        // Handle Select2 unselect event
-        this.select2Instance.on('select2:unselect', (e: any) => {
-          const control = this.fg.get(this.fcn)
-          if (control && this.multiple) {
-            const currentValue = control.value || []
-            // Ensure clean ID for comparison
-            const unselectedId = this.toOptionId(e.params.data.id)
-            const newValue = currentValue.filter((id: any) => {
-              const cleanId = typeof id === 'string' ? parseInt(id.trim(), 10) : id
-              return cleanId !== unselectedId
-            })
-            control.setValue(newValue)
-            control.markAsDirty()
-            this.emitSelectedValues(newValue)
-          } else {
-            // Single-select unselect. Select2 also fires this spuriously while a selection
-            // is replacing the placeholder pseudo-option and the control is still empty;
-            // emitting null then makes parents run their "cleared" branch (patchValue null,
-            // wipe dependent lists) a hair before the real value lands — and if the order
-            // flips it erases a selection the user just made. Only report a genuine clear:
-            // the control actually holding a value.
-            if (control && control.value !== null && control.value !== undefined && control.value !== '') {
-              control.setValue(null)
-              control.markAsDirty()
-              this.onDropDownChanged.emit(null)
-            }
-          }
-        })
-
-        // Update Angular form control when Select2 changes
-        this.select2Instance.on('change', (e: any) => {
-          if (this.multiple) {
-            // For multi-select, value is already handled by select/unselect events
-            return
-          }
-          // select2:select has already set the control value and emitted. Re-emitting here
-          // fired a second change per selection (duplicate cascade HTTP calls) and, when
-          // the control was still empty at this instant, a spurious null that parents treat
-          // as "user cleared the field". Dirty-tracking only.
-          const control = this.fg.get(this.fcn)
-          if (control) {
-            control.markAsDirty()
-          }
-        })
-
-        // Sync Angular form value with Select2
-        const control = this.fg.get(this.fcn)
-        if (control && control.value) {
-          if (this.multiple && Array.isArray(control.value)) {
-            selectElement.val(control.value).trigger('change.select2')
-          } else if (!this.multiple) {
-            selectElement.val(control.value).trigger('change.select2')
-          }
-        } else if (!this.multiple && this.hasDefaultValue) {
-          // An empty control must show the placeholder, not a phantom selection:
-          // browsers initially select the first ENABLED <option>, skipping the
-          // disabled placeholder — the widget would then display e.g. the first
-          // country as if chosen while no filter is actually applied.
-          selectElement.val('').trigger('change.select2')
-        }
-      }
-    }, 100)
+        this.buildWidget()
+      }, 100)
+    }, 50)
   }
 
-  private destroySelect2() {
-    const selectElement = $(this.el.nativeElement).find('select.select2')
-    if (selectElement.length && selectElement.data('select2')) {
-      try {
-        selectElement.select2('destroy')
-      } catch (error) {
-        console.warn('[DropDown] Select2 destroy error (element may already be destroyed):', error)
+  /**
+   * Remove any live select2 from the element — hard and non-throwing. select2's own
+   * destroy can die mid-way on a half-destroyed instance and leave data('select2')
+   * set; force-clearing everything here means the next construction can never trip
+   * over stale state (the constructor destroys whatever data('select2') points to).
+   */
+  private teardownWidget() {
+    const host = $(this.el.nativeElement)
+    const selectElement = host.find('select.select2')
+    if (selectElement.length) {
+      if (selectElement.data('select2')) {
+        try { selectElement.select2('destroy') } catch (e) { /* already torn down */ }
       }
+      selectElement.removeData('select2')
+      // select2('destroy') removes the widget's own listeners but NOT the custom
+      // jQuery handlers we bound on this element. Every rebuild cycle (view init,
+      // data arrival, disabled toggles) stacked another set, so one selection fired
+      // select2:select N times — duplicated control writes and cascade emits.
+      // jQuery .off only touches jQuery handlers; the Angular (change) listener in
+      // the template and ReactiveForms hooks are native listeners and survive.
+      selectElement.off('select2:select select2:unselect change')
+      // Un-hide the native select so the fresh widget measures its width from a
+      // visible element (select2-hidden-accessible breaks the fallback control).
+      selectElement.removeClass('select2-hidden-accessible').removeAttr('aria-hidden')
     }
     this.select2Instance = null
-    // Remove any orphaned widget containers (see initSelect2 for how they appear).
-    $(this.el.nativeElement).find('.select2-container').remove()
-    selectElement.removeClass('select2-hidden-accessible').removeAttr('aria-hidden')
+    // Orphaned 1px-wide .select2-container spans from aborted cycles are invisible
+    // but appear in the accessibility tree as extra comboboxes and can intercept
+    // clicks. After the destroy above, every container still in the host is such
+    // an orphan — remove them before creating the new one.
+    host.find('.select2-container').remove()
+  }
+
+  private buildWidget() {
+    // Check if jQuery and Select2 are available
+    if (typeof $ === 'undefined' || !$.fn.select2) {
+      if (!this.select2UnavailableWarningShown) {
+        console.warn('[DropDown] jQuery or Select2 is not loaded. Dropdowns will use native select elements.')
+        this.select2UnavailableWarningShown = true
+      }
+      return
+    }
+
+    const host = $(this.el.nativeElement)
+    const selectElement = host.find('select.select2')
+    if (!selectElement.length) {
+      return
+    }
+
+    // Initialize Select2 with Bootstrap 4 theme. Guarded: a construction that hits
+    // stale state throws from inside select2 and takes the whole callback with it.
+    try {
+      this.select2Instance = selectElement.select2({
+        theme: 'bootstrap4',
+        width: '100%',
+        dropdownParent: host,
+        placeholder: this.placeholder || this.translate.instant('validation.selectAnOption'),
+        multiple: this.multiple,
+        closeOnSelect: !this.multiple  // Keep dropdown open for multi-select
+      })
+    } catch (e) {
+      console.error('[DropDown] Select2 init failed — falling back to the native select.', e)
+      this.teardownWidget()
+      // Keep the (now plain) select usable: the form control still binds to it.
+      this.select2Instance = selectElement
+      return
+    }
+
+    // Defensive: a construction that raced Angular's option re-render can complete
+    // without ever inserting a container. One immediate retry heals that.
+    if (!host.find('.select2-container').length && !this.rebuildRetried) {
+      this.rebuildRetried = true
+      this.teardownWidget()
+      this.buildWidget()
+      this.rebuildRetried = false
+      return
+    }
+
+    // Handle Select2 select event (after selection is complete)
+    this.select2Instance.on('select2:select', (e: any) => {
+      const selectedData = e.params.data
+      const control = this.fg.get(this.fcn)
+      if (control) {
+        // Ensure ID is clean (no whitespace, proper type)
+        const cleanId = this.toOptionId(selectedData.id)
+        if (this.multiple) {
+          // For multi-select, add to array
+          const currentValue = control.value || []
+          const newValue = [...currentValue, cleanId]
+          control.setValue(newValue)
+          control.markAsDirty()
+          this.emitSelectedValues(newValue)
+        } else {
+          control.setValue(cleanId)
+          control.markAsDirty()
+          this.emitSelectedValue(cleanId)
+        }
+      }
+    })
+
+    // Handle Select2 unselect event
+    this.select2Instance.on('select2:unselect', (e: any) => {
+      const control = this.fg.get(this.fcn)
+      if (control && this.multiple) {
+        const currentValue = control.value || []
+        // Ensure clean ID for comparison
+        const unselectedId = this.toOptionId(e.params.data.id)
+        const newValue = currentValue.filter((id: any) => {
+          const cleanId = typeof id === 'string' ? parseInt(id.trim(), 10) : id
+          return cleanId !== unselectedId
+        })
+        control.setValue(newValue)
+        control.markAsDirty()
+        this.emitSelectedValues(newValue)
+      } else {
+        // Single-select unselect. Select2 also fires this spuriously while a selection
+        // is replacing the placeholder pseudo-option and the control is still empty;
+        // emitting null then makes parents run their "cleared" branch (patchValue null,
+        // wipe dependent lists) a hair before the real value lands — and if the order
+        // flips it erases a selection the user just made. Only report a genuine clear:
+        // the control actually holding a value.
+        if (control && control.value !== null && control.value !== undefined && control.value !== '') {
+          control.setValue(null)
+          control.markAsDirty()
+          this.onDropDownChanged.emit(null)
+        }
+      }
+    })
+
+    // Update Angular form control when Select2 changes
+    this.select2Instance.on('change', (e: any) => {
+      if (this.multiple) {
+        // For multi-select, value is already handled by select/unselect events
+        return
+      }
+      // select2:select has already set the control value and emitted. Re-emitting here
+      // fired a second change per selection (duplicate cascade HTTP calls) and, when
+      // the control was still empty at this instant, a spurious null that parents treat
+      // as "user cleared the field". Dirty-tracking only.
+      const control = this.fg.get(this.fcn)
+      if (control) {
+        control.markAsDirty()
+      }
+    })
+
+    // Sync Angular form value with Select2
+    const control = this.fg.get(this.fcn)
+    if (control && control.value) {
+      if (this.multiple && Array.isArray(control.value)) {
+        selectElement.val(control.value).trigger('change.select2')
+      } else if (!this.multiple) {
+        selectElement.val(control.value).trigger('change.select2')
+      }
+    } else if (!this.multiple && this.hasDefaultValue) {
+      // An empty control must show the placeholder, not a phantom selection:
+      // browsers initially select the first ENABLED <option>, skipping the
+      // disabled placeholder — the widget would then display e.g. the first
+      // country as if chosen while no filter is actually applied.
+      selectElement.val('').trigger('change.select2')
+    }
   }
 
   private sameItems(a: Array<LookupBase>, b: Array<LookupBase>): boolean {
@@ -399,9 +435,8 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
         if (control) {
           this.onChange(control.value)
         }
-        // Re-initialize Select2 after data loads
-        this.destroySelect2()
-        this.initSelect2()
+        // Re-initialize Select2 after data loads (serialized — see scheduleReinit)
+        this.scheduleReinit()
       })
   }
 
@@ -488,7 +523,8 @@ export class DropDownComponent implements OnInit, OnChanges, OnDestroy, AfterVie
   }
 
   ngOnDestroy() {
-    this.destroySelect2()
+    this.reinitSeq++  // cancel any rebuild still pending on this dead view
+    this.teardownWidget()
     this.subscription && this.subscription.unsubscribe()
   }
 }

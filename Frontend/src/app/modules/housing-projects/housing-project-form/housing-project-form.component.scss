@@ -1,0 +1,19 @@
+/**
+ * Manual-collapse section cards (headers with extra content — edit note,
+ * add-row button, saved badge). Same idiom as the shared app-collapsible-card;
+ * kept here because those headers can't be expressed through its inputs.
+ */
+.card-header.section-toggle {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(128, 128, 128, 0.08);
+  }
+
+  /* Push the chevron to the far edge — logical property, correct in LTR and RTL */
+  .section-chevron {
+    margin-inline-start: auto;
+  }
+}

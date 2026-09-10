@@ -1,0 +1,14 @@
+<div class="card shadow mb-4">
+  <div class="card-header section-toggle d-flex align-items-center" role="button"
+       (click)="toggle()" [attr.aria-expanded]="expanded" [attr.aria-controls]="bodyId">
+    <h4 class="mb-0">
+      <i *ngIf="icon" class="fe mr-2 {{ icon }}"></i>
+      {{ titleKey | translate }}
+    </h4>
+    <i class="fe section-chevron" [class.fe-chevron-down]="expanded"
+       [class.fe-chevron-left]="!expanded"></i>
+  </div>
+  <div [attr.id]="bodyId" class="card-body collapse" [class.show]="expanded">
+    <ng-content></ng-content>
+  </div>
+</div>

@@ -16,6 +16,22 @@ export interface AttachmentDto {
   createdOn?: string | null;
 }
 
+// ==================== Family Phones (§4 multi phone) ====================
+
+/** Read row — GET /api/Families/{id} phones[] */
+export interface FamilyPhoneDto {
+  id: string;
+  familyId: string;
+  number: string;
+  isDefault: boolean;
+}
+
+/** Write row — one أرقام التواصل entry, exactly one flagged default per family */
+export interface CreateFamilyPhoneDto {
+  number: string;
+  isDefault: boolean;
+}
+
 // ==================== Family Models ====================
 
 export interface FamilyDto {
@@ -65,6 +81,17 @@ export interface FamilyDto {
   incomeTypeName?: string;
   perMemberShare?: number;
 
+  // Family data extension (§4 معلومات الأسرة) — shared across registers
+  incomeValue?: number;
+  totalIncome?: number;
+  childrenCount?: number;
+  hasProject?: boolean;
+  familyProjectStatusId?: number;
+  familyProjectStatusName?: string;
+  familyMembersCount?: number;
+  monthlyIncome?: number;
+  phones?: FamilyPhoneDto[];
+
   // Related entities
   father?: FatherDto;
   mother?: MotherDto;
@@ -113,6 +140,14 @@ export interface CreateFamilyDto {
   incomeTypeId?: number;
   /** إسم الأسرة — derived from the provider's name on the refugee register (§12.S.2) */
   headOfFamily?: string;
+  // Family data extension (§4 معلومات الأسرة) — stamped on every register
+  incomeValue?: number;
+  totalIncome?: number;
+  childrenCount?: number;
+  hasProject?: boolean;
+  familyProjectStatusId?: number;
+  /** أرقام التواصل — complete live set; exactly one row flagged isDefault */
+  phones?: CreateFamilyPhoneDto[];
 }
 
 export interface UpdateFamilyDto {
@@ -139,6 +174,15 @@ export interface UpdateFamilyDto {
   houseStatusId?: number;
   housingTypeId?: number;
   incomeTypeId?: number;
+  // Family data extension (§4 معلومات الأسرة) — patch-style, absent ⇒ unchanged
+  countryId?: number;
+  incomeValue?: number;
+  totalIncome?: number;
+  childrenCount?: number;
+  hasProject?: boolean;
+  familyProjectStatusId?: number;
+  /** أرقام التواصل — full-replace sync; absent ⇒ phones untouched */
+  phones?: CreateFamilyPhoneDto[];
 }
 
 // List-item shape actually returned by GET /api/Families (FamilyListDto on the wire)
@@ -249,18 +293,36 @@ export interface FatherDto {
   id: string;
   familyId: string;
   fullName: string;
+  /** §10 اضافة معيل — legacy four-part name */
+  firstName?: string;
+  secondName?: string;
+  thirdName?: string;
+  familyName?: string;
   nationalId?: string;
   passportNumber?: string;
+  /** الجنسية — Country lookup id */
+  nationalityCountryId?: number;
+  nationalityName?: string;
   dateOfBirth?: string;
   placeOfBirth?: string;
   educationLevel?: string;
   job?: string;
   monthlyIncome?: number;
   healthStatus?: string;
+  /** الحالة الصحية — HealthStatus lookup id */
+  healthStatusId?: number;
+  healthStatusName?: string;
   phone?: string;
   isAlive: boolean;
   isProvider: boolean;
   deathDate?: string;
+  /** سبب الوفاة — DeathReason lookup id */
+  deathReasonId?: number;
+  deathReasonName?: string;
+  /** صوره شهاده الوفاه — server attachment id */
+  deathCertificateAttachmentId?: string;
+  mezaCard?: string;
+  mezaCardExpirationDate?: string;
   notes?: string;
   createdOn: string;
   modifiedOn?: string;
@@ -269,7 +331,12 @@ export interface FatherDto {
 export interface CreateFatherDto {
   familyId?: string;
   fullName: string;
+  firstName?: string;
+  secondName?: string;
+  thirdName?: string;
+  familyName?: string;
   nationalId: string; // Required
+  nationalityCountryId?: number;
   passportNumber?: string;
   dateOfBirth: string; // Required
   placeOfBirth?: string;
@@ -277,16 +344,28 @@ export interface CreateFatherDto {
   job?: string;
   monthlyIncome?: number;
   healthStatus?: string;
+  healthStatusId?: number;
   phone?: string;
   isAlive: boolean;
   isProvider: boolean;
   deathDate?: string;
+  deathReasonId?: number;
+  deathCertificateAttachmentId?: string;
+  mezaCard?: string;
+  mezaCardExpirationDate?: string;
   notes?: string;
 }
 
 export interface UpdateFatherDto {
+  /** Route-bound — PUT /api/Families/father/{id} */
+  id?: string;
   fullName: string;
+  firstName?: string;
+  secondName?: string;
+  thirdName?: string;
+  familyName?: string;
   nationalId?: string;
+  nationalityCountryId?: number;
   passportNumber?: string;
   dateOfBirth?: string;
   placeOfBirth?: string;
@@ -294,10 +373,15 @@ export interface UpdateFatherDto {
   job?: string;
   monthlyIncome?: number;
   healthStatus?: string;
+  healthStatusId?: number;
   phone?: string;
   isAlive: boolean;
   isProvider: boolean;
   deathDate?: string;
+  deathReasonId?: number;
+  deathCertificateAttachmentId?: string;
+  mezaCard?: string;
+  mezaCardExpirationDate?: string;
   notes?: string;
 }
 
@@ -307,18 +391,36 @@ export interface MotherDto {
   id: string;
   familyId: string;
   fullName: string;
+  /** §10 اضافة معيل — legacy four-part name */
+  firstName?: string;
+  secondName?: string;
+  thirdName?: string;
+  familyName?: string;
   nationalId?: string;
   passportNumber?: string;
+  /** الجنسية — Country lookup id */
+  nationalityCountryId?: number;
+  nationalityName?: string;
   dateOfBirth?: string;
   placeOfBirth?: string;
   educationLevel?: string;
   job?: string;
   monthlyIncome?: number;
   healthStatus?: string;
+  /** الحالة الصحية — HealthStatus lookup id */
+  healthStatusId?: number;
+  healthStatusName?: string;
   phone?: string;
   isAlive: boolean;
   isProvider: boolean;
   deathDate?: string;
+  /** سبب الوفاة — DeathReason lookup id */
+  deathReasonId?: number;
+  deathReasonName?: string;
+  /** صوره شهاده الوفاه — server attachment id */
+  deathCertificateAttachmentId?: string;
+  mezaCard?: string;
+  mezaCardExpirationDate?: string;
   notes?: string;
   createdOn: string;
   modifiedOn?: string;
@@ -327,7 +429,12 @@ export interface MotherDto {
 export interface CreateMotherDto {
   familyId?: string;
   fullName: string;
+  firstName?: string;
+  secondName?: string;
+  thirdName?: string;
+  familyName?: string;
   nationalId: string; // Required
+  nationalityCountryId?: number;
   passportNumber?: string;
   dateOfBirth: string; // Required
   placeOfBirth?: string;
@@ -335,16 +442,28 @@ export interface CreateMotherDto {
   job?: string;
   monthlyIncome?: number;
   healthStatus?: string;
+  healthStatusId?: number;
   phone?: string;
   isAlive: boolean;
   isProvider: boolean;
   deathDate?: string;
+  deathReasonId?: number;
+  deathCertificateAttachmentId?: string;
+  mezaCard?: string;
+  mezaCardExpirationDate?: string;
   notes?: string;
 }
 
 export interface UpdateMotherDto {
+  /** Route-bound — PUT /api/Families/mother/{id} */
+  id?: string;
   fullName: string;
+  firstName?: string;
+  secondName?: string;
+  thirdName?: string;
+  familyName?: string;
   nationalId?: string;
+  nationalityCountryId?: number;
   passportNumber?: string;
   dateOfBirth?: string;
   placeOfBirth?: string;
@@ -352,10 +471,15 @@ export interface UpdateMotherDto {
   job?: string;
   monthlyIncome?: number;
   healthStatus?: string;
+  healthStatusId?: number;
   phone?: string;
   isAlive: boolean;
   isProvider: boolean;
   deathDate?: string;
+  deathReasonId?: number;
+  deathCertificateAttachmentId?: string;
+  mezaCard?: string;
+  mezaCardExpirationDate?: string;
   notes?: string;
 }
 

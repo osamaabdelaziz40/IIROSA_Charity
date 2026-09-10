@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -13,7 +13,7 @@ import {
   SupportTicket
 } from '../../../core/models/technical-support.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
+import { BreadcrumbComponent, BreadcrumbItem, CollapsibleCardComponent } from '../../../shared/components';
 import { NotificationService } from '../../../core/services/notification.service';
 
 @Component({
@@ -25,7 +25,8 @@ import { NotificationService } from '../../../core/services/notification.service
     ReactiveFormsModule,
     TranslateModule,
     PageHeaderComponent,
-    BreadcrumbComponent
+    BreadcrumbComponent,
+    CollapsibleCardComponent
   ],
   templateUrl: './ticket-form.component.html',
   styleUrls: ['./ticket-form.component.scss']
@@ -53,6 +54,10 @@ export class TicketFormComponent implements OnInit {
   // Auto-detected information
   browserInfo: string = '';
   pageUrl: string = '';
+
+  /** Collapsible section cards — expanded on a failed submit to reveal the
+   *  red fields hidden inside collapsed cards. */
+  @ViewChildren(CollapsibleCardComponent) collapsibleCards?: QueryList<CollapsibleCardComponent>;
 
   // Loaded ticket (edit mode) — carries the current statusId for the update payload
   loadedTicket: SupportTicket | null = null;
@@ -162,6 +167,7 @@ export class TicketFormComponent implements OnInit {
   onSubmit(): void {
     if (this.ticketForm.invalid) {
       this.markFormGroupTouched(this.ticketForm);
+      this.collapsibleCards?.forEach(c => c.open());
       return;
     }
 

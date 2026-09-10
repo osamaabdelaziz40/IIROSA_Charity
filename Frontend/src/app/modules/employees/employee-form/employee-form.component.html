@@ -5,187 +5,180 @@
   [actions]="pageActions">
 </app-page-header>
 
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-12">
-      <div class="card shadow" *ngIf="!loading">
-        <div class="card-body">
-          <form [formGroup]="employeeForm">
-            <div class="row">
-              <!-- Login Account Section -->
-              <div class="col-12">
-                <h5 class="mb-3">{{ 'employees.accountInformation' | translate }}</h5>
-              </div>
+<!-- Collapsed accordion card per section (shared app-collapsible-card idiom) -->
+<div class="container-fluid" *ngIf="!loading">
+  <form [formGroup]="employeeForm">
 
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label>{{ 'employees.email' | translate }} <span class="text-danger">*</span></label>
-                  <input type="email" class="form-control" formControlName="email" [ngClass]="{'is-invalid': isFieldInvalid('email')}"
-                         [placeholder]="'employees.emailPlaceholder' | translate">
-                  <div class="invalid-feedback" *ngIf="isFieldInvalid('email')">
-                    <span *ngIf="employeeForm.get('email')?.hasError('required')">{{ 'validation.required' | translate }}</span>
-                    <span *ngIf="employeeForm.get('email')?.hasError('email')">{{ 'validation.email' | translate }}</span>
-                    <span *ngIf="employeeForm.get('email')?.hasError('userNameTaken')">{{ 'validation.emailTaken' | translate }}</span>
-                  </div>
-                  <small class="form-text text-muted" *ngIf="!isFieldInvalid('email')">
-                    {{ 'employees.emailLoginHint' | translate }}
-                  </small>
-                </div>
-              </div>
-
-              <div class="col-md-6" *ngIf="!isEditMode">
-                <div class="form-group">
-                  <label>{{ 'employees.password' | translate }} <span class="text-danger">*</span></label>
-                  <input type="password" class="form-control" formControlName="password" autocomplete="new-password"
-                         [ngClass]="{'is-invalid': isFieldInvalid('password')}">
-                  <div class="invalid-feedback" *ngIf="isFieldInvalid('password')">
-                    <span *ngIf="employeeForm.get('password')?.hasError('required')">{{ 'validation.required' | translate }}</span>
-                    <span *ngIf="employeeForm.get('password')?.hasError('weakPassword')">{{ 'validation.weakPassword' | translate }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Personal Information Section -->
-              <div class="col-12 mt-4">
-                <h5 class="mb-3">{{ 'employees.personalInformation' | translate }}</h5>
-              </div>
-
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label>{{ 'employees.fullName' | translate }} <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" formControlName="fullName" [ngClass]="{'is-invalid': isFieldInvalid('fullName')}">
-                  <div class="invalid-feedback" *ngIf="isFieldInvalid('fullName')">
-                    <span *ngIf="employeeForm.get('fullName')?.hasError('required')">{{ 'validation.required' | translate }}</span>
-                    <span *ngIf="employeeForm.get('fullName')?.hasError('minlength')">{{ 'validation.minLength' | translate }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label>{{ 'employees.employeeCode' | translate }}</label>
-                  <input type="text" class="form-control" formControlName="code">
-                  <small class="form-text text-muted">{{ 'employees.codeAutoHint' | translate }}</small>
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label>{{ 'employees.phoneNumber' | translate }}</label>
-                  <input type="tel" class="form-control" formControlName="phoneNumber">
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label>{{ 'employees.dateOfBirth' | translate }}</label>
-                  <input type="date" class="form-control" formControlName="dateOfBirth">
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <app-drop-down
-                  [fg]="employeeForm"
-                  fcn="gender"
-                  [label]="'employees.gender'"
-                  [initialData]="genderOptions"
-                  [placeholder]="'validation.selectAnOption' | translate">
-                </app-drop-down>
-              </div>
-
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label>{{ 'employees.address' | translate }}</label>
-                  <textarea class="form-control" formControlName="address" rows="2"></textarea>
-                </div>
-              </div>
-
-              <!-- Employment Information Section -->
-              <div class="col-12 mt-4">
-                <h5 class="mb-3">{{ 'employees.employmentInformation' | translate }}</h5>
-              </div>
-
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label>{{ 'employees.position' | translate }} <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" formControlName="position" [ngClass]="{'is-invalid': isFieldInvalid('position')}">
-                  <div class="invalid-feedback" *ngIf="isFieldInvalid('position')">
-                    {{ 'validation.required' | translate }}
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <app-drop-down
-                  [fg]="employeeForm"
-                  fcn="departmentId"
-                  [label]="'employees.department'"
-                  [initialData]="departmentOptions"
-                  [placeholder]="'validation.selectAnOption' | translate">
-                </app-drop-down>
-              </div>
-
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label>{{ 'employees.hireDate' | translate }} <span class="text-danger">*</span></label>
-                  <input type="date" class="form-control" formControlName="hireDate" [ngClass]="{'is-invalid': isFieldInvalid('hireDate')}">
-                  <div class="invalid-feedback" *ngIf="isFieldInvalid('hireDate')">
-                    {{ 'validation.required' | translate }}
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label>{{ 'employees.salary' | translate }}</label>
-                  <input type="number" class="form-control" formControlName="salary" [ngClass]="{'is-invalid': isFieldInvalid('salary')}">
-                  <div class="invalid-feedback" *ngIf="isFieldInvalid('salary')">
-                    {{ 'validation.min' | translate }}
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <app-drop-down
-                  [fg]="employeeForm"
-                  fcn="role"
-                  [label]="'userManagement.role'"
-                  [initialData]="roleOptions"
-                  [placeholder]="'validation.selectAnOption' | translate">
-                </app-drop-down>
-              </div>
-
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label>{{ 'employees.notes' | translate }}</label>
-                  <textarea class="form-control" formControlName="notes" rows="2"></textarea>
-                </div>
-              </div>
-
-              <div class="col-12">
-                <div class="form-group">
-                  <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="loading">
-                    <i class="fe fe-save mr-1"></i>
-                    {{ 'common.save' | translate }}
-                  </button>
-                  <button type="button" class="btn btn-secondary ml-2" (click)="goBack()">
-                    <i class="fe fe-x mr-1"></i>
-                    {{ 'common.cancel' | translate }}
-                  </button>
-                </div>
-              </div>
+    <!-- Login Account Section -->
+    <app-collapsible-card titleKey="employees.accountInformation" icon="fe-lock">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label>{{ 'employees.email' | translate }} <span class="text-danger">*</span></label>
+            <input type="email" class="form-control" formControlName="email" [ngClass]="{'is-invalid': isFieldInvalid('email')}"
+                   [placeholder]="'employees.emailPlaceholder' | translate">
+            <div class="invalid-feedback" *ngIf="isFieldInvalid('email')">
+              <span *ngIf="employeeForm.get('email')?.hasError('required')">{{ 'validation.required' | translate }}</span>
+              <span *ngIf="employeeForm.get('email')?.hasError('email')">{{ 'validation.email' | translate }}</span>
+              <span *ngIf="employeeForm.get('email')?.hasError('userNameTaken')">{{ 'validation.emailTaken' | translate }}</span>
             </div>
-          </form>
+            <small class="form-text text-muted" *ngIf="!isFieldInvalid('email')">
+              {{ 'employees.emailLoginHint' | translate }}
+            </small>
+          </div>
+        </div>
+
+        <div class="col-md-6" *ngIf="!isEditMode">
+          <div class="form-group">
+            <label>{{ 'employees.password' | translate }} <span class="text-danger">*</span></label>
+            <input type="password" class="form-control" formControlName="password" autocomplete="new-password"
+                   [ngClass]="{'is-invalid': isFieldInvalid('password')}">
+            <div class="invalid-feedback" *ngIf="isFieldInvalid('password')">
+              <span *ngIf="employeeForm.get('password')?.hasError('required')">{{ 'validation.required' | translate }}</span>
+              <span *ngIf="employeeForm.get('password')?.hasError('weakPassword')">{{ 'validation.weakPassword' | translate }}</span>
+            </div>
+          </div>
         </div>
       </div>
+    </app-collapsible-card>
 
-      <!-- Loading State -->
-      <div *ngIf="loading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="sr-only">{{ 'common.loading' | translate }}</span>
+    <!-- Personal Information Section -->
+    <app-collapsible-card titleKey="employees.personalInformation" icon="fe-user">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label>{{ 'employees.fullName' | translate }} <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" formControlName="fullName" [ngClass]="{'is-invalid': isFieldInvalid('fullName')}">
+            <div class="invalid-feedback" *ngIf="isFieldInvalid('fullName')">
+              <span *ngIf="employeeForm.get('fullName')?.hasError('required')">{{ 'validation.required' | translate }}</span>
+              <span *ngIf="employeeForm.get('fullName')?.hasError('minlength')">{{ 'validation.minLength' | translate }}</span>
+            </div>
+          </div>
         </div>
-        <p class="mt-3 text-muted">{{ 'common.loading' | translate }}...</p>
+
+        <div class="col-md-6">
+          <div class="form-group">
+            <label>{{ 'employees.employeeCode' | translate }}</label>
+            <input type="text" class="form-control" formControlName="code">
+            <small class="form-text text-muted">{{ 'employees.codeAutoHint' | translate }}</small>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="form-group">
+            <label>{{ 'employees.phoneNumber' | translate }}</label>
+            <input type="tel" class="form-control" formControlName="phoneNumber">
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="form-group">
+            <label>{{ 'employees.dateOfBirth' | translate }}</label>
+            <input type="date" class="form-control" formControlName="dateOfBirth">
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <app-drop-down
+            [fg]="employeeForm"
+            fcn="gender"
+            [label]="'employees.gender'"
+            [initialData]="genderOptions"
+            [placeholder]="'validation.selectAnOption' | translate">
+          </app-drop-down>
+        </div>
+
+        <div class="col-md-6">
+          <div class="form-group">
+            <label>{{ 'employees.address' | translate }}</label>
+            <textarea class="form-control" formControlName="address" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+    </app-collapsible-card>
+
+    <!-- Employment Information Section -->
+    <app-collapsible-card titleKey="employees.employmentInformation" icon="fe-briefcase">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label>{{ 'employees.position' | translate }} <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" formControlName="position" [ngClass]="{'is-invalid': isFieldInvalid('position')}">
+            <div class="invalid-feedback" *ngIf="isFieldInvalid('position')">
+              {{ 'validation.required' | translate }}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <app-drop-down
+            [fg]="employeeForm"
+            fcn="departmentId"
+            [label]="'employees.department'"
+            [initialData]="departmentOptions"
+            [placeholder]="'validation.selectAnOption' | translate">
+          </app-drop-down>
+        </div>
+
+        <div class="col-md-6">
+          <div class="form-group">
+            <label>{{ 'employees.hireDate' | translate }} <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" formControlName="hireDate" [ngClass]="{'is-invalid': isFieldInvalid('hireDate')}">
+            <div class="invalid-feedback" *ngIf="isFieldInvalid('hireDate')">
+              {{ 'validation.required' | translate }}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="form-group">
+            <label>{{ 'employees.salary' | translate }}</label>
+            <input type="number" class="form-control" formControlName="salary" [ngClass]="{'is-invalid': isFieldInvalid('salary')}">
+            <div class="invalid-feedback" *ngIf="isFieldInvalid('salary')">
+              {{ 'validation.min' | translate }}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <app-drop-down
+            [fg]="employeeForm"
+            fcn="role"
+            [label]="'userManagement.role'"
+            [initialData]="roleOptions"
+            [placeholder]="'validation.selectAnOption' | translate">
+          </app-drop-down>
+        </div>
+
+        <div class="col-md-6">
+          <div class="form-group">
+            <label>{{ 'employees.notes' | translate }}</label>
+            <textarea class="form-control" formControlName="notes" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+    </app-collapsible-card>
+
+    <!-- Form Actions (always visible — not a collapsible section) -->
+    <div class="card shadow mb-4">
+      <div class="card-body">
+        <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="loading">
+          <i class="fe fe-save mr-1"></i>
+          {{ 'common.save' | translate }}
+        </button>
+        <button type="button" class="btn btn-secondary ml-2" (click)="goBack()">
+          <i class="fe fe-x mr-1"></i>
+          {{ 'common.cancel' | translate }}
+        </button>
       </div>
     </div>
+  </form>
+</div>
+
+<!-- Loading State -->
+<div *ngIf="loading" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">{{ 'common.loading' | translate }}</span>
   </div>
+  <p class="mt-3 text-muted">{{ 'common.loading' | translate }}...</p>
 </div>

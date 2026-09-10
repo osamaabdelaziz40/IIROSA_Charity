@@ -1,0 +1,10 @@
+/* Notification list (UC-NTF) — table rows keep comfortable reading height for
+   the truncated message column; badges sit inline without wrapping oddly in RTL. */
+
+.text-truncate {
+  direction: inherit;
+}
+
+.badge {
+  white-space: nowrap;
+}

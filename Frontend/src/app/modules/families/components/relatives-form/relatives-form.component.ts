@@ -38,7 +38,8 @@ export interface RelativeData {
 export class RelativesFormComponent implements OnInit {
   @Input() relativesForm!: FormGroup;
   @Input() educationLevelOptions: Array<{ id: string; name: string }> = [];
-  @Input() healthStatusOptions: Array<{ id: string; name: string }> = [];
+  /** الحالة الصحية — HealthStatus lookup rows (numeric ids, shared with father/mother) */
+  @Input() healthStatusOptions: Array<{ id: number; name: string }> = [];
   @Input() relationshipOptions: Array<{ id: string; name: string }> = [];
   @Input() relativesCount: number = 0;
   @Output() addRelative = new EventEmitter<RelativeData>();

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -14,14 +14,14 @@ import {
 } from '../../../core/models/employee.model';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { BreadcrumbComponent, BreadcrumbItem, DropDownComponent } from '../../../shared/components';
+import { BreadcrumbComponent, BreadcrumbItem, DropDownComponent, CollapsibleCardComponent } from '../../../shared/components';
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { employeeUserNameUniqueValidator, passwordStrengthValidator } from '../../../shared/validators';
 
 @Component({
   selector: 'app-employee-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslateModule, PageHeaderComponent, BreadcrumbComponent, LoadingComponent, DropDownComponent],
+  imports: [CommonModule, ReactiveFormsModule, TranslateModule, PageHeaderComponent, BreadcrumbComponent, LoadingComponent, DropDownComponent, CollapsibleCardComponent],
   templateUrl: './employee-form.component.html',
   styleUrls: ['./employee-form.component.scss']
 })
@@ -32,6 +32,10 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
   employeeId?: string;
   allDepartments: DepartmentLookup[] = [];
   allRoles: RoleListItem[] = [];
+
+  // Collapsible section cards — opened programmatically after a failed submit
+  // so invalid fields hidden in collapsed cards are revealed
+  @ViewChildren(CollapsibleCardComponent) collapsibleCards?: QueryList<CollapsibleCardComponent>;
 
   // Select2 option arrays ({id, name}) fed to app-drop-down.
   departmentOptions: Array<{ id: number; name: string }> = [];
@@ -235,6 +239,8 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
 
     if (this.employeeForm.invalid) {
       this.employeeForm.markAllAsTouched();
+      // Reveal the collapsed cards hiding the invalid fields
+      this.collapsibleCards?.forEach(card => card.open());
       this.notification.error(this.translate.instant('validation.fixErrors'));
       return;
     }

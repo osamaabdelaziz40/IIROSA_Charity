@@ -29,6 +29,9 @@ public class LookupManagementService : ILookupManagementService
     private readonly ILookupRepository<HousingFlat> _housingFlatRepository;
     private readonly IOutgoingCategoryRepository _outgoingCategoryRepository;
     private readonly IRepository<ChequeBeneficiary> _chequeBeneficiaryRepository;
+    private readonly IHouseOwnershipRepository _houseOwnershipRepository;
+    private readonly IIncomeTypeRepository _incomeTypeRepository;
+    private readonly IFamilyProjectStatusRepository _familyProjectStatusRepository;
     private readonly ILogger<LookupManagementService> _logger;
 
     public LookupManagementService(
@@ -45,6 +48,9 @@ public class LookupManagementService : ILookupManagementService
         ILookupRepository<HousingFlat> housingFlatRepository,
         IOutgoingCategoryRepository outgoingCategoryRepository,
         IRepository<ChequeBeneficiary> chequeBeneficiaryRepository,
+        IHouseOwnershipRepository houseOwnershipRepository,
+        IIncomeTypeRepository incomeTypeRepository,
+        IFamilyProjectStatusRepository familyProjectStatusRepository,
         ILogger<LookupManagementService> logger)
     {
         _countryRepository = countryRepository;
@@ -60,6 +66,9 @@ public class LookupManagementService : ILookupManagementService
         _housingFlatRepository = housingFlatRepository;
         _outgoingCategoryRepository = outgoingCategoryRepository;
         _chequeBeneficiaryRepository = chequeBeneficiaryRepository;
+        _houseOwnershipRepository = houseOwnershipRepository;
+        _incomeTypeRepository = incomeTypeRepository;
+        _familyProjectStatusRepository = familyProjectStatusRepository;
         _logger = logger;
     }
 
@@ -82,6 +91,10 @@ public class LookupManagementService : ILookupManagementService
             summaries.Add(await GetTableSummaryAsync("HousingBuildings", "Housing Buildings", "عمارات الإسكان", _housingBuildingRepository));
             summaries.Add(await GetTableSummaryAsync("HousingFlats", "Housing Flats", "شقق الإسكان", _housingFlatRepository));
             summaries.Add(await GetTableSummaryAsync("OutgoingCategories", "Outgoing Categories", "تصنيفات الصادر", _outgoingCategoryRepository));
+            // Family data extension catalogues (§4 معلومات الأسرة)
+            summaries.Add(await GetTableSummaryAsync("HouseOwnerships", "House Ownerships", "ملكية السكن", _houseOwnershipRepository));
+            summaries.Add(await GetTableSummaryAsync("IncomeTypes", "Income Types", "أنواع الدخل", _incomeTypeRepository));
+            summaries.Add(await GetTableSummaryAsync("FamilyProjectStatuses", "Family Project Statuses", "حالة المشروع", _familyProjectStatusRepository));
 
             return summaries.OrderByDescending(s => s.LastModified).ToList();
         }
@@ -197,6 +210,9 @@ public class LookupManagementService : ILookupManagementService
                 "HousingBuildings" => await ExportTableAsync(_housingBuildingRepository, exportDto),
                 "HousingFlats" => await ExportTableAsync(_housingFlatRepository, exportDto),
                 "OutgoingCategories" => await ExportTableAsync(_outgoingCategoryRepository, exportDto),
+                "HouseOwnerships" => await ExportTableAsync(_houseOwnershipRepository, exportDto),
+                "IncomeTypes" => await ExportTableAsync(_incomeTypeRepository, exportDto),
+                "FamilyProjectStatuses" => await ExportTableAsync(_familyProjectStatusRepository, exportDto),
                 _ => throw new ArgumentException($"Unknown lookup table: {tableName}")
             };
         }

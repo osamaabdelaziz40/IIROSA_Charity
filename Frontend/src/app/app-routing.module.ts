@@ -63,6 +63,12 @@ const routes: Routes = [
         data: { title: 'missions.title' }
       },
       {
+        // UC-NTF web notifications — the list is every user's; create/edit is HQ-only
+        path: 'notifications',
+        loadChildren: () => import('./modules/notifications/notifications.module').then(m => m.NotificationsModule),
+        data: { title: 'notifications.title' }
+      },
+      {
         path: 'periodic-orphan-reports',
         loadChildren: () => import('./modules/periodic-orphan-reports/periodic-orphan-reports.module').then(m => m.PeriodicOrphanReportsModule),
         data: { title: 'periodicReports.title' }

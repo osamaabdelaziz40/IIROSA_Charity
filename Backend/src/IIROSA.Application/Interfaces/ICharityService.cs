@@ -42,6 +42,9 @@ public interface ICharityService
     // UC-3.10: View All Charities
     Task<(IEnumerable<CharityListDto> Items, int TotalCount)> GetCharitiesAsync(CharityFilterDto filter);
 
+    // UC-3.10: Register statistics band above the list — same caller scope as the list itself
+    Task<CharityStatisticsDto> GetStatisticsAsync();
+
     // UC-3.11: View Charity Profile
     Task<CharityProfileDto> GetCharityProfileAsync(Guid id);
     Task<CharityProfileDto> GetMyProfileAsync(string userId);

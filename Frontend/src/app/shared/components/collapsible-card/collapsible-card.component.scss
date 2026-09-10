@@ -1,0 +1,18 @@
+/**
+ * Collapsible card header — clickable, chevron pushed to the far edge via a
+ * logical property (correct in LTR and RTL; ms-auto does not exist in this
+ * BS4-era TinyDash theme).
+ */
+.card-header.section-toggle {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(128, 128, 128, 0.08);
+  }
+
+  .section-chevron {
+    margin-inline-start: auto;
+  }
+}

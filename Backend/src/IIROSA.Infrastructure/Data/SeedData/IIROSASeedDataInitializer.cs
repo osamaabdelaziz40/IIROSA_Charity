@@ -17,6 +17,7 @@ namespace IIROSA.Infrastructure.Data.SeedData
     {
         private readonly AppIdentityDbContext _identityContext;
         private readonly ApplicationDbContext _appContext;
+        private readonly Framework.Core.SharedServices.ICommonsDbContext _commonsContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly ILogger<IIROSASeedDataInitializer> _logger;
@@ -24,12 +25,14 @@ namespace IIROSA.Infrastructure.Data.SeedData
         public IIROSASeedDataInitializer(
             AppIdentityDbContext identityContext,
             ApplicationDbContext appContext,
+            Framework.Core.SharedServices.ICommonsDbContext commonsContext,
             UserManager<ApplicationUser> userManager,
             RoleManager<ApplicationRole> roleManager,
             ILogger<IIROSASeedDataInitializer> _logger)
         {
             _identityContext = identityContext;
             _appContext = appContext;
+            _commonsContext = commonsContext;
             _userManager = userManager;
             _roleManager = roleManager;
             this._logger = _logger;
@@ -113,6 +116,21 @@ namespace IIROSA.Infrastructure.Data.SeedData
                 _logger.LogInformation("Step 12: Seeding office project types...");
                 await OfficeProjectTypeSeedData.SeedOfficeProjectTypesAsync(_appContext);
                 _logger.LogInformation("Office project type seeding completed successfully");
+
+                // Step 13: Seed cause-of-death catalogue (father/mother death details — سبب الوفاة)
+                _logger.LogInformation("Step 13: Seeding death reasons...");
+                await DeathReasonSeedData.SeedDeathReasonsAsync(_appContext);
+                _logger.LogInformation("Death reason seeding completed successfully");
+
+                // Step 14: Seed health-status catalogue (father/mother الحالة الصحية drop-down)
+                _logger.LogInformation("Step 14: Seeding health statuses...");
+                await HealthStatusSeedData.SeedHealthStatusesAsync(_appContext);
+                _logger.LogInformation("Health status seeding completed successfully");
+
+                // Step 15: Seed the Web notification type (UC-NTF web notifications push)
+                _logger.LogInformation("Step 15: Seeding Web notification type...");
+                await NotificationTypeSeedData.SeedWebNotificationTypeAsync(_commonsContext);
+                _logger.LogInformation("Web notification type seeding completed successfully");
 
                 // Final state
                 var finalRoles = await _identityContext.Roles.CountAsync();

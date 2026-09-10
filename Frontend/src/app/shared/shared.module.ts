@@ -14,6 +14,7 @@ import { SessionExtensionDialogComponent } from './components/session-extension-
 import { SignalrToastComponent } from './components/signalr-toast/signalr-toast.component';
 import { AttachmentInputComponent } from './components/attachment-input/attachment-input.component';
 import { DropDownComponent } from './components/drop-down/drop-down.component';
+import { CollapsibleCardComponent } from './components/collapsible-card/collapsible-card.component';
 
 // Traditional Components - need to be declared
 import { InputTextComponent } from './components/text-input/text-input.component';
@@ -42,6 +43,7 @@ export * from './models';
     SignalrToastComponent,
     AttachmentInputComponent,
     DropDownComponent,
+    CollapsibleCardComponent,
     // Impersonation Module
     ImpersonationModule
   ],
@@ -60,6 +62,7 @@ export * from './models';
     SignalrToastComponent,
     AttachmentInputComponent,
     DropDownComponent,
+    CollapsibleCardComponent,
     // Export traditional components
     InputTextComponent,
     // Re-export impersonation components

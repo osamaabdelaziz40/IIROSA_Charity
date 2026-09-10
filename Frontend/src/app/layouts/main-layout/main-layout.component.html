@@ -13,7 +13,17 @@
     <button type="button" class="navbar-toggler text-muted mt-2 p-0 mr-3 collapseSidebar">
       <i class="fe fe-menu navbar-toggler-icon"></i>
     </button>
-
+<!-- Global charity switcher (select2 — initialised in the component) -->
+    <div class="charity-switcher mr-auto" id="charitySwitcher">
+      <select id="charitySelect" class="form-control select2"
+              [attr.dir]="currentLang === 'ar' ? 'rtl' : 'ltr'"
+              [attr.aria-label]="'layout.selectCharity' | translate">
+        <option value="" disabled hidden></option>
+        <option value="all">{{ 'layout.allCharities' | translate }}</option>
+        <option *ngFor="let charity of charities; trackBy: trackCharityBy"
+                [attr.value]="charity.id">{{ charity.name }}</option>
+      </select>
+    </div>
     <ul class="nav">
       <!-- Language Switcher -->
       <li class="dropdown dropdown-language nav-item"><a class="dropdown-toggle nav-link" id="dropdown-flag" href="#"
@@ -202,6 +212,32 @@
                 [routerLinkActiveOptions]="{ exact: true }">
               <a class="nav-link pl-3" routerLink="/technical-support/reports">
                 <span class="ml-1 item-text">{{ "technicalSupport.reports.title" |translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Notifications (All Users — UC-NTF) -->
+        <li class="nav-item dropdown" [class.show]="isActive('/notifications')">
+          <a href="#notifications" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-bell fe-16"></i>
+            <span class="ml-3 item-text">{{"notifications.title" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/notifications')"
+              id="notifications">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/notifications">
+                <span class="ml-1 item-text">{{ "notifications.myNotifications" |translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active"
+                *ngIf="hasAnyRole(['Admin', 'SuperAdmin'])"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/notifications/create">
+                <span class="ml-1 item-text">{{ "notifications.addNotification" |translate }}</span>
               </a>
             </li>
           </ul>

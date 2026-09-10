@@ -164,6 +164,13 @@ const PERMISSION_ROLES: Record<string, string[]> = {
   'Missions.Edit': ['SuperAdmin', 'Admin'],
   'Missions.Delete': ['SuperAdmin'],
 
+  // NotificationController (UC-NTF web notifications): the list/my read is every
+  // authenticated role's; compose/push/edit/resend are the HQ push roles only,
+  // mirroring the controller's [Authorize(Roles = "Admin,SuperAdmin")] set.
+  'Notifications.View': ['SuperAdmin', 'Admin', 'Charity', 'Accountant', 'FinancialOfficer', 'Employee'],
+  'Notifications.Create': ['SuperAdmin', 'Admin'],
+  'Notifications.Edit': ['SuperAdmin', 'Admin'],
+
   // IncomingOutgoingController (epic 16): the whole correspondence module is HQ staff —
   // Admin,SuperAdmin on every action; delete is SuperAdmin only, mirroring the
   // controller's [Authorize] shapes (UC-COR-01…19). Reads scope to the caller's charity.

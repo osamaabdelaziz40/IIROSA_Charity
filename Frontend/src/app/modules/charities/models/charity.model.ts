@@ -215,3 +215,25 @@ export interface CharityNameAvailability {
   name: string;
   isAvailable: boolean;
 }
+
+/** One row of the by-country breakdown — pick nameAr/nameEn by current language. */
+export interface CharityCountryStatistics {
+  countryId: number;
+  nameAr?: string | null;
+  nameEn?: string | null;
+  count: number;
+}
+
+/**
+ * Register statistics band above the all-charities grid (UC-CHR-01).
+ * Caller-scoped server-side: a charity user gets their own record's counts.
+ */
+export interface CharityStatistics {
+  totalCharities: number;
+  activeCharities: number;
+  inactiveCharities: number;
+  lockedCharities: number;
+  receivingDonations: number;
+  addedThisMonth: number;
+  byCountry: CharityCountryStatistics[];
+}

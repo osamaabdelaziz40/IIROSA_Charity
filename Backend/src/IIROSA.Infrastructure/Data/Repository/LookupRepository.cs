@@ -158,6 +158,13 @@ public class HealthStatusRepository : LookupRepository<HealthStatus>, IHealthSta
     }
 }
 
+public class DeathReasonRepository : LookupRepository<DeathReason>, IDeathReasonRepository
+{
+    public DeathReasonRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
 public class RefuseReasonRepository : LookupRepository<RefuseReason>, IRefuseReasonRepository
 {
     public RefuseReasonRepository(ApplicationDbContext context) : base(context)
@@ -212,6 +219,13 @@ public class ReasonOfRelRepository : LookupRepository<ReasonOfRel>, IReasonOfRel
 public class HousingTypeRepository : LookupRepository<HousingType>, IHousingTypeRepository
 {
     public HousingTypeRepository(ApplicationDbContext context) : base(context)
+    {
+    }
+}
+
+public class FamilyProjectStatusRepository : LookupRepository<FamilyProjectStatus>, IFamilyProjectStatusRepository
+{
+    public FamilyProjectStatusRepository(ApplicationDbContext context) : base(context)
     {
     }
 }

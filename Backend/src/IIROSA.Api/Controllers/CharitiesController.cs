@@ -61,6 +61,30 @@ public class CharitiesController : ControllerBase
     }
 
     /// <summary>
+    /// Register statistics for the band above the all-charities grid (UC-3.10) — same
+    /// caller scope as the list: charity callers get their own record's counts,
+    /// country-pinned head-office callers their country's.
+    /// </summary>
+    // Literal segment beats the {id} route, but it stays above it by convention so the
+    // pairing is visible where GetCharity is read.
+    [HttpGet("statistics")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
+    [ProducesResponseType(typeof(CharityStatisticsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<CharityStatisticsDto>> GetStatistics()
+    {
+        try
+        {
+            var statistics = await _charityService.GetStatisticsAsync();
+            return Ok(statistics);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving charity statistics");
+            return StatusCode(500, new { message = "Error retrieving charity statistics", error = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Get charity by ID
     /// </summary>
     [HttpGet("{id}")]

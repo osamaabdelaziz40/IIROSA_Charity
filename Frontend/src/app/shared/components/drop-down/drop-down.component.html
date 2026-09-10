@@ -1,14 +1,14 @@
 <ng-container [formGroup]="fg">
   <div class="form-group">
     <!-- Label -->
-    <label [attr.for]="id || fcn" *ngIf="label" class="form-label">
+    <label [attr.for]="selectId" *ngIf="label" class="form-label">
       {{ label | translate }}
       <span class="text-danger" *ngIf="isRequired">*</span>
     </label>
 
     <!-- Native Select with Select2 class - jQuery Select2 will transform this -->
     <select
-      [id]="id || fcn"
+      [id]="selectId"
       (change)="dropDownChanged($event)"
       [formControlName]="fcn"
       class="form-control select2"

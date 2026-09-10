@@ -1,15 +1,20 @@
 <div class="card mb-3">
-  <div class="card-header d-flex justify-content-between align-items-center">
+  <div class="card-header section-toggle d-flex justify-content-between align-items-center" role="button"
+       (click)="toggleCard()" [attr.aria-expanded]="expanded" aria-controls="mother-card-body">
     <h4 class="mb-0">
       {{ 'families.motherInformation' | translate }}
       <span class="text-danger">*</span>
     </h4>
-    <button type="button" class="btn btn-sm btn-primary" *ngIf="familyId" (click)="save.emit()">
-      <i class="fe fe-save mr-1"></i>
-      {{ 'common.save' | translate }}
-    </button>
+    <div class="d-flex align-items-center">
+      <button type="button" class="btn btn-sm btn-primary mr-2" *ngIf="familyId"
+              (click)="$event.stopPropagation(); expanded = true; save.emit()">
+        <i class="fe fe-save mr-1"></i>
+        {{ 'common.save' | translate }}
+      </button>
+      <i class="fe" [class.fe-chevron-down]="expanded" [class.fe-chevron-left]="!expanded"></i>
+    </div>
   </div>
-  <div class="card-body">
+  <div id="mother-card-body" class="card-body collapse" [class.show]="expanded">
     <form [formGroup]="motherForm">
       <div class="row">
         <div class="col-md-6">
@@ -32,7 +37,51 @@
         </div>
       </div>
 
+      <!-- §10 اضافة معيل — four-part name -->
       <div class="row">
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="firstName"
+            [label]="'families.firstName'"
+            [placeholder]="'families.firstNamePlaceholder' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="secondName"
+            [label]="'families.secondName'"
+            [placeholder]="'families.secondNamePlaceholder' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="thirdName"
+            [label]="'families.thirdName'"
+            [placeholder]="'families.thirdNamePlaceholder' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-3">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="familyName"
+            [label]="'families.familyName'"
+            [placeholder]="'families.familyNamePlaceholder' | translate">
+          </app-input-text>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <app-drop-down [fg]="motherForm"
+                         fcn="nationalityCountryId"
+                         [label]="'families.nationality'"
+                         [placeholder]="'families.selectNationality' | translate"
+                         [initialData]="nationalityOptions">
+          </app-drop-down>
+        </div>
         <div class="col-md-4">
           <app-input-text
             [fg]="motherForm"
@@ -49,15 +98,6 @@
             [label]="'families.placeOfBirth'"
             [placeholder]="'families.placeOfBirthPlaceholder' | translate">
           </app-input-text>
-        </div>
-        <div class="col-md-4">
-          <app-drop-down
-            [fg]="motherForm"
-            fcn="educationLevel"
-            [label]="'families.educationLevel'"
-            [initialData]="educationLevelOptions"
-            [hasDefaultValue]="true">
-          </app-drop-down>
         </div>
       </div>
 
@@ -79,17 +119,32 @@
           </app-input-text>
         </div>
         <div class="col-md-4">
-          <app-drop-down
-            [fg]="motherForm"
-            fcn="healthStatus"
-            [label]="'families.healthStatus'"
-            [initialData]="healthStatusOptions"
-            [hasDefaultValue]="true">
+          <app-drop-down [fg]="motherForm"
+                         fcn="healthStatusId"
+                         [label]="'families.healthStatus'"
+                         [placeholder]="'families.selectHealthStatus' | translate"
+                         [initialData]="healthStatusOptions">
           </app-drop-down>
         </div>
       </div>
 
       <div class="row">
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="mezaCard"
+            [label]="'families.mezaCard'"
+            [placeholder]="'families.mezaCardPlaceholder' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="motherForm"
+            fcn="mezaCardExpirationDate"
+            type="date"
+            [label]="'families.mezaCardExpirationDate'">
+          </app-input-text>
+        </div>
         <div class="col-md-4">
           <app-input-text
             [fg]="motherForm"
@@ -111,22 +166,56 @@
             {{ 'orphanCoding.phoneChecking' | translate }}...
           </small>
         </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 d-flex align-items-center">
+          <div class="custom-control custom-checkbox mr-3">
+            <input type="checkbox" class="custom-control-input" id="motherIsDead" formControlName="isDead">
+            <label class="custom-control-label" for="motherIsDead">{{ 'families.isDead' | translate }}</label>
+          </div>
+          <div class="custom-control custom-checkbox">
+            <input type="checkbox" class="custom-control-input" id="motherIsProvider" formControlName="isProvider">
+            <label class="custom-control-label" for="motherIsProvider">{{ 'families.isProvider' | translate }}</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- §10 death details — shown while متوفى is checked -->
+      <div class="row" *ngIf="motherForm.get('isDead')?.value">
         <div class="col-md-4">
           <app-input-text
             [fg]="motherForm"
             fcn="deathDate"
             type="date"
-            [label]="'families.deathDate'">
+            [label]="'families.deathDate'"
+            [required]="true">
           </app-input-text>
         </div>
-        <div class="col-md-4 d-flex align-items-center">
-          <div class="custom-control custom-checkbox mr-3">
-            <input type="checkbox" class="custom-control-input" id="motherIsAlive" formControlName="isAlive">
-            <label class="custom-control-label" for="motherIsAlive">{{ 'families.isAlive' | translate }}</label>
+        <div class="col-md-4">
+          <app-drop-down [fg]="motherForm"
+                         fcn="deathReasonId"
+                         [label]="'families.deathReason'"
+                         [placeholder]="'families.selectDeathReason' | translate"
+                         [initialData]="deathReasonOptions">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">{{ 'families.deathCertificate' | translate }}</label>
+          <div *ngIf="!deathCertificate">
+            <input type="file"
+                   class="form-control"
+                   id="motherDeathCertificateFile"
+                   (change)="onDeathCertificateChange($event)">
           </div>
-          <div class="custom-control custom-checkbox">
-            <input type="checkbox" class="custom-control-input" id="motherIsProvider" formControlName="isProvider">
-            <label class="custom-control-label" for="motherIsProvider">{{ 'families.isProvider' | translate }}</label>
+          <div *ngIf="deathCertificate" class="d-flex align-items-center">
+            <span class="text-truncate d-inline-block mr-2" style="max-width: 220px;"
+                  [title]="deathCertificate.fileName">
+              <i class="fe fe-paperclip"></i> {{ deathCertificate.fileName }}
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-danger" (click)="deathCertificateRemoved.emit()">
+              <i class="fe fe-x"></i>
+            </button>
           </div>
         </div>
       </div>

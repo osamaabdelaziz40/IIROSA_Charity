@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -10,8 +10,8 @@ import { ApiResponse } from '../../../../core/models/common.model';
 import { Observable } from 'rxjs';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { LoadingComponent } from '../../../../shared/components/loading/loading.component';
-import { TranslateModule } from '@ngx-translate/core';
-import { BreadcrumbComponent, BreadcrumbItem } from '../../../../shared/components';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { BreadcrumbComponent, BreadcrumbItem, CollapsibleCardComponent } from '../../../../shared/components';
 import { DropDownComponent } from '../../../../shared/components/drop-down/drop-down.component';
 import { SharedModule } from '../../../../shared/shared.module';
 
@@ -47,6 +47,10 @@ export class UserFormComponent implements OnInit {
   // Dropdown data for roles
   rolesDropdownData: Array<{ id: string; name: string }> = [];
 
+  // Collapsible section cards — opened programmatically after a failed submit
+  // so invalid fields hidden in collapsed cards are revealed
+  @ViewChildren(CollapsibleCardComponent) collapsibleCards?: QueryList<CollapsibleCardComponent>;
+
   pageActions = [
     {
       label: 'common.back',
@@ -61,7 +65,8 @@ export class UserFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private userManagementService: UserManagementService,
-    private notification: NotificationService
+    private notification: NotificationService,
+    private translate: TranslateService
   ) {
     this.userForm = this.fb.group({
       fullName: ['', Validators.required],
@@ -172,7 +177,13 @@ export class UserFormComponent implements OnInit {
 
   onSubmit() {
     this.submitted = true;
-    if (this.userForm.invalid) return;
+    if (this.userForm.invalid) {
+      this.markFormGroupTouched(this.userForm);
+      // Reveal the collapsed cards hiding the invalid fields
+      this.collapsibleCards?.forEach(card => card.open());
+      this.notification.error(this.translate.instant('userManagement.fixValidationErrors'));
+      return;
+    }
 
     this.submitting = true;
 
@@ -219,5 +230,12 @@ export class UserFormComponent implements OnInit {
 
   cancel() {
     this.router.navigate(['/user-management/users']);
+  }
+
+  /** Mark all fields as touched so invalid feedback renders */
+  private markFormGroupTouched(formGroup: FormGroup): void {
+    Object.keys(formGroup.controls).forEach(key => {
+      formGroup.get(key)?.markAsTouched();
+    });
   }
 }

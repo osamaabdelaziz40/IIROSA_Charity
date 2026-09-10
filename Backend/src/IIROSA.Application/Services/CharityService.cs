@@ -555,6 +555,46 @@ public class CharityService : ICharityService
     }
 
     /// <summary>
+    /// Register statistics for the band above the list (UC-3.10).
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not filter-reactive: the band describes the caller's whole register
+    /// scope, not the current search. The scope itself rides <see cref="ApplyCallerScope"/>
+    /// with a blank filter, so a charity caller sees only their own record's counts, a
+    /// country-pinned head-office caller their country's, and an unscopeable caller zeros —
+    /// exactly what the grid under it would show on page one.
+    /// </remarks>
+    public async Task<CharityStatisticsDto> GetStatisticsAsync()
+    {
+        _logger.LogInformation("Getting charity register statistics");
+
+        var scoped = ApplyCallerScope(new CharityFilterDto());
+
+        var stats = await _charityRepository.GetRegisterStatisticsAsync(
+            countryId: scoped.CountryId,
+            charityId: scoped.CharityId);
+
+        return new CharityStatisticsDto
+        {
+            TotalCharities = stats.Total,
+            ActiveCharities = stats.Active,
+            InactiveCharities = stats.Total - stats.Active,
+            LockedCharities = stats.Locked,
+            ReceivingDonations = stats.ReceivingDonations,
+            AddedThisMonth = stats.AddedThisMonth,
+            ByCountry = stats.ByCountry
+                .Select(c => new CharityCountryStatisticsDto
+                {
+                    CountryId = c.CountryId,
+                    NameAr = c.NameAr,
+                    NameEn = c.NameEn,
+                    Count = c.Count
+                })
+                .ToList()
+        };
+    }
+
+    /// <summary>
     /// Narrows a caller-supplied filter to what the caller is allowed to see.
     /// </summary>
     /// <remarks>

@@ -26,6 +26,7 @@ public class FamilyService : IFamilyService
     private readonly IProviderRepository _providerRepository;
     private readonly IRelativeRepository _relativeRepository;
     private readonly IOrphanRepository _orphanRepository;
+    private readonly IFamilyPhoneRepository _familyPhoneRepository;
     private readonly ICharityRepository _charityRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
@@ -73,6 +74,7 @@ public class FamilyService : IFamilyService
         IProviderRepository providerRepository,
         IRelativeRepository relativeRepository,
         IOrphanRepository orphanRepository,
+        IFamilyPhoneRepository familyPhoneRepository,
         ICharityRepository charityRepository,
         IUnitOfWork unitOfWork,
         IMapper mapper,
@@ -102,6 +104,7 @@ public class FamilyService : IFamilyService
         _providerRepository = providerRepository;
         _relativeRepository = relativeRepository;
         _orphanRepository = orphanRepository;
+        _familyPhoneRepository = familyPhoneRepository;
         _charityRepository = charityRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -234,11 +237,22 @@ public class FamilyService : IFamilyService
             IncomeTypeId = isHouseholdRegister ? dto.IncomeTypeId : null,
             // Housing allocation (§11.S.2 رقم العماره / رقم الشقه) — housing rows only
             FK_HousingBuildingId = familyType == Domain.Enums.FamilyType.Housing ? dto.HousingBuildingId : null,
-            FK_HousingFlatId = familyType == Domain.Enums.FamilyType.Housing ? dto.HousingFlatId : null
+            FK_HousingFlatId = familyType == Domain.Enums.FamilyType.Housing ? dto.HousingFlatId : null,
+            // Family data extension (§4 معلومات الأسرة) — shared across all registers.
+            // FamilyProjectStatusId only counts while the family owns a project, so an
+            // unflagged create never stores an orphaned status value.
+            IncomeValue = dto.IncomeValue,
+            TotalIncome = dto.TotalIncome,
+            ChildrenCount = dto.ChildrenCount,
+            HasProject = dto.HasProject,
+            FamilyProjectStatusId = dto.HasProject ? dto.FamilyProjectStatusId : null
         };
 
         await _familyRepository.AddAsync(family);
         await _unitOfWork.SaveChangesAsync();
+
+        // Multi phone (§4 أرقام التواصل) — the default row mirrors into PhoneNumber below.
+        await SyncFamilyPhonesAsync(family, dto.Phones);
 
         // A refugee family (§12.S.2) and a housing family (§11.S.2) have no father/mother
         // sections — guardian (provider) + children instead. §11.S.2 multi-guardian: every
@@ -1077,6 +1091,21 @@ public class FamilyService : IFamilyService
         if (dto.HouseStatusId.HasValue) family.HouseStatusId = dto.HouseStatusId.Value;
         if (dto.IncomeTypeId.HasValue) family.IncomeTypeId = dto.IncomeTypeId.Value;
 
+        // Family data extension (§4 معلومات الأسرة) — shared across registers, patch-style
+        if (dto.IncomeValue.HasValue) family.IncomeValue = dto.IncomeValue.Value;
+        if (dto.TotalIncome.HasValue) family.TotalIncome = dto.TotalIncome.Value;
+        if (dto.ChildrenCount.HasValue) family.ChildrenCount = dto.ChildrenCount.Value;
+        if (dto.HasProject.HasValue)
+        {
+            family.HasProject = dto.HasProject.Value;
+            // A family without a project never keeps a status value
+            if (!family.HasProject) family.FamilyProjectStatusId = null;
+        }
+        if (dto.FamilyProjectStatusId.HasValue) family.FamilyProjectStatusId = family.HasProject ? dto.FamilyProjectStatusId.Value : null;
+
+        // Multi phone (§4) — full-replace sync when the payload carries the set
+        await SyncFamilyPhonesAsync(family, dto.Phones);
+
         // UC-REF-04 §12.U.4: an update to a Refugee-register family must leave the §12.S.2
         // mandatory set complete. The copies above are patch-style (absent ⇒ keep stored value),
         // so the state to validate is the entity AFTER the copies — validating the raw DTO would
@@ -1109,6 +1138,57 @@ public class FamilyService : IFamilyService
 
     #endregion
 
+    /// <summary>
+    /// §4 multi phone sync: the payload carries the complete live set, so absence is a removal
+    /// instruction (same edit-sync convention as the §11.S.2 guardians). Exactly one default is
+    /// enforced — the first flagged row wins, or the first row when none is flagged — and the
+    /// default mirrors into <see cref="Family.PhoneNumber"/> for legacy consumers. A null list
+    /// leaves the stored set untouched.
+    /// </summary>
+    private async Task SyncFamilyPhonesAsync(Family family, List<CreateFamilyPhoneDto>? phones)
+    {
+        if (phones == null)
+        {
+            return;
+        }
+
+        var incoming = phones
+            .Where(p => !string.IsNullOrWhiteSpace(p.Number))
+            .Select(p => new CreateFamilyPhoneDto { Number = p.Number.Trim(), IsDefault = p.IsDefault })
+            .ToList();
+
+        // Soft-remove every live row first (platform convention: filtered reads and the
+        // one-default unique index both skip IsDeleted rows) — the payload owns the full set.
+        foreach (var existing in await _familyPhoneRepository.GetAllByFamilyIdAsync(family.Id))
+        {
+            existing.IsDeleted = true;
+            existing.DeletedOn = DateTime.UtcNow;
+            _familyPhoneRepository.Update(existing);
+        }
+
+        var defaultIndex = incoming.FindIndex(p => p.IsDefault);
+        if (defaultIndex < 0 && incoming.Count > 0)
+        {
+            defaultIndex = 0;
+        }
+
+        for (var i = 0; i < incoming.Count; i++)
+        {
+            await _familyPhoneRepository.AddAsync(new FamilyPhone
+            {
+                Id = Guid.NewGuid(),
+                FamilyId = family.Id,
+                Number = incoming[i].Number,
+                IsDefault = i == defaultIndex
+            });
+        }
+
+        // Mirror the default number for legacy consumers; an emptied set clears the mirror
+        family.PhoneNumber = defaultIndex >= 0 ? incoming[defaultIndex].Number : null;
+        _familyRepository.Update(family);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
     #region UC-4.9: Update Father Details
 
     public async Task<FatherDto> UpdateFatherAsync(UpdateFatherDto dto)
@@ -1123,7 +1203,12 @@ public class FamilyService : IFamilyService
 
         // Update fields
         if (dto.FullName != null) father.FullName = dto.FullName;
+        if (dto.FirstName != null) father.FirstName = dto.FirstName;
+        if (dto.SecondName != null) father.SecondName = dto.SecondName;
+        if (dto.ThirdName != null) father.ThirdName = dto.ThirdName;
+        if (dto.FamilyName != null) father.FamilyName = dto.FamilyName;
         if (dto.NationalId != null) father.NationalId = dto.NationalId;
+        if (dto.NationalityCountryId.HasValue) father.NationalityCountryId = dto.NationalityCountryId.Value;
         if (dto.DateOfBirth.HasValue) father.DateOfBirth = dto.DateOfBirth.Value;
         if (dto.PlaceOfBirth != null) father.PlaceOfBirth = dto.PlaceOfBirth;
         if (dto.EducationLevelId.HasValue) father.EducationLevelId = dto.EducationLevelId.Value;
@@ -1134,6 +1219,10 @@ public class FamilyService : IFamilyService
         if (dto.IsAlive.HasValue) father.IsAlive = dto.IsAlive.Value;
         if (dto.IsProvider.HasValue) father.IsProvider = dto.IsProvider.Value;
         if (dto.DeathDate.HasValue) father.DeathDate = dto.DeathDate.Value;
+        if (dto.DeathReasonId.HasValue) father.DeathReasonId = dto.DeathReasonId.Value;
+        if (dto.DeathCertificateAttachmentId.HasValue) father.DeathCertificateAttachmentId = dto.DeathCertificateAttachmentId.Value;
+        if (dto.MezaCard != null) father.MezaCard = dto.MezaCard;
+        if (dto.MezaCardExpirationDate.HasValue) father.MezaCardExpirationDate = dto.MezaCardExpirationDate.Value;
         if (dto.Notes != null) father.Notes = dto.Notes;
 
         _fatherRepository.Update(father);
@@ -1160,7 +1249,12 @@ public class FamilyService : IFamilyService
 
         // Update fields
         if (dto.FullName != null) mother.FullName = dto.FullName;
+        if (dto.FirstName != null) mother.FirstName = dto.FirstName;
+        if (dto.SecondName != null) mother.SecondName = dto.SecondName;
+        if (dto.ThirdName != null) mother.ThirdName = dto.ThirdName;
+        if (dto.FamilyName != null) mother.FamilyName = dto.FamilyName;
         if (dto.NationalId != null) mother.NationalId = dto.NationalId;
+        if (dto.NationalityCountryId.HasValue) mother.NationalityCountryId = dto.NationalityCountryId.Value;
         if (dto.DateOfBirth.HasValue) mother.DateOfBirth = dto.DateOfBirth.Value;
         if (dto.PlaceOfBirth != null) mother.PlaceOfBirth = dto.PlaceOfBirth;
         if (dto.EducationLevelId.HasValue) mother.EducationLevelId = dto.EducationLevelId.Value;
@@ -1171,6 +1265,10 @@ public class FamilyService : IFamilyService
         if (dto.IsAlive.HasValue) mother.IsAlive = dto.IsAlive.Value;
         if (dto.IsProvider.HasValue) mother.IsProvider = dto.IsProvider.Value;
         if (dto.DeathDate.HasValue) mother.DeathDate = dto.DeathDate.Value;
+        if (dto.DeathReasonId.HasValue) mother.DeathReasonId = dto.DeathReasonId.Value;
+        if (dto.DeathCertificateAttachmentId.HasValue) mother.DeathCertificateAttachmentId = dto.DeathCertificateAttachmentId.Value;
+        if (dto.MezaCard != null) mother.MezaCard = dto.MezaCard;
+        if (dto.MezaCardExpirationDate.HasValue) mother.MezaCardExpirationDate = dto.MezaCardExpirationDate.Value;
         if (dto.Notes != null) mother.Notes = dto.Notes;
 
         _motherRepository.Update(mother);
@@ -2219,7 +2317,12 @@ public class FamilyService : IFamilyService
             Id = Guid.NewGuid(),
             FamilyId = familyId,
             FullName = dto.FullName,
+            FirstName = dto.FirstName,
+            SecondName = dto.SecondName,
+            ThirdName = dto.ThirdName,
+            FamilyName = dto.FamilyName,
             NationalId = dto.NationalId,
+            NationalityCountryId = dto.NationalityCountryId,
             DateOfBirth = dto.DateOfBirth,
             PlaceOfBirth = dto.PlaceOfBirth,
             EducationLevelId = dto.EducationLevelId,
@@ -2230,6 +2333,10 @@ public class FamilyService : IFamilyService
             IsAlive = dto.IsAlive,
             IsProvider = dto.IsProvider,
             DeathDate = dto.DeathDate,
+            DeathReasonId = dto.DeathReasonId,
+            DeathCertificateAttachmentId = dto.DeathCertificateAttachmentId,
+            MezaCard = dto.MezaCard,
+            MezaCardExpirationDate = dto.MezaCardExpirationDate,
             Notes = dto.Notes
         };
 
@@ -2246,7 +2353,12 @@ public class FamilyService : IFamilyService
             Id = Guid.NewGuid(),
             FamilyId = familyId,
             FullName = dto.FullName,
+            FirstName = dto.FirstName,
+            SecondName = dto.SecondName,
+            ThirdName = dto.ThirdName,
+            FamilyName = dto.FamilyName,
             NationalId = dto.NationalId,
+            NationalityCountryId = dto.NationalityCountryId,
             DateOfBirth = dto.DateOfBirth,
             PlaceOfBirth = dto.PlaceOfBirth,
             EducationLevelId = dto.EducationLevelId,
@@ -2257,6 +2369,10 @@ public class FamilyService : IFamilyService
             IsAlive = dto.IsAlive,
             IsProvider = dto.IsProvider,
             DeathDate = dto.DeathDate,
+            DeathReasonId = dto.DeathReasonId,
+            DeathCertificateAttachmentId = dto.DeathCertificateAttachmentId,
+            MezaCard = dto.MezaCard,
+            MezaCardExpirationDate = dto.MezaCardExpirationDate,
             Notes = dto.Notes
         };
 
@@ -2436,6 +2552,13 @@ public class FamilyService : IFamilyService
             HouseStatusName = family.HouseStatus?.NameAr ?? family.HouseStatus?.NameEn,
             IncomeTypeId = family.IncomeTypeId,
             IncomeTypeName = family.IncomeType?.NameAr ?? family.IncomeType?.NameEn,
+            // Family data extension (§4 معلومات الأسرة) — shared across registers
+            IncomeValue = family.IncomeValue,
+            TotalIncome = family.TotalIncome,
+            ChildrenCount = family.ChildrenCount,
+            HasProject = family.HasProject,
+            FamilyProjectStatusId = family.FamilyProjectStatusId,
+            FamilyProjectStatusName = family.FamilyProjectStatus?.NameAr ?? family.FamilyProjectStatus?.NameEn,
             // Housing allocation (§11.S.2) — null on non-housing rows
             HousingBuildingId = family.FK_HousingBuildingId,
             HousingBuildingName = family.HousingBuilding?.NameAr ?? family.HousingBuilding?.NameEn,
@@ -2446,6 +2569,16 @@ public class FamilyService : IFamilyService
             UpdatedOn = family.UpdatedOn,
             UpdatedBy = family.UpdatedBy
         };
+
+        // Multi phone (§4 أرقام التواصل) — repository orders default-first
+        var phones = await _familyPhoneRepository.GetAllByFamilyIdAsync(family.Id);
+        dto.Phones = phones.Select(p => new FamilyPhoneDto
+        {
+            Id = p.Id,
+            FamilyId = p.FamilyId,
+            Number = p.Number,
+            IsDefault = p.IsDefault
+        }).ToList();
 
         // Load father
         var father = await _fatherRepository.GetByFamilyIdAsync(family.Id);

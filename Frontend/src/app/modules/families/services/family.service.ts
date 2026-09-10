@@ -279,8 +279,9 @@ export class FamilyService {
     );
   }
 
-  updateFather(familyId: string, father: UpdateFatherDto): Observable<FatherDto> {
-    return this.http.put<FatherDto>(`${this.apiUrl}/${familyId}/father`, father, {
+  /** PUT /api/Families/father/{fatherId} — the id rides the route, not the family segment. */
+  updateFather(father: UpdateFatherDto): Observable<FatherDto> {
+    return this.http.put<FatherDto>(`${this.apiUrl}/father/${father.id}`, father, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -313,8 +314,9 @@ export class FamilyService {
     );
   }
 
-  updateMother(familyId: string, mother: UpdateMotherDto): Observable<MotherDto> {
-    return this.http.put<MotherDto>(`${this.apiUrl}/${familyId}/mother`, mother, {
+  /** PUT /api/Families/mother/{motherId} — the id rides the route, not the family segment. */
+  updateMother(mother: UpdateMotherDto): Observable<MotherDto> {
+    return this.http.put<MotherDto>(`${this.apiUrl}/mother/${mother.id}`, mother, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)

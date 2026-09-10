@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -14,7 +14,7 @@ import {
 } from '../models/seasonal-aid.model';
 import { LookupBase } from '../../../shared/models/lookup.base.model';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
+import { BreadcrumbComponent, BreadcrumbItem, CollapsibleCardComponent } from '../../../shared/components';
 import { SharedModule } from '../../../shared/shared.module';
 
 @Component({
@@ -42,6 +42,10 @@ export class CampaignFormComponent implements OnInit, OnDestroy {
   campaignId: string | null = null;
   loading = false;
   saving = false;
+
+  // Collapsible section cards — opened after a failed submit to reveal the
+  // collapsed sections hiding invalid fields
+  @ViewChildren(CollapsibleCardComponent) collapsibleCards?: QueryList<CollapsibleCardComponent>;
 
   // Lookup dropdown data (LookupBase format for the shared drop-down component).
   // Region/center lists are children of the selected parent — the cascade mirrors
@@ -266,6 +270,7 @@ export class CampaignFormComponent implements OnInit, OnDestroy {
   onSubmit(): void {
     if (this.campaignForm.invalid) {
       this.markFormGroupTouched(this.campaignForm);
+      this.collapsibleCards?.forEach(card => card.open());
       this.notification.error(this.translate.instant('validation.fixErrors'));
       return;
     }

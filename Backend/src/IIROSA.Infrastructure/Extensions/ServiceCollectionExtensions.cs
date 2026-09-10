@@ -167,6 +167,9 @@ public static class ServiceCollectionExtensions
         // Mission Management Service (UC-8.1 to UC-8.13)
         services.AddScoped<IIROSA.Application.Interfaces.IMissionService, IIROSA.Application.Services.MissionService>();
 
+        // Notifications Log Service (UC-NTF web notifications push)
+        services.AddScoped<IIROSA.Application.Interfaces.INotificationsLogService, IIROSA.Application.Services.NotificationsLogService>();
+
         // Office Project Management Service (UC-7.1 to UC-7.14)
         services.AddScoped<IIROSA.Application.Interfaces.IOfficeProjectService, IIROSA.Application.Services.OfficeProjectService>();
 
@@ -190,6 +193,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IIROSA.Application.Interfaces.INGOTypeService, IIROSA.Application.Services.NGOTypeService>();
         services.AddScoped<IIROSA.Application.Interfaces.IEducationLevelService, IIROSA.Application.Services.EducationLevelService>();
         services.AddScoped<IIROSA.Application.Interfaces.IHealthStatusService, IIROSA.Application.Services.HealthStatusService>();
+        services.AddScoped<IIROSA.Application.Interfaces.IDeathReasonService, IIROSA.Application.Services.DeathReasonService>();
         services.AddScoped<IIROSA.Application.Interfaces.IRefuseReasonService, IIROSA.Application.Services.RefuseReasonService>();
         // Refugee register lookups (epic 7, UC-REF-03)
         services.AddScoped<IIROSA.Application.Interfaces.IHouseOwnershipService, IIROSA.Application.Services.HouseOwnershipService>();
@@ -199,6 +203,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IIROSA.Application.Interfaces.IRelationService, IIROSA.Application.Services.RelationService>();
         services.AddScoped<IIROSA.Application.Interfaces.IReasonOfRelService, IIROSA.Application.Services.ReasonOfRelService>();
         services.AddScoped<IIROSA.Application.Interfaces.IHousingTypeService, IIROSA.Application.Services.HousingTypeService>();
+        services.AddScoped<IIROSA.Application.Interfaces.IFamilyProjectStatusService, IIROSA.Application.Services.FamilyProjectStatusService>();
         services.AddScoped<IIROSA.Application.Interfaces.IMaritalStatusService, IIROSA.Application.Services.MaritalStatusService>();
         services.AddScoped<IIROSA.Application.Interfaces.IJobService, IIROSA.Application.Services.JobService>();
         services.AddScoped<IIROSA.Application.Interfaces.ILookupManagementService, IIROSA.Application.Services.LookupManagementService>();
@@ -215,6 +220,9 @@ public static class ServiceCollectionExtensions
 
         // Mission Management Repository
         services.AddScoped<IIROSA.Domain.Interfaces.IMissionRepository, IIROSA.Infrastructure.Data.Repository.MissionRepository>();
+
+        // Notifications Log Repository (UC-NTF web notifications push)
+        services.AddScoped<IIROSA.Domain.Interfaces.INotificationsLogRepository, IIROSA.Infrastructure.Data.Repository.NotificationsLogRepository>();
 
         // Office Project Management Repository (UC-7.1 to UC-7.14)
         services.AddScoped<IIROSA.Domain.Interfaces.IOfficeProjectRepository, IIROSA.Infrastructure.Data.Repository.OfficeProjectRepository>();
@@ -237,6 +245,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IIROSA.Domain.Interfaces.INGOTypeRepository, IIROSA.Infrastructure.Data.Repository.NGOTypeRepository>();
         services.AddScoped<IIROSA.Domain.Interfaces.IEducationLevelRepository, IIROSA.Infrastructure.Data.Repository.EducationLevelRepository>();
         services.AddScoped<IIROSA.Domain.Interfaces.IHealthStatusRepository, IIROSA.Infrastructure.Data.Repository.HealthStatusRepository>();
+        services.AddScoped<IIROSA.Domain.Interfaces.IDeathReasonRepository, IIROSA.Infrastructure.Data.Repository.DeathReasonRepository>();
         // Refugee register lookups (epic 7, UC-REF-03)
         services.AddScoped<IIROSA.Domain.Interfaces.IHouseOwnershipRepository, IIROSA.Infrastructure.Data.Repository.HouseOwnershipRepository>();
         services.AddScoped<IIROSA.Domain.Interfaces.IHouseStatusRepository, IIROSA.Infrastructure.Data.Repository.HouseStatusRepository>();
@@ -245,6 +254,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IIROSA.Domain.Interfaces.IRelationRepository, IIROSA.Infrastructure.Data.Repository.RelationRepository>();
         services.AddScoped<IIROSA.Domain.Interfaces.IReasonOfRelRepository, IIROSA.Infrastructure.Data.Repository.ReasonOfRelRepository>();
         services.AddScoped<IIROSA.Domain.Interfaces.IHousingTypeRepository, IIROSA.Infrastructure.Data.Repository.HousingTypeRepository>();
+        services.AddScoped<IIROSA.Domain.Interfaces.IFamilyProjectStatusRepository, IIROSA.Infrastructure.Data.Repository.FamilyProjectStatusRepository>();
         services.AddScoped<IIROSA.Domain.Interfaces.IMaritalStatusRepository, IIROSA.Infrastructure.Data.Repository.MaritalStatusRepository>();
         services.AddScoped<IIROSA.Domain.Interfaces.IJobRepository, IIROSA.Infrastructure.Data.Repository.JobRepository>();
         // Housing building/flat lookups (epic 6) — services were auto-registered before their

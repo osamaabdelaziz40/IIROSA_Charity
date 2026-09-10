@@ -23,7 +23,9 @@
   <!-- ==================== بيانات الأسرة (§11.S.2) ==================== -->
   <form [formGroup]="familyForm">
     <div class="card shadow mb-4">
-      <div class="card-header">
+      <div class="card-header section-toggle d-flex align-items-center" role="button"
+           (click)="toggleSection('family')"
+           [attr.aria-expanded]="sections.family" aria-controls="housing-section-family">
         <h4 class="mb-0">
           <i class="fe fe-info me-2"></i>
           {{ 'housingProjects.form.sections.family' | translate }}
@@ -32,8 +34,10 @@
             {{ 'housingProjects.form.ownershipLocked' | translate }}
           </span>
         </h4>
+        <i class="fe section-chevron" [class.fe-chevron-down]="sections.family"
+           [class.fe-chevron-left]="!sections.family"></i>
       </div>
-      <div class="card-body">
+      <div id="housing-section-family" class="card-body collapse" [class.show]="sections.family">
         <div class="row">
           <!-- الجمعية — HQ only; a Charity caller is pinned server-side -->
           <div class="col-md-4" *ngIf="isHQ">
@@ -60,14 +64,7 @@
     </div>
 
     <!-- الموقع — country → region → center cascade -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-map-pin me-2"></i>
-          {{ 'housingProjects.form.sections.location' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="housingProjects.form.sections.location" icon="fe-map-pin">
         <div class="row">
           <div class="col-md-4">
             <!-- البلد — drives the regions cascade (same cascade as the office-development register) -->
@@ -114,18 +111,10 @@
             </app-input-text>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- السكن والدخل — رقم العماره → رقم الشقه cascade (UC-HOU-05) -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-home me-2"></i>
-          {{ 'housingProjects.form.sections.housingIncome' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="housingProjects.form.sections.housingIncome" icon="fe-home">
         <div class="row">
           <div class="col-md-4">
             <app-drop-down [fg]="familyForm" fcn="housingBuildingId"
@@ -164,18 +153,10 @@
             </app-input-text>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Read-only computed displays (§11.S.2) -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-calculator me-2"></i>
-          {{ 'housingProjects.form.sections.computed' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="housingProjects.form.sections.computed" icon="fe-calculator">
         <div class="row">
           <div class="col-md-4">
             <div class="form-group">
@@ -196,22 +177,28 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
   </form>
 
-  <!-- Phones grid — client-side rows; the default row feeds بيانات الإتصال -->
+  <!-- Phones grid — client-side rows; the default row feeds بيانات الإتصال.
+       Manual collapse — the header carries the add-row button (stopPropagation
+       keeps the button from toggling the section). -->
   <div class="card shadow mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card-header section-toggle d-flex align-items-center" role="button"
+         (click)="toggleSection('phones')"
+         [attr.aria-expanded]="sections.phones" aria-controls="housing-section-phones">
       <h4 class="mb-0">
         <i class="fe fe-phone me-2"></i>
         {{ 'housingProjects.form.sections.phones' | translate }}
       </h4>
-      <button type="button" class="btn btn-sm btn-outline-primary" (click)="addPhoneRow()">
+      <button type="button" class="btn btn-sm btn-outline-primary me-2"
+              (click)="addPhoneRow(); $event.stopPropagation()">
         <i class="fe fe-plus"></i> {{ 'housingProjects.form.phones.add' | translate }}
       </button>
+      <i class="fe section-chevron" [class.fe-chevron-down]="sections.phones"
+         [class.fe-chevron-left]="!sections.phones"></i>
     </div>
-    <div class="card-body">
+    <div id="housing-section-phones" class="card-body collapse" [class.show]="sections.phones">
       <div class="table-responsive">
         <table class="table table-bordered align-middle">
           <thead>
@@ -252,18 +239,22 @@
 
   <!-- ==================== اضافة معيل (§11.S.2) ==================== -->
   <form [formGroup]="guardianForm">
-    <!-- صلة القرابة -->
+    <!-- صلة القرابة — manual collapse (header carries the guardian-saved badge) -->
     <div class="card shadow mb-4">
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card-header section-toggle d-flex align-items-center" role="button"
+           (click)="toggleSection('guardianRelation')"
+           [attr.aria-expanded]="sections.guardianRelation" aria-controls="housing-section-guardian-relation">
         <h4 class="mb-0">
           <i class="fe fe-link me-2"></i>
           {{ 'housingProjects.form.sections.guardianRelation' | translate }}
         </h4>
-        <span class="badge bg-success" *ngIf="guardianSaved">
+        <span class="badge bg-success ms-2" *ngIf="guardianSaved">
           <i class="fe fe-check"></i> {{ 'housingProjects.form.guardian.saved' | translate }}
         </span>
+        <i class="fe section-chevron" [class.fe-chevron-down]="sections.guardianRelation"
+           [class.fe-chevron-left]="!sections.guardianRelation"></i>
       </div>
-      <div class="card-body">
+      <div id="housing-section-guardian-relation" class="card-body collapse" [class.show]="sections.guardianRelation">
         <div class="row">
           <div class="col-md-4">
             <app-drop-down [fg]="guardianForm" fcn="reasonOfRelationId"
@@ -292,14 +283,7 @@
     </div>
 
     <!-- اسم المعيل -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-user me-2"></i>
-          {{ 'housingProjects.form.sections.guardianName' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="housingProjects.form.sections.guardianName" icon="fe-user">
         <div class="row">
           <div class="col-md-3">
             <app-input-text [fg]="guardianForm" fcn="firstName"
@@ -322,18 +306,10 @@
             </app-input-text>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- البيانات الشخصية للمعيل -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-user-check me-2"></i>
-          {{ 'housingProjects.form.sections.guardianPersonal' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="housingProjects.form.sections.guardianPersonal" icon="fe-user-check">
         <div class="row">
           <div class="col-md-4">
             <app-input-text [fg]="guardianForm" fcn="familyName"
@@ -371,18 +347,10 @@
             </app-input-text>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- الدخل والحالات + الأعلام -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-dollar-sign me-2"></i>
-          {{ 'housingProjects.form.sections.guardianStatus' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="housingProjects.form.sections.guardianStatus" icon="fe-dollar-sign">
         <div class="row">
           <div class="col-md-4">
             <app-input-text [fg]="guardianForm" fcn="monthlyIncome" type="number"
@@ -449,19 +417,12 @@
                 : 'housingProjects.form.guardian.confirm') | translate }}
           </button>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
   </form>
 
   <!-- Captured guardians — §11.S.2 اضافة الاباء rows (rows drive the payload) -->
-  <div class="card shadow mb-4" *ngIf="guardians.length > 0">
-    <div class="card-header">
-      <h4 class="mb-0">
-        <i class="fe fe-users me-2"></i>
-        {{ 'housingProjects.form.sections.guardiansTable' | translate }}
-      </h4>
-    </div>
-    <div class="card-body">
+  <app-collapsible-card *ngIf="guardians.length > 0"
+                        titleKey="housingProjects.form.sections.guardiansTable" icon="fe-users">
       <div class="table-responsive">
         <table class="table table-bordered align-middle">
           <thead>
@@ -491,20 +452,12 @@
           </tbody>
         </table>
       </div>
-    </div>
-  </div>
+  </app-collapsible-card>
 
   <!-- ==================== اضافة ابن (§11.S.2) ==================== -->
   <form [formGroup]="childForm">
     <!-- البيانات الأساسية للابن -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-info me-2"></i>
-          {{ 'housingProjects.form.sections.childBasic' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="housingProjects.form.sections.childBasic" icon="fe-info">
         <div class="row">
           <div class="col-md-4">
             <app-input-text [fg]="childForm" fcn="dateOfBirth" type="date"
@@ -540,18 +493,10 @@
             </app-drop-down>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- الحالة الصحية والاجتماعية -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-activity me-2"></i>
-          {{ 'housingProjects.form.sections.childStatus' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="housingProjects.form.sections.childStatus" icon="fe-activity">
         <div class="row">
           <div class="col-md-6">
             <app-drop-down [fg]="childForm" fcn="healthStatusId"
@@ -568,18 +513,10 @@
             </app-drop-down>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- البيانات التعليمية -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-book-open me-2"></i>
-          {{ 'housingProjects.form.sections.childEducation' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="housingProjects.form.sections.childEducation" icon="fe-book-open">
         <div class="row">
           <div class="col-md-4">
             <app-drop-down [fg]="childForm" fcn="educationLevelId"
@@ -629,18 +566,10 @@
             </app-input-text>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- §11.S.2 اضافة ابن attachments — shared attachment component, one file each -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-file-text me-2"></i>
-          {{ 'housingProjects.form.sections.childAttachments' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
+    <app-collapsible-card titleKey="housingProjects.form.sections.childAttachments" icon="fe-file-text">
         <div class="row">
           <div class="col-md-4">
             <div class="form-group">
@@ -670,10 +599,9 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
 
-    <!-- ملاحظات + اضافة — actions card (mission-form idiom) -->
+    <!-- ملاحظات + اضافة — actions card (mission-form idiom; stays visible) -->
     <div class="card shadow mb-4">
       <div class="card-body">
         <div class="row">
@@ -700,14 +628,8 @@
   </form>
 
   <!-- Captured children — كل الابناء rows -->
-  <div class="card shadow mb-4" *ngIf="children.length > 0">
-    <div class="card-header">
-      <h4 class="mb-0">
-        <i class="fe fe-users me-2"></i>
-        {{ 'housingProjects.form.sections.childrenTable' | translate }}
-      </h4>
-    </div>
-    <div class="card-body">
+  <app-collapsible-card *ngIf="children.length > 0"
+                        titleKey="housingProjects.form.sections.childrenTable" icon="fe-users">
       <div class="table-responsive">
         <table class="table table-bordered align-middle">
           <thead>
@@ -739,8 +661,7 @@
           </tbody>
         </table>
       </div>
-    </div>
-  </div>
+  </app-collapsible-card>
 
   <!-- Save bar (§11.S.2 حفظ) -->
   <div class="card shadow mb-4" *ngIf="saving">

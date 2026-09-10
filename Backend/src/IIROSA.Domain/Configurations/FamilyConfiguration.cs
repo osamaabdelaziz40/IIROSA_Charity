@@ -45,6 +45,13 @@ public class FamilyConfiguration : IEntityTypeConfiguration<Family>
         builder.Property(x => x.RentAmount)
             .HasColumnType("decimal(18,2)");
 
+        // Family data extensions (معلومات الأسرة) — income / children / project block
+        builder.Property(x => x.IncomeValue)
+            .HasColumnType("decimal(18,2)");
+
+        builder.Property(x => x.TotalIncome)
+            .HasColumnType("decimal(18,2)");
+
         // Relationships
         builder.HasOne(x => x.Country)
             .WithMany()
@@ -80,6 +87,12 @@ public class FamilyConfiguration : IEntityTypeConfiguration<Family>
         builder.HasOne(x => x.IncomeType)
             .WithMany()
             .HasForeignKey(x => x.IncomeTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Family project status (حالة المشروع) — family data extension
+        builder.HasOne(x => x.FamilyProjectStatus)
+            .WithMany()
+            .HasForeignKey(x => x.FamilyProjectStatusId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Charity)

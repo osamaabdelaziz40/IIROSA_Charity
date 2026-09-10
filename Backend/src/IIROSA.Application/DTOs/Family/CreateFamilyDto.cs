@@ -127,6 +127,39 @@ public class CreateFamilyDto
     /// </summary>
     public int? IncomeTypeId { get; set; }
 
+    // Family data extension (§4 معلومات الأسرة) — shared across registers, stamped unconditionally
+
+    /// <summary>
+    /// Income value (قيمة الدخل)
+    /// </summary>
+    public decimal? IncomeValue { get; set; }
+
+    /// <summary>
+    /// Total income (الدخل الكلى)
+    /// </summary>
+    public decimal? TotalIncome { get; set; }
+
+    /// <summary>
+    /// Children count (عدد الأبناء)
+    /// </summary>
+    public int? ChildrenCount { get; set; }
+
+    /// <summary>
+    /// Does the family own a project (هل الأسرة تمتلك مشروع)
+    /// </summary>
+    public bool HasProject { get; set; }
+
+    /// <summary>
+    /// Family project status (حالة المشروع) — lookup FamilyProjectStatus
+    /// </summary>
+    public int? FamilyProjectStatusId { get; set; }
+
+    /// <summary>
+    /// Contact numbers (multi phone) — exactly one should be flagged IsDefault; the service
+    /// mirrors the default into <see cref="PhoneNumber"/> for legacy consumers.
+    /// </summary>
+    public List<CreateFamilyPhoneDto>? Phones { get; set; }
+
     // Housing register allocation (epic 6, UC-HOU-03 §11.S.2 رقم العماره / رقم الشقه) —
     // mandatory when FamilyType=Housing (CreateHousingFamilyValidator); flat must belong to
     // the chosen building (enforced in AddNewHousingFamilyAsync)

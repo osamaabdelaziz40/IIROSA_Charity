@@ -1,0 +1,6 @@
+/* Notification form (UC-NTF) — checkbox rows and the multi-select columns stay
+   aligned in RTL; the row-level audience guard sits where a field error would. */
+
+.form-check-input.is-invalid {
+  margin-top: 0.25rem;
+}

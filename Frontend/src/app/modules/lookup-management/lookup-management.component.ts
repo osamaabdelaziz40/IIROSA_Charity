@@ -82,7 +82,10 @@ export class LookupManagementComponent implements OnInit {
       'OfficeProjectTypes': 'fe fe-briefcase',
       'HousingBuildings': 'fe fe-home',
       'HousingFlats': 'fe fe-layout',
-      'OutgoingCategories': 'fe fe-send'
+      'OutgoingCategories': 'fe fe-send',
+      'HouseOwnerships': 'fe fe-key',
+      'IncomeTypes': 'fe fe-dollar-sign',
+      'FamilyProjectStatuses': 'fe fe-trending-up'
     };
     return icons[tableName] || 'fe fe-list';
   }
@@ -108,7 +111,10 @@ export class LookupManagementComponent implements OnInit {
       'OfficeProjectTypes': '/lookup-management/office-project-types',
       'HousingBuildings': '/lookup-management/housing-buildings',
       'HousingFlats': '/lookup-management/housing-flats',
-      'OutgoingCategories': '/lookup-management/outgoing-categories'
+      'OutgoingCategories': '/lookup-management/outgoing-categories',
+      'HouseOwnerships': '/lookup-management/house-ownerships',
+      'IncomeTypes': '/lookup-management/income-types',
+      'FamilyProjectStatuses': '/lookup-management/family-project-statuses'
       // TODO: Add routes for MissionTypes, ProjectTypes, Banks, NGOTypes when components are created
     };
     const route = routeMap[tableName];

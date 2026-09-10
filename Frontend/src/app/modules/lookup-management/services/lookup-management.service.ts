@@ -491,6 +491,60 @@ export class LookupManagementService {
     );
   }
 
+  // ==================== FAMILY DATA CATALOGUES (§4 معلومات الأسرة) ====================
+  // house-ownerships / income-types / family-project-statuses share one generic CRUD
+  // surface; `table` is the API route segment.
+
+  /** Management list (GET {table}/items) — paged, includes inactive rows. */
+  getSimpleLookupItems(table: string, filter?: LookupFilterDto): Observable<LookupPagedResult<LookupDto>> {
+    return this.http.get<LookupPagedResult<LookupDto>>(`${this.apiUrl}/${table}/items`, {
+      headers: this.getHeaders(),
+      params: this.buildHttpParams(filter)
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  createSimpleLookup(table: string, item: CreateLookupDto): Observable<LookupDto> {
+    return this.http.post<LookupDto>(`${this.apiUrl}/${table}`, item, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  updateSimpleLookup(table: string, id: number, item: UpdateLookupDto): Observable<LookupDto> {
+    return this.http.put<LookupDto>(`${this.apiUrl}/${table}/${id}`, item, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  deleteSimpleLookup(table: string, id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${table}/${id}`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  activateSimpleLookup(table: string, id: number): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/${table}/${id}/activate`, {}, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  deactivateSimpleLookup(table: string, id: number): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/${table}/${id}/deactivate`, {}, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   // ==================== HOUSING BUILDINGS (management, UC-HOU-05) ====================
 
   getHousingBuildingsItems(filter?: LookupFilterDto): Observable<LookupPagedResult<HousingBuildingDto>> {
@@ -667,9 +721,23 @@ export class LookupManagementService {
     }).pipe(catchError(this.handleError));
   }
 
+  /** سبب الوفاة — GET death-reasons (طبيعية / مرض / حادث) */
+  getDeathReasons(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/death-reasons`, {
+      headers: this.getHeaders()
+    }).pipe(catchError(this.handleError));
+  }
+
   /** نوع الدخل — GET income-types */
   getIncomeTypes(): Observable<LookupDto[]> {
     return this.http.get<LookupDto[]>(`${this.apiUrl}/income-types`, {
+      headers: this.getHeaders()
+    }).pipe(catchError(this.handleError));
+  }
+
+  /** حالة المشروع — GET family-project-statuses (family data extension catalogue) */
+  getFamilyProjectStatuses(): Observable<LookupDto[]> {
+    return this.http.get<LookupDto[]>(`${this.apiUrl}/family-project-statuses`, {
       headers: this.getHeaders()
     }).pipe(catchError(this.handleError));
   }

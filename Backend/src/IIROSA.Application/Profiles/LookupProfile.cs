@@ -126,6 +126,20 @@ public class LookupProfile : Profile
             .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.Events, opt => opt.Ignore());
 
+        // DeathReason mappings (father/mother death details — سبب الوفاة)
+        CreateMap<DeathReason, DeathReasonDto>();
+
+        CreateMap<CreateDeathReasonDto, DeathReason>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.Events, opt => opt.Ignore());
+
+        CreateMap<UpdateDeathReasonDto, DeathReason>()
+            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.Events, opt => opt.Ignore());
+
         // RefuseReason mappings (epic 9, UC-ORR-08 periodic report refusal catalogue)
         CreateMap<RefuseReason, RefuseReasonDto>();
 
@@ -170,6 +184,18 @@ public class LookupProfile : Profile
             .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.Events, opt => opt.Ignore());
         CreateMap<UpdateIncomeTypeDto, IncomeType>()
+            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.Events, opt => opt.Ignore());
+
+        // حالة المشروع — family data extension catalogue
+        CreateMap<FamilyProjectStatus, FamilyProjectStatusDto>();
+        CreateMap<CreateFamilyProjectStatusDto, FamilyProjectStatus>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.Events, opt => opt.Ignore());
+        CreateMap<UpdateFamilyProjectStatusDto, FamilyProjectStatus>()
             .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.Events, opt => opt.Ignore());

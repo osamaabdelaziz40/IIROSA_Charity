@@ -665,6 +665,9 @@ namespace IIROSA.Infrastructure.Migrations
                     b.Property<Guid?>("CharityId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int?>("ChildrenCount")
+                        .HasColumnType("int");
+
                     b.Property<int?>("CityId")
                         .HasColumnType("int");
 
@@ -706,6 +709,9 @@ namespace IIROSA.Infrastructure.Migrations
                     b.Property<int>("FamilyMembersCount")
                         .HasColumnType("int");
 
+                    b.Property<int?>("FamilyProjectStatusId")
+                        .HasColumnType("int");
+
                     b.Property<string>("FamilyStatus")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -716,6 +722,9 @@ namespace IIROSA.Infrastructure.Migrations
                     b.Property<string>("FinancialStatus")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("HasProject")
+                        .HasColumnType("bit");
 
                     b.Property<string>("HeadOfFamily")
                         .IsRequired()
@@ -733,6 +742,9 @@ namespace IIROSA.Infrastructure.Migrations
 
                     b.Property<int?>("IncomeTypeId")
                         .HasColumnType("int");
+
+                    b.Property<decimal?>("IncomeValue")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -786,6 +798,9 @@ namespace IIROSA.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<decimal?>("TotalIncome")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
@@ -808,6 +823,8 @@ namespace IIROSA.Infrastructure.Migrations
                     b.HasIndex("FK_HousingBuildingId");
 
                     b.HasIndex("FK_HousingFlatId");
+
+                    b.HasIndex("FamilyProjectStatusId");
 
                     b.HasIndex("FamilyType");
 
@@ -877,6 +894,54 @@ namespace IIROSA.Infrastructure.Migrations
                     b.ToTable("FamilyCharityTransfer", "IIROSA");
                 });
 
+            modelBuilder.Entity("IIROSA.Domain.Entities.FamilyPhone", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_FamilyPhone_OneDefaultPerFamily")
+                        .HasFilter("[IsDefault] = 1 AND [IsDeleted] = 0");
+
+                    b.ToTable("FamilyPhone", "IIROSA");
+                });
+
             modelBuilder.Entity("IIROSA.Domain.Entities.Father", b =>
                 {
                     b.Property<Guid>("Id")
@@ -892,8 +957,14 @@ namespace IIROSA.Infrastructure.Migrations
                     b.Property<DateTime?>("DateOfBirth")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("DeathCertificateAttachmentId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DeathDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("DeathReasonId")
+                        .HasColumnType("int");
 
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
@@ -906,6 +977,14 @@ namespace IIROSA.Infrastructure.Migrations
 
                     b.Property<Guid?>("FamilyId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FamilyName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FirstName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("FullName")
                         .IsRequired()
@@ -932,6 +1011,13 @@ namespace IIROSA.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("MezaCard")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("MezaCardExpirationDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal?>("MonthlyIncome")
                         .HasColumnType("decimal(18,2)");
 
@@ -939,6 +1025,9 @@ namespace IIROSA.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("NationalityCountryId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
@@ -952,6 +1041,14 @@ namespace IIROSA.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("SecondName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ThirdName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
@@ -959,6 +1056,8 @@ namespace IIROSA.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DeathReasonId");
 
                     b.HasIndex("EducationLevelId");
 
@@ -973,6 +1072,8 @@ namespace IIROSA.Infrastructure.Migrations
                     b.HasIndex("IsProvider");
 
                     b.HasIndex("NationalId");
+
+                    b.HasIndex("NationalityCountryId");
 
                     b.ToTable("Father", "IIROSA");
                 });
@@ -1691,6 +1792,43 @@ namespace IIROSA.Infrastructure.Migrations
                     b.ToTable("Country", "Lookup");
                 });
 
+            modelBuilder.Entity("IIROSA.Domain.Entities.Lookups.DeathReason", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NameAr")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NameEn")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DeathReason", "Lookup");
+                });
+
             modelBuilder.Entity("IIROSA.Domain.Entities.Lookups.Department", b =>
                 {
                     b.Property<int>("Id")
@@ -1767,6 +1905,43 @@ namespace IIROSA.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("EducationLevel", "Lookup");
+                });
+
+            modelBuilder.Entity("IIROSA.Domain.Entities.Lookups.FamilyProjectStatus", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NameAr")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NameEn")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("FamilyProjectStatus", "Lookup");
                 });
 
             modelBuilder.Entity("IIROSA.Domain.Entities.Lookups.HealthStatus", b =>
@@ -2844,8 +3019,14 @@ namespace IIROSA.Infrastructure.Migrations
                     b.Property<DateTime?>("DateOfBirth")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("DeathCertificateAttachmentId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DeathDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("DeathReasonId")
+                        .HasColumnType("int");
 
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
@@ -2858,6 +3039,14 @@ namespace IIROSA.Infrastructure.Migrations
 
                     b.Property<Guid?>("FamilyId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FamilyName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FirstName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("FullName")
                         .IsRequired()
@@ -2884,6 +3073,13 @@ namespace IIROSA.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("MezaCard")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("MezaCardExpirationDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal?>("MonthlyIncome")
                         .HasColumnType("decimal(18,2)");
 
@@ -2891,6 +3087,9 @@ namespace IIROSA.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("NationalityCountryId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
@@ -2904,6 +3103,14 @@ namespace IIROSA.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("SecondName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ThirdName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
@@ -2911,6 +3118,8 @@ namespace IIROSA.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DeathReasonId");
 
                     b.HasIndex("EducationLevelId");
 
@@ -2926,7 +3135,75 @@ namespace IIROSA.Infrastructure.Migrations
 
                     b.HasIndex("NationalId");
 
+                    b.HasIndex("NationalityCountryId");
+
                     b.ToTable("Mother", "IIROSA");
+                });
+
+            modelBuilder.Entity("IIROSA.Domain.Entities.NotificationsLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsCharity")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsUser")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastSentOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("NotificationTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RecipientCharityIds")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RecipientUserIds")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SentCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("NotificationsLog", "IIROSA");
                 });
 
             modelBuilder.Entity("IIROSA.Domain.Entities.OfficeProject", b =>
@@ -4998,6 +5275,11 @@ namespace IIROSA.Infrastructure.Migrations
                         .HasForeignKey("FK_HousingFlatId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("IIROSA.Domain.Entities.Lookups.FamilyProjectStatus", "FamilyProjectStatus")
+                        .WithMany()
+                        .HasForeignKey("FamilyProjectStatusId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("IIROSA.Domain.Entities.Lookups.HouseOwnership", "HouseOwnership")
                         .WithMany()
                         .HasForeignKey("HouseOwnershipId")
@@ -5033,6 +5315,8 @@ namespace IIROSA.Infrastructure.Migrations
                     b.Navigation("City");
 
                     b.Navigation("Country");
+
+                    b.Navigation("FamilyProjectStatus");
 
                     b.Navigation("HouseOwnership");
 
@@ -5078,8 +5362,24 @@ namespace IIROSA.Infrastructure.Migrations
                     b.Navigation("ToCharity");
                 });
 
+            modelBuilder.Entity("IIROSA.Domain.Entities.FamilyPhone", b =>
+                {
+                    b.HasOne("IIROSA.Domain.Entities.Family", "Family")
+                        .WithMany("Phones")
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Family");
+                });
+
             modelBuilder.Entity("IIROSA.Domain.Entities.Father", b =>
                 {
+                    b.HasOne("IIROSA.Domain.Entities.Lookups.DeathReason", "DeathReason")
+                        .WithMany()
+                        .HasForeignKey("DeathReasonId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("IIROSA.Domain.Entities.Lookups.EducationLevel", "EducationLevel")
                         .WithMany()
                         .HasForeignKey("EducationLevelId")
@@ -5094,6 +5394,15 @@ namespace IIROSA.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("HealthStatusId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("IIROSA.Domain.Entities.Lookups.Country", "Country")
+                        .WithMany()
+                        .HasForeignKey("NationalityCountryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Country");
+
+                    b.Navigation("DeathReason");
 
                     b.Navigation("EducationLevel");
 
@@ -5330,6 +5639,11 @@ namespace IIROSA.Infrastructure.Migrations
 
             modelBuilder.Entity("IIROSA.Domain.Entities.Mother", b =>
                 {
+                    b.HasOne("IIROSA.Domain.Entities.Lookups.DeathReason", "DeathReason")
+                        .WithMany()
+                        .HasForeignKey("DeathReasonId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("IIROSA.Domain.Entities.Lookups.EducationLevel", "EducationLevel")
                         .WithMany()
                         .HasForeignKey("EducationLevelId")
@@ -5344,6 +5658,15 @@ namespace IIROSA.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("HealthStatusId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("IIROSA.Domain.Entities.Lookups.Country", "Country")
+                        .WithMany()
+                        .HasForeignKey("NationalityCountryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Country");
+
+                    b.Navigation("DeathReason");
 
                     b.Navigation("EducationLevel");
 
@@ -5746,6 +6069,8 @@ namespace IIROSA.Infrastructure.Migrations
                     b.Navigation("Mother");
 
                     b.Navigation("Orphans");
+
+                    b.Navigation("Phones");
 
                     b.Navigation("Providers");
 

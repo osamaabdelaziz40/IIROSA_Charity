@@ -4,12 +4,15 @@
   [actions]="pageActions">
 </app-page-header>
 
+<!-- Collapsed accordion sections via the shared app-collapsible-card; the
+     actions card stays always visible. -->
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
-      <div class="card shadow" *ngIf="!loading">
-        <div class="card-body">
-          <form [formGroup]="ticketForm" (ngSubmit)="onSubmit()">
+      <form [formGroup]="ticketForm" (ngSubmit)="onSubmit()" *ngIf="!loading">
+
+        <!-- Ticket Details (title · category · priority · description · user action) -->
+        <app-collapsible-card titleKey="technicalSupport.ticketDetails" icon="fe-info">
           <!-- Title -->
           <div class="form-group">
             <label for="title">
@@ -112,8 +115,10 @@
               {{ 'technicalSupport.placeholders.userActionHelp' | translate }}
             </small>
           </div>
+        </app-collapsible-card>
 
-          <!-- System Information (Read-only) -->
+        <!-- System Information (auto-detected · read-only) -->
+        <app-collapsible-card titleKey="technicalSupport.systemInformation" icon="fe-monitor">
           <div class="form-group">
             <label>{{ 'technicalSupport.browserInfo' | translate }}</label>
             <input
@@ -136,8 +141,11 @@
               {{ 'technicalSupport.placeholders.pageUrlHelp' | translate }}
             </small>
           </div>
+        </app-collapsible-card>
 
-            <!-- Form Actions -->
+        <!-- Form Actions (always visible) -->
+        <div class="card shadow mb-4">
+          <div class="card-body">
             <div class="col-12 mt-4">
               <div class="form-group">
                 <button type="submit" class="btn btn-primary" [disabled]="submitting">
@@ -151,9 +159,9 @@
                 </button>
               </div>
             </div>
-          </form>
+          </div>
         </div>
-      </div>
+      </form>
 
       <!-- Loading State -->
       <div *ngIf="loading" class="text-center py-5">

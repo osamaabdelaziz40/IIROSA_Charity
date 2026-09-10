@@ -16,12 +16,8 @@
 <div *ngIf="!loading" class="row">
   <div class="col-12">
     <form [formGroup]="familyForm">
-      <!-- Family Information Section -->
-      <div class="card mb-3">
-        <div class="card-header">
-          <h4 class="mb-0">{{ 'families.familyInformation' | translate }}</h4>
-        </div>
-        <div class="card-body">
+      <!-- Family Information Section (collapsed accordion) -->
+      <app-collapsible-card titleKey="families.familyInformation">
           <div class="row">
             <div class="col-md-6">
               <app-input-text
@@ -53,16 +49,40 @@
             </div>
           </div>
 
+          <!-- §4 address — country → region → center cascade (missions/create convention) -->
           <div class="row">
             <div class="col-md-4">
-              <app-input-text
-                [fg]="familyForm"
-                fcn="city"
-                [label]="'families.city'"
-                [placeholder]="'families.cityPlaceholder' | translate">
-              </app-input-text>
+              <app-drop-down [fg]="familyForm"
+                             fcn="countryId"
+                             [label]="'families.country'"
+                             [placeholder]="'families.selectCountry' | translate"
+                             [initialData]="countries"
+                             (onDropDownChanged)="onCountryChanged($event)">
+              </app-drop-down>
             </div>
             <div class="col-md-4">
+              <app-drop-down [fg]="familyForm"
+                             fcn="regionId"
+                             [label]="'families.region'"
+                             [placeholder]="'families.selectRegion' | translate"
+                             [initialData]="regionOptions"
+                             [disabled]="!familyForm.get('countryId')?.value || regionOptions.length === 0"
+                             (onDropDownChanged)="onRegionChanged($event)">
+              </app-drop-down>
+            </div>
+            <div class="col-md-4">
+              <app-drop-down [fg]="familyForm"
+                             fcn="centerId"
+                             [label]="'families.center'"
+                             [placeholder]="'families.selectCenter' | translate"
+                             [initialData]="centerOptions"
+                             [disabled]="!familyForm.get('regionId')?.value || centerOptions.length === 0">
+              </app-drop-down>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
               <app-input-text
                 [fg]="familyForm"
                 fcn="village"
@@ -70,7 +90,7 @@
                 [placeholder]="'families.villagePlaceholder' | translate">
               </app-input-text>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
               <app-input-text
                 [fg]="familyForm"
                 fcn="district"
@@ -80,28 +100,52 @@
             </div>
           </div>
 
-          <div class="row">
-            <div class="col-md-4">
-              <app-input-text
-                [fg]="familyForm"
-                fcn="phone"
-                [label]="'families.phone'"
-                [placeholder]="'families.phonePlaceholder' | translate">
-              </app-input-text>
-              <!-- UC-ORP-10 — duplicate-phone flag -->
-              <small class="text-danger d-block mt-1"
-                     *ngIf="phoneChecks['family'].status === 'duplicate'">
+          <!-- §4 multi phone rows — exactly one default per family; UC-ORP-10 checked per row -->
+          <div formArrayName="phones" class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <label class="form-label mb-0">{{ 'families.phones' | translate }}</label>
+              <button type="button" class="btn btn-sm btn-primary" (click)="addPhone()">
+                <i class="fe fe-plus mr-1"></i>{{ 'families.addPhone' | translate }}
+              </button>
+            </div>
+            <div *ngFor="let row of phonesArray.controls; let i = index; trackBy: trackPhoneRow"
+                 class="mb-2">
+              <div class="input-group" [formGroupName]="i">
+                <div class="input-group-prepend">
+                  <div class="input-group-text" [title]="'families.defaultPhone' | translate">
+                    <input type="radio"
+                           name="familyDefaultPhone"
+                           [checked]="row.get('isDefault')?.value === true"
+                           (change)="setDefaultPhone(i)">
+                  </div>
+                </div>
+                <input type="text"
+                       class="form-control"
+                       formControlName="number"
+                       [placeholder]="'families.phonePlaceholder' | translate"
+                       [ngClass]="{'is-invalid': phoneRowChecks[i]?.status === 'duplicate'}">
+                <div class="input-group-append">
+                  <button type="button" class="btn btn-outline-danger" (click)="removePhone(i)">
+                    <i class="fe fe-trash"></i>
+                  </button>
+                </div>
+              </div>
+              <small class="text-danger d-block"
+                     *ngIf="phoneRowChecks[i]?.status === 'duplicate'">
                 <i class="fe fe-alert-circle"></i>
                 {{ 'orphanCoding.phoneDuplicate' | translate }}
-                <span *ngIf="phoneChecks['family'].holderLabel">
-                  ({{ 'orphanCoding.phoneHeldBy' | translate }}: {{ phoneChecks['family'].holderLabel }})
+                <span *ngIf="phoneRowChecks[i]?.holderLabel">
+                  ({{ 'orphanCoding.phoneHeldBy' | translate }}: {{ phoneRowChecks[i].holderLabel }})
                 </span>
               </small>
-              <small class="text-muted d-block mt-1"
-                     *ngIf="phoneChecks['family'].status === 'checking'">
+              <small class="text-muted d-block"
+                     *ngIf="phoneRowChecks[i]?.status === 'checking'">
                 {{ 'orphanCoding.phoneChecking' | translate }}...
               </small>
             </div>
+          </div>
+
+          <div class="row">
             <div class="col-md-4">
               <app-drop-down
                 [fg]="familyForm"
@@ -120,6 +164,76 @@
                 [hasDefaultValue]="true">
               </app-drop-down>
             </div>
+            <div class="col-md-4">
+              <app-drop-down [fg]="familyForm"
+                             fcn="houseOwnershipId"
+                             [label]="'families.houseOwnership'"
+                             [placeholder]="'families.selectHouseOwnership' | translate"
+                             [initialData]="houseOwnershipOptions">
+              </app-drop-down>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4">
+              <app-drop-down [fg]="familyForm"
+                             fcn="incomeTypeId"
+                             [label]="'families.incomeType'"
+                             [placeholder]="'families.selectIncomeType' | translate"
+                             [initialData]="incomeTypeOptions">
+              </app-drop-down>
+            </div>
+            <div class="col-md-4">
+              <app-input-text
+                [fg]="familyForm"
+                fcn="incomeValue"
+                type="number"
+                [label]="'families.incomeValue'">
+              </app-input-text>
+            </div>
+            <div class="col-md-4">
+              <app-input-text
+                [fg]="familyForm"
+                fcn="totalIncome"
+                type="number"
+                [label]="'families.totalIncome'">
+              </app-input-text>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4">
+              <app-input-text
+                [fg]="familyForm"
+                fcn="childrenCount"
+                type="number"
+                [label]="'families.childrenCount'">
+              </app-input-text>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">{{ 'families.perMemberShare' | translate }}</label>
+              <input type="text" class="form-control" readonly
+                     [value]="perMemberSharePreview ?? ''">
+            </div>
+            <div class="col-md-4 d-flex align-items-end pb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="familyHasProject"
+                       formControlName="hasProject"
+                       (change)="onHasProjectChange($any($event.target).checked)">
+                <label class="form-check-label" for="familyHasProject">{{ 'families.hasProject' | translate }}</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" *ngIf="familyForm.get('hasProject')?.value">
+            <div class="col-md-4">
+              <app-drop-down [fg]="familyForm"
+                             fcn="familyProjectStatusId"
+                             [label]="'families.familyProjectStatus'"
+                             [placeholder]="'families.selectFamilyProjectStatus' | translate"
+                             [initialData]="familyProjectStatusOptions">
+              </app-drop-down>
+            </div>
           </div>
 
           <div class="row">
@@ -133,15 +247,10 @@
               </app-input-text>
             </div>
           </div>
-        </div>
-      </div>
+      </app-collapsible-card>
 
-      <!-- Provider Type Section -->
-      <div class="card mb-3">
-        <div class="card-header">
-          <h4 class="mb-0">{{ 'families.providerType' | translate }}</h4>
-        </div>
-        <div class="card-body">
+      <!-- Provider Type Section (collapsed accordion) -->
+      <app-collapsible-card titleKey="families.providerType">
           <app-drop-down
             [fg]="familyForm"
             fcn="providerType"
@@ -149,39 +258,53 @@
             [initialData]="providerTypeOptions"
             (onDropDownChanged)="onProviderTypeChange()">
           </app-drop-down>
-        </div>
-      </div>
+      </app-collapsible-card>
 
       <!-- Father Section (MANDATORY) -->
       <app-father-form
         [fatherForm]="fatherForm"
-        [educationLevelOptions]="educationLevelOptions"
+        [nationalityOptions]="nationalityOptions"
         [healthStatusOptions]="healthStatusOptions"
+        [deathReasonOptions]="deathReasonOptions"
+        [deathCertificate]="fatherDeathCertificate"
         [familyId]="familyId"
         [phoneCheck]="phoneChecks['father']"
+        (deathCertificateSelected)="onFatherDeathCertificateSelected($event)"
+        (deathCertificateRemoved)="onFatherDeathCertificateRemoved()"
         (save)="saveFather()">
       </app-father-form>
 
       <!-- Mother Section (MANDATORY) -->
       <app-mother-form
         [motherForm]="motherForm"
-        [educationLevelOptions]="educationLevelOptions"
+        [nationalityOptions]="nationalityOptions"
         [healthStatusOptions]="healthStatusOptions"
+        [deathReasonOptions]="deathReasonOptions"
+        [deathCertificate]="motherDeathCertificate"
         [familyId]="familyId"
         [phoneCheck]="phoneChecks['mother']"
+        (deathCertificateSelected)="onMotherDeathCertificateSelected($event)"
+        (deathCertificateRemoved)="onMotherDeathCertificateRemoved()"
         (save)="saveMother()">
       </app-mother-form>
 
-      <!-- Other Provider Section -->
+      <!-- Other Provider Section (collapsed accordion; Save stays in the header) -->
       <div class="card mb-3" *ngIf="showProviderType('other') || hasProvider()">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header section-toggle d-flex justify-content-between align-items-center" role="button"
+             (click)="toggleSection('otherProvider')"
+             [attr.aria-expanded]="sections.otherProvider" aria-controls="family-provider-card-body">
           <h4 class="mb-0">{{ 'families.providerInformation' | translate }}</h4>
-          <button type="button" class="btn btn-sm btn-primary" *ngIf="familyId" (click)="saveProvider()">
-            <i class="fe fe-save mr-1"></i>
-            {{ 'common.save' | translate }}
-          </button>
+          <div class="d-flex align-items-center">
+            <button type="button" class="btn btn-sm btn-primary mr-2" *ngIf="familyId"
+                    (click)="$event.stopPropagation(); sections.otherProvider = true; saveProvider()">
+              <i class="fe fe-save mr-1"></i>
+              {{ 'common.save' | translate }}
+            </button>
+            <i class="fe" [class.fe-chevron-down]="sections.otherProvider"
+               [class.fe-chevron-left]="!sections.otherProvider"></i>
+          </div>
         </div>
-        <div class="card-body">
+        <div id="family-provider-card-body" class="card-body collapse" [class.show]="sections.otherProvider">
           <form [formGroup]="providerForm">
             <div class="row">
               <div class="col-md-6">
@@ -277,13 +400,19 @@
         </div>
       </div>
 
-      <!-- Relatives Section (Optional) -->
+      <!-- Relatives Section (Optional; count badge stays in the header) -->
       <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header section-toggle d-flex justify-content-between align-items-center" role="button"
+             (click)="toggleSection('relatives')"
+             [attr.aria-expanded]="sections.relatives" aria-controls="family-relatives-card-body">
           <h4 class="mb-0">{{ 'families.relativesInformation' | translate }}</h4>
-          <span class="badge badge-secondary">{{ getRelativesCount() }} {{ 'families.relatives' | translate }}</span>
+          <div class="d-flex align-items-center">
+            <span class="badge badge-secondary mr-2">{{ getRelativesCount() }} {{ 'families.relatives' | translate }}</span>
+            <i class="fe" [class.fe-chevron-down]="sections.relatives"
+               [class.fe-chevron-left]="!sections.relatives"></i>
+          </div>
         </div>
-        <div class="card-body">
+        <div id="family-relatives-card-body" class="card-body collapse" [class.show]="sections.relatives">
           <!-- Add Relative Form -->
           <app-relatives-form
             [relativesForm]="relativesForm"
@@ -302,19 +431,14 @@
         </div>
       </div>
 
-      <!-- Attachments Section -->
-      <div class="card mb-3" *ngIf="isEditMode">
-        <div class="card-header">
-          <h4 class="mb-0">{{ 'families.attachments' | translate }}</h4>
-        </div>
-        <div class="card-body">
-          <app-attachment-input
-            [attachments]="familyAttachments"
-            [fileType]="attachmentFileType.Image"
-            (attachmentsChange)="onFamilyAttachmentChange($event)">
-          </app-attachment-input>
-        </div>
-      </div>
+      <!-- Attachments Section (edit mode; collapsed accordion) -->
+      <app-collapsible-card titleKey="families.attachments" *ngIf="isEditMode">
+        <app-attachment-input
+          [attachments]="familyAttachments"
+          [fileType]="attachmentFileType.Image"
+          (attachmentsChange)="onFamilyAttachmentChange($event)">
+        </app-attachment-input>
+      </app-collapsible-card>
 
       <!-- Form Actions -->
       <div class="form-group text-right">

@@ -8,7 +8,7 @@
  * (nameAr in Arabic mode, nameEn in English mode).
  */
 
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -28,7 +28,7 @@ import { CountryDto, RegionDto, CenterDto } from '../../lookup-management/models
 import { UserManagementService } from '../../user-management/services/user-management.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
+import { BreadcrumbComponent, BreadcrumbItem, CollapsibleCardComponent } from '../../../shared/components';
 import { SharedModule } from '../../../shared/shared.module';
 import type { PageAction } from '../../../shared/components/page-header/page-header.component';
 
@@ -67,6 +67,10 @@ export class MissionFormComponent implements OnInit, OnDestroy {
   saving = false;
   isEditMode = false;
   error: string | null = null;
+
+  /** Collapsible §20.S.2 section cards — expanded on a failed submit to reveal
+   *  the red fields hidden inside collapsed cards. */
+  @ViewChildren(CollapsibleCardComponent) collapsibleCards?: QueryList<CollapsibleCardComponent>;
 
   // Catalogues (§20.S.2) — options for the shared dropdowns; catalogue labels
   // are resolved per current language at load time (the app hard-reloads on
@@ -330,6 +334,9 @@ export class MissionFormComponent implements OnInit, OnDestroy {
   onSubmit(): void {
     if (this.missionForm.invalid) {
       this.markFormGroupTouched(this.missionForm);
+      // Reveal collapsed sections — otherwise the actor sees only the error
+      // toast while the red fields stay hidden.
+      this.collapsibleCards?.forEach(card => card.open());
       this.notification.error(this.translate.instant('missions.fixValidationErrors'));
       return;
     }

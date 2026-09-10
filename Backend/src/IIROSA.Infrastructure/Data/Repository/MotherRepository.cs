@@ -51,6 +51,8 @@ public class MotherRepository : Repository<Mother>, IMotherRepository
         return _dbSet
             .Include(m => m.Family)
             .Include(m => m.EducationLevel)
-            .Include(m => m.HealthStatus);
+            .Include(m => m.HealthStatus)
+            .Include(m => m.Country)
+            .Include(m => m.DeathReason);
     }
 }

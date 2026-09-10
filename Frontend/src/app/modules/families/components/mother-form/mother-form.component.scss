@@ -1,1 +1,13 @@
 // Mother Form Component Styles
+
+/* Collapsible card header — same behaviour as the shared app-collapsible-card,
+   kept manual because this header carries the Save button. */
+.card-header.section-toggle {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(128, 128, 128, 0.08);
+  }
+}

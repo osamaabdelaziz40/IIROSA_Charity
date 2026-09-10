@@ -7,6 +7,65 @@
   </div>
 </div>
 
+<!-- Selected Charity (from the header switcher — hidden until one is picked) -->
+<div class="row" *ngIf="selectedCharity$ | async as charity">
+  <div class="col-12 mb-4">
+    <div class="card shadow">
+      <div class="card-header d-flex align-items-center">
+        <i class="fe fe-home text-primary mr-2"></i>
+        <strong class="card-title mb-0 mr-auto">{{ charity.name }}</strong>
+        <span class="badge" [ngClass]="charity.isActive ? 'badge-success' : 'badge-secondary'">
+          {{ (charity.isActive ? 'common.active' : 'common.inactive') | translate }}
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <h6 class="text-uppercase text-muted mb-1">{{ 'charities.charityCode' | translate }}</h6>
+            <span>{{ charity.code }}</span>
+          </div>
+          <div class="col-12 col-md-6 col-lg-3 mb-3">
+            <h6 class="text-uppercase text-muted mb-1">{{ 'charities.ngoType' | translate }}</h6>
+            <span>{{ charity.ngoType }}</span>
+          </div>
+          <div class="col-12 col-md-6 col-lg-3 mb-3" *ngIf="charity.countryName">
+            <h6 class="text-uppercase text-muted mb-1">{{ 'charities.country' | translate }}</h6>
+            <span>{{ charity.countryName }}</span>
+          </div>
+          <div class="col-12 col-md-6 col-lg-3 mb-3" *ngIf="charity.regionName">
+            <h6 class="text-uppercase text-muted mb-1">{{ 'charities.region' | translate }}</h6>
+            <span>{{ charity.regionName }}</span>
+          </div>
+          <div class="col-12 col-md-6 col-lg-3 mb-3" *ngIf="charity.centerName">
+            <h6 class="text-uppercase text-muted mb-1">{{ 'charities.center' | translate }}</h6>
+            <span>{{ charity.centerName }}</span>
+          </div>
+          <div class="col-12 col-md-6 col-lg-3 mb-3" *ngIf="charity.phone">
+            <h6 class="text-uppercase text-muted mb-1">{{ 'charities.phone' | translate }}</h6>
+            <span>{{ charity.phone }}</span>
+          </div>
+          <div class="col-12 col-md-6 col-lg-3 mb-3" *ngIf="charity.email">
+            <h6 class="text-uppercase text-muted mb-1">{{ 'charities.email' | translate }}</h6>
+            <span>{{ charity.email }}</span>
+          </div>
+          <div class="col-12 col-md-6 col-lg-3 mb-3" *ngIf="charity.bossName">
+            <h6 class="text-uppercase text-muted mb-1">{{ 'charities.bossName' | translate }}</h6>
+            <span>{{ charity.bossName }}</span>
+          </div>
+          <div class="col-12 col-md-6 col-lg-3 mb-3" *ngIf="charity.familyCount != null">
+            <h6 class="text-uppercase text-muted mb-1">{{ 'dashboard.totalFamilies' | translate }}</h6>
+            <span>{{ charity.familyCount }}</span>
+          </div>
+          <div class="col-12 col-md-6 col-lg-3 mb-3" *ngIf="charity.orphanCount != null">
+            <h6 class="text-uppercase text-muted mb-1">{{ 'dashboard.totalOrphans' | translate }}</h6>
+            <span>{{ charity.orphanCount }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Statistics Cards -->
 <div class="row">
   <div class="col-12 col-sm-6 col-xl-3 mb-4">

@@ -14,7 +14,8 @@ import {
   CharityStatusUpdateDto,
   CharityCredentialsDto,
   CharityNameAvailability,
-  AttachmentDto
+  AttachmentDto,
+  CharityStatistics
 } from '../models/charity.model';
 
 /**
@@ -392,8 +393,12 @@ export class CharityService {
 
   // ==================== STATISTICS ====================
 
-  getStatistics(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/statistics`, {
+  /**
+   * Register statistics for the band above the all-charities grid (UC-CHR-01).
+   * Caller-scoped server-side — the counts always match what the list can show.
+   */
+  getStatistics(): Observable<CharityStatistics> {
+    return this.http.get<CharityStatistics>(`${this.apiUrl}/statistics`, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)

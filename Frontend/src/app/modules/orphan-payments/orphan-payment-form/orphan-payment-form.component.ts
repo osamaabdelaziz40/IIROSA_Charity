@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -14,11 +14,12 @@ import {
 import { OrphanPaymentService } from '../services/orphan-payment.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { CharityService } from '../../charities/services/charity.service';
+import { NotificationService } from '../../../core/services/notification.service';
 // 10-2 trim: LookupManagementService import removed with the dead "Filtering Options"
 // card — its values were never persisted or echoed back by the server.
 // 10-6 re-introduces CharityService for the HQ batch-picker filter only (UC-PAY-06).
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
+import { BreadcrumbComponent, BreadcrumbItem, CollapsibleCardComponent } from '../../../shared/components';
 import { SharedModule } from '../../../shared/shared.module';
 import type { PageAction } from '../../../shared/components/page-header/page-header.component';
 
@@ -107,7 +108,8 @@ export class OrphanPaymentFormComponent implements OnInit, OnDestroy {
     private orphanPaymentService: OrphanPaymentService,
     private translate: TranslateService,
     private authService: AuthService,
-    private charityService: CharityService
+    private charityService: CharityService,
+    private notification: NotificationService
   ) {
     this.form = this.buildForm();
     this.filterForm = this.fb.group({ charityId: [CHARITY_FILTER_ALL] });
@@ -136,9 +138,11 @@ export class OrphanPaymentFormComponent implements OnInit, OnDestroy {
     const today = new Date().toISOString().split('T')[0];
 
     return this.fb.group({
-      // Basic Information
+      // Basic Information — كل الحقول اجباريه (missions-form precedent): every
+      // data-entry field is required and the server validator re-checks each one.
+      // dontRemoveRate is a checkbox with no empty state, so it carries no rule.
       groupName: ['', [Validators.required, Validators.maxLength(200)]],
-      description: ['', [Validators.maxLength(1000)]],
+      description: ['', [Validators.required, Validators.maxLength(1000)]],
       paymentPeriodFrom: [today, [Validators.required]],
       paymentPeriodTo: [today, [Validators.required]],
       groupDate: [today, [Validators.required]],
@@ -146,14 +150,14 @@ export class OrphanPaymentFormComponent implements OnInit, OnDestroy {
       paymentDate: [today, [Validators.required]],
 
       // Financial Information
-      exchangeRate: [null, [Validators.min(0), Validators.max(1000)]],
-      currency: ['EGP'],
+      exchangeRate: [null, [Validators.required, Validators.min(0), Validators.max(1000)]],
+      currency: ['EGP', [Validators.required]],
       dontRemoveRate: [false],
 
       // Settings
-      batchNo: [''],
-      showOrder: [0],
-      notes: ['', [Validators.maxLength(2000)]]
+      batchNo: ['', [Validators.required, Validators.maxLength(50)]],
+      showOrder: [0, [Validators.required, Validators.min(0)]],
+      notes: ['', [Validators.required, Validators.maxLength(2000)]]
     }, {
       validators: [this.dateRangeValidator]
     });
@@ -223,10 +227,18 @@ export class OrphanPaymentFormComponent implements OnInit, OnDestroy {
 
   // ==================== FORM ACTIONS ====================
 
+  /** Collapsible section cards — expanded on a failed submit to reveal the
+   *  red fields hidden inside collapsed cards. */
+  @ViewChildren(CollapsibleCardComponent) collapsibleCards?: QueryList<CollapsibleCardComponent>;
+
   onSubmit(): void {
     this.serverMessage = null;
     if (this.form.invalid) {
       this.markFormGroupTouched(this.form);
+      // Reveal collapsed sections — otherwise the actor sees only the error
+      // toast while the red fields stay hidden.
+      this.collapsibleCards?.forEach(c => c.open());
+      this.notification.error(this.translate.instant('validation.fixErrors'));
       return;
     }
 
@@ -240,7 +252,9 @@ export class OrphanPaymentFormComponent implements OnInit, OnDestroy {
   }
 
   private createPaymentGroup(): void {
-    const formValue = this.form.value;
+    // 10-4 (same reason as the update path): raw value — a locked batch disables
+    // rate/currency controls, and disabled controls drop out of form.value.
+    const formValue = this.form.getRawValue();
     const dto: CreateOrphanPaymentDto = {
       groupName: formValue.groupName,
       description: formValue.description,
@@ -251,7 +265,7 @@ export class OrphanPaymentFormComponent implements OnInit, OnDestroy {
       exchangeRate: formValue.exchangeRate,
       currency: formValue.currency,
       dontRemoveRate: formValue.dontRemoveRate,
-      batchNo: formValue.batchNo || undefined,
+      batchNo: formValue.batchNo,
       showOrder: formValue.showOrder,
       notes: formValue.notes
     };
@@ -380,6 +394,31 @@ export class OrphanPaymentFormComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * First active client-side error for a control, already localized — the raw
+   * inputs on this form render it under the field (missions-form behaviour; the
+   * shared app-drop-down carries its own copy of the same message set).
+   */
+  fieldError(controlName: string): string | null {
+    const control = this.form.get(controlName);
+    if (!control || !control.errors || !(control.touched || control.dirty)) {
+      return null;
+    }
+    if (control.errors['required']) {
+      return this.translate.instant('validation.required');
+    }
+    if (control.errors['maxlength']) {
+      return this.translate.instant('validation.maxLength', { maxLength: control.errors['maxlength'].requiredLength });
+    }
+    if (control.errors['min']) {
+      return this.translate.instant('validation.min', { min: control.errors['min'].min });
+    }
+    if (control.errors['max']) {
+      return this.translate.instant('validation.max', { max: control.errors['max'].max });
+    }
+    return null;
+  }
+
+  /**
    * Maps the 400 payload's field→messages dictionary onto the form.
    * Server keys are PascalCase DTO names — form controls are camelCase.
    */
@@ -391,7 +430,11 @@ export class OrphanPaymentFormComponent implements OnInit, OnDestroy {
       const first = Array.isArray(messages) ? messages[0] : null;
       if (first) {
         this.serverErrors[controlName] = first;
-        this.form.get(controlName)?.markAsTouched();
+        // 'server' carries the message itself so the shared app-drop-down (currency)
+        // renders it — its template reads errors['server'] verbatim.
+        const control = this.form.get(controlName);
+        control?.setErrors({ ...control.errors, server: first });
+        control?.markAsTouched();
       }
     });
   }

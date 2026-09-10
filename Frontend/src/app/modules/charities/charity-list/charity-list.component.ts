@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { CharityDto, CharitySearchRequest } from '../models/charity.model';
+import { CharityDto, CharitySearchRequest, CharityStatistics, CharityCountryStatistics } from '../models/charity.model';
 import { CharityService } from '../services/charity.service';
 import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
 import { CountryDto, RegionDto, CenterDto } from '../../lookup-management/models/lookup.model';
@@ -43,6 +43,12 @@ export class CharityListComponent implements OnInit, OnDestroy {
   // Expose Math to template for pagination calculations
   Math = Math;
   charities: CharityDto[] = [];
+
+  // Register statistics band (UC-CHR-01) — caller-scoped server-side, refreshed after
+  // the mutations that move its numbers. Not filter-reactive by design.
+  statistics: CharityStatistics | null = null;
+  /** Current language for picking nameAr/nameEn in the by-country breakdown. */
+  currentLang: string = 'ar';
   allCountries: CountryDto[] = [];
   allRegions: RegionDto[] = [];
   allCenters: CenterDto[] = [];
@@ -124,16 +130,19 @@ export class CharityListComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.currentLang = this.translate.currentLang || 'ar';
     this.initializeStatusOptions();
 
     // Subscribe to language changes to update translated options
     this.langChangeSubscription = this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
+      this.currentLang = event.lang;
       this.initializeStatusOptions();
     });
 
     // Page actions are now directly bound
     this.loadCountries();
     this.loadCharities();
+    this.loadStatistics();
   }
 
   ngOnDestroy(): void {
@@ -288,6 +297,29 @@ export class CharityListComponent implements OnInit, OnDestroy {
     this.loadCharities();
   }
 
+  /**
+   * Register statistics band — describes the caller's whole scope (not the active
+   * filters), so it loads once and after mutations that move its numbers, never on
+   * paging or search. Fails silently like the lookup loads: a missing band must not
+   * block the grid.
+   */
+  loadStatistics(): void {
+    this.charityService.getStatistics().subscribe({
+      next: statistics => this.statistics = statistics,
+      error: (error: any) => console.error('Error loading charity statistics:', error)
+    });
+  }
+
+  /** Bilingual label for a by-country breakdown row. */
+  countryName(row: { nameAr?: string | null; nameEn?: string | null }): string {
+    const english = this.currentLang === 'en';
+    return (english ? row.nameEn || row.nameAr : row.nameAr || row.nameEn) || '';
+  }
+
+  trackByCountry(index: number, row: CharityCountryStatistics): number {
+    return row.countryId;
+  }
+
   // Country dropdown change handler
   onCountryChange(event?: any): void {
     const countryId = event?.id || event || this.filterForm.get('country')?.value;
@@ -376,6 +408,7 @@ export class CharityListComponent implements OnInit, OnDestroy {
         next: () => {
           this.notification.success(this.getTranslation(`charities.${action}Success`));
           this.loadCharities();
+          this.loadStatistics();
         },
         error: (error: any) => {
           console.error(`Error ${action}ing charity:`, error);
@@ -400,6 +433,7 @@ export class CharityListComponent implements OnInit, OnDestroy {
         next: () => {
           this.notification.success(this.getTranslation(`charities.${action}Success`));
           this.loadCharities();
+          this.loadStatistics();
         },
         error: (error: any) => {
           console.error(`Error ${action}ing charity:`, error);
@@ -488,6 +522,7 @@ export class CharityListComponent implements OnInit, OnDestroy {
         next: () => {
           this.notification.success(this.getTranslation('charities.deleteSuccess'));
           this.loadCharities();
+          this.loadStatistics();
         },
         error: (error: any) => {
           console.error('Error deleting charity:', error);

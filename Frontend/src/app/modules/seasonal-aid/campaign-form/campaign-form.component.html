@@ -5,246 +5,200 @@
   [actions]="pageActions">
 </app-page-header>
 
-<!-- One card per section (mission-form card idiom); every field is a shared
-     component — app-input-text / app-drop-down — per the platform rule. -->
+<!-- One collapsed accordion card per section (app-collapsible-card — headers
+     toggle the body, collapsed by default; a failed submit re-expands them);
+     every field is a shared component — app-input-text / app-drop-down — per
+     the platform rule. -->
 <div class="container-fluid" *ngIf="!loading">
   <form [formGroup]="campaignForm" (ngSubmit)="onSubmit()">
 
     <!-- Basic Information Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-info mr-2"></i>
-          {{ 'seasonalAid.basicInformation' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <app-input-text
-              [fg]="campaignForm"
-              fcn="name"
-              [label]="'seasonalAid.campaignName'"
-              [placeholder]="'seasonalAid.campaignNamePlaceholder' | translate">
-            </app-input-text>
-          </div>
-          <div class="col-md-6">
-            <app-drop-down
-              [fg]="campaignForm"
-              fcn="campaignType"
-              [label]="'seasonalAid.campaignType'"
-              [initialData]="campaignTypeOptions">
-            </app-drop-down>
-          </div>
+    <app-collapsible-card titleKey="seasonalAid.basicInformation" icon="fe-info">
+      <div class="row">
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="campaignForm"
+            fcn="name"
+            [label]="'seasonalAid.campaignName'"
+            [placeholder]="'seasonalAid.campaignNamePlaceholder' | translate">
+          </app-input-text>
         </div>
-        <div class="row">
-          <div class="col-md-12">
-            <app-input-text
-              [fg]="campaignForm"
-              fcn="description"
-              [label]="'seasonalAid.description'"
-              type="textarea"
-              [rows]="3"
-              [placeholder]="'seasonalAid.descriptionPlaceholder' | translate">
-            </app-input-text>
-          </div>
+        <div class="col-md-6">
+          <app-drop-down
+            [fg]="campaignForm"
+            fcn="campaignType"
+            [label]="'seasonalAid.campaignType'"
+            [initialData]="campaignTypeOptions">
+          </app-drop-down>
         </div>
       </div>
-    </div>
+      <div class="row">
+        <div class="col-md-12">
+          <app-input-text
+            [fg]="campaignForm"
+            fcn="description"
+            [label]="'seasonalAid.description'"
+            type="textarea"
+            [rows]="3"
+            [placeholder]="'seasonalAid.descriptionPlaceholder' | translate">
+          </app-input-text>
+        </div>
+      </div>
+    </app-collapsible-card>
 
     <!-- Campaign Period Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-calendar mr-2"></i>
-          {{ 'seasonalAid.campaignPeriod' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <app-input-text
-              [fg]="campaignForm"
-              fcn="startDate"
-              [label]="'seasonalAid.startDate'"
-              type="date-picker">
-            </app-input-text>
-          </div>
-          <div class="col-md-6">
-            <app-input-text
-              [fg]="campaignForm"
-              fcn="endDate"
-              [label]="'seasonalAid.endDate'"
-              type="date-picker">
-            </app-input-text>
-          </div>
+    <app-collapsible-card titleKey="seasonalAid.campaignPeriod" icon="fe-calendar">
+      <div class="row">
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="campaignForm"
+            fcn="startDate"
+            [label]="'seasonalAid.startDate'"
+            type="date-picker">
+          </app-input-text>
+        </div>
+        <div class="col-md-6">
+          <app-input-text
+            [fg]="campaignForm"
+            fcn="endDate"
+            [label]="'seasonalAid.endDate'"
+            type="date-picker">
+          </app-input-text>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Financial Information Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-dollar-sign mr-2"></i>
-          {{ 'seasonalAid.financialInformation' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-4">
-            <app-input-text
-              [fg]="campaignForm"
-              fcn="totalBudget"
-              [label]="'seasonalAid.totalBudget'"
-              type="number"
-              [min]="0"
-              [step]="0.01"
-              [placeholder]="'seasonalAid.totalBudgetPlaceholder' | translate">
-            </app-input-text>
-          </div>
-          <div class="col-md-4">
-            <app-drop-down
-              [fg]="campaignForm"
-              fcn="budgetCurrency"
-              [label]="'seasonalAid.currency'"
-              [initialData]="currencyOptions">
-            </app-drop-down>
-          </div>
-          <div class="col-md-4">
-            <app-input-text
-              [fg]="campaignForm"
-              fcn="perFamilyAllocation"
-              [label]="'seasonalAid.perFamilyAllocation'"
-              type="number"
-              [min]="0"
-              [step]="0.01"
-              [placeholder]="'seasonalAid.perFamilyAllocationPlaceholder' | translate">
-            </app-input-text>
-          </div>
+    <app-collapsible-card titleKey="seasonalAid.financialInformation" icon="fe-dollar-sign">
+      <div class="row">
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="campaignForm"
+            fcn="totalBudget"
+            [label]="'seasonalAid.totalBudget'"
+            type="number"
+            [min]="0"
+            [step]="0.01"
+            [placeholder]="'seasonalAid.totalBudgetPlaceholder' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="campaignForm"
+            fcn="budgetCurrency"
+            [label]="'seasonalAid.currency'"
+            [initialData]="currencyOptions">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="campaignForm"
+            fcn="perFamilyAllocation"
+            [label]="'seasonalAid.perFamilyAllocation'"
+            type="number"
+            [min]="0"
+            [step]="0.01"
+            [placeholder]="'seasonalAid.perFamilyAllocationPlaceholder' | translate">
+          </app-input-text>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Geographic Scope Section (country → region → center cascade) -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-map-pin mr-2"></i>
-          {{ 'seasonalAid.geographicScope' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-4">
-            <app-drop-down
-              [fg]="campaignForm"
-              fcn="countryId"
-              [label]="'seasonalAid.country'"
-              [initialData]="countryOptions"
-              (onDropDownChanged)="onCountryDropDownChanged($event)">
-            </app-drop-down>
-          </div>
-          <div class="col-md-4">
-            <app-drop-down
-              [fg]="campaignForm"
-              fcn="regionId"
-              [label]="'seasonalAid.region'"
-              [initialData]="regionOptions"
-              [disabled]="!campaignForm.get('countryId')?.value || regionOptions.length === 0"
-              (onDropDownChanged)="onRegionDropDownChanged($event)">
-            </app-drop-down>
-          </div>
-          <div class="col-md-4">
-            <app-drop-down
-              [fg]="campaignForm"
-              fcn="centerId"
-              [label]="'seasonalAid.center'"
-              [initialData]="centerOptions"
-              [disabled]="!campaignForm.get('regionId')?.value || centerOptions.length === 0">
-            </app-drop-down>
-          </div>
+    <app-collapsible-card titleKey="seasonalAid.geographicScope" icon="fe-map-pin">
+      <div class="row">
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="campaignForm"
+            fcn="countryId"
+            [label]="'seasonalAid.country'"
+            [initialData]="countryOptions"
+            (onDropDownChanged)="onCountryDropDownChanged($event)">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="campaignForm"
+            fcn="regionId"
+            [label]="'seasonalAid.region'"
+            [initialData]="regionOptions"
+            [disabled]="!campaignForm.get('countryId')?.value || regionOptions.length === 0"
+            (onDropDownChanged)="onRegionDropDownChanged($event)">
+          </app-drop-down>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="campaignForm"
+            fcn="centerId"
+            [label]="'seasonalAid.center'"
+            [initialData]="centerOptions"
+            [disabled]="!campaignForm.get('regionId')?.value || centerOptions.length === 0">
+          </app-drop-down>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Beneficiary Criteria Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-users mr-2"></i>
-          {{ 'seasonalAid.beneficiaryCriteria' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-4">
-            <app-input-text
-              [fg]="campaignForm"
-              fcn="maximumFamilies"
-              [label]="'seasonalAid.maximumFamilies'"
-              type="number"
-              [min]="1"
-              [placeholder]="'seasonalAid.maximumFamiliesPlaceholder' | translate">
-            </app-input-text>
-          </div>
-          <div class="col-md-4">
-            <app-drop-down
-              [fg]="campaignForm"
-              fcn="familyType"
-              [label]="'seasonalAid.familyType'"
-              [initialData]="familyTypeOptions">
-            </app-drop-down>
-          </div>
-          <div class="col-md-2">
-            <app-input-text
-              [fg]="campaignForm"
-              fcn="minChildrenAge"
-              [label]="'seasonalAid.ageRangeFrom'"
-              type="number"
-              [min]="0"
-              [max]="18"
-              [placeholder]="'seasonalAid.ageRangeFromPlaceholder' | translate">
-            </app-input-text>
-          </div>
-          <div class="col-md-2">
-            <app-input-text
-              [fg]="campaignForm"
-              fcn="maxChildrenAge"
-              [label]="'seasonalAid.ageRangeTo'"
-              type="number"
-              [min]="0"
-              [max]="18"
-              [placeholder]="'seasonalAid.ageRangeToPlaceholder' | translate">
-            </app-input-text>
-          </div>
+    <app-collapsible-card titleKey="seasonalAid.beneficiaryCriteria" icon="fe-users">
+      <div class="row">
+        <div class="col-md-4">
+          <app-input-text
+            [fg]="campaignForm"
+            fcn="maximumFamilies"
+            [label]="'seasonalAid.maximumFamilies'"
+            type="number"
+            [min]="1"
+            [placeholder]="'seasonalAid.maximumFamiliesPlaceholder' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-4">
+          <app-drop-down
+            [fg]="campaignForm"
+            fcn="familyType"
+            [label]="'seasonalAid.familyType'"
+            [initialData]="familyTypeOptions">
+          </app-drop-down>
+        </div>
+        <div class="col-md-2">
+          <app-input-text
+            [fg]="campaignForm"
+            fcn="minChildrenAge"
+            [label]="'seasonalAid.ageRangeFrom'"
+            type="number"
+            [min]="0"
+            [max]="18"
+            [placeholder]="'seasonalAid.ageRangeFromPlaceholder' | translate">
+          </app-input-text>
+        </div>
+        <div class="col-md-2">
+          <app-input-text
+            [fg]="campaignForm"
+            fcn="maxChildrenAge"
+            [label]="'seasonalAid.ageRangeTo'"
+            type="number"
+            [min]="0"
+            [max]="18"
+            [placeholder]="'seasonalAid.ageRangeToPlaceholder' | translate">
+          </app-input-text>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
     <!-- Status Section -->
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">
-          <i class="fe fe-activity mr-2"></i>
-          {{ 'seasonalAid.status' | translate }}
-        </h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <div class="custom-control custom-checkbox">
-              <input type="checkbox" class="custom-control-input" id="isActive" formControlName="isActive">
-              <label class="custom-control-label" for="isActive">
-                {{ 'seasonalAid.isActive' | translate }}
-              </label>
-            </div>
+    <app-collapsible-card titleKey="seasonalAid.status" icon="fe-activity">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="custom-control custom-checkbox">
+            <input type="checkbox" class="custom-control-input" id="isActive" formControlName="isActive">
+            <label class="custom-control-label" for="isActive">
+              {{ 'seasonalAid.isActive' | translate }}
+            </label>
           </div>
         </div>
       </div>
-    </div>
+    </app-collapsible-card>
 
-    <!-- Form Actions -->
+    <!-- Form Actions (always visible — not collapsible) -->
     <div class="card shadow mb-4">
       <div class="card-body">
         <button type="submit" class="btn btn-primary" [disabled]="saving">

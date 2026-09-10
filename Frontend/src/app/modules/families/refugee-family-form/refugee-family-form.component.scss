@@ -15,3 +15,15 @@
 :host-context([dir="rtl"]) .stage-row .btn-danger {
   margin-right: auto;
 }
+
+/* Collapsible section cards with Add buttons in the header (Children,
+   Companions) — same behaviour as the shared app-collapsible-card. */
+.card-header.section-toggle {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(128, 128, 128, 0.08);
+  }
+}

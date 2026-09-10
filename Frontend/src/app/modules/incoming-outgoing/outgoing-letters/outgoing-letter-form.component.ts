@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -10,7 +10,7 @@ import { LookupManagementService } from '../../lookup-management/services/lookup
 import { DepartmentDto } from '../../lookup-management/models/lookup.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { BreadcrumbComponent, BreadcrumbItem, AttachmentInputComponent } from '../../../shared/components';
+import { BreadcrumbComponent, BreadcrumbItem, AttachmentInputComponent, CollapsibleCardComponent } from '../../../shared/components';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { OutgoingDto, CreateOutgoingDto, UpdateOutgoingDto, OutgoingCategoryOptionDto } from '../models/outgoing.model';
 import { IncomingListDto } from '../models/incoming.model';
@@ -52,6 +52,10 @@ export class OutgoingLetterFormComponent implements OnInit, OnDestroy {
   // Attachments
   attachmentFileId: string | null = null;
   attachmentFileType = AttachmentFileType;
+
+  // Collapsible section cards — opened programmatically on a failed submit so
+  // the actor never hunts for errors hidden inside collapsed cards
+  @ViewChildren(CollapsibleCardComponent) collapsibleCards?: QueryList<CollapsibleCardComponent>;
 
   private destroy$ = new Subject<void>();
 
@@ -250,6 +254,7 @@ export class OutgoingLetterFormComponent implements OnInit, OnDestroy {
   onSubmit(): void {
     if (this.letterForm.invalid) {
       this.markFormGroupTouched(this.letterForm);
+      this.collapsibleCards?.forEach(card => card.open());
       this.notification.error(this.translate.instant('incomingOutgoing.fixValidationErrors'));
       return;
     }

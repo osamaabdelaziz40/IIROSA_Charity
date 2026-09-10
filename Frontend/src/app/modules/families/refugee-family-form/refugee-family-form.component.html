@@ -6,12 +6,8 @@
   [icon]="'fe fe-home'">
 </app-page-header>
 
-<!-- §12.S.2 — بيانات الأسرة -->
-<div class="card mb-4">
-  <div class="card-header">
-    <h5 class="mb-0">{{ 'families.refugeeSectionFamily' | translate }}</h5>
-  </div>
-  <div class="card-body">
+<!-- §12.S.2 — بيانات الأسرة (collapsed accordion) -->
+<app-collapsible-card titleKey="families.refugeeSectionFamily">
     <form [formGroup]="familyForm">
       <div class="row">
         <!-- الجمعية + الكود — create-time only (HQ-only charity selector, immutable code) -->
@@ -150,15 +146,10 @@
         </div>
       </div>
     </form>
-  </div>
-</div>
+</app-collapsible-card>
 
-<!-- §12.S.2 — اضافة معيل -->
-<div class="card mb-4">
-  <div class="card-header">
-    <h5 class="mb-0">{{ 'families.refugeeSectionProvider' | translate }}</h5>
-  </div>
-  <div class="card-body">
+<!-- §12.S.2 — اضافة معيل (collapsed accordion) -->
+<app-collapsible-card titleKey="families.refugeeSectionProvider">
     <form [formGroup]="providerForm">
       <div class="row">
         <div class="col-md-4">
@@ -282,19 +273,25 @@
         </ng-container>
       </div>
     </form>
-  </div>
-</div>
+</app-collapsible-card>
 
-<!-- §12.S.2 — اضافة ابن (staged rows, submitted with the family) -->
+<!-- §12.S.2 — اضافة ابن (staged rows; collapsed accordion, Add stays in the header) -->
 <div class="card mb-4">
-  <div class="card-header d-flex justify-content-between align-items-center">
+  <div class="card-header section-toggle d-flex justify-content-between align-items-center" role="button"
+       (click)="toggleSection('children')"
+       [attr.aria-expanded]="sections.children" aria-controls="refugee-children-card-body">
     <h5 class="mb-0">{{ 'families.refugeeSectionChildren' | translate }}</h5>
-    <button type="button" class="btn btn-sm btn-primary" (click)="addChildRow()">
-      <i class="fe fe-plus mr-1"></i>
-      {{ 'families.refugeeAddChild' | translate }}
-    </button>
+    <div class="d-flex align-items-center">
+      <button type="button" class="btn btn-sm btn-primary mr-2"
+              (click)="$event.stopPropagation(); sections.children = true; addChildRow()">
+        <i class="fe fe-plus mr-1"></i>
+        {{ 'families.refugeeAddChild' | translate }}
+      </button>
+      <i class="fe" [class.fe-chevron-down]="sections.children"
+         [class.fe-chevron-left]="!sections.children"></i>
+    </div>
   </div>
-  <div class="card-body">
+  <div id="refugee-children-card-body" class="card-body collapse" [class.show]="sections.children">
     <form [formGroup]="familyForm">
       <div formArrayName="orphans">
         <div class="row align-items-end stage-row" *ngFor="let _ of childrenForm.controls; let i = index; trackBy: trackByRowId">
@@ -368,16 +365,23 @@
   </div>
 </div>
 
-<!-- §12.S.2 — اضافة مرافق (staged rows, submitted with the family) -->
+<!-- §12.S.2 — اضافة مرافق (staged rows; collapsed accordion, Add stays in the header) -->
 <div class="card mb-4">
-  <div class="card-header d-flex justify-content-between align-items-center">
+  <div class="card-header section-toggle d-flex justify-content-between align-items-center" role="button"
+       (click)="toggleSection('companions')"
+       [attr.aria-expanded]="sections.companions" aria-controls="refugee-companions-card-body">
     <h5 class="mb-0">{{ 'families.refugeeSectionCompanions' | translate }}</h5>
-    <button type="button" class="btn btn-sm btn-primary" (click)="addCompanionRow()">
-      <i class="fe fe-plus mr-1"></i>
-      {{ 'families.refugeeAddCompanion' | translate }}
-    </button>
+    <div class="d-flex align-items-center">
+      <button type="button" class="btn btn-sm btn-primary mr-2"
+              (click)="$event.stopPropagation(); sections.companions = true; addCompanionRow()">
+        <i class="fe fe-plus mr-1"></i>
+        {{ 'families.refugeeAddCompanion' | translate }}
+      </button>
+      <i class="fe" [class.fe-chevron-down]="sections.companions"
+         [class.fe-chevron-left]="!sections.companions"></i>
+    </div>
   </div>
-  <div class="card-body">
+  <div id="refugee-companions-card-body" class="card-body collapse" [class.show]="sections.companions">
     <form [formGroup]="familyForm">
       <div formArrayName="relatives">
         <div class="row align-items-end stage-row" *ngFor="let _ of companionsForm.controls; let i = index; trackBy: trackByRowId">

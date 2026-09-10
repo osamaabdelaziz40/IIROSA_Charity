@@ -1,6 +1,8 @@
-import { Component, OnInit, Renderer2, AfterViewInit } from '@angular/core';
+import { Component, OnInit, Renderer2, AfterViewInit, OnDestroy, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { first } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { SignalRService } from '../../core/services/signalr.service';
 import { LocalStorageService } from '../../core/services/localstorage.service';
@@ -13,13 +15,18 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { QuickImpersonationDialogComponent } from '../../shared/impersonation-dialogs/quick-impersonation-dialog.component';
 import { ImpersonationConfirmDialogComponent } from '../../shared/impersonation-dialogs/impersonation-confirm-dialog.component';
 import { NotificationService, NotificationMessage } from '../../core/services/notification.service';
+import { SelectedCharityService } from '../../core/services/selected-charity.service';
+import { CharityService } from '../../modules/charities/services/charity.service';
+import { CharityDto } from '../../modules/charities/models/charity.model';
+
+declare var $: any;  // jQuery declaration for Select2
 
 @Component({
   selector: 'app-main-layout',
   templateUrl: './main-layout.component.html',
   styleUrls: ['./main-layout.component.scss']
 })
-export class MainLayoutComponent implements OnInit, AfterViewInit {
+export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   currentUser$ = this.authService.currentUser$;
   isSidebarCollapsed = false;
   currentLang = 'en';
@@ -34,6 +41,11 @@ export class MainLayoutComponent implements OnInit, AfterViewInit {
   // Impersonation
   canImpersonate = false;
   isSuperAdmin = false;
+
+  // Header charity switcher (select2)
+  charities: CharityDto[] = [];
+  private charitySelect2: any = null;
+  private charitiesSub?: Subscription;
 
   // jquery, popper, moment, bootstrap, select2, daterangepicker and
   // jquery.timepicker are deliberately NOT in this list: they are already
@@ -82,7 +94,11 @@ export class MainLayoutComponent implements OnInit, AfterViewInit {
     private titleService: TitleService,
     private impersonationService: ImpersonationService,
     private modalService: NgbModal,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private charityService: CharityService,
+    private selectedCharityService: SelectedCharityService,
+    private elementRef: ElementRef,
+    private translateService: TranslateService
   ) {
     // Load theme and language preferences from localStorage
     this.loadPreferences();
@@ -127,6 +143,9 @@ export class MainLayoutComponent implements OnInit, AfterViewInit {
       this.canImpersonate = this.authService.hasAnyRole(['SuperAdmin', 'Admin']);
       this.isSuperAdmin = this.authService.hasRole('SuperAdmin');
     }
+
+    // Header charity switcher — see loadCharities() for the scoping note
+    this.loadCharities();
 
     // Start SignalR connection (wrapped to handle gracefully if not available)
     try {
@@ -306,6 +325,8 @@ export class MainLayoutComponent implements OnInit, AfterViewInit {
 
   logout(): void {
     this.signalRService.stopConnection();
+    // Drop the header charity selection so it does not leak to the next login.
+    this.selectedCharityService.clear();
     this.authService.logout().pipe(first()).subscribe({
       next: () => {
         this.router.navigate(['/auth/login']);
@@ -320,6 +341,98 @@ export class MainLayoutComponent implements OnInit, AfterViewInit {
   hasPermission(permission: string): boolean {
     // TODO: Implement permission check
     return true;
+  }
+
+  /**
+   * Header charity switcher
+   */
+
+  trackCharityBy(index: number, charity: CharityDto): string {
+    return charity.id;
+  }
+
+  /**
+   * Load every charity for the header switcher. What "every" means is decided
+   * server-side: HQ roles receive the whole register, a Charity user only their
+   * own record — the same GET /api/Charities the charities list screen uses.
+   */
+  private loadCharities(): void {
+    this.charitiesSub = this.charityService.getCharities({ pageNumber: 1, pageSize: 10000 })
+      .subscribe({
+        next: response => {
+          this.charities = response.items || [];
+          this.initCharitySelect2();
+        },
+        error: error => console.warn('Header charity switcher: failed to load charities', error)
+      });
+  }
+
+  /**
+   * Turn the header select into a select2 widget. The charity <option>s must be
+   * rendered before init, so this runs from the HTTP callback, not view init.
+   */
+  private initCharitySelect2(): void {
+    setTimeout(() => {
+      if (typeof $ === 'undefined' || !$.fn.select2) {
+        console.warn('Header charity switcher: jQuery or Select2 not loaded');
+        return;
+      }
+
+      const selectElement = $(this.elementRef.nativeElement).find('#charitySelect');
+      if (!selectElement.length) {
+        return;
+      }
+
+      // select2('destroy') removes the widget's own listeners but NOT handlers we
+      // bound ourselves — re-init without .off() stacks them and one selection
+      // fires several times. Also clear orphaned containers a failed destroy left.
+      if (selectElement.data('select2')) {
+        try { selectElement.select2('destroy'); } catch (e) { /* already torn down */ }
+      }
+      $(this.elementRef.nativeElement).find('#charitySwitcher .select2-container').remove();
+      selectElement.off('select2:select');
+
+      selectElement.select2({
+        theme: 'bootstrap4',
+        width: '260px',
+        placeholder: this.translateService.instant('layout.selectCharity'),
+        allowClear: true
+      });
+
+      // Store the selection for consumers (dashboard card) instead of navigating.
+      // Only select2:select is bound — binding 'change' as well would fire twice
+      // per selection. 'all' is the synthetic first option and clears the
+      // specific selection.
+      selectElement.on('select2:select', (e: any) => {
+        const id = e.params?.data?.id;
+        if (id === 'all') {
+          this.selectedCharityService.selectAll();
+        } else if (id) {
+          const charity = this.charities.find(c => c.id === id);
+          if (charity) {
+            this.selectedCharityService.setCharity(charity);
+          }
+        }
+      });
+
+      // Restore the persisted choice (page reload / language switch). The
+      // namespaced 'change.select2' trigger only repaints the widget — it does
+      // not re-fire the select2:select handler above.
+      const savedId = this.selectedCharityService.getSelectedId();
+      if (savedId) {
+        selectElement.val(savedId).trigger('change.select2');
+      }
+    }, 100);
+  }
+
+  ngOnDestroy(): void {
+    this.charitiesSub?.unsubscribe();
+    if (typeof $ !== 'undefined' && $.fn?.select2) {
+      const selectElement = $(this.elementRef.nativeElement).find('#charitySelect');
+      if (selectElement.length && selectElement.data('select2')) {
+        try { selectElement.select2('destroy'); } catch (e) { /* already torn down */ }
+      }
+    }
   }
 
   /**
@@ -348,9 +461,12 @@ export class MainLayoutComponent implements OnInit, AfterViewInit {
     return 6;
   }
 
-  showNotification(notification: any): void {
-    // TODO: Show toast notification
-    console.log('New notification:', notification);
+  /**
+   * Toast a live web notification (UC-NTF) pushed over SignalR — title and body
+   * as composed by the sender, held a little longer than a default toast.
+   */
+  showNotification(notification: { title: string; message: string; type: 'success' | 'error' | 'warning' | 'info' }): void {
+    this.notificationService.show(notification.message, notification.type, notification.title, 6000);
   }
 
   runDiagnostics(): void {
