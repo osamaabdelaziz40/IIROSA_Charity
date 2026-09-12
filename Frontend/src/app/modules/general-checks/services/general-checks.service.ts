@@ -14,7 +14,8 @@ import {
   CheckStatement,
   ChequeBeneficiaryOption,
   CurrencyOption,
-  BankChequePositions
+  BankChequePositions,
+  CheckStatistics
 } from '../models/check.model';
 
 /**
@@ -35,6 +36,12 @@ export class GeneralChecksService {
 
   getChecks(filter?: Partial<CheckFilter>): Observable<CheckPagedResult> {
     return this.http.get<CheckPagedResult>(this.apiUrl, { params: this.buildParams(filter) });
+  }
+
+  // Register statistics band (§16.S.1) — caller-scoped server-side like the register read
+
+  getStatistics(): Observable<CheckStatistics> {
+    return this.http.get<CheckStatistics>(`${this.apiUrl}/statistics`);
   }
 
   getCheckById(id: string): Observable<CheckDetail> {

@@ -81,6 +81,14 @@ export interface IncomingPagedResult {
   page: number;
 }
 
+// Register statistics band above the §21.S.1 grid — caller-scoped server-side, so the
+// counts always match what the register under it can show.
+export interface IncomingStatistics {
+  total: number;
+  thisYear: number;
+  addedThisMonth: number;
+}
+
 // The spec's tri-state (معلق / تم الرد / تم عمل اللازم) — id is the Arabic stored value.
 export interface CorrespondenceStatusOption {
   id: string;

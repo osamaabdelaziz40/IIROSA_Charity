@@ -626,6 +626,43 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
     }
 
     /// <summary>
+    /// Register statistics for the band above the periodic reports grid (§14.S.1, UC-ORR-01).
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not filter-reactive: the band describes the caller's whole register
+    /// scope, not the current search. The scope rides <see cref="ApplyCallerScope"/> with a
+    /// bare queryable — the same ladder the paged read applies first, so a charity caller
+    /// counts only their own rows and a country-pinned head-office caller their country's.
+    /// The review predicates are the register's own: Accepted is Reviewed &amp;&amp; IsAccepted
+    /// and Pending is !Reviewed (the string ReviewStatus column is display data; the booleans
+    /// are what every list filter branches on).
+    /// </remarks>
+    public async Task<PeriodicOrphanReportStatisticsDto> GetStatisticsAsync()
+    {
+        var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        // One grouped round-trip for every scalar card; null when the scope matches no rows.
+        var totals = await ApplyCallerScope(_reportRepository.AsQueryable())
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                Accepted = g.Count(r => r.Reviewed && r.IsAccepted),
+                Pending = g.Count(r => !r.Reviewed),
+                AddedThisMonth = g.Count(r => r.CreatedOn >= monthStart)
+            })
+            .FirstOrDefaultAsync();
+
+        return new PeriodicOrphanReportStatisticsDto
+        {
+            Total = totals?.Total ?? 0,
+            Accepted = totals?.Accepted ?? 0,
+            Pending = totals?.Pending ?? 0,
+            AddedThisMonth = totals?.AddedThisMonth ?? 0
+        };
+    }
+
+    /// <summary>
     /// An orphan's complete periodic report history, newest first (UC-ORR-01). Review
     /// 2026-08-24: the discriminator is pinned to Child — a guardian report rides the
     /// carrier child's OrphanId and must not appear in the child's own history (6-6).

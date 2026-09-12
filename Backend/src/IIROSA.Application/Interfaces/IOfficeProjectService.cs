@@ -15,6 +15,12 @@ public interface IOfficeProjectService
     Task<OfficeProjectPagedResult<OfficeProjectListDto>> GetProjectsFilteredAsync(OfficeProjectFilterDto filter);
 
     /// <summary>
+    /// Register statistics for the band above the projects grid (UC-OFP-01: list) —
+    /// same country scope as the list; describes the whole register, not the current search.
+    /// </summary>
+    Task<ProjectStatisticsDto> GetStatisticsAsync();
+
+    /// <summary>
     /// Get office project by ID with navigations and attachments (UC-OFP-04: view)
     /// </summary>
     Task<OfficeProjectDetailDto?> GetProjectByIdAsync(Guid id);

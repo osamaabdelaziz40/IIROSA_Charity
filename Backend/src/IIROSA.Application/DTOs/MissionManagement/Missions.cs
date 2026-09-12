@@ -189,6 +189,25 @@ public class MissionStatusSummaryDto
 }
 
 /// <summary>
+/// Register statistics for the band above the missions grid (UC-MSN-01).
+/// Counts follow the caller's scope — the same country/charity pin the list read
+/// applies — so the band describes the caller's whole register, not the current search.
+/// </summary>
+public class MissionStatisticsDto
+{
+    public int Total { get; set; }
+
+    /// <summary>Missions whose registered outcome is completed (IsMissionCompleted).</summary>
+    public int Completed { get; set; }
+
+    /// <summary>Everything without a completed outcome — Total minus Completed.</summary>
+    public int InProgress { get; set; }
+
+    /// <summary>Missions created since the first day of the current (UTC) month.</summary>
+    public int AddedThisMonth { get; set; }
+}
+
+/// <summary>
 /// Paged result wrapper for missions
 /// </summary>
 public class MissionPagedResult<T>

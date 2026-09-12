@@ -13,19 +13,20 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { MissionService } from '../services/mission.service';
-import { Mission, MissionSearchRequest } from '../models/mission.model';
+import { Mission, MissionSearchRequest, MissionStatistics } from '../models/mission.model';
 import { CharityService } from '../../charities/services/charity.service';
 import { CharityDto } from '../../charities/models/charity.model';
 import { UserManagementService } from '../../user-management/services/user-management.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PaginationComponent, BreadcrumbComponent, PageHeaderComponent, BreadcrumbItem, DropDownComponent } from '../../../shared/components';
+import { SharedModule } from '../../../shared/shared.module';
 import type { PageAction } from '../../../shared/components/page-header/page-header.component';
 
 @Component({
   selector: 'app-mission-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslateModule, PaginationComponent, BreadcrumbComponent, PageHeaderComponent, DropDownComponent],
+  imports: [CommonModule, ReactiveFormsModule, TranslateModule, PaginationComponent, BreadcrumbComponent, PageHeaderComponent, DropDownComponent, SharedModule],
   templateUrl: './mission-list.component.html',
   styleUrls: ['./mission-list.component.scss']
 })
@@ -36,6 +37,9 @@ export class MissionListComponent implements OnInit, OnDestroy {
   missions: Mission[] = [];
   charities: CharityDto[] = [];
   users: Array<{ id: string; fullName?: string; userName?: string; email?: string }> = [];
+
+  // Register statistics band — null until the (silent-fail) load answers
+  statistics: MissionStatistics | null = null;
 
   // Loading states
   loading = false;
@@ -104,6 +108,7 @@ export class MissionListComponent implements OnInit, OnDestroy {
     this.loadCharities();
     this.loadUsers();
     this.loadMissions();
+    this.loadStatistics();
 
     // The "كافة الجهات"/"كافة المستخدمين" option labels are pre-translated
     // (app-drop-down renders raw text), so a language switch needs a rebuild —
@@ -215,6 +220,20 @@ export class MissionListComponent implements OnInit, OnDestroy {
           this.loading = false;
           this.notification.error(this.translate.instant('missions.loadFailed'));
         }
+      });
+  }
+
+  /**
+   * Load the register statistics band — scoped server-side; describes the caller's
+   * whole register, not the current search. Silent-fail: the band is optional chrome,
+   * the grid is the payload.
+   */
+  loadStatistics(): void {
+    this.missionService.getStatistics()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: statistics => (this.statistics = statistics),
+        error: (error: unknown) => console.error('Error loading mission statistics:', error)
       });
   }
 

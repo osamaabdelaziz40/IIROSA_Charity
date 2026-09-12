@@ -7,6 +7,8 @@
   },
   "common": {
     "actions": "Actions",
+    "filters": "Filters",
+    "results": "Results",
     "add": "Add",
     "download": "Download",
     "downloadFailed": "File download failed",
@@ -136,6 +138,13 @@
   },
   "employees": {
     "title": "Employees",
+    "stats": {
+      "title": "Statistics",
+      "total": "Total Employees",
+      "active": "Active Employees",
+      "inactive": "Inactive Employees",
+      "addedThisMonth": "Added This Month"
+    },
     "addEmployee": "Add Employee",
     "editEmployee": "Edit Employee",
     "deleteEmployee": "Delete Employee",
@@ -295,6 +304,8 @@
       "addedThisMonth": "Added This Month",
       "byCountry": "Distribution by Country"
     },
+    "filters": "Filters",
+    "results": "Results",
     "isActive": "Is Active",
     "isLocked": "Is Locked",
     "isAddEnabled": "Can Add Records",
@@ -1097,6 +1108,13 @@
   },
   "families": {
     "title": "Families",
+    "stats": {
+      "title": "Statistics",
+      "total": "Total Families",
+      "active": "Active Families",
+      "inactive": "Inactive Families",
+      "addedThisMonth": "Added This Month"
+    },
     "manageFamilies": "Manage Families",
     "addFamily": "Add Family",
     "editFamily": "Edit Family",
@@ -1534,6 +1552,13 @@
   },
   "orphanPayments": {
     "title": "Orphan Payments",
+    "stats": {
+      "title": "Statistics",
+      "total": "Total Payments",
+      "uploaded": "Uploaded Batches",
+      "pendingUpload": "Pending Upload",
+      "addedThisMonth": "Added This Month"
+    },
     "subtitle": "Manage orphan payment groups for manual payment processing",
     "manageGroups": "Manage Payment Groups",
     "addNewGroup": "Add New Payment Group",
@@ -1976,6 +2001,13 @@
   },
   "missions": {
     "title": "Missions",
+    "stats": {
+      "title": "Statistics",
+      "total": "Total Missions",
+      "completed": "Completed Missions",
+      "inProgress": "In-Progress Missions",
+      "addedThisMonth": "Added This Month"
+    },
     "addMission": "Add Mission",
     "editMission": "Edit Mission",
     "deleteMission": "Delete Mission",
@@ -2105,6 +2137,12 @@
   },
   "hqTransfers": {
     "title": "Financial Transfers",
+    "stats": {
+      "title": "Statistics",
+      "total": "Total Transfers",
+      "totalAmount": "Total Amount",
+      "addedThisMonth": "Added This Month"
+    },
     "description": "Financial transfers issued by the HQ Financial Department",
     "serial": "No.",
     "operationNumber": "Operation No.",
@@ -2256,6 +2294,13 @@
   },
   "officeDevelopmentProjects": {
     "title": "Office Development Projects",
+    "stats": {
+      "title": "Statistics",
+      "total": "Total Projects",
+      "completed": "Completed Projects",
+      "thisYear": "Projects This Year",
+      "addedThisMonth": "Added This Month"
+    },
     "manageProjects": "Manage Office Development Projects",
     "notes": "Notes",
     "enterNotes": "Enter notes",
@@ -2377,6 +2422,13 @@
   },
   "seasonalAid": {
     "title": "Seasonal Aid",
+    "stats": {
+      "title": "Statistics",
+      "total": "Total Campaigns",
+      "active": "Active Campaigns",
+      "closed": "Closed Campaigns",
+      "addedThisMonth": "Added This Month"
+    },
     "subtitle": "Manage seasonal aid campaigns",
     "addCampaign": "Add Campaign",
     "editCampaign": "Edit Campaign",
@@ -2921,6 +2973,12 @@
   },
   "generalChecks": {
     "title": "General Cheques",
+    "stats": {
+      "title": "Statistics",
+      "total": "Total Cheques",
+      "thisYear": "Cheques This Year",
+      "addedThisMonth": "Added This Month"
+    },
     "subtitle": "General cheques management",
     "manageChecks": "Manage Cheques",
     "addCheck": "Add Cheque",
@@ -2993,6 +3051,12 @@
   },
   "incomingOutgoing": {
     "moduleTitle": "Incoming & Outgoing",
+    "stats": {
+      "title": "Statistics",
+      "total": "Total Letters",
+      "thisYear": "Letters This Year",
+      "addedThisMonth": "Added This Month"
+    },
     "title": "Incoming & Outgoing Correspondence",
     "subtitle": "Manage incoming and outgoing correspondence",
     "incomingLetters": "Incoming Letters",
@@ -3280,6 +3344,8 @@
       "operationFailed": "The operation failed. Please try again."
     },
     "statistics": {
+      "title": "Statistics",
+      "myTickets": "My Tickets",
       "totalTickets": "Total Tickets",
       "openTickets": "Open Tickets",
       "inProgressTickets": "In Progress Tickets",
@@ -3423,6 +3489,13 @@
   },
   "periodicReports": {
     "title": "Periodic Orphan Reports",
+    "stats": {
+      "title": "Statistics",
+      "total": "Total Reports",
+      "accepted": "Accepted",
+      "pending": "Pending Review",
+      "addedThisMonth": "Added This Month"
+    },
     "subtitle": "Register of recurring status reports filed for each orphan",
     "createReport": "Add Periodic Report",
     "editReport": "Edit Periodic Report",
@@ -3909,6 +3982,13 @@
   },
   "notifications": {
     "title": "Notifications",
+    "stats": {
+      "title": "Statistics",
+      "total": "Total Notifications",
+      "toUsers": "User Notifications",
+      "toCharities": "Charity Notifications",
+      "addedThisMonth": "Added This Month"
+    },
     "myNotifications": "My Notifications",
     "listDescription": "Sent and received notifications register",
     "addNotification": "Add Notification",

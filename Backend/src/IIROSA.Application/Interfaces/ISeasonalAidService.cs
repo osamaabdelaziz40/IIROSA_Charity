@@ -34,6 +34,12 @@ public interface ISeasonalAidService
     Task<(IEnumerable<SeasonalAidCampaignListDto> Items, int TotalCount)> GetCampaignsAsync(SeasonalAidCampaignFilterDto filter);
     Task<IEnumerable<SeasonalAidCampaignListDto>> GetActiveCampaignsAsync();
 
+    /// <summary>
+    /// Register statistics for the band above the campaigns grid (UC-9.6) — same country
+    /// scope as the campaign list; describes the whole register, not the current search.
+    /// </summary>
+    Task<CampaignStatisticsDto> GetCampaignStatisticsAsync();
+
     // UC-9.7: View Campaign Beneficiaries
     Task<(IEnumerable<SeasonalAidBeneficiaryDto> Items, int TotalCount)> GetBeneficiariesAsync(
         Guid campaignId, SeasonalAidBeneficiaryFilterDto filter);

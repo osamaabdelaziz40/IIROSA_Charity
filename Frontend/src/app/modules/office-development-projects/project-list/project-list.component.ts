@@ -10,6 +10,7 @@ import {
 import {
   OfficeProjectListItem,
   OfficeProjectFilter,
+  OfficeProjectStatistics,
   BeneficiaryType
 } from '../models/office-project.model';
 import { OfficeProjectService } from '../services/office-project.service';
@@ -63,6 +64,9 @@ export class ProjectListComponent implements OnInit, OnDestroy {
   allCenters: CenterDto[] = [];
   allProjectTypes: any[] = [];
   allCharities: any[] = [];
+
+  // Register statistics band — null until the (silent-fail) load answers
+  statistics: OfficeProjectStatistics | null = null;
 
   loading = false;
   loadingCountries = false;
@@ -135,6 +139,7 @@ export class ProjectListComponent implements OnInit, OnDestroy {
 
     this.loadLookupData();
     this.loadProjects();
+    this.loadStatistics();
 
     // Subscribe to form value changes for real-time filtering
     this.filterForm.valueChanges.subscribe(() => {
@@ -252,6 +257,18 @@ export class ProjectListComponent implements OnInit, OnDestroy {
   onSearch(): void {
     this.currentPage = 1;
     this.loadProjects();
+  }
+
+  /**
+   * Load the register statistics band — scoped server-side; describes the caller's
+   * whole register, not the current search. Silent-fail: the band is optional chrome,
+   * the grid is the payload.
+   */
+  loadStatistics(): void {
+    this.projectService.getStatistics().subscribe({
+      next: statistics => (this.statistics = statistics),
+      error: (error: any) => console.error('Error loading project statistics:', error)
+    });
   }
 
   onCountryChange(event?: any): void {

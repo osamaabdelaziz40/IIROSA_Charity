@@ -121,6 +121,20 @@ export interface OfficeProjectFilter {
 }
 
 /**
+ * Register statistics band (matches backend ProjectStatisticsDto — UC-OFP-01; caller
+ * country-scoped server-side; describes the whole register, not the current search)
+ */
+export interface OfficeProjectStatistics {
+  total: number;
+  /** Projects marked finished (IsFinished) */
+  completed: number;
+  /** Projects whose start date falls in the current year */
+  thisYear: number;
+  /** Projects created since the first day of the current month */
+  addedThisMonth: number;
+}
+
+/**
  * Office Project List Item (matches backend OfficeProjectListDto — UC-OFP-01)
  */
 export interface OfficeProjectListItem {

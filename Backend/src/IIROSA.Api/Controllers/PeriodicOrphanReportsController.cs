@@ -292,6 +292,27 @@ public class PeriodicOrphanReportsController : ApiController
     }
 
     /// <summary>
+    /// Register statistics for the band above the periodic reports grid (§14.S.1, UC-ORR-01) —
+    /// same caller scope and roles as the register read above: tenancy is applied by the
+    /// service from the token (charity pin or country pin).
+    /// </summary>
+    [HttpGet("statistics")]
+    [Authorize(Roles = "SuperAdmin,Admin,Accountant,Employee,Charity")]
+    [ProducesResponseType(typeof(PeriodicOrphanReportStatisticsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PeriodicOrphanReportStatisticsDto>> GetStatistics()
+    {
+        try
+        {
+            return Ok(await _periodicReportService.GetStatisticsAsync());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving periodic orphan report statistics");
+            return StatusCode(500, new { message = "An error occurred while retrieving report statistics" });
+        }
+    }
+
+    /// <summary>
     /// Get accepted reports - UC-ORR-12
     /// </summary>
     [HttpGet("approved")]

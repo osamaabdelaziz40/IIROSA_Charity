@@ -164,6 +164,62 @@ public class MissionService : IMissionService
         return await GetMissionsFilteredAsync(filter);
     }
 
+    /// <summary>
+    /// Register statistics for the band above the missions grid (UC-MSN-01).
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not filter-reactive: the band describes the caller's whole register,
+    /// not the current search. The scope rides <see cref="ApplyCallerScope"/> with a blank
+    /// filter — the same country/charity pin the list read applies, so the numbers are
+    /// exactly what the grid under it would show on page one.
+    /// </remarks>
+    public async Task<MissionStatisticsDto> GetStatisticsAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Getting mission register statistics");
+
+            var scoped = new MissionFilterDto();
+            ApplyCallerScope(scoped);
+
+            var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            var query = _missionRepository.TableNoTracking.Where(m => !m.IsDeleted);
+            if (scoped.CountryId.HasValue)
+            {
+                query = query.Where(m => m.FK_CountryId == scoped.CountryId.Value);
+            }
+            if (scoped.CharityId.HasValue)
+            {
+                query = query.Where(m => m.FK_CharityId == scoped.CharityId.Value);
+            }
+
+            // One grouped round-trip for every scalar card; null when the scope matches no rows.
+            var totals = await query
+                .GroupBy(_ => 1)
+                .Select(g => new
+                {
+                    Total = g.Count(),
+                    Completed = g.Count(m => m.IsMissionCompleted),
+                    AddedThisMonth = g.Count(m => m.CreatedOn >= monthStart)
+                })
+                .FirstOrDefaultAsync();
+
+            return new MissionStatisticsDto
+            {
+                Total = totals?.Total ?? 0,
+                Completed = totals?.Completed ?? 0,
+                InProgress = (totals?.Total ?? 0) - (totals?.Completed ?? 0),
+                AddedThisMonth = totals?.AddedThisMonth ?? 0
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving mission register statistics");
+            throw;
+        }
+    }
+
     // ========== Writes ==========
 
     /// <summary>

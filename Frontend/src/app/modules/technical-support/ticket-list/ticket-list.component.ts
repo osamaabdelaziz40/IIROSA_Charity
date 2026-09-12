@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { Subject, Subscription, takeUntil } from 'rxjs';
+import { Subject, Subscription, forkJoin, of, takeUntil } from 'rxjs';
 
 import { TechnicalSupportService } from '../services/technical-support.service';
 import {
@@ -15,6 +15,7 @@ import { AuthService, User } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PagedResponse } from '../../../core/models/common.model';
 import { PaginationComponent, BreadcrumbComponent, BreadcrumbItem, DropDownComponent } from '../../../shared/components';
+import { SharedModule } from '../../../shared/shared.module';
 
 // Local interfaces (data-list component not yet implemented)
 export interface DataColumn {
@@ -52,7 +53,8 @@ export interface ActionItem {
     TranslateModule,
     PaginationComponent,
     BreadcrumbComponent,
-    DropDownComponent
+    DropDownComponent,
+    SharedModule
   ],
   templateUrl: './ticket-list.component.html',
   styleUrls: ['./ticket-list.component.scss']
@@ -72,6 +74,10 @@ export class TicketListComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   isAdmin: boolean = false;
   isSuperAdmin: boolean = false;
+
+  // Count band above the grid — my count for everyone, all/unsolved for admins
+  // (those two endpoints are role-gated server-side). Informational only.
+  statistics: { myTickets: number; allTickets: number; unsolved: number } | null = null;
 
   // Search and filters (wire names of SupportTicketFilterDto)
   searchRequest: TicketSearchRequest = {
@@ -220,6 +226,7 @@ export class TicketListComponent implements OnInit, OnDestroy {
 
     this.loadLookups();
     this.loadTickets();
+    this.loadStatistics();
 
     // Subscribe to tickets updates
     this.technicalSupportService.ticketsUpdated$
@@ -239,6 +246,23 @@ export class TicketListComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
     this.langChangeSubscription?.unsubscribe();
+  }
+
+  /**
+   * Count band — loads once on init. Fails silently like the lookups load:
+   * a missing band must not block the grid.
+   */
+  loadStatistics(): void {
+    forkJoin({
+      myTickets: this.technicalSupportService.getMyTicketsCount(),
+      allTickets: this.isAdmin ? this.technicalSupportService.getAllTicketsCount() : of(0),
+      unsolved: this.isAdmin ? this.technicalSupportService.getUnsolvedTicketsCount() : of(0)
+    })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: counts => this.statistics = counts,
+        error: (error: any) => console.error('Error loading ticket statistics:', error)
+      });
   }
 
   loadLookups(): void {

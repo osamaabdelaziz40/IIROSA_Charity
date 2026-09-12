@@ -46,6 +46,7 @@ import {
   FamilyAttachmentDto,
   CreateFamilyAttachmentDto,
   FamilyAuditLog,
+  FamilyStatistics,
   AttachmentDto
 } from '../models/family.model';
 
@@ -527,9 +528,16 @@ export class FamilyService {
 
   // ==================== STATISTICS ====================
 
-  getStatistics(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/statistics`, {
-      headers: this.getHeaders()
+  /** Register statistics band — familyType narrows to one register (Refugee / Housing pages). */
+  getStatistics(familyType?: 'Regular' | 'Housing' | 'Refugee'): Observable<FamilyStatistics> {
+    let params = new HttpParams();
+    if (familyType) {
+      params = params.set('familyType', familyType);
+    }
+
+    return this.http.get<FamilyStatistics>(`${this.apiUrl}/statistics`, {
+      headers: this.getHeaders(),
+      params
     }).pipe(
       catchError(this.handleError)
     );

@@ -52,6 +52,30 @@ public class SeasonalAidController : ControllerBase
     }
 
     /// <summary>
+    /// Register statistics for the band above the campaigns grid (UC-9.6) — same
+    /// caller scope as the campaign list: the band describes the caller's whole
+    /// register, not the current search.
+    /// </summary>
+    // Literal segment beats the campaigns/{id} route, but it stays above it by convention
+    // so the pairing with the list is visible where GetCampaigns is read.
+    [HttpGet("campaigns/statistics")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
+    [ProducesResponseType(typeof(CampaignStatisticsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<CampaignStatisticsDto>> GetCampaignStatistics()
+    {
+        try
+        {
+            var statistics = await _seasonalAidService.GetCampaignStatisticsAsync();
+            return Ok(statistics);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving campaign statistics");
+            return StatusCode(500, new { message = "Error retrieving campaign statistics", error = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Get active campaigns
     /// </summary>
     [HttpGet("campaigns/active")]

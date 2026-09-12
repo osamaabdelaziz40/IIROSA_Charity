@@ -4,7 +4,7 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angul
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { TranslateService, TranslateModule } from '@ngx-translate/core';
-import { IncomingListDto, IncomingFilterDto, CorrespondenceStatusOption } from '../models/incoming.model';
+import { IncomingListDto, IncomingFilterDto, IncomingStatistics, CorrespondenceStatusOption } from '../models/incoming.model';
 import { IncomingService } from '../services/incoming.service';
 import { CharityService } from '../../charities/services/charity.service';
 import { EmployeeService } from '../../employees/services/employee.service';
@@ -18,6 +18,7 @@ import { RouterModule } from '@angular/router';
 import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
 import { DropDownComponent } from '../../../shared/components/drop-down/drop-down.component';
 import { Employee } from '../../../core/models/employee.model';
+import { SharedModule } from '../../../shared/shared.module';
 
 @Component({
   selector: 'app-incoming-letters-list',
@@ -31,7 +32,8 @@ import { Employee } from '../../../core/models/employee.model';
     TranslateModule,
     RouterModule,
     BreadcrumbComponent,
-    DropDownComponent
+    DropDownComponent,
+    SharedModule
   ],
   templateUrl: './incoming-letters-list.component.html',
   styleUrls: ['./incoming-letters-list.component.scss']
@@ -43,6 +45,9 @@ export class IncomingLettersListComponent implements OnInit, OnDestroy {
   totalCount = 0;
   currentPage = 1;
   pageSize = 20;
+
+  // Register statistics band — caller-scoped server-side, not tied to the filters below
+  statistics: IncomingStatistics | null = null;
 
   // HQ callers can narrow the register to one charity (§21.S.1 الجمعية); deletes are
   // the General Director's alone — SuperAdmin only (UC-COR-07).
@@ -142,6 +147,7 @@ export class IncomingLettersListComponent implements OnInit, OnDestroy {
       this.loadCharities();
     }
     this.loadLetters();
+    this.loadStatistics();
 
     // The option labels are pre-translated (app-drop-down renders raw text), so a
     // language switch needs a rebuild — the translate pipe can't refresh them.
@@ -226,6 +232,17 @@ export class IncomingLettersListComponent implements OnInit, OnDestroy {
         this.notification.error(`${error.message || 'Failed to load letters'}`);
         this.loading = false;
       }
+    });
+  }
+
+  /**
+   * Register statistics band — describes the caller's whole scope, not the active
+   * filters. Silent-fail so the register still renders without it.
+   */
+  loadStatistics(): void {
+    this.incomingService.getStatistics().subscribe({
+      next: statistics => this.statistics = statistics,
+      error: (error: any) => console.error('Error loading incoming statistics:', error)
     });
   }
 

@@ -30,9 +30,82 @@
     </a>
   </div>
 
+  <!-- Statistics band — caller-scoped server-side; describes the caller's whole register -->
+  <app-collapsible-card titleKey="periodicReports.stats.title" icon="fe-bar-chart-2" *ngIf="statistics">
+    <div class="row">
+      <div class="col-6 col-md-3">
+        <div class="card shadow mb-4 h-100">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-3 text-center">
+                <span class="circle circle-md bg-primary">
+                  <span class="fe fe-file-text fe-24 text-white"></span>
+                </span>
+              </div>
+              <div class="col">
+                <h3 class="mb-0">{{ statistics.total }}</h3>
+                <p class="small text-muted mb-0">{{ 'periodicReports.stats.total' | translate }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card shadow mb-4 h-100">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-3 text-center">
+                <span class="circle circle-md bg-success">
+                  <span class="fe fe-thumbs-up fe-24 text-white"></span>
+                </span>
+              </div>
+              <div class="col">
+                <h3 class="mb-0">{{ statistics.accepted }}</h3>
+                <p class="small text-muted mb-0">{{ 'periodicReports.stats.accepted' | translate }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card shadow mb-4 h-100">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-3 text-center">
+                <span class="circle circle-md bg-warning">
+                  <span class="fe fe-hourglass fe-24 text-white"></span>
+                </span>
+              </div>
+              <div class="col">
+                <h3 class="mb-0">{{ statistics.pending }}</h3>
+                <p class="small text-muted mb-0">{{ 'periodicReports.stats.pending' | translate }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card shadow mb-4 h-100">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-3 text-center">
+                <span class="circle circle-md bg-danger">
+                  <span class="fe fe-calendar fe-24 text-white"></span>
+                </span>
+              </div>
+              <div class="col">
+                <h3 class="mb-0">{{ statistics.addedThisMonth }}</h3>
+                <p class="small text-muted mb-0">{{ 'periodicReports.stats.addedThisMonth' | translate }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </app-collapsible-card>
+
   <!-- §14.S.1 filters: الجمعية · من تاريخ · الي تاريخ · كود اليتيم · اسم اليتيم · أكواد -->
-  <div class="card shadow mb-4">
-    <div class="card-body">
+  <app-collapsible-card titleKey="common.filters" icon="fe-filter">
       <form [formGroup]="filterForm">
         <div class="row mb-3">
           <!-- الجمعية — HQ only (a charity caller is server-pinned to its own rows) -->
@@ -109,15 +182,12 @@
           </div>
         </div>
       </form>
-    </div>
-  </div>
-
-  <app-loading *ngIf="loading"></app-loading>
+  </app-collapsible-card>
 
   <!-- §14.S.1 grid: الرقم · رقم التقرير · التاريخ · تم الاعتماد · تاريخ الاعتماد · الاجراءات -->
-  <div class="card shadow mb-4" *ngIf="!loading">
-    <div class="card-body p-0">
-      <div class="table-responsive">
+  <app-collapsible-card titleKey="common.results" icon="fe-list" [expanded]="true">
+  <app-loading *ngIf="loading"></app-loading>
+    <div class="table-responsive" *ngIf="!loading">
         <table class="table table-hover mb-0">
           <thead>
             <tr>
@@ -186,7 +256,6 @@
         [title]="'periodicReports.empty.title' | translate"
         [description]="'periodicReports.empty.message' | translate">
       </app-empty-state>
-    </div>
 
     <div class="card-footer" *ngIf="totalCount > 0">
       <app-pagination
@@ -196,5 +265,5 @@
         (pageChange)="onPageChange($event)">
       </app-pagination>
     </div>
-  </div>
+  </app-collapsible-card>
 </div>

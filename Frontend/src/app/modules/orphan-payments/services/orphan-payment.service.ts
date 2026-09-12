@@ -17,7 +17,8 @@ import {
   BatchNumberOptionDto,
   UpdateOrphanPaymentItemDto,
   OrphanPaymentItemDto,
-  PaymentSummary
+  PaymentSummary,
+  OrphanPaymentRegisterStatistics
 } from '../models/orphan-payment.model';
 
 @Injectable({
@@ -56,6 +57,18 @@ export class OrphanPaymentService {
     return this.http.get<OrphanPaymentPagedResult>(`${this.apiUrl}`, {
       headers: this.getHeaders(),
       params: this.buildHttpParams(searchRequest)
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Register statistics for the band above the payment-groups grid (UC-5.8) — batch-level
+   * counts, caller-scoped server-side exactly like the list read.
+   */
+  getStatistics(): Observable<OrphanPaymentRegisterStatistics> {
+    return this.http.get<OrphanPaymentRegisterStatistics>(`${this.apiUrl}/statistics`, {
+      headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
     );

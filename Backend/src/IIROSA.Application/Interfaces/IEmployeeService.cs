@@ -14,6 +14,12 @@ public interface IEmployeeService
     Task<EmployeePagedResult<EmployeeListDto>> GetEmployeesFilteredAsync(EmployeeFilterDto filter);
 
     /// <summary>
+    /// Register statistics for the band above the employees grid (UC-2.5) — the whole
+    /// register, matching the list's head-office (unscoped) semantics.
+    /// </summary>
+    Task<EmployeeStatisticsDto> GetStatisticsAsync();
+
+    /// <summary>
     /// Check whether a proposed login name (the identity user's email/username) is free
     /// (UC-EMP-02: Verify employee username availability). Consults both the identity user
     /// store and the Employee table, excluding the given employee's own account when editing.

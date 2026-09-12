@@ -9,6 +9,10 @@ public interface IIncomingService
 {
     Task<IncomingDto?> GetByIdAsync(Guid id);
     Task<(IEnumerable<IncomingListDto> Items, int TotalCount, int Page)> GetPagedAsync(IncomingFilterDto filter);
+
+    /// <summary>Register statistics for the band above the §21.S.1 grid — the register read's caller scope.</summary>
+    Task<IncomingStatisticsDto> GetStatisticsAsync();
+
     Task<IncomingDto> CreateAsync(CreateIncomingDto dto);
     Task<IncomingDto> UpdateAsync(Guid id, UpdateIncomingDto dto);
     Task DeleteAsync(Guid id, Guid? deletedBy);

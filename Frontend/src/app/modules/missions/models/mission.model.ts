@@ -214,6 +214,20 @@ export interface MissionListResponse {
 }
 
 /**
+ * Register statistics band — the wire shape of MissionStatisticsDto (caller-scoped
+ * server-side; describes the caller's whole register, not the current search)
+ */
+export interface MissionStatistics {
+  total: number;
+  /** Missions whose registered outcome is completed */
+  completed: number;
+  /** Everything without a completed outcome */
+  inProgress: number;
+  /** Missions created since the first day of the current month */
+  addedThisMonth: number;
+}
+
+/**
  * Lookup item for the mission catalogues (type / time type / interview type)
  */
 export interface MissionLookupItem {

@@ -242,6 +242,20 @@ export interface SeasonalAidCampaignFilter {
   sortDescending: boolean;
 }
 
+/**
+ * Register statistics band — the wire shape of CampaignStatisticsDto (caller
+ * country-scoped server-side; describes the whole register, not the current search)
+ */
+export interface SeasonalAidCampaignStatistics {
+  total: number;
+  /** Campaigns currently marked active */
+  active: number;
+  /** Campaigns closed via UC-9.9 */
+  closed: number;
+  /** Campaigns created since the first day of the current month */
+  addedThisMonth: number;
+}
+
 export interface EligibleFamiliesFilter {
   charityId?: string;
   regionId?: number;

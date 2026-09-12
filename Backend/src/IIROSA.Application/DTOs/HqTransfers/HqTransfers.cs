@@ -229,3 +229,22 @@ public class UpdateHqTransferDto
     public string TransactionNumber { get; set; } = string.Empty;
     public DateTime TransactionDate { get; set; }
 }
+
+/// <summary>
+/// Register statistics band shown above the §22.S.1 grid (UC-TRF-01). Counts follow the
+/// caller's country claim — the list read's scope — so the band and the grid beneath it
+/// can never disagree about what is counted.
+/// </summary>
+public class HqTransferStatisticsDto
+{
+    public int Total { get; set; }
+
+    /// <summary>
+    /// Σ <c>AmountOfPayment</c> over the scoped transfers — the header's payment amount,
+    /// not the detail lines' partial allocations.
+    /// </summary>
+    public decimal TotalAmount { get; set; }
+
+    /// <summary>Transfers filed since the first day of the current (UTC) month.</summary>
+    public int AddedThisMonth { get; set; }
+}

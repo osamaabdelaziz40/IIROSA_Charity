@@ -250,6 +250,21 @@ export interface BatchNumberGeneration {
 }
 
 /**
+ * Register statistics band above the payment-groups grid (UC-5.8, §15.S.1) — batch-level
+ * counts, caller-scoped server-side exactly like the list read: for a Charity-role caller,
+ * batches with at least one live row tenanted to their charity; head-office callers see all.
+ * (Named "Register" to keep clear of the never-wired OrphanPaymentStatistics above.)
+ */
+export interface OrphanPaymentRegisterStatistics {
+  total: number;
+  /** Batches marked as uploaded (isBatchUploaded, UC-5.7). */
+  uploaded: number;
+  /** Batches not yet uploaded — total minus uploaded, so the pair always sums to total. */
+  pendingUpload: number;
+  addedThisMonth: number;
+}
+
+/**
  * UC-RPT-32 (§23.U.32 صفحات ملخص الدفعة) — the batch view's totals band: the batch's cover
  * figures from GET /api/Dashboard/payment-summary. Every figure arrives server-side
  * null-safe; zeros are a valid result (an empty batch), never an error.

@@ -2,6 +2,7 @@ using IIROSA.Application.DTOs.OfficeProjectManagement;
 using IIROSA.Application.Interfaces;
 using IIROSA.Domain.Entities;
 using IIROSA.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using AutoMapper;
 using FluentValidation;
@@ -89,6 +90,61 @@ public class OfficeProjectService : IOfficeProjectService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error occurred while retrieving office projects with filter: {@Filter}", filter);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Register statistics for the band above the projects grid (UC-OFP-01).
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not filter-reactive: the band describes the caller's whole register,
+    /// not the current search. The scope rides <see cref="ApplyCallerScope"/> with a blank
+    /// filter — the same country pin the list read applies, so the numbers are exactly
+    /// what the grid under it would show on page one.
+    /// </remarks>
+    public async Task<ProjectStatisticsDto> GetStatisticsAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Getting office project register statistics");
+
+            var scoped = new OfficeProjectFilterDto();
+            ApplyCallerScope(scoped);
+
+            var now = DateTime.UtcNow;
+            var yearStart = new DateTime(now.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            var query = _projectRepository.TableNoTracking.Where(p => !p.IsDeleted);
+            if (scoped.CountryId.HasValue)
+            {
+                query = query.Where(p => p.FK_CountryId == scoped.CountryId.Value);
+            }
+
+            // One grouped round-trip for every scalar card; null when the scope matches no rows.
+            var totals = await query
+                .GroupBy(_ => 1)
+                .Select(g => new
+                {
+                    Total = g.Count(),
+                    Completed = g.Count(p => p.IsFinished),
+                    ThisYear = g.Count(p => p.ProjectDate >= yearStart),
+                    AddedThisMonth = g.Count(p => p.CreatedOn >= monthStart)
+                })
+                .FirstOrDefaultAsync();
+
+            return new ProjectStatisticsDto
+            {
+                Total = totals?.Total ?? 0,
+                Completed = totals?.Completed ?? 0,
+                ThisYear = totals?.ThisYear ?? 0,
+                AddedThisMonth = totals?.AddedThisMonth ?? 0
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving office project register statistics");
             throw;
         }
     }

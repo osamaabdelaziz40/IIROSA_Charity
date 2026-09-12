@@ -9,6 +9,7 @@ import { Subject, Subscription, takeUntil } from 'rxjs';
 import {
   OrphanPaymentDto,
   OrphanPaymentSearchRequest,
+  OrphanPaymentRegisterStatistics,
   CURRENCY_OPTIONS,
   SPONSORSHIP_STATUS_OPTIONS
 } from '../models/orphan-payment.model';
@@ -59,6 +60,10 @@ export class OrphanPaymentListComponent implements OnInit, OnDestroy {
   paymentGroups: OrphanPaymentDto[] = [];
   totalRecords = 0;
   loading = false;
+
+  // Register statistics band (UC-5.8) — batch-level counts, caller-scoped server-side
+  // like the list itself; describes the caller's whole register, not the active filters.
+  statistics: OrphanPaymentRegisterStatistics | null = null;
 
   // Review P3b: a failed load renders an explicit error state instead of a silently
   // blank grid (a 403 used to vanish here).
@@ -148,6 +153,7 @@ export class OrphanPaymentListComponent implements OnInit, OnDestroy {
     });
 
     this.loadPaymentGroups();
+    this.loadStatistics();
 
     // Check for query params for navigation from other components
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
@@ -288,6 +294,20 @@ export class OrphanPaymentListComponent implements OnInit, OnDestroy {
           this.loading = false;
           this.loadError = true;
         }
+      });
+  }
+
+  /**
+   * Register statistics band — describes the caller's whole register (not the active
+   * filters). Silent-fail: the band is decorative context and must not surface toasts
+   * (the grid keeps its explicit error state above).
+   */
+  loadStatistics(): void {
+    this.orphanPaymentService.getStatistics()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: statistics => this.statistics = statistics,
+        error: () => console.error('Error loading payment-group statistics')
       });
   }
 

@@ -1504,6 +1504,64 @@ public class FamilyService : IFamilyService
     }
 
     /// <summary>
+    /// Register statistics for the band above the family list pages (families / refugee / housing).
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not filter-reactive: the band describes the caller's whole register
+    /// scope, not the current search. The scope ladder mirrors <see cref="GetFamiliesAsync"/>
+    /// exactly — soft-deleted families are dropped, a Charity-role caller is pinned to its
+    /// own register, and everyone else sees the whole register (families carry no country
+    /// scope). <paramref name="familyType"/> narrows the counts to one register so the
+    /// refugee and housing pages each describe their own register rather than all families.
+    /// </remarks>
+    public async Task<FamilyStatisticsDto> GetStatisticsAsync(string? familyType, Guid? userCharityId, string? userRole)
+    {
+        _logger.LogInformation("Getting family register statistics for user role: {Role}, family type: {FamilyType}", userRole, familyType);
+
+        // TableNoTracking is the lightest queryable the repository surface offers — the counts
+        // need neither navigation includes nor change tracking, unlike the list's
+        // IncludeNavigationProperties() query.
+        var query = _familyRepository.TableNoTracking;
+
+        // No global soft-delete filter exists — deleted families must be dropped explicitly
+        // or they would count forever.
+        query = query.Where(f => !f.IsDeleted);
+
+        // Apply data isolation - Charity users see only their own families
+        if (userRole == "Charity" && userCharityId.HasValue)
+        {
+            query = query.Where(f => f.FK_CharityId == userCharityId.Value);
+        }
+
+        // Register discriminator — same parse as the list (invalid values ignored)
+        if (!string.IsNullOrEmpty(familyType) &&
+            Enum.TryParse<Domain.Enums.FamilyType>(familyType, ignoreCase: true, out var parsedFamilyType))
+        {
+            query = query.Where(f => f.FamilyType == parsedFamilyType);
+        }
+
+        // One grouped round-trip for every scalar card; null when the scope matches no rows.
+        var now = DateTime.UtcNow;
+        var totals = await query
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                Active = g.Count(f => f.IsActive),
+                AddedThisMonth = g.Count(f => f.CreatedOn.Year == now.Year && f.CreatedOn.Month == now.Month)
+            })
+            .FirstOrDefaultAsync();
+
+        return new FamilyStatisticsDto
+        {
+            Total = totals?.Total ?? 0,
+            Active = totals?.Active ?? 0,
+            Inactive = (totals?.Total ?? 0) - (totals?.Active ?? 0),
+            AddedThisMonth = totals?.AddedThisMonth ?? 0
+        };
+    }
+
+    /// <summary>
     /// Export the family list to Excel — widens the list page to all matching rows and
     /// reuses <see cref="GetFamiliesAsync"/> so the sheet always matches what the caller
     /// can see on screen (same scoping, same filters, same ordering).

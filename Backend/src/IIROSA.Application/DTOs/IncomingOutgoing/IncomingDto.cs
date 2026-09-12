@@ -105,3 +105,23 @@ public class IncomingFilterDto
     public string? SortBy { get; set; } = "Date";
     public string? SortOrder { get; set; } = "desc";
 }
+
+/// <summary>
+/// Register statistics band shown above the §21.S.1 incoming grid (UC-COR-01).
+/// Counts follow the caller's scope — the same ladder as the register read — so the
+/// band and the grid beneath it can never disagree about what is counted.
+/// </summary>
+public class IncomingStatisticsDto
+{
+    public int Total { get; set; }
+
+    /// <summary>
+    /// Letters of the current year, matched on the register's <c>Year</c> column (stamped
+    /// from the letter date at create) — the register's own year notion, not CreatedOn.
+    /// Legacy rows carrying a NULL year fall out of this one card only.
+    /// </summary>
+    public int ThisYear { get; set; }
+
+    /// <summary>Letters registered since the first day of the current (UTC) month.</summary>
+    public int AddedThisMonth { get; set; }
+}

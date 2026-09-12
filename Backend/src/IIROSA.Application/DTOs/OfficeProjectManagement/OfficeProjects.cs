@@ -173,6 +173,25 @@ public class OfficeProjectFilterDto
 }
 
 /// <summary>
+/// Register statistics for the band above the projects grid (UC-OFP-01).
+/// Counts follow the caller's country scope — the same pin the list read applies —
+/// so the band describes the caller's whole register, not the current search.
+/// </summary>
+public class ProjectStatisticsDto
+{
+    public int Total { get; set; }
+
+    /// <summary>Projects marked finished (IsFinished, UC-7.9).</summary>
+    public int Completed { get; set; }
+
+    /// <summary>Projects whose start date (ProjectDate) falls in the current year.</summary>
+    public int ThisYear { get; set; }
+
+    /// <summary>Projects created since the first day of the current (UTC) month.</summary>
+    public int AddedThisMonth { get; set; }
+}
+
+/// <summary>
 /// Mark project as completed DTO (module completion tracking, feeds `#/office-development-projects/progress`)
 /// </summary>
 public class MarkProjectCompletedDto

@@ -96,6 +96,33 @@ public class IncomingRepository : Repository<Incoming>, IIncomingRepository
         return (max ?? 0) + 1;
     }
 
+    /// <summary>
+    /// Register statistics for the band above the §21.S.1 grid (UC-COR-01) — one grouped
+    /// round-trip over the same filtered query as the register read, so the band and the
+    /// grid can never disagree about scope. Null when the scope matches no rows.
+    /// </summary>
+    public async Task<(int Total, int ThisYear, int AddedThisMonth)> GetRegisterStatisticsAsync(
+        IncomingFilterCriteria criteria)
+    {
+        var now = DateTime.UtcNow;
+        var currentYear = now.Year;
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var totals = await BuildFilteredQuery(criteria)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                // The register's year column (stamped from the letter date at create) —
+                // legacy NULL-year rows fall out of this card only
+                ThisYear = g.Count(i => i.Year == currentYear),
+                AddedThisMonth = g.Count(i => i.CreatedOn >= monthStart)
+            })
+            .FirstOrDefaultAsync();
+
+        return (totals?.Total ?? 0, totals?.ThisYear ?? 0, totals?.AddedThisMonth ?? 0);
+    }
+
     private IQueryable<Incoming> BuildFilteredQuery(IncomingFilterCriteria criteria)
     {
         // Soft delete is NOT a global query filter in this platform — the register

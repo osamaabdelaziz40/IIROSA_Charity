@@ -8,7 +8,8 @@ import {
   OfficeProjectDto,
   OfficeProjectFilter,
   OfficeProjectListItem,
-  OfficeProjectPagedResult
+  OfficeProjectPagedResult,
+  OfficeProjectStatistics
 } from '../models/office-project.model';
 
 /**
@@ -64,6 +65,18 @@ export class OfficeProjectService {
     return this.http.get<OfficeProjectPagedResult<OfficeProjectListItem>>(this.apiUrl, {
       headers: this.getHeaders(),
       params: this.buildHttpParams(filter)
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Register statistics for the band above the list (UC-OFP-01) — caller country-scoped
+   * server-side; describes the whole register, not the current search
+   */
+  getStatistics(): Observable<OfficeProjectStatistics> {
+    return this.http.get<OfficeProjectStatistics>(`${this.apiUrl}/statistics`, {
+      headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
     );

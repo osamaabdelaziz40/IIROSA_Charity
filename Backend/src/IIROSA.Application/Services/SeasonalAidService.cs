@@ -884,6 +884,53 @@ public class SeasonalAidService : ISeasonalAidService
         });
     }
 
+    /// <summary>
+    /// Register statistics for the band above the campaigns grid (UC-9.6).
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not filter-reactive: the band describes the caller's whole register,
+    /// not the current search. The scope rides <see cref="ApplyCallerScope"/> with a blank
+    /// filter — the same country pin the list read applies, so the numbers are exactly
+    /// what the grid under it would show on page one.
+    /// </remarks>
+    public async Task<CampaignStatisticsDto> GetCampaignStatisticsAsync()
+    {
+        _logger.LogInformation("Getting campaign register statistics");
+
+        var scoped = ApplyCallerScope(new SeasonalAidCampaignFilterDto());
+
+        var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var query = _campaignRepository.TableNoTracking.Where(c => !c.IsDeleted);
+
+        // Same country rule as the list: a pinned caller matches their country exactly —
+        // and the DenyAll sentinel (-1) matches no row, so an unscopeable caller gets zeros.
+        if (scoped.CountryId.HasValue)
+        {
+            query = query.Where(c => c.CountryId == scoped.CountryId.Value);
+        }
+
+        // One grouped round-trip for every scalar card; null when the scope matches no rows.
+        var totals = await query
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                Active = g.Count(c => c.IsActive),
+                Closed = g.Count(c => c.IsClosed),
+                AddedThisMonth = g.Count(c => c.CreatedOn >= monthStart)
+            })
+            .FirstOrDefaultAsync();
+
+        return new CampaignStatisticsDto
+        {
+            Total = totals?.Total ?? 0,
+            Active = totals?.Active ?? 0,
+            Closed = totals?.Closed ?? 0,
+            AddedThisMonth = totals?.AddedThisMonth ?? 0
+        };
+    }
+
     #endregion
 
     #region UC-9.7: View Campaign Beneficiaries

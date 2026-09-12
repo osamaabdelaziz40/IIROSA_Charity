@@ -339,6 +339,34 @@ public class FamiliesController : ControllerBase
     }
 
     /// <summary>
+    /// Register statistics for the band above the family list pages — same caller scope as
+    /// the list: a Charity-role caller gets its own register's counts, everyone else the
+    /// whole register. The optional familyType discriminator narrows to one register
+    /// (the refugee and housing pages send Refugee / Housing).
+    /// </summary>
+    // Literal segment beats the {id} route, but it stays above it by convention so the
+    // pairing is visible where GetFamily is read.
+    [HttpGet("statistics")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
+    [ProducesResponseType(typeof(FamilyStatisticsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<FamilyStatisticsDto>> GetStatistics([FromQuery] string? familyType)
+    {
+        try
+        {
+            var userCharityId = GetUserCharityId();
+            var userRole = GetUserRole();
+
+            var statistics = await _familyService.GetStatisticsAsync(familyType, userCharityId, userRole);
+            return Ok(statistics);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving family statistics");
+            return StatusCode(500, new { message = "Error retrieving family statistics", error = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Export the family list to Excel (UC-4.12: View Family List - Export) — same
     /// filters and scoping as the list, with the page widened to every matching row.
     /// </summary>

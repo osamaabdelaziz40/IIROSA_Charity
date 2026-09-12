@@ -12,6 +12,12 @@ public interface INotificationsLogService
     /// <summary>Admin register read — every pushed notification, paged (UC-NTF list).</summary>
     Task<NotificationsLogPagedResult> GetFilteredAsync(NotificationsLogFilterDto filter);
 
+    /// <summary>
+    /// Register statistics for the band above the admin notifications grid (UC-NTF list) —
+    /// the whole register, matching GetFilteredAsync's unscoped admin semantics.
+    /// </summary>
+    Task<NotificationsLogStatisticsDto> GetStatisticsAsync();
+
     /// <summary>Detail read for the edit screen (UC-NTF edit).</summary>
     Task<NotificationsLogListDto?> GetByIdAsync(Guid id);
 

@@ -67,6 +67,25 @@ public class CheckManagementController : ControllerBase
     }
 
     /// <summary>
+    /// Register statistics for the band above the cheque register (§16.S.1, UC-CHQ-01) —
+    /// same tenancy as the register read: tenancy is applied by the service from the token.
+    /// </summary>
+    [HttpGet("statistics")]
+    [Authorize(Roles = ReadRoles)]
+    public async Task<ActionResult<CheckStatisticsDto>> GetStatistics()
+    {
+        try
+        {
+            return Ok(await _checkService.GetStatisticsAsync());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving cheque statistics");
+            return StatusCode(500, new { message = "An error occurred while retrieving cheque statistics" });
+        }
+    }
+
+    /// <summary>
     /// The cheque register (§16.S.1 grid) as an Excel workbook — the current filters,
     /// every matching row. Same scope rules as the register read: tenancy is applied
     /// by the service from the token.

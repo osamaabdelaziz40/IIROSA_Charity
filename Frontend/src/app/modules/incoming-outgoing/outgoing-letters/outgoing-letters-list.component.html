@@ -6,9 +6,65 @@
   [actions]="pageActions">
 </app-page-header>
 
+<!-- Statistics band — scoped server-side; describes the caller's whole register -->
+<app-collapsible-card titleKey="incomingOutgoing.stats.title" icon="fe-bar-chart-2" *ngIf="statistics">
+  <div class="row">
+    <div class="col-6 col-md-4">
+      <div class="card shadow mb-4 h-100">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-3 text-center">
+              <span class="circle circle-md bg-primary">
+                <span class="fe fe-mail fe-24 text-white"></span>
+              </span>
+            </div>
+            <div class="col">
+              <h3 class="mb-0">{{ statistics.total }}</h3>
+              <p class="small text-muted mb-0">{{ 'incomingOutgoing.stats.total' | translate }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="card shadow mb-4 h-100">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-3 text-center">
+              <span class="circle circle-md bg-success">
+                <span class="fe fe-calendar fe-24 text-white"></span>
+              </span>
+            </div>
+            <div class="col">
+              <h3 class="mb-0">{{ statistics.thisYear }}</h3>
+              <p class="small text-muted mb-0">{{ 'incomingOutgoing.stats.thisYear' | translate }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="card shadow mb-4 h-100">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-3 text-center">
+              <span class="circle circle-md bg-info">
+                <span class="fe fe-clock fe-24 text-white"></span>
+              </span>
+            </div>
+            <div class="col">
+              <h3 class="mb-0">{{ statistics.addedThisMonth }}</h3>
+              <p class="small text-muted mb-0">{{ 'incomingOutgoing.stats.addedThisMonth' | translate }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</app-collapsible-card>
+
 <!-- Filters Card -->
-<div class="card shadow mb-4">
-  <div class="card-body">
+<app-collapsible-card titleKey="common.filters" icon="fe-filter">
     <!-- Filters using shared components (§21.S.4) -->
     <form [formGroup]="filterForm">
       <div class="row mb-3">
@@ -117,12 +173,10 @@
         </div>
       </div>
     </form>
-  </div>
-</div>
+</app-collapsible-card>
 
 <!-- Data Table Card -->
-<div class="card shadow mb-4">
-  <div class="card-body">
+<app-collapsible-card titleKey="common.results" icon="fe-list" [expanded]="true">
     <!-- Loading State -->
     <div *ngIf="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status">
@@ -204,5 +258,4 @@
       [totalCount]="totalCount"
       (pageChange)="changePage($event)">
     </app-pagination>
-  </div>
-</div>
+</app-collapsible-card>

@@ -44,3 +44,18 @@ public class EmployeeExportDto
     public DateTime? HireDate { get; set; }
     public DateTime CreatedOn { get; set; }
 }
+
+/// <summary>
+/// Register statistics band shown above the employees grid (UC-2.5).
+/// Head-office register semantics — like the list itself, the counts are not
+/// narrowed to a caller charity/country because the employee register is an HQ
+/// catalogue with no per-charity rows.
+/// </summary>
+public class EmployeeStatisticsDto
+{
+    public int Total { get; set; }
+    public int Active { get; set; }
+    public int Inactive { get; set; }
+    /// <summary>Employees registered since the first day of the current (UTC) month.</summary>
+    public int AddedThisMonth { get; set; }
+}

@@ -15,17 +15,18 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { NotificationLogService } from '../services/notification-log.service';
-import { NotificationsLog } from '../models/notification.model';
+import { NotificationsLog, NotificationsLogStatistics } from '../models/notification.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { SignalRService } from '../../../core/services/signalr.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PaginationComponent, BreadcrumbComponent, PageHeaderComponent, BreadcrumbItem } from '../../../shared/components';
 import type { PageAction } from '../../../shared/components/page-header/page-header.component';
+import { SharedModule } from '../../../shared/shared.module';
 
 @Component({
   selector: 'app-notification-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TranslateModule, PaginationComponent, BreadcrumbComponent, PageHeaderComponent],
+  imports: [CommonModule, ReactiveFormsModule, TranslateModule, PaginationComponent, BreadcrumbComponent, PageHeaderComponent, SharedModule],
   templateUrl: './notification-list.component.html',
   styleUrls: ['./notification-list.component.scss']
 })
@@ -42,6 +43,13 @@ export class NotificationListComponent implements OnInit, OnDestroy {
   totalPages = 0;
 
   filterForm: FormGroup;
+
+  /**
+   * Register statistics band (UC-NTF list) — admin register only: the endpoint sits
+   * behind the same Admin/SuperAdmin roles as the register read, so it is loaded (and
+   * shown) exclusively for managers. Silent-fail; not tied to the filters.
+   */
+  statistics: NotificationsLogStatistics | null = null;
 
   /** Admin/SuperAdmin see the register and the management actions (server-authorised). */
   canManage = false;
@@ -82,6 +90,10 @@ export class NotificationListComponent implements OnInit, OnDestroy {
     }
 
     this.loadNotifications();
+
+    if (this.canManage) {
+      this.loadStatistics();
+    }
 
     // Live refresh: a push landing while the screen is open belongs in the grid
     // immediately (for the admin register too — it lists every pushed row).
@@ -128,6 +140,19 @@ export class NotificationListComponent implements OnInit, OnDestroy {
         this.notification.error(this.translate.instant('notifications.loadFailed'));
       }
     });
+  }
+
+  /**
+   * Register statistics band — describes the whole admin register (not the active
+   * filters). Silent-fail: the band is decorative context and must not surface toasts.
+   */
+  loadStatistics(): void {
+    this.notificationLogService.getStatistics()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: statistics => this.statistics = statistics,
+        error: () => console.error('Error loading notification statistics')
+      });
   }
 
   onSearch(): void {

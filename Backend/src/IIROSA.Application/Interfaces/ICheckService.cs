@@ -12,6 +12,12 @@ public interface ICheckService
     /// <summary>UC-CHQ-01 — paged cheque register.</summary>
     Task<CheckPagedResult<CheckListDto>> GetChecksAsync(CheckFilterDto filter);
 
+    /// <summary>
+    /// Register statistics for the band above the cheque register (§16.S.1, UC-CHQ-01) —
+    /// same caller scope as the register read: charity pin or head-office country pin.
+    /// </summary>
+    Task<CheckStatisticsDto> GetStatisticsAsync();
+
     /// <summary>The register (§16.S.1 grid columns) as an Excel workbook — every filtered row.</summary>
     Task<byte[]> ExportChecksToExcelAsync(CheckFilterDto filter);
 

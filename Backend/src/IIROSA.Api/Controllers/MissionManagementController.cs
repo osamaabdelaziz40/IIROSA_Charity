@@ -56,6 +56,28 @@ public class MissionManagementController : ControllerBase
     }
 
     /// <summary>
+    /// Register statistics for the band above the missions grid (UC-MSN-01) — same
+    /// caller scope as the list: the band describes the caller's whole register,
+    /// not the current search.
+    /// </summary>
+    // Literal segment beats the {id} route, but it stays above it by convention so the
+    // pairing with the list is visible where GetMissions is read.
+    [HttpGet("statistics")]
+    public async Task<ActionResult<MissionStatisticsDto>> GetStatistics()
+    {
+        try
+        {
+            var statistics = await _missionService.GetStatisticsAsync();
+            return Ok(statistics);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving mission statistics");
+            return StatusCode(500, new { message = "An error occurred while retrieving mission statistics" });
+        }
+    }
+
+    /// <summary>
     /// Get mission by ID (UC-MSN-07: view mission details)
     /// </summary>
     [HttpGet("{id}")]

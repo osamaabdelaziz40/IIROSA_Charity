@@ -17,6 +17,14 @@ public interface IIncomingRepository : IRepository<Incoming>
         int pageNumber,
         int pageSize);
 
+    /// <summary>
+    /// Register statistics for the band above the §21.S.1 grid — one grouped round-trip
+    /// over the same filtered query as <see cref="GetPagedAsync"/> (scope pinning happens
+    /// in the service, before this call; ThisYear matches the register's Year column).
+    /// </summary>
+    Task<(int Total, int ThisYear, int AddedThisMonth)> GetRegisterStatisticsAsync(
+        IncomingFilterCriteria criteria);
+
     /// <summary>Detail read with the navigations the §21.S.2 view renders.</summary>
     Task<Incoming?> GetWithDetailsAsync(Guid id);
 

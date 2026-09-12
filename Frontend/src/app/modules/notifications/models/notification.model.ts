@@ -45,3 +45,15 @@ export interface NotificationsLogPagedResult {
   page: number;
   pageSize: number;
 }
+
+/**
+ * Register statistics band above the admin notifications grid (UC-NTF list) — the whole
+ * admin register, matching the list's unscoped semantics. A row may address both
+ * audiences at once, so toUsers + toCharities can exceed total.
+ */
+export interface NotificationsLogStatistics {
+  total: number;
+  toUsers: number;
+  toCharities: number;
+  addedThisMonth: number;
+}

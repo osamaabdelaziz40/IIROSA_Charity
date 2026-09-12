@@ -112,6 +112,15 @@ public interface IFamilyService
     Task<(IEnumerable<FamilyListDto> Items, int TotalCount)> GetFamiliesAsync(FamilyFilterDto filter, Guid? userCharityId, string? userRole);
 
     /// <summary>
+    /// Register statistics for the band above the family list pages. Scopes exactly like
+    /// <see cref="GetFamiliesAsync"/> (soft-deleted dropped, a Charity-role caller pinned to
+    /// its own register, everyone else unfiltered) and narrows to one register through
+    /// <paramref name="familyType"/> ("Regular"/"Housing"/"Refugee", case-insensitive;
+    /// null/empty = no discriminator).
+    /// </summary>
+    Task<FamilyStatisticsDto> GetStatisticsAsync(string? familyType, Guid? userCharityId, string? userRole);
+
+    /// <summary>
     /// Export the family list to Excel — the same query and scoping as
     /// <see cref="GetFamiliesAsync"/> with the page widened to every matching row.
     /// </summary>

@@ -83,6 +83,41 @@ public class NotificationsLogService : INotificationsLogService
         };
     }
 
+    /// <summary>
+    /// Register statistics for the band above the admin notifications grid (UC-NTF list).
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not filter-reactive: the band describes the whole register, not the
+    /// current search. Unscoped by design — GetFilteredAsync (the read this band sits above)
+    /// is the admin register with no caller narrowing. One grouped round-trip over the
+    /// no-tracking queryable; soft-deleted rows stay out via !IsDeleted, as in every read.
+    /// </remarks>
+    public async Task<NotificationsLogStatisticsDto> GetStatisticsAsync()
+    {
+        var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        // One grouped round-trip for every scalar card; null when the register has no live rows.
+        var totals = await _notificationsLogRepository.TableNoTracking
+            .Where(n => !n.IsDeleted)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                ToUsers = g.Count(n => n.IsUser),
+                ToCharities = g.Count(n => n.IsCharity),
+                AddedThisMonth = g.Count(n => n.CreatedOn >= monthStart)
+            })
+            .FirstOrDefaultAsync();
+
+        return new NotificationsLogStatisticsDto
+        {
+            Total = totals?.Total ?? 0,
+            ToUsers = totals?.ToUsers ?? 0,
+            ToCharities = totals?.ToCharities ?? 0,
+            AddedThisMonth = totals?.AddedThisMonth ?? 0
+        };
+    }
+
     /// <summary>Detail read for the edit screen.</summary>
     public async Task<NotificationsLogListDto?> GetByIdAsync(Guid id)
     {

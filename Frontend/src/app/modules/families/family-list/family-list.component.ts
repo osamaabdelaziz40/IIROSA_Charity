@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { FamilyDto, FamilySearchRequest } from '../models/family.model';
+import { FamilyDto, FamilySearchRequest, FamilyStatistics } from '../models/family.model';
 import { FamilyService } from '../services/family.service';
 import { CharityService } from '../../charities/services/charity.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -47,6 +47,9 @@ export class FamilyListComponent implements OnInit, OnDestroy {
   currentPage = 1;
   pageSize = 20;
   totalPages = 0;
+
+  /** Statistics band — describes the caller's whole register, not the current filter. */
+  statistics: FamilyStatistics | null = null;
 
   filterForm: FormGroup;
 
@@ -126,6 +129,7 @@ export class FamilyListComponent implements OnInit, OnDestroy {
     });
 
     this.loadFamilies();
+    this.loadStatistics();
   }
 
   ngOnDestroy(): void {
@@ -214,6 +218,20 @@ export class FamilyListComponent implements OnInit, OnDestroy {
         this.loading = false;
       }
     });
+  }
+
+  /** Statistics band — silent fail: the list stays fully usable without it. */
+  loadStatistics(): void {
+    this.familyService.getStatistics()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (statistics) => {
+          this.statistics = statistics;
+        },
+        error: (error: any) => {
+          console.error('Error loading family statistics:', error);
+        }
+      });
   }
 
   onSearch(): void {

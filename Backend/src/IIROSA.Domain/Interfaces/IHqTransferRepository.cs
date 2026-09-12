@@ -33,6 +33,15 @@ public interface IHqTransferRepository : IRepository<HqTransfer>
         int pageSize = 10);
 
     /// <summary>
+    /// Register statistics for the band above the §22.S.1 grid — one grouped round-trip over
+    /// the scoped rows (!IsDeleted applied here; TotalAmount sums the header's
+    /// AmountOfPayment, not the detail lines). Scope pinning happens in the service, before
+    /// this call.
+    /// </summary>
+    Task<(int Total, decimal TotalAmount, int AddedThisMonth)> GetRegisterStatisticsAsync(
+        Expression<Func<HqTransfer, bool>>? filter = null);
+
+    /// <summary>
     /// Eager-load the lookup navigations shared by every read path
     /// </summary>
     IQueryable<HqTransfer> IncludeNavigationProperties();

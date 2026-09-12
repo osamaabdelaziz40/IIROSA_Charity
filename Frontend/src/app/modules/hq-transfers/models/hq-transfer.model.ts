@@ -117,3 +117,10 @@ export interface SaveHqTransferDetailLineRequest {
   arrivalDate?: string | null;
   arrivalAmount?: number | null;
 }
+
+/** Register statistics band above the §22.S.1 grid — caller-scoped server-side (country claim) */
+export interface HqTransferStatistics {
+  total: number;
+  totalAmount: number;
+  addedThisMonth: number;
+}

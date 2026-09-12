@@ -20,7 +20,8 @@ import {
   UpdateBeneficiariesResult,
   SetFamilyReceivedFlagRequest,
   CloseCampaignRequest,
-  SeasonalAidPagedResult
+  SeasonalAidPagedResult,
+  SeasonalAidCampaignStatistics
 } from '../models/seasonal-aid.model';
 
 interface RegisterBeneficiariesResponse {
@@ -48,6 +49,11 @@ export class SeasonalAidService {
   getCampaigns(filter?: Partial<SeasonalAidCampaignFilter>): Observable<SeasonalAidPagedResult<SeasonalAidCampaignListItem>> {
     return this.http.get<SeasonalAidPagedResult<SeasonalAidCampaignListItem>>(
       `${this.apiUrl}/campaigns`, { params: this.buildParams(filter) });
+  }
+
+  /** Register statistics band (UC-9.6) — caller country-scoped server-side. */
+  getStatistics(): Observable<SeasonalAidCampaignStatistics> {
+    return this.http.get<SeasonalAidCampaignStatistics>(`${this.apiUrl}/campaigns/statistics`);
   }
 
   getActiveCampaigns(): Observable<SeasonalAidCampaignListItem[]> {

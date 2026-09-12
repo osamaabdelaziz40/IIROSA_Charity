@@ -112,6 +112,43 @@ public class OutgoingService : IOutgoingService
         return (dtos, totalCount, filter.PageNumber);
     }
 
+    /// <summary>
+    /// Register statistics for the band above the §21.S.4 grid (UC-COR-10).
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not filter-reactive: the band describes the caller's whole register
+    /// scope, not the current search. The scope rides the same ladder as the register read
+    /// — <see cref="ApplyCallerScope(OutgoingFilterDto)"/> over a blank filter plus the
+    /// caller's country claim — so the band and the grid beneath it can never disagree
+    /// about what is counted.
+    /// </remarks>
+    public async Task<OutgoingStatisticsDto> GetStatisticsAsync()
+    {
+        _logger.LogInformation("Getting outgoing letter register statistics");
+
+        // Blank filter ⇒ only the scope pins apply: the caller's charity claim (pinned)
+        // and the country claim (criteria) — the register read's first half, unchanged.
+        var filter = new OutgoingFilterDto();
+        ApplyCallerScope(filter);
+
+        var criteria = new OutgoingFilterCriteria
+        {
+            CharityId = filter.CharityId,
+            // Country dimension of tenancy (review P7): pinned from the caller's claims
+            // only — never a client assertion — mirroring MissionService.ApplyCallerScope
+            CountryId = _currentUser.CountryId
+        };
+
+        var (total, thisYear, addedThisMonth) = await _outgoingRepository.GetRegisterStatisticsAsync(criteria);
+
+        return new OutgoingStatisticsDto
+        {
+            Total = total,
+            ThisYear = thisYear,
+            AddedThisMonth = addedThisMonth
+        };
+    }
+
     // ========== Writes ==========
 
     /// <summary>

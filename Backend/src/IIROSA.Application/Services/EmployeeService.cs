@@ -3,6 +3,7 @@ using IIROSA.Application.Interfaces;
 using IIROSA.Domain.Entities;
 using IIROSA.Domain.Interfaces;
 using Framework.Identity.Data.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using AutoMapper;
 
@@ -132,6 +133,44 @@ public class EmployeeService : IEmployeeService
             _logger.LogError(ex, "Error occurred while retrieving employees with filter: {@Filter}", filter);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Register statistics for the band above the employees grid (UC-2.5).
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not filter-reactive: the band describes the whole register, not the
+    /// current search. Unscoped by design — the list read this band sits above is itself an
+    /// HQ register with no caller scoping. Counted over <see cref="IEmployeeRepository"/>'s
+    /// no-tracking queryable rather than <c>GetAllWithDepartmentAsync</c> (the list's
+    /// materialising read): the band needs no Department navigation, so one grouped
+    /// aggregate round-trip is the lighter shape for the same live-row set (!IsDeleted).
+    /// </remarks>
+    public async Task<EmployeeStatisticsDto> GetStatisticsAsync()
+    {
+        _logger.LogInformation("Getting employee register statistics");
+
+        var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        // One grouped round-trip for every scalar card; null when the register has no live rows.
+        var totals = await _employeeRepository.TableNoTracking
+            .Where(e => !e.IsDeleted)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                Active = g.Count(e => e.IsActive),
+                AddedThisMonth = g.Count(e => e.CreatedOn >= monthStart)
+            })
+            .FirstOrDefaultAsync();
+
+        return new EmployeeStatisticsDto
+        {
+            Total = totals?.Total ?? 0,
+            Active = totals?.Active ?? 0,
+            Inactive = (totals?.Total ?? 0) - (totals?.Active ?? 0),
+            AddedThisMonth = totals?.AddedThisMonth ?? 0
+        };
     }
 
     /// <summary>

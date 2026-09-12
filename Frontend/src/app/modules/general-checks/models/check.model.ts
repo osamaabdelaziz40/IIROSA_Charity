@@ -165,3 +165,15 @@ export interface BankChequePositions {
   amountWordsX: number | null;
   amountWordsY: number | null;
 }
+
+/**
+ * Register statistics band above the cheque register (§16.S.1, UC-CHQ-01) — caller-scoped
+ * server-side (charity pin or head-office country pin), so the counts match what the
+ * grid under them can show.
+ */
+export interface CheckStatistics {
+  total: number;
+  /** Cheques dated in the current calendar year (checkDate, تاريخ الشيك). */
+  thisYear: number;
+  addedThisMonth: number;
+}

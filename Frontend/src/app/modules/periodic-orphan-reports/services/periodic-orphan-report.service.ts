@@ -12,6 +12,7 @@ import {
   PeriodicOrphanReportFilterDto,
   PeriodicOrphanReportSummaryDto,
   PeriodicOrphanReportPagedResult,
+  PeriodicOrphanReportStatistics,
   OrphanReportStatusCounts,
   OrphanLookupDto,
   OrphanReportFormPrintPayload
@@ -141,6 +142,18 @@ export class PeriodicOrphanReportService {
     return this.http.get<PeriodicOrphanReportPagedResult>(`${this.apiUrl}`, {
       headers: this.getHeaders(),
       params: this.buildHttpParams(filter)
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Register statistics for the band above the periodic reports grid (§14.S.1, UC-ORR-01) —
+   * caller-scoped server-side (charity pin or country pin), like the register read.
+   */
+  getStatistics(): Observable<PeriodicOrphanReportStatistics> {
+    return this.http.get<PeriodicOrphanReportStatistics>(`${this.apiUrl}/statistics`, {
+      headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
     );

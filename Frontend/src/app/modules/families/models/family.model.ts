@@ -963,3 +963,13 @@ export interface FamilyFollowUpPagedResult {
   items: FamilyFollowUpRow[];
   totalCount: number;
 }
+
+// ==================== Register Statistics ====================
+
+/** Statistics band above the family list pages — scoped server-side to the caller's register. */
+export interface FamilyStatistics {
+  total: number;
+  active: number;
+  inactive: number;
+  addedThisMonth: number;
+}

@@ -6,8 +6,81 @@
   [icon]="'fe fe-users'">
 </app-page-header>
 
-<div class="card shadow mb-4">
-  <div class="card-body">
+<!-- Statistics band — scoped server-side; describes the caller's whole register -->
+<app-collapsible-card titleKey="families.stats.title" icon="fe-bar-chart-2" *ngIf="statistics">
+  <div class="row">
+    <div class="col-6 col-md-3">
+      <div class="card shadow mb-4 h-100">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-3 text-center">
+              <span class="circle circle-md bg-primary">
+                <span class="fe fe-users fe-24 text-white"></span>
+              </span>
+            </div>
+            <div class="col">
+              <h3 class="mb-0">{{ statistics.total }}</h3>
+              <p class="small text-muted mb-0">{{ 'families.stats.total' | translate }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card shadow mb-4 h-100">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-3 text-center">
+              <span class="circle circle-md bg-success">
+                <span class="fe fe-check-circle fe-24 text-white"></span>
+              </span>
+            </div>
+            <div class="col">
+              <h3 class="mb-0">{{ statistics.active }}</h3>
+              <p class="small text-muted mb-0">{{ 'families.stats.active' | translate }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card shadow mb-4 h-100">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-3 text-center">
+              <span class="circle circle-md bg-warning">
+                <span class="fe fe-slash fe-24 text-white"></span>
+              </span>
+            </div>
+            <div class="col">
+              <h3 class="mb-0">{{ statistics.inactive }}</h3>
+              <p class="small text-muted mb-0">{{ 'families.stats.inactive' | translate }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card shadow mb-4 h-100">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-3 text-center">
+              <span class="circle circle-md bg-info">
+                <span class="fe fe-calendar fe-24 text-white"></span>
+              </span>
+            </div>
+            <div class="col">
+              <h3 class="mb-0">{{ statistics.addedThisMonth }}</h3>
+              <p class="small text-muted mb-0">{{ 'families.stats.addedThisMonth' | translate }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</app-collapsible-card>
+
+<app-collapsible-card titleKey="common.filters" icon="fe-filter">
     <!-- Filters (§12.S.1): الجمعية + search box + البحث عن طريق -->
     <form [formGroup]="filterForm">
       <div class="row mb-3">
@@ -59,11 +132,9 @@
         </div>
       </div>
     </form>
-  </div>
-</div>
+</app-collapsible-card>
 
-<div class="card shadow mb-4">
-  <div class="card-body">
+<app-collapsible-card titleKey="common.results" icon="fe-list" [expanded]="true">
     <!-- Toolbar: تسجيل أسرة لاجئة (UC-REF-03) + تصدير — the endpoints authorise again server-side -->
     <div class="d-flex justify-content-end mb-3">
       <button class="btn btn-success mr-2" type="button" (click)="exportToExcel()">
@@ -141,5 +212,4 @@
       [totalCount]="totalCount"
       (pageChange)="onPageChange($event)">
     </app-pagination>
-  </div>
-</div>
+</app-collapsible-card>

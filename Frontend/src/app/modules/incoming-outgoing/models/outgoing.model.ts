@@ -81,6 +81,14 @@ export interface OutgoingPagedResult {
   page: number;
 }
 
+// Register statistics band above the §21.S.4 grid — caller-scoped server-side, so the
+// counts always match what the register under it can show.
+export interface OutgoingStatistics {
+  total: number;
+  thisYear: number;
+  addedThisMonth: number;
+}
+
 export interface OutgoingCategoryOptionDto {
   id: number;
   nameAr: string;

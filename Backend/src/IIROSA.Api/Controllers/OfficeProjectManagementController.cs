@@ -51,6 +51,28 @@ public class OfficeProjectManagementController : ControllerBase
     }
 
     /// <summary>
+    /// Register statistics for the band above the projects grid (UC-OFP-01: list) — same
+    /// caller scope as the list: the band describes the caller's whole register,
+    /// not the current search.
+    /// </summary>
+    // Literal segment beats the {id} route, but it stays above it by convention so the
+    // pairing with the list is visible where GetProjects is read.
+    [HttpGet("statistics")]
+    public async Task<ActionResult<ProjectStatisticsDto>> GetStatistics()
+    {
+        try
+        {
+            var statistics = await _projectService.GetStatisticsAsync();
+            return Ok(statistics);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving office project statistics");
+            return StatusCode(500, new { message = "An error occurred while retrieving office project statistics" });
+        }
+    }
+
+    /// <summary>
     /// Get office project by ID (UC-OFP-04: view)
     /// </summary>
     [HttpGet("{id}")]

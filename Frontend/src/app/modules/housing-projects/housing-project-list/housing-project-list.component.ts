@@ -15,7 +15,7 @@ import { Subject, Subscription } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { FamilyService } from '../../families/services/family.service';
-import { FamilyListItemDto } from '../../families/models/family.model';
+import { FamilyListItemDto, FamilyStatistics } from '../../families/models/family.model';
 import { CharityService } from '../../charities/services/charity.service';
 import { CharityDto } from '../../charities/models/charity.model';
 import { AuthService } from '../../../core/services/auth.service';
@@ -109,6 +109,9 @@ export class HousingProjectListComponent implements OnInit, OnDestroy {
   totalCount = 0;
   totalPages = 0;
 
+  /** Statistics band — describes the caller's whole housing register, not the current filter. */
+  statistics: FamilyStatistics | null = null;
+
   constructor(
     private fb: FormBuilder,
     private familyService: FamilyService,
@@ -133,6 +136,7 @@ export class HousingProjectListComponent implements OnInit, OnDestroy {
       this.loadCharities();
     }
     this.loadHousingFamilies();
+    this.loadStatistics();
 
     // The option labels are pre-translated (app-drop-down renders raw text), so a
     // language switch needs a rebuild — the translate pipe can't refresh them.
@@ -221,6 +225,24 @@ export class HousingProjectListComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  /**
+   * Statistics band — silent fail: the list stays fully usable without it.
+   */
+  loadStatistics(): void {
+    this.familyService.getStatistics('Housing')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (statistics) => {
+          this.statistics = statistics;
+          // OnPush: the band's *ngIf never re-evaluates unless the component is marked dirty
+          this.cdr.markForCheck();
+        },
+        error: (error: any) => {
+          console.error('Error loading housing family statistics:', error);
+        }
+      });
   }
 
   /**

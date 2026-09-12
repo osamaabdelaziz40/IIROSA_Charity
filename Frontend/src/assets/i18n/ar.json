@@ -7,6 +7,8 @@
   },
   "common": {
     "actions": "الإجراءات",
+    "filters": "الفلاتر",
+    "results": "النتائج",
     "add": "إضافة",
     "download": "تنزيل",
     "downloadFailed": "تعذر تنزيل الملف",
@@ -136,6 +138,13 @@
   },
   "employees": {
     "title": "الموظفون",
+    "stats": {
+      "title": "الإحصائيات",
+      "total": "إجمالي الموظفين",
+      "active": "موظفون نشطون",
+      "inactive": "موظفون غير نشطين",
+      "addedThisMonth": "أُضيفوا هذا الشهر"
+    },
     "addEmployee": "إضافة موظف",
     "editEmployee": "تعديل موظف",
     "deleteEmployee": "حذف موظف",
@@ -309,6 +318,8 @@
       "addedThisMonth": "أُضيفت هذا الشهر",
       "byCountry": "التوزيع حسب الدولة"
     },
+    "filters": "الفلاتر",
+    "results": "النتائج",
     "isActive": "نشط",
     "isLocked": "مقفل",
     "isAddEnabled": "يمكنه إضافة السجلات",
@@ -1110,6 +1121,13 @@
   },
   "families": {
     "title": "الأسر",
+    "stats": {
+      "title": "الإحصائيات",
+      "total": "إجمالي الأسر",
+      "active": "أسر نشطة",
+      "inactive": "أسر غير نشطة",
+      "addedThisMonth": "أُضيفت هذا الشهر"
+    },
     "manageFamilies": "إدارة الأسر",
     "addFamily": "إضافة أسرة",
     "editFamily": "تعديل أسرة",
@@ -1527,6 +1545,13 @@
   },
   "orphanPayments": {
     "title": "مدفوعات الأيتام",
+    "stats": {
+      "title": "الإحصائيات",
+      "total": "إجمالي الدفعات",
+      "uploaded": "دفعات مرفوعة",
+      "pendingUpload": "قيد الرفع",
+      "addedThisMonth": "أُضيفت هذا الشهر"
+    },
     "subtitle": "إدارة مجموعات مدفوعات الأيتام للمعالجة اليدوية",
     "manageGroups": "إدارة مجموعات المدفوعات",
     "addNewGroup": "إضافة مجموعة مدفوعات جديدة",
@@ -1975,6 +2000,13 @@
   },
   "missions": {
     "title": "المهام",
+    "stats": {
+      "title": "الإحصائيات",
+      "total": "إجمالي المهام",
+      "completed": "مهام منجزة",
+      "inProgress": "مهام قيد التنفيذ",
+      "addedThisMonth": "أُضيفت هذا الشهر"
+    },
     "addMission": "إضافة مهمة",
     "editMission": "تعديل المهمة",
     "deleteMission": "حذف المهمة",
@@ -2104,6 +2136,12 @@
   },
   "hqTransfers": {
     "title": "الحوالات المالية",
+    "stats": {
+      "title": "الإحصائيات",
+      "total": "إجمالي التحويلات",
+      "totalAmount": "إجمالي المبالغ",
+      "addedThisMonth": "أُضيفت هذا الشهر"
+    },
     "description": "قائمة الحوالات المالية الصادرة من الإدارة المالية",
     "serial": "الرقم",
     "operationNumber": "رقم العملية",
@@ -2255,6 +2293,13 @@
   },
   "officeDevelopmentProjects": {
     "title": "مشاريع التنمية المكتبية",
+    "stats": {
+      "title": "الإحصائيات",
+      "total": "إجمالي المشاريع",
+      "completed": "مشاريع منجزة",
+      "thisYear": "مشاريع هذا العام",
+      "addedThisMonth": "أُضيفت هذا الشهر"
+    },
     "manageProjects": "إدارة مشاريع التنمية المكتبية",
     "notes": "ملاحظات",
     "enterNotes": "أدخل الملاحظات",
@@ -2376,6 +2421,13 @@
   },
   "seasonalAid": {
     "title": "الموسمية المساعدات",
+    "stats": {
+      "title": "الإحصائيات",
+      "total": "إجمالي الحملات",
+      "active": "حملات نشطة",
+      "closed": "حملات مغلقة",
+      "addedThisMonth": "أُضيفت هذا الشهر"
+    },
     "subtitle": "إدارة حملات المساعدات الموسمية",
     "addCampaign": "إضافة حملة",
     "editCampaign": "تعديل الحملة",
@@ -2920,6 +2972,12 @@
   },
   "generalChecks": {
     "title": "الشيكات العامة",
+    "stats": {
+      "title": "الإحصائيات",
+      "total": "إجمالي الشيكات",
+      "thisYear": "شيكات هذا العام",
+      "addedThisMonth": "أُضيفت هذا الشهر"
+    },
     "subtitle": "إدارة الشيكات العامة",
     "manageChecks": "إدارة الشيكات",
     "addCheck": "إضافة شيك",
@@ -2992,6 +3050,12 @@
   },
   "incomingOutgoing": {
     "moduleTitle": "الوارد والصادر",
+    "stats": {
+      "title": "الإحصائيات",
+      "total": "إجمالي الخطابات",
+      "thisYear": "خطابات هذا العام",
+      "addedThisMonth": "أُضيفت هذا الشهر"
+    },
     "title": "المراسلات الواردة والصادرة",
     "subtitle": "إدارة المراسلات الواردة والصادرة",
     "incomingLetters": "المراسلات الواردة",
@@ -3279,6 +3343,8 @@
       "operationFailed": "فشلت العملية. حاول مرة أخرى."
     },
     "statistics": {
+      "title": "الإحصائيات",
+      "myTickets": "تذاكري",
       "totalTickets": "إجمالي التذاكر",
       "openTickets": "التذاكر المفتوحة",
       "inProgressTickets": "تذاكر قيد التنفيذ",
@@ -3422,6 +3488,13 @@
   },
   "periodicReports": {
     "title": "التقارير الدورية للأيتام",
+    "stats": {
+      "title": "الإحصائيات",
+      "total": "إجمالي التقارير",
+      "accepted": "مقبولة",
+      "pending": "قيد المراجعة",
+      "addedThisMonth": "أُضيفت هذا الشهر"
+    },
     "subtitle": "سجل التقارير الدورية المقدمة عن الأيتام",
     "createReport": "إضافة تقرير دوري",
     "editReport": "تعديل التقرير الدوري",
@@ -3908,6 +3981,13 @@
   },
   "notifications": {
     "title": "الإشعارات",
+    "stats": {
+      "title": "الإحصائيات",
+      "total": "إجمالي الإشعارات",
+      "toUsers": "إشعارات المستخدمين",
+      "toCharities": "إشعارات الجمعيات",
+      "addedThisMonth": "أُضيفت هذا الشهر"
+    },
     "myNotifications": "إشعاراتي",
     "listDescription": "سجل الإشعارات المرسلة والمستلمة",
     "addNotification": "إضافة إشعار",

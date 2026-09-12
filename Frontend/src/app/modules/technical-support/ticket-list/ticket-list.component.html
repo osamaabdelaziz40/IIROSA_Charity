@@ -9,9 +9,65 @@
 
 <div class="row">
   <div class="col-lg-12">
+    <!-- Count band — my count for everyone, all/unsolved for admins (role-gated endpoints) -->
+    <app-collapsible-card titleKey="technicalSupport.statistics.title" icon="fe-bar-chart-2" *ngIf="statistics">
+      <div class="row">
+        <div class="col-6 col-md-4">
+          <div class="card shadow mb-4 h-100">
+            <div class="card-body">
+              <div class="row align-items-center">
+                <div class="col-3 text-center">
+                  <span class="circle circle-md bg-primary">
+                    <span class="fe fe-user fe-24 text-white"></span>
+                  </span>
+                </div>
+                <div class="col">
+                  <h3 class="mb-0">{{ statistics.myTickets }}</h3>
+                  <p class="small text-muted mb-0">{{ 'technicalSupport.statistics.myTickets' | translate }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4" *ngIf="isAdmin">
+          <div class="card shadow mb-4 h-100">
+            <div class="card-body">
+              <div class="row align-items-center">
+                <div class="col-3 text-center">
+                  <span class="circle circle-md bg-success">
+                    <span class="fe fe-layers fe-24 text-white"></span>
+                  </span>
+                </div>
+                <div class="col">
+                  <h3 class="mb-0">{{ statistics.allTickets }}</h3>
+                  <p class="small text-muted mb-0">{{ 'technicalSupport.statistics.totalTickets' | translate }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4" *ngIf="isAdmin">
+          <div class="card shadow mb-4 h-100">
+            <div class="card-body">
+              <div class="row align-items-center">
+                <div class="col-3 text-center">
+                  <span class="circle circle-md bg-warning">
+                    <span class="fe fe-alert-circle fe-24 text-white"></span>
+                  </span>
+                </div>
+                <div class="col">
+                  <h3 class="mb-0">{{ statistics.unsolved }}</h3>
+                  <p class="small text-muted mb-0">{{ 'technicalSupport.statistics.unsolvedTickets' | translate }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </app-collapsible-card>
+
     <!-- Filters Card -->
-    <div class="card shadow mb-4">
-      <div class="card-body">
+    <app-collapsible-card titleKey="common.filters" icon="fe-filter">
         <form [formGroup]="filterForm">
           <div class="row mb-3">
             <!-- Search -->
@@ -76,37 +132,30 @@
             </div>
           </div>
         </form>
-      </div>
-    </div>
+    </app-collapsible-card>
 
-    <div class="card shadow mb-4">
-      <div class="card-header">
-        <div class="row align-items-center">
-          <div class="col">
-            <!-- View Mode Tabs (for admins) -->
-            <ul class="nav nav-tabs card-header-tabs" *ngIf="isAdmin">
-              <li class="nav-item">
-                <a class="nav-link"
-                   [class.active]="viewMode === 'my-tickets'"
-                   (click)="onViewModeChange('my-tickets')">
-                  <i class="fe fe-user mr-1"></i>
-                  {{ 'technicalSupport.myTickets' | translate }}
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link"
-                   [class.active]="viewMode === 'all-tickets'"
-                   (click)="onViewModeChange('all-tickets')">
-                  <i class="fe fe-users mr-1"></i>
-                  {{ 'technicalSupport.allTickets' | translate }}
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
+    <!-- View Mode Tabs (for admins) — kept outside the collapsible cards so switching
+         stays reachable while Results is collapsed -->
+    <ul class="nav nav-tabs mb-3" *ngIf="isAdmin">
+      <li class="nav-item">
+        <a class="nav-link"
+           [class.active]="viewMode === 'my-tickets'"
+           (click)="onViewModeChange('my-tickets')">
+          <i class="fe fe-user mr-1"></i>
+          {{ 'technicalSupport.myTickets' | translate }}
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link"
+           [class.active]="viewMode === 'all-tickets'"
+           (click)="onViewModeChange('all-tickets')">
+          <i class="fe fe-users mr-1"></i>
+          {{ 'technicalSupport.allTickets' | translate }}
+        </a>
+      </li>
+    </ul>
 
-      <div class="card-body">
+    <app-collapsible-card titleKey="common.results" icon="fe-list" [expanded]="true">
         <!-- Toolbar Actions -->
         <div class="row mb-3">
           <div class="col text-right">
@@ -269,7 +318,6 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </app-collapsible-card>
   </div>
 </div>

@@ -82,6 +82,12 @@ public interface IPeriodicOrphanReportService
     Task<PeriodicOrphanReportPagedResult<PeriodicOrphanReportListDto>> GetRejectedReportsAsync(PeriodicOrphanReportFilterDto filter);
 
     /// <summary>
+    /// Register statistics for the band above the periodic reports grid (§14.S.1, UC-ORR-01) —
+    /// same caller scope as the register read: charity pin or country pin, resolved server-side.
+    /// </summary>
+    Task<PeriodicOrphanReportStatisticsDto> GetStatisticsAsync();
+
+    /// <summary>
     /// Get reports by orphan - UC-ORR-01
     /// Returns the orphan's complete periodic report history, newest first.
     /// </summary>

@@ -12,7 +12,8 @@ import {
   CreateNotificationsLogRequest,
   UpdateNotificationsLogRequest,
   NotificationsLogSearchRequest,
-  NotificationsLogPagedResult
+  NotificationsLogPagedResult,
+  NotificationsLogStatistics
 } from '../models/notification.model';
 
 @Injectable({
@@ -36,6 +37,14 @@ export class NotificationLogService {
    */
   getMyNotifications(search: NotificationsLogSearchRequest): Observable<NotificationsLogPagedResult> {
     return this.http.get<NotificationsLogPagedResult>(`${this.apiBaseUrl}/my`, { params: this.buildParams(search) });
+  }
+
+  /**
+   * Register statistics for the band above the admin notifications grid (UC-NTF list) —
+   * Admin/SuperAdmin only; describes the whole register the admin list shows.
+   */
+  getStatistics(): Observable<NotificationsLogStatistics> {
+    return this.http.get<NotificationsLogStatistics>(`${this.apiBaseUrl}/statistics`);
   }
 
   /**

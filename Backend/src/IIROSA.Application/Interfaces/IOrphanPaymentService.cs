@@ -42,6 +42,11 @@ public interface IOrphanPaymentService
     // callers must use that mode (the scoping params verify the orphan is theirs).
     Task<(IEnumerable<OrphanPaymentListDto> Items, int TotalCount)> GetPaymentGroupsAsync(OrphanPaymentFilterDto filter, Guid? userCharityId = null, string? userRole = null);
 
+    // Register statistics for the band above the payment-groups grid (UC-5.8) — batch-level
+    // counts over the same live-row scope GetPaymentGroupsAsync's paged read applies; a
+    // Charity token without a parseable charity claim fails closed.
+    Task<OrphanPaymentStatisticsDto> GetStatisticsAsync(Guid? userCharityId = null, string? userRole = null);
+
     // List export to Excel — same scope rules as GetPaymentGroupsAsync
     Task<byte[]> ExportPaymentGroupsToExcelAsync(OrphanPaymentFilterDto filter, Guid? userCharityId = null, string? userRole = null);
 

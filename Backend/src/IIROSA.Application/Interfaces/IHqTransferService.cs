@@ -13,6 +13,12 @@ public interface IHqTransferService
     Task<HqTransferPagedResult<HqTransferListDto>> GetHqTransfersAsync(HqTransferFilterDto filter);
 
     /// <summary>
+    /// Register statistics for the band above the §22.S.1 grid — the list read's country
+    /// scope; TotalAmount sums the headers' AmountOfPayment, not the detail lines
+    /// </summary>
+    Task<HqTransferStatisticsDto> GetStatisticsAsync();
+
+    /// <summary>
     /// Export the §22.S.1 register to Excel — the grid's serial + 11 data columns, every
     /// row in the caller's country scope (the list read's rules; paging ignored)
     /// </summary>

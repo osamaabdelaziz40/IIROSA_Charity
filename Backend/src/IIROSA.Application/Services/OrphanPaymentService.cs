@@ -564,6 +564,72 @@ public class OrphanPaymentService : IOrphanPaymentService
     }
 
     /// <summary>
+    /// Register statistics for the band above the payment-groups grid (UC-5.8).
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not filter-reactive: the band describes the caller's whole register
+    /// scope, not the current search. The scope mirrors GetPaymentGroupsAsync's paged read:
+    /// live batches (!IsDeleted), and for a Charity-role caller the participation predicate
+    /// the repository's UC-5.12 charity dimension applies (items → orphan → FK_CharityId ??
+    /// Family.FK_CharityId, the standing 10-7 tenancy model) — a batch counts when it holds
+    /// at least one live row tenanted to the caller's charity. A Charity token without a
+    /// parseable charity claim fails CLOSED (UnauthorizedAccessException), never the
+    /// unscoped branch — the same D4 rule the list read's controller guard enforces.
+    /// Counts are batch-level by design: Uploaded counts IsBatchUploaded batches and
+    /// PendingUpload is the remainder, so the pair always sums to Total.
+    /// </remarks>
+    public async Task<OrphanPaymentStatisticsDto> GetStatisticsAsync(Guid? userCharityId = null, string? userRole = null)
+    {
+        _logger.LogInformation("Getting payment-group register statistics, role: {Role}", userRole);
+
+        if (userRole == "Charity" && !userCharityId.HasValue)
+        {
+            throw new UnauthorizedAccessException("Charity caller has no charity scope");
+        }
+
+        var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        // Same live-row rule as the paged register read (GetFilteredPaginatedAsync).
+        var query = _orphanPaymentRepository.AsQueryable()
+            .Where(op => !op.IsDeleted);
+
+        if (userRole == "Charity")
+        {
+            // The UC-5.12 charity dimension verbatim — membership lives on OrphanPaymentItem.
+            var scopedCharityId = userCharityId!.Value;
+            query = query.Where(op => op.Orphans.Any(opi =>
+                !opi.IsDeleted &&
+                opi.Orphan != null &&
+                (opi.Orphan.FK_CharityId == scopedCharityId ||
+                 (opi.Orphan.FK_CharityId == null &&
+                  opi.Orphan.Family != null &&
+                  opi.Orphan.Family.FK_CharityId == scopedCharityId))));
+        }
+
+        // One grouped round-trip for every scalar card; null when the scope matches no rows.
+        var totals = await query
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                Uploaded = g.Count(op => op.IsBatchUploaded),
+                AddedThisMonth = g.Count(op => op.CreatedOn >= monthStart)
+            })
+            .FirstOrDefaultAsync();
+
+        var total = totals?.Total ?? 0;
+        var uploaded = totals?.Uploaded ?? 0;
+
+        return new OrphanPaymentStatisticsDto
+        {
+            Total = total,
+            Uploaded = uploaded,
+            PendingUpload = total - uploaded,
+            AddedThisMonth = totals?.AddedThisMonth ?? 0
+        };
+    }
+
+    /// <summary>
     /// Export payment groups to Excel — §15.S.1's grid columns, every filtered row
     /// (OfficeProjectService.ExportProjectsToExcelAsync pattern).
     /// </summary>

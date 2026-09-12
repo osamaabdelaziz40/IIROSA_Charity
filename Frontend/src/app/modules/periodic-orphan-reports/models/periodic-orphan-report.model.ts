@@ -404,6 +404,20 @@ export interface PeriodicOrphanReportPagedResult {
   totalPages: number;
 }
 
+/**
+ * Register statistics band above the periodic reports grid (§14.S.1, UC-ORR-01) —
+ * caller-scoped server-side (charity pin or country pin), so the counts match what
+ * the grid under them can show.
+ */
+export interface PeriodicOrphanReportStatistics {
+  total: number;
+  /** Reviewed && isAccepted rows — the register's "approved" predicate. */
+  accepted: number;
+  /** Rows still awaiting review (!reviewed) — the reviewer's pending queue. */
+  pending: number;
+  addedThisMonth: number;
+}
+
 // 18-14 / UC-RPT-14 — status-grouped counts; pending is derived all − accepted − refused.
 // A null leg means its request failed — the tile renders "—" instead of a wrong number.
 export interface OrphanReportStatusCounts {

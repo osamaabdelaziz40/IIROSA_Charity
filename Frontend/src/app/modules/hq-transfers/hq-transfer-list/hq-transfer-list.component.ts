@@ -16,16 +16,17 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { HqTransferService } from '../services/hq-transfer.service';
-import { HqTransfer } from '../models/hq-transfer.model';
+import { HqTransfer, HqTransferStatistics } from '../models/hq-transfer.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PaginationComponent, BreadcrumbComponent, PageHeaderComponent, BreadcrumbItem } from '../../../shared/components';
+import { SharedModule } from '../../../shared/shared.module';
 import type { PageAction } from '../../../shared/components/page-header/page-header.component';
 
 @Component({
   selector: 'app-hq-transfer-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, PaginationComponent, BreadcrumbComponent, PageHeaderComponent],
+  imports: [CommonModule, FormsModule, TranslateModule, PaginationComponent, BreadcrumbComponent, PageHeaderComponent, SharedModule],
   templateUrl: './hq-transfer-list.component.html',
   styleUrls: ['./hq-transfer-list.component.scss']
 })
@@ -34,6 +35,9 @@ export class HqTransferListComponent implements OnInit, OnDestroy {
 
   // Data
   transfers: HqTransfer[] = [];
+
+  // Register statistics band — caller-scoped server-side (country claim)
+  statistics: HqTransferStatistics | null = null;
 
   // Loading state
   loading = false;
@@ -91,6 +95,7 @@ export class HqTransferListComponent implements OnInit, OnDestroy {
     }
 
     this.loadTransfers();
+    this.loadStatistics();
   }
 
   ngOnDestroy(): void {
@@ -117,6 +122,19 @@ export class HqTransferListComponent implements OnInit, OnDestroy {
           this.loading = false;
           this.notification.error(this.translate.instant('hqTransfers.loadFailed'));
         }
+      });
+  }
+
+  /**
+   * Register statistics band — describes the caller's whole country scope, not the
+   * current page. Silent-fail so the register still renders without it.
+   */
+  loadStatistics(): void {
+    this.transferService.getStatistics()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: statistics => this.statistics = statistics,
+        error: () => console.error('Error loading HQ transfer statistics')
       });
   }
 

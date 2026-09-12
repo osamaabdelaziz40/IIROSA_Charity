@@ -8,7 +8,8 @@ import { Subject, takeUntil } from 'rxjs';
 import { PeriodicOrphanReportService } from '../services/periodic-orphan-report.service';
 import {
   PeriodicOrphanReportListDto,
-  PeriodicOrphanReportFilterDto
+  PeriodicOrphanReportFilterDto,
+  PeriodicOrphanReportStatistics
 } from '../models/periodic-orphan-report.model';
 import { CharityService } from '../../charities/services/charity.service';
 import { CharityDto } from '../../charities/models/charity.model';
@@ -20,6 +21,7 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
 import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { DropDownComponent } from '../../../shared/components/drop-down/drop-down.component';
+import { SharedModule } from '../../../shared/shared.module';
 
 /**
  * Periodic reports register — §14.S.1 / UC-ORR-01.
@@ -41,7 +43,8 @@ import { DropDownComponent } from '../../../shared/components/drop-down/drop-dow
     PaginationComponent,
     LoadingComponent,
     EmptyStateComponent,
-    DropDownComponent
+    DropDownComponent,
+    SharedModule
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './periodic-reports-list.component.html',
@@ -52,6 +55,10 @@ export class PeriodicReportsListComponent implements OnInit, OnDestroy {
   totalCount = 0;
   totalPages = 0;
   loading = false;
+
+  // Register statistics band (§14.S.1) — caller-scoped server-side like the register
+  // itself; describes the caller's whole register, not the active filters.
+  statistics: PeriodicOrphanReportStatistics | null = null;
 
   /** §14.S.1 filter bar — reactive form so the shared select2 drop-downs can bind (charity-list pattern). */
   filterForm: FormGroup;
@@ -134,6 +141,7 @@ export class PeriodicReportsListComponent implements OnInit, OnDestroy {
       });
 
     this.loadReports();
+    this.loadStatistics();
   }
 
   ngOnDestroy(): void {
@@ -199,6 +207,26 @@ export class PeriodicReportsListComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  /**
+   * Register statistics band — describes the caller's whole register (not the active
+   * filters). Silent-fail: the band is decorative context and must not surface toasts.
+   * OnPush — both callbacks mark for check or the band never renders.
+   */
+  loadStatistics(): void {
+    this.periodicReportService.getStatistics()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: statistics => {
+          this.statistics = statistics;
+          this.cdr.markForCheck();
+        },
+        error: error => {
+          console.error('Error loading periodic report statistics:', error);
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   /** مسح التصفية — back to the §14.S.1 defaults (sentinels included) and page 1. */

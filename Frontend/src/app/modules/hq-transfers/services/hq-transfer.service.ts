@@ -9,7 +9,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-import { HqTransfer, HqTransferListResponse, HqTransferDetail, CreateHqTransferRequest, UpdateHqTransferRequest, CountryMaxTransferAmount, UpdateCountryMaxTransferRequest, HqTransferDetails, HqTransferDetailLine, SaveHqTransferDetailLineRequest } from '../models/hq-transfer.model';
+import { HqTransfer, HqTransferListResponse, HqTransferDetail, CreateHqTransferRequest, UpdateHqTransferRequest, CountryMaxTransferAmount, UpdateCountryMaxTransferRequest, HqTransferDetails, HqTransferDetailLine, SaveHqTransferDetailLineRequest, HqTransferStatistics } from '../models/hq-transfer.model';
 
 /**
  * Paged response wrapper as the API serializes it
@@ -56,6 +56,14 @@ export class HqTransferService {
    */
   exportToExcel(): Observable<Blob> {
     return this.http.get(`${this.apiBaseUrl}/export`, { responseType: 'blob' });
+  }
+
+  /**
+   * Register statistics for the band above the §22.S.1 grid — the list read's country
+   * scope (the caller's country claim), one grouped round-trip server-side.
+   */
+  getStatistics(): Observable<HqTransferStatistics> {
+    return this.http.get<HqTransferStatistics>(`${this.apiBaseUrl}/statistics`);
   }
 
   /**

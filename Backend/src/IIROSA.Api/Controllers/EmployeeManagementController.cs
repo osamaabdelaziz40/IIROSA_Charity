@@ -65,6 +65,27 @@ namespace IIROSA.Api.Controllers
         }
 
         /// <summary>
+        /// Register statistics for the band above the employees grid (UC-2.5) — the whole
+        /// register, matching the list's head-office (unscoped) semantics.
+        /// </summary>
+        // Literal segment beats the {id} route; declared here so the pairing with the list
+        // read stays visible where GetEmployees is read.
+        [HttpGet("statistics")]
+        [Authorize(Policy = "ManagementOnly")]
+        public async Task<ActionResult<EmployeeStatisticsDto>> GetStatistics()
+        {
+            try
+            {
+                return Ok(await _employeeService.GetStatisticsAsync());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving employee statistics");
+                return StatusCode(500, new { message = "An error occurred while retrieving employee statistics" });
+            }
+        }
+
+        /// <summary>
         /// Check login-name availability (UC-EMP-02: Verify employee username availability).
         /// In this stack the identity UserName IS the email, so this probes the same two
         /// stores the create/update uniqueness rules enforce against. excludeEmployeeId

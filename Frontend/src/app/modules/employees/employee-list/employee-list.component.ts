@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { Employee, EmployeeSearchRequest, DepartmentLookup, RoleListItem } from '../../../core/models/employee.model';
+import { Employee, EmployeeSearchRequest, DepartmentLookup, RoleListItem, EmployeeStatistics } from '../../../core/models/employee.model';
 import { EmployeeService } from '../services/employee.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -12,11 +12,12 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AppDatePipe } from '../../../shared/pipes/date.pipe';
 import { RouterModule } from '@angular/router';
 import { PaginationComponent } from '../../../shared/components';
+import { SharedModule } from '../../../shared/shared.module';
 
 @Component({
   selector: 'app-employee-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, BreadcrumbComponent, TranslateModule, AppDatePipe, RouterModule, PaginationComponent, DropDownComponent],
+  imports: [CommonModule, ReactiveFormsModule, PageHeaderComponent, BreadcrumbComponent, TranslateModule, AppDatePipe, RouterModule, PaginationComponent, DropDownComponent, SharedModule],
   templateUrl: './employee-list.component.html',
   styleUrls: ['./employee-list.component.scss']
 })
@@ -29,6 +30,10 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
   totalCount = 0;
   currentPage = 1;
   pageSize = 20;
+
+  // Register statistics band (UC-2.5) — describes the whole HQ register, not the active
+  // filters; silent-fail so an unreachable endpoint never blocks the grid.
+  statistics: EmployeeStatistics | null = null;
 
   // Filter form — the shared select2 drop-downs bind to this (charities-list pattern).
   filterForm: FormGroup;
@@ -80,6 +85,7 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
     this.loadRoles();
     this.initializeStatusOptions();
     this.loadEmployees();
+    this.loadStatistics();
 
     // The option labels are pre-translated (app-drop-down renders raw text), so a
     // language switch needs a rebuild — the translate pipe can't refresh them.
@@ -163,6 +169,17 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
         this.notification.error(this.translate.instant('employees.employeeLoadFailed'));
         this.loading = false;
       }
+    });
+  }
+
+  /**
+   * Register statistics band — describes the caller's whole register (not the active
+   * filters). Silent-fail: the band is decorative context and must not surface toasts.
+   */
+  loadStatistics(): void {
+    this.employeeService.getStatistics().subscribe({
+      next: statistics => this.statistics = statistics,
+      error: (error: any) => console.error('Error loading employee statistics:', error)
     });
   }
 

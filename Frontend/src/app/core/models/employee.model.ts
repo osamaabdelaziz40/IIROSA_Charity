@@ -109,3 +109,14 @@ export interface RoleListItem {
   displayNameAr?: string | null;
   displayNameEn?: string | null;
 }
+
+/**
+ * Register statistics band above the employees grid (UC-2.5) — the whole HQ register,
+ * matching the list's unscoped semantics.
+ */
+export interface EmployeeStatistics {
+  total: number;
+  active: number;
+  inactive: number;
+  addedThisMonth: number;
+}

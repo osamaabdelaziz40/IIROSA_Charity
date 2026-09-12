@@ -66,3 +66,20 @@ public class NotificationsLogPagedResult
     public int Page { get; set; }
     public int PageSize { get; set; }
 }
+
+/// <summary>
+/// Register statistics band shown above the admin notifications grid (UC-NTF list).
+/// Register semantics like <c>GetFilteredAsync</c> — the admin register is unscoped, so the
+/// counts describe every pushed notification. A row may address both audiences at once
+/// (IsUser and IsCharity are independent flags), so ToUsers + ToCharities can exceed Total.
+/// </summary>
+public class NotificationsLogStatisticsDto
+{
+    public int Total { get; set; }
+    /// <summary>Rows whose audience includes specific users (IsUser).</summary>
+    public int ToUsers { get; set; }
+    /// <summary>Rows whose audience includes whole charities (IsCharity).</summary>
+    public int ToCharities { get; set; }
+    /// <summary>Notifications pushed since the first day of the current (UTC) month.</summary>
+    public int AddedThisMonth { get; set; }
+}

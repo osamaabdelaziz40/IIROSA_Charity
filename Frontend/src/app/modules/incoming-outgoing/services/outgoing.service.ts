@@ -9,6 +9,7 @@ import {
   UpdateOutgoingDto,
   OutgoingFilterDto,
   OutgoingPagedResult,
+  OutgoingStatistics,
   OutgoingCategoryOptionDto,
   OutgoingOrphansDto,
   OutgoingOrphanReportFilterDto,
@@ -50,6 +51,16 @@ export class OutgoingService {
     return this.http.get<OutgoingPagedResult>(this.apiUrl, {
       headers: this.getHeaders(),
       params: this.buildHttpParams(filter)
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // ========== UC-COR-10 — the register statistics band ==========
+
+  getStatistics(): Observable<OutgoingStatistics> {
+    return this.http.get<OutgoingStatistics>(`${this.apiUrl}/statistics`, {
+      headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
     );

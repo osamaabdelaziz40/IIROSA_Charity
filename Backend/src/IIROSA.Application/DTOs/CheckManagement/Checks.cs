@@ -211,3 +211,17 @@ public class BankChequePositionsDto
     public decimal? AmountWordsX { get; set; }
     public decimal? AmountWordsY { get; set; }
 }
+
+/// <summary>
+/// Register statistics band shown above the cheque register (§16.S.1, UC-CHQ-01).
+/// Counts follow the caller's scope exactly like the register read: charity-pinned
+/// callers see their own charity, country-pinned head-office callers their country.
+/// </summary>
+public class CheckStatisticsDto
+{
+    public int Total { get; set; }
+    /// <summary>Cheques dated in the current calendar year (CheckDate, تاريخ الشيك).</summary>
+    public int ThisYear { get; set; }
+    /// <summary>Cheques registered since the first day of the current (UTC) month.</summary>
+    public int AddedThisMonth { get; set; }
+}

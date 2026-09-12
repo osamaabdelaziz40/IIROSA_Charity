@@ -7,9 +7,65 @@
   [actions]="pageActions">
 </app-page-header>
 
+<!-- Statistics band — caller-scoped server-side; describes the caller's whole register -->
+<app-collapsible-card titleKey="generalChecks.stats.title" icon="fe-bar-chart-2" *ngIf="statistics">
+  <div class="row">
+    <div class="col-6 col-md-4">
+      <div class="card shadow mb-4 h-100">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-3 text-center">
+              <span class="circle circle-md bg-primary">
+                <span class="fe fe-file-text fe-24 text-white"></span>
+              </span>
+            </div>
+            <div class="col">
+              <h3 class="mb-0">{{ statistics.total }}</h3>
+              <p class="small text-muted mb-0">{{ 'generalChecks.stats.total' | translate }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="card shadow mb-4 h-100">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-3 text-center">
+              <span class="circle circle-md bg-success">
+                <span class="fe fe-calendar fe-24 text-white"></span>
+              </span>
+            </div>
+            <div class="col">
+              <h3 class="mb-0">{{ statistics.thisYear }}</h3>
+              <p class="small text-muted mb-0">{{ 'generalChecks.stats.thisYear' | translate }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="card shadow mb-4 h-100">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-3 text-center">
+              <span class="circle circle-md bg-warning">
+                <span class="fe fe-clock fe-24 text-white"></span>
+              </span>
+            </div>
+            <div class="col">
+              <h3 class="mb-0">{{ statistics.addedThisMonth }}</h3>
+              <p class="small text-muted mb-0">{{ 'generalChecks.stats.addedThisMonth' | translate }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</app-collapsible-card>
+
 <!-- §16.S.1: charity dropdown — head office only; charity users are scoped server-side -->
-<div class="card shadow mb-4" *ngIf="isHeadOffice">
-  <div class="card-body">
+<app-collapsible-card titleKey="common.filters" icon="fe-filter" *ngIf="isHeadOffice">
     <form [formGroup]="filterForm">
       <div class="row mb-3">
         <div class="col-md-4">
@@ -37,11 +93,9 @@
         </div>
       </div>
     </form>
-  </div>
-</div>
+</app-collapsible-card>
 
-<div class="card shadow mb-4">
-  <div class="card-body">
+<app-collapsible-card titleKey="common.results" icon="fe-list" [expanded]="true">
     <!-- Loading State -->
     <div *ngIf="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status">
@@ -109,5 +163,4 @@
       [totalCount]="totalCount"
       (pageChange)="onPageChange($event)">
     </app-pagination>
-  </div>
-</div>
+</app-collapsible-card>

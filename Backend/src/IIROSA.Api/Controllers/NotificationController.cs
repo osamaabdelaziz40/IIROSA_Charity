@@ -66,6 +66,25 @@ public class NotificationController : ControllerBase
     }
 
     /// <summary>
+    /// Register statistics for the band above the admin notifications grid (UC-NTF list) —
+    /// same register semantics as the list read above.
+    /// </summary>
+    [HttpGet("statistics")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
+    public async Task<ActionResult<NotificationsLogStatisticsDto>> GetStatistics()
+    {
+        try
+        {
+            return Ok(await _notificationsLogService.GetStatisticsAsync());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving notification statistics");
+            return StatusCode(500, new { message = "An error occurred while retrieving notification statistics" });
+        }
+    }
+
+    /// <summary>
     /// The recipient's read (UC-NTF my notifications): every notification whose
     /// audience contains the caller directly or through their charity.
     /// </summary>

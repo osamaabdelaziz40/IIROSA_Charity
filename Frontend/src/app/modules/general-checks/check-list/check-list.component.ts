@@ -6,7 +6,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 
 import { GeneralChecksService } from '../services/general-checks.service';
-import { CheckListItem } from '../models/check.model';
+import { CheckListItem, CheckStatistics } from '../models/check.model';
 import { CharityService } from '../../charities/services/charity.service';
 import { CharityDto } from '../../charities/models/charity.model';
 import { AuthService } from '../../../core/services/auth.service';
@@ -69,6 +69,10 @@ export class CheckListComponent implements OnInit, OnDestroy {
   currentPage = 1;
   pageSize = 20;
 
+  // Register statistics band (§16.S.1) — caller-scoped server-side like the register
+  // itself; describes the caller's whole register, not the active filters.
+  statistics: CheckStatistics | null = null;
+
   /** The charity filter is a head-office concern — everyone else is pinned server-side. */
   isHeadOffice = false;
   canEdit = false;
@@ -112,6 +116,7 @@ export class CheckListComponent implements OnInit, OnDestroy {
     });
 
     this.loadChecks();
+    this.loadStatistics();
   }
 
   ngOnDestroy(): void {
@@ -158,6 +163,17 @@ export class CheckListComponent implements OnInit, OnDestroy {
         this.totalCount = 0;
         this.loading = false;
       }
+    });
+  }
+
+  /**
+   * Register statistics band — describes the caller's whole register (not the active
+   * filters). Silent-fail: the band is decorative context and must not surface toasts.
+   */
+  loadStatistics(): void {
+    this.generalChecksService.getStatistics().subscribe({
+      next: statistics => this.statistics = statistics,
+      error: () => console.error('Error loading cheque statistics')
     });
   }
 

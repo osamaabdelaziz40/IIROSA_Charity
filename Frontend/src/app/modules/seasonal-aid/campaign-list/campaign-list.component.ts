@@ -8,7 +8,8 @@ import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import { SeasonalAidService } from '../services/seasonal-aid.service';
 import {
   SeasonalAidCampaignListItem,
-  SeasonalAidCampaignFilter
+  SeasonalAidCampaignFilter,
+  SeasonalAidCampaignStatistics
 } from '../models/seasonal-aid.model';
 import { PaginationComponent, BreadcrumbComponent, BreadcrumbItem, PageHeaderComponent } from '../../../shared/components';
 import { SharedModule } from '../../../shared/shared.module';
@@ -59,6 +60,9 @@ export class CampaignListComponent implements OnInit, OnDestroy {
   totalCount = 0;
   exporting = false;
 
+  // Register statistics band — null until the (silent-fail) load answers
+  statistics: SeasonalAidCampaignStatistics | null = null;
+
   filterForm: FormGroup;
 
   currentPage = 1;
@@ -107,6 +111,7 @@ export class CampaignListComponent implements OnInit, OnDestroy {
       .subscribe(() => this.onSearchChange());
 
     this.loadCampaigns();
+    this.loadStatistics();
   }
 
   ngOnDestroy(): void {
@@ -150,6 +155,18 @@ export class CampaignListComponent implements OnInit, OnDestroy {
         this.totalCount = 0;
         this.loading = false;
       }
+    });
+  }
+
+  /**
+   * Load the register statistics band — scoped server-side; describes the caller's
+   * whole register, not the current search. Silent-fail: the band is optional chrome,
+   * the grid is the payload.
+   */
+  loadStatistics(): void {
+    this.seasonalAidService.getStatistics().subscribe({
+      next: statistics => (this.statistics = statistics),
+      error: (error: unknown) => console.error('Error loading campaign statistics:', error)
     });
   }
 

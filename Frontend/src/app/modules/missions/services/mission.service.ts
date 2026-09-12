@@ -17,7 +17,8 @@ import {
   RegisterMissionResultRequest,
   MissionSearchRequest,
   MissionListResponse,
-  MissionLookupItem
+  MissionLookupItem,
+  MissionStatistics
 } from '../models/mission.model';
 
 /**
@@ -85,6 +86,14 @@ export class MissionService {
    */
   getMissionById(id: string): Observable<MissionDetail> {
     return this.http.get<MissionDetail>(`${this.apiBaseUrl}/${id}`);
+  }
+
+  /**
+   * Register statistics for the band above the list — scoped server-side to the
+   * caller's charity and country; describes the whole register, not the current search
+   */
+  getStatistics(): Observable<MissionStatistics> {
+    return this.http.get<MissionStatistics>(`${this.apiBaseUrl}/statistics`);
   }
 
   /**

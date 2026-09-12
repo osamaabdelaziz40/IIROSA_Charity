@@ -84,6 +84,45 @@ public class CheckService : ICheckService
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Deliberately not filter-reactive: the band describes the caller's whole register
+    /// scope, not the current search. The scope rides <see cref="ScopedQuery"/> plus
+    /// <see cref="ApplyFilters"/> with a blank filter — with no user input every optional
+    /// predicate falls away and only the scope rules remain (charity pin, or the head-office
+    /// country pin). "This year" counts by <c>CheckDate</c> (تاريخ الشيك, mandatory on every
+    /// cheque) rather than CreatedOn: the cheque's own date is what the register is ordered
+    /// and filtered by, and a back-dated cheque registered today belongs to its cheque year.
+    /// The blank filter needs no validation because nothing in it came from a caller.
+    /// </remarks>
+    public async Task<CheckStatisticsDto> GetStatisticsAsync()
+    {
+        _logger.LogInformation("Getting cheque register statistics");
+
+        var now = DateTime.UtcNow;
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var yearStart = new DateTime(now.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        // One grouped round-trip for every scalar card; null when the scope matches no rows.
+        // ApplyFilters' register ordering is harmless here — grouping discards it in translation.
+        var totals = await ApplyFilters(ScopedQuery(), new CheckFilterDto())
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                ThisYear = g.Count(c => c.CheckDate >= yearStart && c.CheckDate < yearStart.AddYears(1)),
+                AddedThisMonth = g.Count(c => c.CreatedOn >= monthStart)
+            })
+            .FirstOrDefaultAsync();
+
+        return new CheckStatisticsDto
+        {
+            Total = totals?.Total ?? 0,
+            ThisYear = totals?.ThisYear ?? 0,
+            AddedThisMonth = totals?.AddedThisMonth ?? 0
+        };
+    }
+
+    /// <inheritdoc />
     public async Task<CheckDetailDto?> GetCheckByIdAsync(Guid id)
     {
         var check = await ScopedQuery().FirstOrDefaultAsync(c => c.Id == id);

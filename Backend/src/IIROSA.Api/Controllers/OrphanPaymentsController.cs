@@ -71,6 +71,39 @@ public class OrphanPaymentsController : ControllerBase
     }
 
     /// <summary>
+    /// Register statistics for the band above the payment-groups grid (UC-5.8) — batch-level
+    /// counts, same roles and fail-closed charity guard as the list read, and the same
+    /// service-side scoping as GetPaymentGroupsAsync.
+    /// </summary>
+    [HttpGet("statistics")]
+    [Authorize(Roles = "SuperAdmin,Admin,Accountant,FinancialOfficer,Charity")]
+    [ProducesResponseType(typeof(OrphanPaymentStatisticsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<OrphanPaymentStatisticsDto>> GetStatistics()
+    {
+        try
+        {
+            // D4 fail-closed, as on the list read: a Charity token must carry a parseable
+            // charity claim. The orphan-mode half of the list guard does not apply —
+            // statistics takes no orphanId and describes the caller's whole register scope.
+            if (User.IsInRole("Charity") && GetUserCharityId() == null)
+            {
+                return Forbid();
+            }
+
+            return Ok(await _orphanPaymentService.GetStatisticsAsync(GetUserCharityId(), GetUserRole()));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving payment-group statistics");
+            return StatusCode(500, new { message = "An error occurred while retrieving payment-group statistics" });
+        }
+    }
+
+    /// <summary>
     /// Export payment groups to Excel — the §15.S.1 grid columns, every filtered row.
     /// Same scope rules as the list read: charity callers stay orphan-scoped (UC-ORP-08).
     /// </summary>

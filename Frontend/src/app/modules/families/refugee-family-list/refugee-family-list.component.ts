@@ -5,7 +5,7 @@ import { Router, RouterModule } from '@angular/router';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 import { TranslateModule, TranslateService, LangChangeEvent } from '@ngx-translate/core';
-import { FamilyListItemDto, FamilySearchRequest } from '../models/family.model';
+import { FamilyListItemDto, FamilySearchRequest, FamilyStatistics } from '../models/family.model';
 import { FamilyService } from '../services/family.service';
 import { CharityService } from '../../charities/services/charity.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -49,6 +49,9 @@ export class RefugeeFamilyListComponent implements OnInit, OnDestroy {
   currentPage = 1;
   pageSize = 20;
   totalPages = 0;
+
+  /** Statistics band — describes the caller's whole refugee register, not the current filter. */
+  statistics: FamilyStatistics | null = null;
 
   /** الجمعية selector is an HQ-only control; a Charity caller is pinned server-side */
   isHQ = false;
@@ -110,6 +113,7 @@ export class RefugeeFamilyListComponent implements OnInit, OnDestroy {
     }
 
     this.loadRefugeeFamilies();
+    this.loadStatistics();
   }
 
   ngOnDestroy(): void {
@@ -203,6 +207,22 @@ export class RefugeeFamilyListComponent implements OnInit, OnDestroy {
           this.totalPages = 0;
           this.loading = false;
           this.cdr.markForCheck();
+        }
+      });
+  }
+
+  /** Statistics band — silent fail: the list stays fully usable without it. */
+  loadStatistics(): void {
+    this.familyService.getStatistics('Refugee')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (statistics) => {
+          this.statistics = statistics;
+          // OnPush: the band's *ngIf never re-evaluates unless the component is marked dirty
+          this.cdr.markForCheck();
+        },
+        error: (error: any) => {
+          console.error('Error loading refugee family statistics:', error);
         }
       });
   }

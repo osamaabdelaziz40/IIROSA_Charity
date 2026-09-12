@@ -8,9 +8,82 @@
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
+      <!-- Statistics band — describes the whole HQ register; not tied to the filters below -->
+      <app-collapsible-card titleKey="employees.stats.title" icon="fe-bar-chart-2" *ngIf="statistics">
+        <div class="row">
+          <div class="col-6 col-md-3">
+            <div class="card shadow mb-4 h-100">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <div class="col-3 text-center">
+                    <span class="circle circle-md bg-primary">
+                      <span class="fe fe-users fe-24 text-white"></span>
+                    </span>
+                  </div>
+                  <div class="col">
+                    <h3 class="mb-0">{{ statistics.total }}</h3>
+                    <p class="small text-muted mb-0">{{ 'employees.stats.total' | translate }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="card shadow mb-4 h-100">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <div class="col-3 text-center">
+                    <span class="circle circle-md bg-success">
+                      <span class="fe fe-check-circle fe-24 text-white"></span>
+                    </span>
+                  </div>
+                  <div class="col">
+                    <h3 class="mb-0">{{ statistics.active }}</h3>
+                    <p class="small text-muted mb-0">{{ 'employees.stats.active' | translate }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="card shadow mb-4 h-100">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <div class="col-3 text-center">
+                    <span class="circle circle-md bg-warning">
+                      <span class="fe fe-slash fe-24 text-white"></span>
+                    </span>
+                  </div>
+                  <div class="col">
+                    <h3 class="mb-0">{{ statistics.inactive }}</h3>
+                    <p class="small text-muted mb-0">{{ 'employees.stats.inactive' | translate }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="card shadow mb-4 h-100">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <div class="col-3 text-center">
+                    <span class="circle circle-md bg-danger">
+                      <span class="fe fe-calendar fe-24 text-white"></span>
+                    </span>
+                  </div>
+                  <div class="col">
+                    <h3 class="mb-0">{{ statistics.addedThisMonth }}</h3>
+                    <p class="small text-muted mb-0">{{ 'employees.stats.addedThisMonth' | translate }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </app-collapsible-card>
+
       <!-- Filters Card -->
-      <div class="card shadow mb-4">
-        <div class="card-body">
+      <app-collapsible-card titleKey="common.filters" icon="fe-filter">
           <form [formGroup]="filterForm">
             <div class="row mb-3">
               <div class="col-md-3">
@@ -67,9 +140,10 @@
               </div>
             </div>
           </form>
-        </div>
-      </div>
+      </app-collapsible-card>
 
+      <!-- Employees Table -->
+      <app-collapsible-card titleKey="common.results" icon="fe-list" [expanded]="true">
       <!-- Loading indicator -->
       <div *ngIf="loading" class="text-center py-5">
         <div class="spinner-border text-primary" role="status">
@@ -78,10 +152,7 @@
         <p class="mt-3 text-muted">{{ 'common.loading' | translate }} {{ 'employees.employees' | translate }}...</p>
       </div>
 
-      <!-- Employees Table -->
-      <div class="card shadow" *ngIf="!loading">
-        <div class="card-body">
-          <div class="table-responsive">
+          <div class="table-responsive" *ngIf="!loading">
             <table class="table table-hover">
               <thead>
                 <tr>
@@ -165,12 +236,9 @@
             [totalCount]="totalCount"
             (pageChange)="onPageChange($event)">
           </app-pagination>
-        </div>
-      </div>
 
       <!-- No data message -->
-      <div class="card shadow text-center py-5" *ngIf="!loading && employees.length === 0">
-        <div class="card-body">
+      <div class="text-center py-5" *ngIf="!loading && employees.length === 0">
           <i class="fe fe-users" style="font-size: 4rem; opacity: 0.3;"></i>
           <h4 class="mt-3">{{ 'employees.noEmployeesFound' | translate }}</h4>
           <p class="text-muted">{{ 'employees.searchPlaceholder' | translate }}</p>
@@ -178,8 +246,8 @@
             <i class="fe fe-plus mr-2"></i>
             {{ 'employees.addEmployee' | translate }}
           </button>
-        </div>
       </div>
+      </app-collapsible-card>
     </div>
   </div>
 </div>

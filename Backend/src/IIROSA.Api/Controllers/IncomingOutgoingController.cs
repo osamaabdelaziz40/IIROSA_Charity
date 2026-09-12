@@ -51,6 +51,25 @@ public class IncomingOutgoingController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Register statistics for the band above the §21.S.1 grid (UC-COR-01) — same caller
+    /// scope as the register read, never the active search.
+    /// </summary>
+    [HttpGet("incoming/statistics")]
+    public async Task<IActionResult> GetIncomingStatistics()
+    {
+        try
+        {
+            var statistics = await _incomingService.GetStatisticsAsync();
+            return Ok(statistics);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving incoming letter statistics");
+            return StatusCode(500, new { message = "An error occurred while retrieving incoming letter statistics" });
+        }
+    }
+
     /// <summary>View an incoming letter (UC-COR-05).</summary>
     [HttpGet("incoming/{id:guid}")]
     public async Task<IActionResult> GetIncomingLetter(Guid id)
@@ -272,6 +291,25 @@ public class IncomingOutgoingController : ControllerBase
         {
             _logger.LogError(ex, "Error occurred while retrieving outgoing letters");
             return StatusCode(500, new { message = "An error occurred while retrieving outgoing letters" });
+        }
+    }
+
+    /// <summary>
+    /// Register statistics for the band above the §21.S.4 grid (UC-COR-10) — same caller
+    /// scope as the register read, never the active search.
+    /// </summary>
+    [HttpGet("outgoing/statistics")]
+    public async Task<IActionResult> GetOutgoingStatistics()
+    {
+        try
+        {
+            var statistics = await _outgoingService.GetStatisticsAsync();
+            return Ok(statistics);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving outgoing letter statistics");
+            return StatusCode(500, new { message = "An error occurred while retrieving outgoing letter statistics" });
         }
     }
 

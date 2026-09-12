@@ -110,6 +110,44 @@ public class HqTransferService : IHqTransferService
     }
 
     /// <summary>
+    /// Register statistics for the band above the §22.S.1 grid (UC-TRF-01) — deliberately
+    /// not filter-reactive: the band describes the caller's whole country scope, not the
+    /// current search. TotalAmount sums the header's AmountOfPayment over the scoped
+    /// transfers, never the detail lines' partial allocations.
+    /// </summary>
+    public async Task<HqTransferStatisticsDto> GetStatisticsAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Retrieving HQ transfer register statistics");
+
+            // Blank filter ⇒ only the country pin applies — the list read's scope, unchanged
+            var filter = new HqTransferFilterDto();
+            ApplyCallerScope(filter);
+
+            System.Linq.Expressions.Expression<Func<HqTransfer, bool>>? filterExpression =
+                filter.CountryId.HasValue
+                    ? t => t.FK_CountryId == filter.CountryId.Value
+                    : null;
+
+            var (total, totalAmount, addedThisMonth) =
+                await _transferRepository.GetRegisterStatisticsAsync(filterExpression);
+
+            return new HqTransferStatisticsDto
+            {
+                Total = total,
+                TotalAmount = totalAmount,
+                AddedThisMonth = addedThisMonth
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while retrieving HQ transfer register statistics");
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Export the §22.S.1 register to Excel (the OrphanPaymentService.ExportPaymentGroupsToExcelAsync
     /// pattern): the grid's serial + 11 data columns, every row in the caller's country scope.
     /// The repository is read directly — GetHqTransfersAsync clamps PageSize to 200 and an

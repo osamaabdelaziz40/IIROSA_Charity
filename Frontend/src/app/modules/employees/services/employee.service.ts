@@ -12,7 +12,8 @@ import {
   EmployeeUserNameAvailability,
   DepartmentLookup,
   LookupPagedResult,
-  RoleListItem
+  RoleListItem,
+  EmployeeStatistics
 } from '../../../core/models/employee.model';
 import { ApiResponse, PagedResponse } from '../../../core/models/common.model';
 
@@ -54,6 +55,14 @@ export class EmployeeService {
   // Employee CRUD
   getEmployees(search: EmployeeSearchRequest): Observable<PagedResponse<Employee>> {
     return this.api.get(`${this.endpoint}`, search);
+  }
+
+  /**
+   * Register statistics for the band above the employees grid (UC-2.5) — the whole
+   * HQ register, matching the list's unscoped semantics.
+   */
+  getStatistics(): Observable<EmployeeStatistics> {
+    return this.api.get<EmployeeStatistics>(`${this.endpoint}/statistics`);
   }
 
   getEmployeeById(id: string): Observable<Employee> {

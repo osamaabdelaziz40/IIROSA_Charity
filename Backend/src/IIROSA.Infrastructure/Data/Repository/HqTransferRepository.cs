@@ -73,4 +73,35 @@ public class HqTransferRepository : Repository<HqTransfer>, IHqTransferRepositor
             .Include(t => t.Country)
             .Include(t => t.Department);
     }
+
+    /// <summary>
+    /// Register statistics for the band above the §22.S.1 grid (UC-TRF-01) — one grouped
+    /// round-trip over the scoped rows. Soft delete is NOT a global query filter in this
+    /// platform, so !IsDeleted is applied here; TotalAmount sums the header's
+    /// AmountOfPayment, never the detail lines' partial allocations. Null when the scope
+    /// matches no rows.
+    /// </summary>
+    public async Task<(int Total, decimal TotalAmount, int AddedThisMonth)> GetRegisterStatisticsAsync(
+        Expression<Func<HqTransfer, bool>>? filter = null)
+    {
+        var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var query = _dbSet.AsNoTracking().Where(t => !t.IsDeleted);
+        if (filter != null)
+        {
+            query = query.Where(filter);
+        }
+
+        var totals = await query
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                TotalAmount = g.Sum(t => t.AmountOfPayment),
+                AddedThisMonth = g.Count(t => t.CreatedOn >= monthStart)
+            })
+            .FirstOrDefaultAsync();
+
+        return (totals?.Total ?? 0, totals?.TotalAmount ?? 0m, totals?.AddedThisMonth ?? 0);
+    }
 }

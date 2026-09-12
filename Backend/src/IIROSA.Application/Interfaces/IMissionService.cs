@@ -28,6 +28,12 @@ public interface IMissionService
     /// </summary>
     Task<MissionPagedResult<MissionListDto>> GetMyMissionsAsync(MissionFilterDto filter);
 
+    /// <summary>
+    /// Register statistics for the band above the missions grid (UC-MSN-01) — same
+    /// caller scope as the list read; describes the whole register, not the current search.
+    /// </summary>
+    Task<MissionStatisticsDto> GetStatisticsAsync();
+
     // ========== Writes ==========
 
     /// <summary>

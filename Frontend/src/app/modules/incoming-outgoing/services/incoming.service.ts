@@ -9,6 +9,7 @@ import {
   UpdateIncomingDto,
   IncomingFilterDto,
   IncomingPagedResult,
+  IncomingStatistics,
   CorrespondenceStatusOption,
   NextSerialDto,
   IncomingEmployeesDto
@@ -48,6 +49,16 @@ export class IncomingService {
     return this.http.get<IncomingPagedResult>(this.apiUrl, {
       headers: this.getHeaders(),
       params: this.buildHttpParams(filter)
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // ========== UC-COR-01 — the register statistics band ==========
+
+  getStatistics(): Observable<IncomingStatistics> {
+    return this.http.get<IncomingStatistics>(`${this.apiUrl}/statistics`, {
+      headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
     );

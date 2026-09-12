@@ -47,6 +47,26 @@ public class HqTransfersController : ApiController
     }
 
     /// <summary>
+    /// Register statistics for the band above the §22.S.1 grid — the list read's country
+    /// scope (the caller's country claim, pinned in the service), never the active search.
+    /// Literal route beside {id:guid} — literals outrank parameters (export precedent).
+    /// </summary>
+    [HttpGet("statistics")]
+    public async Task<ActionResult<HqTransferStatisticsDto>> GetStatistics()
+    {
+        try
+        {
+            var statistics = await _transferService.GetStatisticsAsync();
+            return Ok(statistics);
+        }
+        catch (Exception)
+        {
+            // The service layer already logs at Error and rethrows — no duplicate here
+            return StatusCode(500, new { message = "An error occurred while retrieving HQ transfer statistics" });
+        }
+    }
+
+    /// <summary>
     /// Export the §22.S.1 register to Excel — the list read's scope rules (the caller's
     /// country claim, pinned in the service), every matching row: paging is ignored.
     /// Literal route beside {id:guid} — literals outrank parameters (max-amount precedent).
