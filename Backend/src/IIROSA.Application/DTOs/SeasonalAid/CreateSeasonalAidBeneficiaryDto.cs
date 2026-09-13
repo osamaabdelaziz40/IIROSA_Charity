@@ -21,4 +21,10 @@ public class CreateSeasonalAidBeneficiaryDto
 
     [StringLength(500, ErrorMessage = "Registration notes cannot exceed 500 characters")]
     public string? RegistrationNotes { get; set; }
+
+    /// <summary>
+    /// true (default) registers the families as main beneficiaries; false puts them on the
+    /// pending list awaiting confirmation as main — the UC-PRJ-06 selection screen's two lists.
+    /// </summary>
+    public bool IsMain { get; set; } = true;
 }

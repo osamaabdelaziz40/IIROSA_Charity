@@ -21,6 +21,14 @@ public class SeasonalAidBeneficiary : FullAuditedEntity
     public DateTime RegistrationDate { get; set; } = DateTime.UtcNow;
     public string? RegistrationNotes { get; set; }
 
+    /// <summary>
+    /// Main/pending split of the project register (UC-PRJ-06 selection screen):
+    /// true = main family (الأسرة الأساسية) added to the project; false = pending
+    /// list entry waiting to be confirmed as main. Distinct from IsRegistered,
+    /// which the removal flow drives (false + soft delete).
+    /// </summary>
+    public bool IsMain { get; set; } = true;
+
     // Distribution Status
     public bool IsDistributed { get; set; } = false;
     public DateTime? DistributionDate { get; set; }

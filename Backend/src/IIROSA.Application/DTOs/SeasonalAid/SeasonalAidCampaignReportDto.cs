@@ -25,6 +25,10 @@ public class SeasonalAidCampaignReportDto
     public int TotalBeneficiaries { get; set; }
     public int DistributedBeneficiaries { get; set; }
     public int PendingBeneficiaries { get; set; }
+
+    // UC-PRJ-06 register split — main vs pending-list families
+    public int MainBeneficiaries { get; set; }
+    public int PendingListBeneficiaries { get; set; }
     public double BeneficiaryDistributionPercentage => TotalBeneficiaries > 0
         ? (DistributedBeneficiaries * 100.0 / TotalBeneficiaries)
         : 0;
@@ -72,6 +76,8 @@ public class BeneficiaryDistributionDetail
     public string? FamilyAddress { get; set; }
     public string? CharityName { get; set; }
     public string? RegionName { get; set; }
+    /// <summary>Main/pending register split (UC-PRJ-06) — drives the report's two detail tables.</summary>
+    public bool IsMain { get; set; }
     public decimal AllocationAmount { get; set; }
     public decimal DistributedAmount { get; set; }
     public bool IsDistributed { get; set; }

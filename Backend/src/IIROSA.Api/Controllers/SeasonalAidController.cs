@@ -481,6 +481,38 @@ public class SeasonalAidController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Move a registration between the selection screen's lists (UC-PRJ-06): main families
+    /// (isMain = true) or the pending list awaiting confirmation (isMain = false).
+    /// </summary>
+    [HttpPut("beneficiaries/{beneficiaryId}/main-status")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
+    [ProducesResponseType(typeof(SeasonalAidBeneficiaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SeasonalAidBeneficiaryDto>> SetBeneficiaryMainStatus(
+        Guid beneficiaryId, [FromBody] SetBeneficiaryMainStatusDto dto)
+    {
+        try
+        {
+            var result = await _seasonalAidService.SetBeneficiaryMainStatusAsync(beneficiaryId, dto.IsMain);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error moving beneficiary {BeneficiaryId} between lists", beneficiaryId);
+            return StatusCode(500, new { message = "Error updating the beneficiary list", error = ex.Message });
+        }
+    }
+
     #endregion
 
     #region Distribution Management (UC-9.5, UC-PRJ-08)

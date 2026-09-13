@@ -96,6 +96,8 @@ export interface SeasonalAidBeneficiary {
   allocationAmount: number;
   currency: string;
   isRegistered: boolean;
+  /** Main family (true) vs pending-list entry (false) — the selection screen's two lists. */
+  isMain: boolean;
   registrationDate: string;
   registrationNotes?: string | null;
   isDistributed: boolean;
@@ -158,6 +160,9 @@ export interface SeasonalAidCampaignReport {
   totalBeneficiaries: number;
   distributedBeneficiaries: number;
   pendingBeneficiaries: number;
+  /** UC-PRJ-06 register split — main vs pending-list families (optional: older API builds omit them). */
+  mainBeneficiaries?: number;
+  pendingListBeneficiaries?: number;
   beneficiaryDistributionPercentage: number;
   beneficiariesByRegion: Record<string, number>;
   beneficiariesByCharity: Record<string, number>;
@@ -183,6 +188,8 @@ export interface BeneficiaryDistributionDetail {
   familyAddress?: string | null;
   charityName?: string | null;
   regionName?: string | null;
+  /** Main/pending register split (UC-PRJ-06) — drives the report's two detail tables. */
+  isMain?: boolean;
   allocationAmount: number;
   distributedAmount: number;
   isDistributed: boolean;
@@ -194,6 +201,8 @@ export interface BeneficiaryDistributionDetail {
 // UC-PRJ-07 quick add: only familyIds are required; the rest fall back to campaign defaults.
 export interface RegisterBeneficiariesRequest {
   familyIds: string[];
+  /** true = main families; false/omitted-server-default = pending list. */
+  isMain?: boolean;
   allocationAmount?: number;
   currency?: string;
   registrationNotes?: string;
@@ -272,6 +281,8 @@ export interface EligibleFamiliesFilter {
 
 export interface SeasonalAidBeneficiaryFilter {
   isDistributed?: boolean;
+  /** Split the register into the main list (true) or the pending list (false). */
+  isMain?: boolean;
   charityId?: string;
   regionId?: number;
   centerId?: number;

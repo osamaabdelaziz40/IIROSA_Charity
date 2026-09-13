@@ -19,214 +19,284 @@
     </div>
   </div>
 
-  <!-- Content -->
   <div *ngIf="!loading && campaign">
-    <!-- Budget Summary Card -->
+    <!-- Family search — one field above the three tables (code / address) -->
     <div class="card mb-4">
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-3">
-            <div class="budget-summary">
-              <label>{{ 'seasonalAid.totalBudget' | translate }}</label>
-              <div class="budget-value">{{ campaign.totalBudget | number }} {{ campaign.budgetCurrency }}</div>
+      <div class="card-body py-3">
+        <div class="input-group">
+          <span class="input-group-text"><i class="fe fe-search"></i></span>
+          <input type="text"
+                 class="form-control"
+                 [(ngModel)]="searchTerm"
+                 (input)="onSearchInput()"
+                 (keyup.enter)="onSearch()"
+                 [placeholder]="'seasonalAid.searchFamiliesPlaceholder' | translate" />
+          <button *ngIf="searchTerm" class="btn btn-outline-secondary" type="button" (click)="clearSearch()">
+            <i class="fe fe-x"></i>
+          </button>
+          <button class="btn btn-primary" type="button" (click)="onSearch()">
+            {{ 'common.search' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Campaign context — budget and register quota at a glance -->
+    <div class="card">
+      <div class="card-body py-2">
+        <div class="row text-center">
+          <div class="col-6 col-lg">
+            <div class="summary-tile">
+              <span class="tile-title">{{ 'seasonalAid.mainFamiliesShort' | translate }}</span>
+              <span class="tile-value">{{ mainFamilies.length }}</span>
+              <span class="tile-sub">
+                {{ 'seasonalAid.maximumFamilies' | translate }}:
+                {{ campaign.maximumFamilies || ('seasonalAid.unlimited' | translate) }}
+              </span>
             </div>
           </div>
-          <div class="col-md-3">
-            <div class="budget-summary">
-              <label>{{ 'seasonalAid.registeredBeneficiaries' | translate }}</label>
-              <div class="budget-value">
-                {{ registeredBeneficiaries.length }}<span *ngIf="campaign.maximumFamilies"> / {{ campaign.maximumFamilies }}</span>
+          <div class="col-6 col-lg">
+            <div class="summary-tile">
+              <span class="tile-title">{{ 'seasonalAid.pendingFamiliesShort' | translate }}</span>
+              <span class="tile-value">{{ pendingFamilies.length }}</span>
+            </div>
+          </div>
+          <div class="col-6 col-lg">
+            <div class="summary-tile">
+              <span class="tile-title">{{ 'seasonalAid.totalBudget' | translate }}</span>
+              <span class="tile-value">{{ campaign.totalBudget | number }} {{ campaign.budgetCurrency }}</span>
+            </div>
+          </div>
+          <div class="col-6 col-lg">
+            <div class="summary-tile">
+              <span class="tile-title">{{ 'seasonalAid.allocatedAmount' | translate }}</span>
+              <span class="tile-value">{{ campaign.allocatedBudget | number }} {{ campaign.budgetCurrency }}</span>
+              <div class="progress">
+                <div class="progress-bar bg-primary" role="progressbar"
+                     [style.width.%]="allocationUtilization"></div>
               </div>
             </div>
           </div>
-          <div class="col-md-3">
-            <div class="budget-summary">
-              <label>{{ 'seasonalAid.allocatedAmount' | translate }}</label>
-              <div class="budget-value">
-                {{ campaign.allocatedBudget | number }} {{ campaign.budgetCurrency }}
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="budget-summary">
-              <label>{{ 'seasonalAid.remainingBudget' | translate }}</label>
-              <div class="budget-value" [ngClass]="getRemainingBudget() < campaign.totalBudget * 0.1 ? 'text-danger' : 'text-success'">
-                {{ getRemainingBudget() | number }} {{ campaign.budgetCurrency }}
-              </div>
+          <div class="col-12 col-lg">
+            <div class="summary-tile">
+              <span class="tile-title">{{ 'seasonalAid.remainingBudget' | translate }}</span>
+              <span class="tile-value">{{ campaign.remainingBudget | number }} {{ campaign.budgetCurrency }}</span>
+              <span class="tile-sub">
+                {{ 'seasonalAid.budgetUtilization' | translate }}: {{ budgetUtilization | number:'1.0-0' }}%
+              </span>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="row">
-      <!-- Eligible Families Panel (UC-PRJ-10) -->
-      <div class="col-md-7">
-        <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="card-title">{{ 'seasonalAid.eligibleFamilies' | translate }}</h5>
-            <div class="header-actions">
-              <input type="checkbox"
-                     class="form-check-input mr-2"
-                     #selectAllCheckbox
-                     [checked]="selectedCount === eligibleFamilies.length && eligibleFamilies.length > 0"
-                     (change)="toggleSelectAll(selectAllCheckbox.checked)">
-              <label class="form-check-label mr-3">{{ 'common.selectAll' | translate }}</label>
-              <span class="badge badge-primary">{{ selectedCount }} {{ 'common.selected' | translate }}</span>
-            </div>
+    <!-- ═══════════ Table 1 — all families of the charity not yet on the project ═══════════ -->
+    <app-collapsible-card titleKey="seasonalAid.selection.allFamilies" icon="fe-home" [expanded]="true">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div>
+          <span class="badge badge-secondary mr-1">{{ poolTotalCount }}</span>
+          {{ 'seasonalAid.families' | translate }}
+          <small class="text-muted d-block">{{ 'seasonalAid.selection.allFamiliesHint' | translate }}</small>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <div class="form-check mb-0 mr-2">
+            <input class="form-check-input" type="checkbox" id="selectAllPool"
+                   [checked]="allPoolSelected" (change)="toggleSelectAll($any($event.target).checked)">
+            <label class="form-check-label" for="selectAllPool">{{ 'common.selectAll' | translate }}</label>
           </div>
-          <div class="card-body">
-            <!-- Filters -->
-            <div class="row mb-3">
-              <div class="col-md-5">
-                <input type="text"
-                       class="form-control"
-                       [placeholder]="'common.search' | translate"
-                       [(ngModel)]="searchTerm"
-                       (input)="onSearchChange()">
-              </div>
-              <div class="col-md-3" *ngIf="regionOptions.length > 0">
-                <select class="form-control" [(ngModel)]="regionFilter" (change)="onFilterChange()">
-                  <option [ngValue]="null">{{ 'seasonalAid.allRegions' | translate }}</option>
-                  <option *ngFor="let region of regionOptions; trackBy: trackByRegion" [ngValue]="region.id">
-                    {{ region.name }}
-                  </option>
-                </select>
-              </div>
-              <div class="col-md-4">
-                <select class="form-control" [(ngModel)]="familyTypeFilter" (change)="onFilterChange()">
-                  <option *ngFor="let type of familyTypeOptions; trackBy: trackFamilyType" [ngValue]="type.id">
-                    {{ type.name | translate }}
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Selection Summary -->
-            <div class="selection-summary mb-3" *ngIf="selectedCount > 0">
-              <div class="alert alert-info">
-                <i class="fe fe-info mr-2"></i>
-                {{ selectedCount }} {{ 'seasonalAid.familiesSelected' | translate }}
-                ({{ getSelectedAllocation() | number }} {{ campaign.budgetCurrency }})
-                <span *ngIf="!canAddMoreBeneficiaries()" class="text-danger ml-2">
-                  <i class="fe fe-alert-circle mr-1"></i>
-                  {{ 'seasonalAid.exceedsBudget' | translate }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Eligible Families Table -->
-            <div class="table-responsive">
-              <table class="table table-hover">
-                <thead>
-                  <tr>
-                    <th width="40"></th>
-                    <th>{{ 'seasonalAid.familyCode' | translate }}</th>
-                    <th>{{ 'seasonalAid.address' | translate }}</th>
-                    <th>{{ 'seasonalAid.charity' | translate }}</th>
-                    <th>{{ 'seasonalAid.orphanCount' | translate }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let family of eligibleFamilies; trackBy: trackByFamily"
-                      [class.table-active]="isSelected(family)">
-                    <td>
-                      <input type="checkbox"
-                             class="form-check-input"
-                             #familyCheckbox
-                             [checked]="isSelected(family)"
-                             (change)="toggleSelected(family, familyCheckbox.checked)">
-                    </td>
-                    <td>{{ family.familyCode }}</td>
-                    <td>{{ family.familyAddress }}</td>
-                    <td>{{ family.charityName }}</td>
-                    <td>{{ family.orphansCount }}</td>
-                  </tr>
-                  <tr *ngIf="eligibleFamilies.length === 0">
-                    <td colspan="5" class="text-center py-4">
-                      <i class="fe fe-inbox fe-2x text-muted mb-2"></i>
-                      <p class="text-muted">{{ 'seasonalAid.noAvailableBeneficiaries' | translate }}</p>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Actions -->
-            <div class="action-bar mt-3">
-              <button class="btn btn-primary"
-                      [disabled]="selectedCount === 0 || saving || !canAddMoreBeneficiaries()"
-                      (click)="onAddBeneficiaries()">
-                <i class="fe fe-plus mr-2" *ngIf="!saving"></i>
-                <span class="spinner-border spinner-border-sm mr-2" *ngIf="saving"></span>
-                {{ 'seasonalAid.addSelectedBeneficiaries' | translate }} ({{ selectedCount }})
-              </button>
-            </div>
-          </div>
+          <span class="badge badge-primary mr-2">{{ selectedCount }} {{ 'common.selected' | translate }}</span>
+          <button class="btn btn-success btn-sm"
+                  [disabled]="saving || selectedCount === 0"
+                  (click)="addSelectedAs(true)">
+            <i class="fe fe-check mr-1"></i>
+            {{ 'seasonalAid.selection.addSelectedAsMain' | translate }}
+          </button>
+          <button class="btn btn-warning btn-sm"
+                  [disabled]="saving || selectedCount === 0"
+                  (click)="addSelectedAs(false)">
+            <i class="fe fe-clock mr-1"></i>
+            {{ 'seasonalAid.selection.addSelectedAsPending' | translate }}
+          </button>
         </div>
       </div>
 
-      <!-- Registered Beneficiaries Panel -->
-      <div class="col-md-5">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title">{{ 'seasonalAid.registeredBeneficiaries' | translate }}</h5>
-            <span class="badge badge-success">{{ registeredBeneficiaries.length }}</span>
-          </div>
-          <div class="card-body">
-            <div class="registered-list">
-              <div class="registered-item d-flex justify-content-between align-items-center"
-                   *ngFor="let beneficiary of registeredBeneficiaries; trackBy: trackByBeneficiary">
-                <div class="registered-info">
-                  <div class="registered-name">
-                    {{ beneficiary.familyCode }}
-                    <span class="badge ml-1"
-                          [ngClass]="beneficiary.isDistributed ? 'badge-success' : 'badge-warning'">
-                      {{ (beneficiary.isDistributed ? 'seasonalAid.distributed' : 'seasonalAid.pending') | translate }}
-                    </span>
-                  </div>
-                  <div class="registered-details">
-                    <i class="fe fe-map-pin"></i> {{ beneficiary.familyAddress }}
-                  </div>
-                  <div class="registered-details">
-                    <i class="fe fe-users"></i> {{ beneficiary.orphansCount }} {{ 'seasonalAid.orphans' | translate }}
-                  </div>
-                </div>
-                <div class="registered-actions">
-                  <!-- UC-PRJ-08: تأكيد استلام الأسرة — acting user comes from the token server-side -->
-                  <button class="btn btn-sm"
-                          [ngClass]="beneficiary.isDistributed ? 'btn-outline-warning' : 'btn-outline-success'"
-                          [title]="'seasonalAid.confirmReceived' | translate"
-                          [disabled]="togglingFamilyId === beneficiary.familyId"
-                          (click)="onToggleReceived(beneficiary)">
-                    <span class="spinner-border spinner-border-sm" *ngIf="togglingFamilyId === beneficiary.familyId; else receivedIcon"></span>
-                    <ng-template #receivedIcon>
-                      <i class="fe" [class.fe-check-circle]="!beneficiary.isDistributed" [class.fe-rotate-ccw]="beneficiary.isDistributed"></i>
-                    </ng-template>
-                  </button>
-                  <button class="btn btn-sm btn-outline-danger ml-1"
-                          [title]="'common.remove' | translate"
+      <div class="text-center py-4" *ngIf="loadingPool">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+      </div>
+
+      <div class="table-responsive" *ngIf="!loadingPool">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th style="width: 40px;"></th>
+              <th>{{ 'seasonalAid.familyCode' | translate }}</th>
+              <th>{{ 'seasonalAid.address' | translate }}</th>
+              <th>{{ 'seasonalAid.orphans' | translate }}</th>
+              <th>{{ 'seasonalAid.familyMembers' | translate }}</th>
+              <th>{{ 'seasonalAid.region' | translate }}</th>
+              <th>{{ 'common.actions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let family of poolFamilies; trackBy: trackByFamilyId">
+              <td>
+                <input type="checkbox"
+                       class="form-check-input"
+                       [checked]="isPoolSelected(family)"
+                       (change)="togglePoolSelected(family, $any($event.target).checked)">
+              </td>
+              <td><strong>{{ family.familyCode }}</strong></td>
+              <td>{{ family.familyAddress || '-' }}</td>
+              <td>{{ family.orphansCount }}</td>
+              <td>{{ family.familyMembersCount }}</td>
+              <td>{{ family.regionName || '-' }}</td>
+              <td>
+                <button class="btn btn-success btn-sm mr-1"
+                        [disabled]="saving"
+                        (click)="addFamilyAs(family, true)"
+                        [title]="'seasonalAid.selection.addAsMain' | translate">
+                  <i class="fe fe-check mr-1"></i>{{ 'seasonalAid.selection.addAsMain' | translate }}
+                </button>
+                <button class="btn btn-warning btn-sm"
+                        [disabled]="saving"
+                        (click)="addFamilyAs(family, false)"
+                        [title]="'seasonalAid.selection.addAsPending' | translate">
+                  <i class="fe fe-clock mr-1"></i>{{ 'seasonalAid.selection.addAsPending' | translate }}
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="poolFamilies.length === 0">
+              <td colspan="7" class="text-center text-muted py-4">
+                {{ 'seasonalAid.noAvailableBeneficiaries' | translate }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </app-collapsible-card>
+
+    <!-- ═══════════ Table 2 — main families on the project ═══════════ -->
+    <app-collapsible-card titleKey="seasonalAid.selection.mainFamilies" icon="fe-check-square" [expanded]="true">
+      <div class="mb-3">
+        <span class="badge badge-success mr-1">{{ mainFamilies.length }}</span>
+        {{ 'seasonalAid.families' | translate }}
+        <small class="text-muted d-block">{{ 'seasonalAid.selection.mainFamiliesHint' | translate }}</small>
+      </div>
+
+      <div class="text-center py-4" *ngIf="loadingMain">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+      </div>
+
+      <div class="table-responsive" *ngIf="!loadingMain">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>{{ 'seasonalAid.familyCode' | translate }}</th>
+              <th>{{ 'seasonalAid.address' | translate }}</th>
+              <th>{{ 'seasonalAid.orphans' | translate }}</th>
+              <th>{{ 'seasonalAid.allocation' | translate }}</th>
+              <th>{{ 'seasonalAid.selection.registeredOn' | translate }}</th>
+              <th>{{ 'common.actions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let beneficiary of mainFamilies; trackBy: trackByBeneficiaryId">
+              <td><strong>{{ beneficiary.familyCode }}</strong></td>
+              <td>{{ beneficiary.familyAddress || '-' }}</td>
+              <td>{{ beneficiary.orphansCount }}</td>
+              <td>{{ beneficiary.allocationAmount | number }} {{ beneficiary.currency }}</td>
+              <td>{{ beneficiary.registrationDate | date: 'mediumDate' }}</td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-warning"
+                          *ngIf="!beneficiary.isDistributed"
                           [disabled]="saving"
-                          (click)="onRemoveBeneficiary(beneficiary)">
-                    <i class="fe fe-trash"></i>
+                          (click)="moveToList(beneficiary, false)"
+                          [title]="'seasonalAid.selection.moveToPending' | translate">
+                    <i class="fe fe-clock"></i>
+                    {{ 'seasonalAid.selection.moveToPending' | translate }}
+                  </button>
+                  <button class="btn btn-danger"
+                          *ngIf="!beneficiary.isDistributed"
+                          [disabled]="saving"
+                          (click)="onRemoveBeneficiary(beneficiary)"
+                          [title]="'common.delete' | translate">
+                    <i class="fe fe-trash-2"></i>
+                  </button>
+                  <span class="badge badge-info align-self-center ml-2"
+                        *ngIf="beneficiary.isDistributed">
+                    {{ 'seasonalAid.distributedLabel' | translate }}
+                  </span>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="mainFamilies.length === 0">
+              <td colspan="6" class="text-center text-muted py-4">
+                {{ 'seasonalAid.noRegisteredBeneficiaries' | translate }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </app-collapsible-card>
+
+    <!-- ═══════════ Table 3 — pending list awaiting confirmation ═══════════ -->
+    <app-collapsible-card titleKey="seasonalAid.selection.pendingFamilies" icon="fe-clock" [expanded]="true">
+      <div class="mb-3">
+        <span class="badge badge-warning mr-1">{{ pendingFamilies.length }}</span>
+        {{ 'seasonalAid.families' | translate }}
+        <small class="text-muted d-block">{{ 'seasonalAid.selection.pendingFamiliesHint' | translate }}</small>
+      </div>
+
+      <div class="text-center py-4" *ngIf="loadingPending">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+      </div>
+
+      <div class="table-responsive" *ngIf="!loadingPending">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>{{ 'seasonalAid.familyCode' | translate }}</th>
+              <th>{{ 'seasonalAid.address' | translate }}</th>
+              <th>{{ 'seasonalAid.orphans' | translate }}</th>
+              <th>{{ 'seasonalAid.allocation' | translate }}</th>
+              <th>{{ 'seasonalAid.selection.registeredOn' | translate }}</th>
+              <th>{{ 'common.actions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let beneficiary of pendingFamilies; trackBy: trackByBeneficiaryId">
+              <td><strong>{{ beneficiary.familyCode }}</strong></td>
+              <td>{{ beneficiary.familyAddress || '-' }}</td>
+              <td>{{ beneficiary.orphansCount }}</td>
+              <td>{{ beneficiary.allocationAmount | number }} {{ beneficiary.currency }}</td>
+              <td>{{ beneficiary.registrationDate | date: 'mediumDate' }}</td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-success"
+                          [disabled]="saving"
+                          (click)="moveToList(beneficiary, true)"
+                          [title]="'seasonalAid.selection.confirmAsMain' | translate">
+                    <i class="fe fe-check"></i>
+                    {{ 'seasonalAid.selection.confirmAsMain' | translate }}
+                  </button>
+                  <button class="btn btn-danger"
+                          [disabled]="saving"
+                          (click)="onRemoveBeneficiary(beneficiary)"
+                          [title]="'common.delete' | translate">
+                    <i class="fe fe-trash-2"></i>
                   </button>
                 </div>
-              </div>
-
-              <div class="text-center py-4" *ngIf="registeredBeneficiaries.length === 0">
-                <i class="fe fe-inbox fe-2x text-muted mb-2"></i>
-                <p class="text-muted">{{ 'seasonalAid.noRegisteredBeneficiaries' | translate }}</p>
-              </div>
-            </div>
-          </div>
-          <div class="card-footer">
-            <button class="btn btn-success btn-block" [disabled]="campaign.isClosed" (click)="onContinueToDistribution()">
-              <i class="fe fe-arrow-right mr-2"></i>
-              {{ 'seasonalAid.continueToDistribution' | translate }}
-            </button>
-          </div>
-        </div>
+              </td>
+            </tr>
+            <tr *ngIf="pendingFamilies.length === 0">
+              <td colspan="6" class="text-center text-muted py-4">
+                {{ 'seasonalAid.selection.noPending' | translate }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </div>
+    </app-collapsible-card>
   </div>
 </div>

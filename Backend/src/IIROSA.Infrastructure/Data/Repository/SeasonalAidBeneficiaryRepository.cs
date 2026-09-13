@@ -51,6 +51,12 @@ public class SeasonalAidBeneficiaryRepository : Repository<SeasonalAidBeneficiar
             query = query.Where(b => b.IsDistributed == filter.IsDistributed.Value);
         }
 
+        // Main vs pending-list split (UC-PRJ-06 selection screen)
+        if (filter.IsMain.HasValue)
+        {
+            query = query.Where(b => b.IsMain == filter.IsMain.Value);
+        }
+
         if (filter.CharityId.HasValue)
         {
             query = query.Where(b => b.Family != null && b.Family.FK_CharityId == filter.CharityId.Value);
@@ -130,7 +136,7 @@ public class SeasonalAidBeneficiaryRepository : Repository<SeasonalAidBeneficiar
     /// logic lives in exactly one place.
     /// </summary>
     public async Task<(IEnumerable<SeasonalAidBeneficiary> Items, int TotalCount)> GetByCampaignFilteredPaginatedAsync(
-        Guid campaignId, string? searchTerm = null, bool? isDistributed = null,
+        Guid campaignId, string? searchTerm = null, bool? isDistributed = null, bool? isMain = null,
         Guid? charityId = null, int? regionId = null, int? centerId = null,
         DateTime? registrationDateFrom = null, DateTime? registrationDateTo = null,
         DateTime? distributionDateFrom = null, DateTime? distributionDateTo = null,
@@ -140,6 +146,7 @@ public class SeasonalAidBeneficiaryRepository : Repository<SeasonalAidBeneficiar
         {
             SearchTerm = searchTerm,
             IsDistributed = isDistributed,
+            IsMain = isMain,
             CharityId = charityId,
             RegionId = regionId,
             CenterId = centerId,

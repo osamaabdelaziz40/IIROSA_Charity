@@ -126,6 +126,12 @@ export class SeasonalAidService {
     return this.http.delete<void>(`${this.apiUrl}/beneficiaries/${beneficiaryId}`);
   }
 
+  /** Move one registration between the main list and the pending list (UC-PRJ-06). */
+  setBeneficiaryMainStatus(beneficiaryId: string, isMain: boolean): Observable<SeasonalAidBeneficiary> {
+    return this.http.put<SeasonalAidBeneficiary>(
+      `${this.apiUrl}/beneficiaries/${beneficiaryId}/main-status`, { isMain });
+  }
+
   /** UC-PRJ-08 — confirm/withdraw a family's receipt; lives on /api/Families per the module spec. */
   setFamilyReceivedFlag(familyId: string, request: SetFamilyReceivedFlagRequest): Observable<{ message: string }> {
     return this.http.put<{ message: string }>(

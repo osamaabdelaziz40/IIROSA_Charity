@@ -35,3 +35,12 @@ public class UpdateBeneficiariesResultDto
     public int TotalRegistered { get; set; }
     public int? MaximumFamilies { get; set; }
 }
+
+/// <summary>
+/// Move one registration between the selection screen's two lists: main families (true)
+/// or the pending list (false) — UC-PRJ-06.
+/// </summary>
+public class SetBeneficiaryMainStatusDto
+{
+    public bool IsMain { get; set; }
+}

@@ -374,6 +374,16 @@ export class DistributionRecordComponent implements OnInit {
     return this.beneficiaries.filter(b => !b.isDistributed);
   }
 
+  /** Main-register families still awaiting distribution (UC-PRJ-06 split). */
+  getMainPendingDistribution(): SeasonalAidBeneficiary[] {
+    return this.beneficiaries.filter(b => b.isMain && !b.isDistributed);
+  }
+
+  /** Pending-register families still awaiting distribution. */
+  getPendingListDistribution(): SeasonalAidBeneficiary[] {
+    return this.beneficiaries.filter(b => !b.isMain && !b.isDistributed);
+  }
+
   getDistributedBeneficiaries(): SeasonalAidBeneficiary[] {
     return this.beneficiaries.filter(b => b.isDistributed);
   }

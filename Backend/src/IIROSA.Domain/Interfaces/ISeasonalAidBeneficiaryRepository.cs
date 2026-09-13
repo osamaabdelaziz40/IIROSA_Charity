@@ -22,7 +22,7 @@ public interface ISeasonalAidBeneficiaryRepository : IRepository<SeasonalAidBene
     // Paged variant with the full filter surface (search, dates, sorting) — primitives only,
     // same rationale as ISeasonalAidCampaignRepository.GetFilteredPaginatedAsync.
     Task<(IEnumerable<SeasonalAidBeneficiary> Items, int TotalCount)> GetByCampaignFilteredPaginatedAsync(
-        Guid campaignId, string? searchTerm = null, bool? isDistributed = null,
+        Guid campaignId, string? searchTerm = null, bool? isDistributed = null, bool? isMain = null,
         Guid? charityId = null, int? regionId = null, int? centerId = null,
         DateTime? registrationDateFrom = null, DateTime? registrationDateTo = null,
         DateTime? distributionDateFrom = null, DateTime? distributionDateTo = null,

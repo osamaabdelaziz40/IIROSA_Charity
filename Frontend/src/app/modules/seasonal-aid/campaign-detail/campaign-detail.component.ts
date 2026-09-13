@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { forkJoin } from 'rxjs';
 
 import { SeasonalAidService } from '../services/seasonal-aid.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -31,9 +32,17 @@ export class CampaignDetailComponent implements OnInit {
   ];
 
   campaign: SeasonalAidCampaign | null = null;
-  beneficiaries: SeasonalAidBeneficiary[] = [];
+  // Main and pending registers are shown as two separate preview tables.
+  mainBeneficiaries: SeasonalAidBeneficiary[] = [];
+  pendingBeneficiaries: SeasonalAidBeneficiary[] = [];
   loading = false;
   closingCampaign = false;
+
+  // Live counts from the beneficiaries endpoint — the counter fields on the campaign
+  // DTO are unreliable, so the detail page computes its own split.
+  mainCount = 0;
+  pendingCount = 0;
+  distributedCount = 0;
 
   beneficiaryFilterForm: FormGroup;
 
@@ -71,6 +80,7 @@ export class CampaignDetailComponent implements OnInit {
         this.campaign = data;
         this.loading = false;
         this.loadBeneficiaries(id);
+        this.loadBeneficiaryStats(id);
       },
       error: () => {
         this.loading = false;
@@ -78,27 +88,51 @@ export class CampaignDetailComponent implements OnInit {
     });
   }
 
-  /** Beneficiary preview (first page) — the full management screen lives at :id/beneficiaries. */
+  /** Main / pending / distributed counts — cheap paged queries, only totalCount is read. */
+  loadBeneficiaryStats(id: string): void {
+    const page = { pageNumber: 1, pageSize: 1 };
+    forkJoin({
+      main: this.seasonalAidService.getCampaignBeneficiaries(id, { ...page, isMain: true }),
+      pending: this.seasonalAidService.getCampaignBeneficiaries(id, { ...page, isMain: false }),
+      distributed: this.seasonalAidService.getCampaignBeneficiaries(id, { ...page, isDistributed: true })
+    }).subscribe({
+      next: ({ main, pending, distributed }) => {
+        this.mainCount = main.totalCount || 0;
+        this.pendingCount = pending.totalCount || 0;
+        this.distributedCount = distributed.totalCount || 0;
+      }
+    });
+  }
+
+  /**
+   * Beneficiary previews (first page of each register) — the full management
+   * screen lives at :id/beneficiaries. Search and distribution filters apply
+   * to both tables; the main/pending split itself is the two tables.
+   */
   loadBeneficiaries(id: string): void {
     const formValues = this.beneficiaryFilterForm.value;
-    const filter: Partial<SeasonalAidBeneficiaryFilter> = {
+    const base: Partial<SeasonalAidBeneficiaryFilter> = {
       pageNumber: 1,
       pageSize: 10,
       sortDescending: false
     };
 
     if (formValues.searchTerm) {
-      filter.searchTerm = formValues.searchTerm;
+      base.searchTerm = formValues.searchTerm;
     }
     if (formValues.distributionStatus === 'pending') {
-      filter.isDistributed = false;
+      base.isDistributed = false;
     } else if (formValues.distributionStatus === 'distributed') {
-      filter.isDistributed = true;
+      base.isDistributed = true;
     }
 
-    this.seasonalAidService.getCampaignBeneficiaries(id, filter).subscribe({
-      next: result => {
-        this.beneficiaries = result.items || [];
+    forkJoin({
+      main: this.seasonalAidService.getCampaignBeneficiaries(id, { ...base, isMain: true }),
+      pending: this.seasonalAidService.getCampaignBeneficiaries(id, { ...base, isMain: false })
+    }).subscribe({
+      next: ({ main, pending }) => {
+        this.mainBeneficiaries = main.items || [];
+        this.pendingBeneficiaries = pending.items || [];
       }
     });
   }
@@ -135,6 +169,11 @@ export class CampaignDetailComponent implements OnInit {
     }
   }
 
+  /** Total families on the register (main + pending). */
+  get registeredCount(): number {
+    return this.mainCount + this.pendingCount;
+  }
+
   getBudgetUtilization(): number {
     if (!this.campaign || !this.campaign.totalBudget) return 0;
     return (this.campaign.distributedBudget / this.campaign.totalBudget) * 100;
@@ -145,6 +184,19 @@ export class CampaignDetailComponent implements OnInit {
     if (utilization >= 90) return 'text-danger';
     if (utilization >= 70) return 'text-warning';
     return 'text-success';
+  }
+
+  getBudgetUtilizationBarClass(): string {
+    const utilization = this.getBudgetUtilization();
+    if (utilization >= 90) return 'bg-danger';
+    if (utilization >= 70) return 'bg-warning';
+    return 'bg-success';
+  }
+
+  /** Share of the budget committed to registered families. */
+  getAllocationUtilization(): number {
+    if (!this.campaign || !this.campaign.totalBudget) return 0;
+    return (this.campaign.allocatedBudget / this.campaign.totalBudget) * 100;
   }
 
   getCampaignTypeClass(type: string): string {

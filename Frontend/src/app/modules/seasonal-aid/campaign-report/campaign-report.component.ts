@@ -118,6 +118,15 @@ export class CampaignReportComponent implements OnInit {
     return details.filter(d => d.charityName === this.selectedCharityName);
   }
 
+  /** UC-PRJ-06 register split — one detail table per register, both after the charity filter. */
+  get filteredMainDetails(): BeneficiaryDistributionDetail[] {
+    return this.filteredDetails.filter(d => d.isMain);
+  }
+
+  get filteredPendingDetails(): BeneficiaryDistributionDetail[] {
+    return this.filteredDetails.filter(d => !d.isMain);
+  }
+
   /** The charity-breakdown rows after the same filter. */
   get filteredCharityEntries(): Array<{ key: string; value: number }> {
     return this.toEntries(this.report?.beneficiariesByCharity)

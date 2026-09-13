@@ -7,6 +7,10 @@ public class SeasonalAidBeneficiaryFilterDto
 {
     // Filters
     public bool? IsDistributed { get; set; }
+
+    /// <summary>Main (true) vs pending-list (false) split — UC-PRJ-06 selection screen.</summary>
+    public bool? IsMain { get; set; }
+
     public Guid? CharityId { get; set; }
     public int? RegionId { get; set; }
     public int? CenterId { get; set; }

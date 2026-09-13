@@ -27,6 +27,9 @@ public class SeasonalAidBeneficiaryDto
     public DateTime RegistrationDate { get; set; }
     public string? RegistrationNotes { get; set; }
 
+    /// <summary>Main family (true) or pending-list entry (false) — UC-PRJ-06 selection screen split.</summary>
+    public bool IsMain { get; set; }
+
     // Distribution Status (UC-9.7)
     public bool IsDistributed { get; set; }
     public DateTime? DistributionDate { get; set; }

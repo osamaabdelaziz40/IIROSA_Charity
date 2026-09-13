@@ -6,51 +6,63 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 import { SeasonalAidService } from '../services/seasonal-aid.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
+import { SharedModule } from '../../../shared/shared.module';
 import {
   SeasonalAidCampaign,
-  SeasonalAidBeneficiary,
-  EligibleFamiliesFilter
+  SeasonalAidBeneficiary
 } from '../models/seasonal-aid.model';
-import { LookupBase } from '../../../shared/models/lookup.base.model';
 
+/**
+ * Beneficiary selection screen (UC-PRJ-06 اختيار الأسر للمشروع) — three tables:
+ *
+ *  1. all families of the caller's charity that are not yet on the project
+ *     (server excludes already-registered rows) with row selection, select-all
+ *     and two add commands — add as main family or add to the pending list;
+ *  2. main families registered on the project (isMain = true);
+ *  3. the pending list awaiting confirmation as main (isMain = false).
+ *
+ * One search field above the tables drives all three reads. Every mutation goes
+ * through the register endpoint (with isMain) or the main-status move endpoint;
+ * quota, budget and charity ownership are enforced server-side.
+ */
 @Component({
   selector: 'app-beneficiary-selection',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
+  imports: [CommonModule, FormsModule, TranslateModule, SharedModule],
   templateUrl: './beneficiary-selection.component.html',
   styleUrls: ['./beneficiary-selection.component.scss']
 })
 export class BeneficiarySelectionComponent implements OnInit {
   campaign: SeasonalAidCampaign | null = null;
-  eligibleFamilies: SeasonalAidBeneficiary[] = [];
-  registeredBeneficiaries: SeasonalAidBeneficiary[] = [];
   loading = false;
+
+  // Table 1 — pool: every charity family not yet on the project
+  poolFamilies: SeasonalAidBeneficiary[] = [];
+  poolTotalCount = 0;
+  loadingPool = false;
+
+  // Tables 2 & 3 — the project register split by main/pending
+  mainFamilies: SeasonalAidBeneficiary[] = [];
+  pendingFamilies: SeasonalAidBeneficiary[] = [];
+  loadingMain = false;
+  loadingPending = false;
+
   saving = false;
-  togglingFamilyId: string | null = null;
 
+  /** Family search (code/address) — one field above the tables, applied to all three. */
   searchTerm = '';
-  charityFilter = '';
-  regionFilter: number | null = null;
-  familyTypeFilter = '';
+  private searchDebounce: ReturnType<typeof setTimeout> | null = null;
 
-  /** Families ticked on the eligible panel, pending an "Add selected". */
+  /** Families ticked on the pool table, pending an add-as-main / add-as-pending. */
   selectedFamilyIds = new Set<string>();
 
-  regionOptions: LookupBase[] = [];
-
-  familyTypeOptions = [
-    { id: '', name: 'seasonalAid.allTypes' },
-    { id: 'All', name: 'seasonalAid.familyTypes.All' },
-    { id: 'Orphan Families', name: 'seasonalAid.familyTypes.OrphanFamilies' },
-    { id: 'Needy Families', name: 'seasonalAid.familyTypes.NeedyFamilies' }
-  ];
+  /** Pool page size — the pool can be much larger than the two register tables. */
+  readonly poolPageSize = 100;
 
   constructor(
     private router: Router,
     private route: ActivatedRoute,
     private seasonalAidService: SeasonalAidService,
-    private lookupManagementService: LookupManagementService,
     private notification: NotificationService,
     private translate: TranslateService
   ) {}
@@ -67,74 +79,116 @@ export class BeneficiarySelectionComponent implements OnInit {
       next: data => {
         this.campaign = data;
         this.loading = false;
-        this.loadRegistered(id);
-        this.loadEligible(id);
-        if (data.countryId) {
-          this.loadRegions(data.countryId);
-        }
+        this.reloadTables();
       },
       error: () => {
         this.loading = false;
+        this.notification.error(this.translate.instant('seasonalAid.campaignLoadFailed'));
+        this.onCancel();
       }
     });
   }
 
-  private loadRegions(countryId: number): void {
-    this.lookupManagementService.getRegionsByCountry(countryId).subscribe({
-      next: regions => {
-        this.regionOptions = (regions || []).map(r => ({ id: r.id, name: r.nameAr || r.name }));
-      },
-      error: () => (this.regionOptions = [])
-    });
+  /** Refresh the three tables with the current search term. */
+  reloadTables(): void {
+    if (!this.campaign) {
+      return;
+    }
+    this.loadPool();
+    this.loadMain();
+    this.loadPending();
   }
 
-  /** UC-PRJ-10 — families matching the campaign scope that are not yet registered. */
-  loadEligible(id: string): void {
-    const filter: Partial<EligibleFamiliesFilter> = {
+  // ========== Table 1: charity family pool (UC-PRJ-10 read) ==========
+
+  loadPool(): void {
+    if (!this.campaign) return;
+    this.loadingPool = true;
+    this.seasonalAidService.getEligibleFamilies(this.campaign.id, {
       pageNumber: 1,
-      pageSize: 50,
-      sortDescending: false
-    };
-    if (this.searchTerm) {
-      filter.searchTerm = this.searchTerm;
-    }
-    if (this.regionFilter) {
-      filter.regionId = this.regionFilter;
-    }
-    if (this.familyTypeFilter) {
-      filter.familyType = this.familyTypeFilter;
-    }
-
-    this.seasonalAidService.getEligibleFamilies(id, filter).subscribe({
+      pageSize: this.poolPageSize,
+      sortDescending: false,
+      searchTerm: this.searchTerm || undefined
+    }).subscribe({
       next: result => {
-        this.eligibleFamilies = result.items || [];
+        this.poolFamilies = result.items || [];
+        this.poolTotalCount = result.totalCount || this.poolFamilies.length;
+        this.loadingPool = false;
+        // Selections belong to the rows on screen — a reloaded pool starts clean.
         this.selectedFamilyIds.clear();
-      }
+      },
+      error: () => (this.loadingPool = false)
     });
   }
 
-  loadRegistered(id: string): void {
-    this.seasonalAidService.getCampaignBeneficiaries(id, { pageNumber: 1, pageSize: 200, sortDescending: false }).subscribe({
+  // ========== Tables 2 & 3: the register split ==========
+
+  loadMain(): void {
+    if (!this.campaign) return;
+    this.loadingMain = true;
+    this.seasonalAidService.getCampaignBeneficiaries(this.campaign.id, {
+      pageNumber: 1,
+      pageSize: 200,
+      sortDescending: false,
+      isMain: true,
+      searchTerm: this.searchTerm || undefined
+    }).subscribe({
       next: result => {
-        this.registeredBeneficiaries = result.items || [];
-      }
+        this.mainFamilies = result.items || [];
+        this.loadingMain = false;
+      },
+      error: () => (this.loadingMain = false)
     });
   }
 
-  onFilterChange(): void {
-    if (this.campaign) {
-      this.loadEligible(this.campaign.id);
-    }
+  loadPending(): void {
+    if (!this.campaign) return;
+    this.loadingPending = true;
+    this.seasonalAidService.getCampaignBeneficiaries(this.campaign.id, {
+      pageNumber: 1,
+      pageSize: 200,
+      sortDescending: false,
+      isMain: false,
+      searchTerm: this.searchTerm || undefined
+    }).subscribe({
+      next: result => {
+        this.pendingFamilies = result.items || [];
+        this.loadingPending = false;
+      },
+      error: () => (this.loadingPending = false)
+    });
   }
 
-  onSearchChange(): void {
-    if (this.campaign) {
-      this.loadEligible(this.campaign.id);
+  // ========== Search ==========
+
+  /** Debounced typing search; Enter bypasses the wait. */
+  onSearchInput(): void {
+    if (this.searchDebounce !== null) {
+      clearTimeout(this.searchDebounce);
     }
+    this.searchDebounce = setTimeout(() => {
+      this.searchDebounce = null;
+      this.reloadTables();
+    }, 400);
   }
+
+  onSearch(): void {
+    if (this.searchDebounce !== null) {
+      clearTimeout(this.searchDebounce);
+      this.searchDebounce = null;
+    }
+    this.reloadTables();
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+    this.onSearch();
+  }
+
+  // ========== Selection on the pool table ==========
 
   toggleSelectAll(selectAll: boolean): void {
-    this.eligibleFamilies.forEach(f => {
+    this.poolFamilies.forEach(f => {
       if (selectAll) {
         this.selectedFamilyIds.add(f.familyId);
       } else {
@@ -147,11 +201,31 @@ export class BeneficiarySelectionComponent implements OnInit {
     return this.selectedFamilyIds.size;
   }
 
-  isSelected(family: SeasonalAidBeneficiary): boolean {
+  // ========== Campaign context strip ==========
+
+  /** Share of the total budget committed to the registered families. */
+  get allocationUtilization(): number {
+    if (!this.campaign || !this.campaign.totalBudget) return 0;
+    return (this.campaign.allocatedBudget / this.campaign.totalBudget) * 100;
+  }
+
+  get budgetUtilization(): number {
+    if (!this.campaign || !this.campaign.totalBudget) return 0;
+    return (this.campaign.distributedBudget / this.campaign.totalBudget) * 100;
+  }
+
+  get utilizationBarClass(): string {
+    const utilization = this.budgetUtilization;
+    if (utilization >= 90) return 'bg-danger';
+    if (utilization >= 70) return 'bg-warning';
+    return 'bg-success';
+  }
+
+  isPoolSelected(family: SeasonalAidBeneficiary): boolean {
     return this.selectedFamilyIds.has(family.familyId);
   }
 
-  toggleSelected(family: SeasonalAidBeneficiary, checked: boolean): void {
+  togglePoolSelected(family: SeasonalAidBeneficiary, checked: boolean): void {
     if (checked) {
       this.selectedFamilyIds.add(family.familyId);
     } else {
@@ -159,35 +233,62 @@ export class BeneficiarySelectionComponent implements OnInit {
     }
   }
 
-  /**
-   * UC-PRJ-07 quick add: sends the desired final set (existing + newly selected) through the
-   * PUT sync endpoint — one mutation path for every change on this screen. The quota
-   * (current + adds ≤ MaximumFamilies) and charity ownership are enforced server-side.
-   */
-  onAddBeneficiaries(): void {
+  get allPoolSelected(): boolean {
+    return this.poolFamilies.length > 0 &&
+      this.poolFamilies.every(f => this.selectedFamilyIds.has(f.familyId));
+  }
+
+  // ========== Add to the project (UC-PRJ-07 quick add) ==========
+
+  /** Add the ticked pool families to the main list (true) or the pending list (false). */
+  addSelectedAs(isMain: boolean): void {
     if (!this.campaign || this.selectedFamilyIds.size === 0) return;
+    this.registerFamilies([...this.selectedFamilyIds], isMain);
+  }
 
+  /** Row-level add of a single pool family. */
+  addFamilyAs(family: SeasonalAidBeneficiary, isMain: boolean): void {
+    this.registerFamilies([family.familyId], isMain);
+  }
+
+  private registerFamilies(familyIds: string[], isMain: boolean): void {
+    if (!this.campaign) return;
     this.saving = true;
-    const desiredFamilyIds = [
-      ...this.registeredBeneficiaries.map(b => b.familyId),
-      ...this.selectedFamilyIds
-    ];
-
-    this.seasonalAidService.updateCampaignBeneficiaries(this.campaign.id, {
-      familyIds: desiredFamilyIds
+    this.seasonalAidService.registerBeneficiaries(this.campaign.id, {
+      familyIds,
+      isMain
     }).subscribe({
       next: result => {
         this.saving = false;
         this.notification.success(
-          this.translate.instant('seasonalAid.beneficiariesUpdated')
-            .replace('{added}', String(result.addedCount))
-            .replace('{total}', String(result.totalRegistered))
+          this.translate.instant(isMain ? 'seasonalAid.selection.addedAsMain' : 'seasonalAid.selection.addedAsPending')
+            .replace('{count}', String(result.registeredCount))
         );
-        this.refresh();
+        this.reloadTables();
       },
       error: () => {
         this.saving = false;
-        this.notification.error(this.translate.instant('seasonalAid.beneficiariesUpdateFailed'));
+        this.notification.error(
+          this.translate.instant(isMain ? 'seasonalAid.selection.addFailed' : 'seasonalAid.selection.addFailed'));
+      }
+    });
+  }
+
+  // ========== Move between the two lists (UC-PRJ-06) ==========
+
+  moveToList(beneficiary: SeasonalAidBeneficiary, isMain: boolean): void {
+    if (!this.campaign) return;
+    this.saving = true;
+    this.seasonalAidService.setBeneficiaryMainStatus(beneficiary.id, isMain).subscribe({
+      next: () => {
+        this.saving = false;
+        this.notification.success(
+          this.translate.instant(isMain ? 'seasonalAid.selection.movedToMain' : 'seasonalAid.selection.movedToPending'));
+        this.reloadTables();
+      },
+      error: () => {
+        this.saving = false;
+        this.notification.error(this.translate.instant('seasonalAid.selection.moveFailed'));
       }
     });
   }
@@ -203,7 +304,7 @@ export class BeneficiarySelectionComponent implements OnInit {
       next: () => {
         this.saving = false;
         this.notification.success(this.translate.instant('seasonalAid.beneficiaryRemoved'));
-        this.refresh();
+        this.reloadTables();
       },
       error: () => {
         this.saving = false;
@@ -212,82 +313,23 @@ export class BeneficiarySelectionComponent implements OnInit {
     });
   }
 
-  /** UC-PRJ-08 — mark a family as having received the assistance (toggle). */
-  onToggleReceived(beneficiary: SeasonalAidBeneficiary): void {
-    if (!this.campaign) return;
-
-    this.togglingFamilyId = beneficiary.familyId;
-    this.seasonalAidService.setFamilyReceivedFlag(beneficiary.familyId, {
-      campaignId: this.campaign.id,
-      isReceived: !beneficiary.isDistributed
-    }).subscribe({
-      next: () => {
-        this.togglingFamilyId = null;
-        this.notification.success(
-          this.translate.instant(
-            beneficiary.isDistributed ? 'seasonalAid.receivedFlagWithdrawn' : 'seasonalAid.receivedFlagConfirmed'
-          )
-        );
-        this.refresh();
-      },
-      error: () => {
-        this.togglingFamilyId = null;
-        this.notification.error(this.translate.instant('seasonalAid.receivedFlagFailed'));
-      }
-    });
-  }
-
-  private refresh(): void {
-    if (!this.campaign) return;
-    this.loadCampaign(this.campaign.id);
-  }
-
   onCancel(): void {
     if (this.campaign) {
       this.router.navigate(['/seasonal-aid', this.campaign.id]);
+    } else {
+      this.router.navigate(['/seasonal-aid']);
     }
   }
 
-  onContinueToDistribution(): void {
-    if (this.campaign) {
-      this.router.navigate(['/seasonal-aid', this.campaign.id, 'distribution']);
-    }
+  get totalOnProject(): number {
+    return this.mainFamilies.length + this.pendingFamilies.length;
   }
 
-  getRegisteredAllocation(): number {
-    return this.registeredBeneficiaries.reduce((sum, b) => sum + (b.allocationAmount || 0), 0);
-  }
-
-  getRemainingBudget(): number {
-    if (!this.campaign) return 0;
-    return this.campaign.totalBudget - this.campaign.allocatedBudget;
-  }
-
-  getSelectedAllocation(): number {
-    return this.selectedFamilyIds.size * (this.campaign?.perFamilyAllocation || 0);
-  }
-
-  canAddMoreBeneficiaries(): boolean {
-    if (!this.campaign) return false;
-    if (this.campaign.maximumFamilies) {
-      return this.registeredBeneficiaries.length + this.selectedFamilyIds.size <= this.campaign.maximumFamilies;
-    }
-    return this.getSelectedAllocation() <= this.getRemainingBudget();
-  }
-
-  trackByFamily(index: number, family: SeasonalAidBeneficiary): string {
+  trackByFamilyId(index: number, family: SeasonalAidBeneficiary): string {
     return family.familyId;
   }
 
-  trackByBeneficiary(index: number, beneficiary: SeasonalAidBeneficiary): string {
+  trackByBeneficiaryId(index: number, beneficiary: SeasonalAidBeneficiary): string {
     return beneficiary.id;
-  }
-
-  trackByRegion(index: number, region: LookupBase): number {
-    return region.id;
-  }
-
-  trackFamilyType(index: number, type: { id: string; name: string }): string {
-    return type.id;
   }
 }

@@ -78,9 +78,9 @@
       </div>
     </div>
 
-    <!-- Summary Cards -->
+    <!-- Summary Cards — total + the UC-PRJ-06 register split + distribution progress -->
     <div class="row mb-4">
-      <div class="col-md-3">
+      <div class="col-6 col-md-4 col-xl-2">
         <div class="card stat-card">
           <div class="card-body text-center">
             <h6 class="stat-title">{{ 'seasonalAid.totalBeneficiaries' | translate }}</h6>
@@ -88,7 +88,23 @@
           </div>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-6 col-md-4 col-xl-2">
+        <div class="card stat-card">
+          <div class="card-body text-center">
+            <h6 class="stat-title">{{ 'seasonalAid.mainFamiliesShort' | translate }}</h6>
+            <h3 class="stat-value text-primary">{{ report.mainBeneficiaries ?? 0 }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-xl-2">
+        <div class="card stat-card">
+          <div class="card-body text-center">
+            <h6 class="stat-title">{{ 'seasonalAid.pendingFamiliesShort' | translate }}</h6>
+            <h3 class="stat-value text-warning">{{ report.pendingListBeneficiaries ?? 0 }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-xl-2">
         <div class="card stat-card">
           <div class="card-body text-center">
             <h6 class="stat-title">{{ 'seasonalAid.distributedBeneficiaries' | translate }}</h6>
@@ -96,7 +112,7 @@
           </div>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-6 col-md-4 col-xl-2">
         <div class="card stat-card">
           <div class="card-body text-center">
             <h6 class="stat-title">{{ 'seasonalAid.pendingBeneficiaries' | translate }}</h6>
@@ -104,7 +120,7 @@
           </div>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-6 col-md-4 col-xl-2">
         <div class="card stat-card">
           <div class="card-body text-center">
             <h6 class="stat-title">{{ 'seasonalAid.distributionRate' | translate }}</h6>
@@ -179,9 +195,16 @@
       </div>
     </div>
 
-    <!-- Distribution Details -->
-    <div class="card">
-      <div class="card-header"><h5 class="card-title">{{ 'seasonalAid.distributionDetails' | translate }}</h5></div>
+    <!-- Distribution Details — UC-PRJ-06 register split, one table per register. Both honor
+         the charity filter; an empty table under a filter says so instead of "no families". -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+          <i class="fe fe-check-square me-1"></i>
+          {{ 'seasonalAid.selection.mainFamilies' | translate }}
+        </h5>
+        <span class="badge badge-primary">{{ filteredMainDetails.length }}</span>
+      </div>
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-striped mb-0">
@@ -198,7 +221,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let detail of filteredDetails; let i = index; trackBy: trackByDetail">
+              <tr *ngFor="let detail of filteredMainDetails; let i = index; trackBy: trackByDetail">
                 <td>{{ i + 1 }}</td>
                 <td>{{ detail.familyCode }}</td>
                 <td>{{ detail.charityName }}</td>
@@ -208,8 +231,55 @@
                 <td>{{ detail.distributionDate ? (detail.distributionDate | date:'mediumDate') : '—' }}</td>
                 <td>{{ detail.receivedBy || '—' }}</td>
               </tr>
-              <tr *ngIf="filteredDetails.length === 0">
-                <td colspan="8" class="text-center py-4 text-muted">{{ 'seasonalAid.noFilteredRows' | translate }}</td>
+              <tr *ngIf="filteredMainDetails.length === 0">
+                <td colspan="8" class="text-center py-4 text-muted">
+                  {{ (selectedCharityId ? 'seasonalAid.noFilteredRows' : 'seasonalAid.noRegisteredBeneficiaries') | translate }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+          <i class="fe fe-clock me-1"></i>
+          {{ 'seasonalAid.selection.pendingFamilies' | translate }}
+        </h5>
+        <span class="badge badge-warning">{{ filteredPendingDetails.length }}</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-striped mb-0">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>{{ 'seasonalAid.familyCode' | translate }}</th>
+                <th>{{ 'seasonalAid.charity' | translate }}</th>
+                <th>{{ 'seasonalAid.region' | translate }}</th>
+                <th>{{ 'seasonalAid.allocation' | translate }}</th>
+                <th>{{ 'seasonalAid.distributedAmount' | translate }}</th>
+                <th>{{ 'seasonalAid.distributedOn' | translate }}</th>
+                <th>{{ 'seasonalAid.receivedBy' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let detail of filteredPendingDetails; let i = index; trackBy: trackByDetail">
+                <td>{{ i + 1 }}</td>
+                <td>{{ detail.familyCode }}</td>
+                <td>{{ detail.charityName }}</td>
+                <td>{{ detail.regionName }}</td>
+                <td>{{ detail.allocationAmount | number }}</td>
+                <td [class.text-success]="detail.isDistributed">{{ detail.isDistributed ? (detail.distributedAmount | number) : '—' }}</td>
+                <td>{{ detail.distributionDate ? (detail.distributionDate | date:'mediumDate') : '—' }}</td>
+                <td>{{ detail.receivedBy || '—' }}</td>
+              </tr>
+              <tr *ngIf="filteredPendingDetails.length === 0">
+                <td colspan="8" class="text-center py-4 text-muted">
+                  {{ (selectedCharityId ? 'seasonalAid.noFilteredRows' : 'seasonalAid.selection.noPending') | translate }}
+                </td>
               </tr>
             </tbody>
           </table>

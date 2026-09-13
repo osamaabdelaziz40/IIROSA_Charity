@@ -23,6 +23,9 @@ public interface ISeasonalAidService
     Task<(IEnumerable<SeasonalAidBeneficiaryDto> Items, int TotalCount)> GetEligibleFamiliesAsync(EligibleFamiliesFilterDto filter);
     Task RemoveBeneficiaryAsync(Guid beneficiaryId);
 
+    // UC-PRJ-06: move a registration between the main list and the pending list
+    Task<SeasonalAidBeneficiaryDto?> SetBeneficiaryMainStatusAsync(Guid beneficiaryId, bool isMain);
+
     // UC-PRJ-08: Confirm a family received the assistance (تأكيد استلام الأسرة)
     Task SetFamilyReceivedFlagAsync(Guid familyId, SetFamilyReceivedFlagDto dto);
 

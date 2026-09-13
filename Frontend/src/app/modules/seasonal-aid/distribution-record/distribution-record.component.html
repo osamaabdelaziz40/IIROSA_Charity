@@ -106,17 +106,20 @@
     </div>
 
     <div class="row">
-      <!-- Pending Beneficiaries -->
+      <!-- Pending Distribution — Main register and Pending register as separate lists -->
       <div class="col-md-6">
-        <div class="card">
+        <div class="card mb-3">
           <div class="card-header">
-            <h5 class="card-title">{{ 'seasonalAid.pendingDistribution' | translate }}</h5>
-            <span class="badge badge-warning">{{ getPendingBeneficiaries().length }}</span>
+            <h5 class="card-title">
+              <i class="fe fe-check-square mr-1"></i>
+              {{ 'seasonalAid.selection.mainFamilies' | translate }}
+            </h5>
+            <span class="badge badge-primary">{{ getMainPendingDistribution().length }}</span>
           </div>
           <div class="card-body">
             <div class="beneficiary-list">
               <div class="beneficiary-item"
-                   *ngFor="let beneficiary of getPendingBeneficiaries(); trackBy: trackByBeneficiary">
+                   *ngFor="let beneficiary of getMainPendingDistribution(); trackBy: trackByBeneficiary">
                 <div class="beneficiary-info">
                   <div class="beneficiary-code">{{ beneficiary.familyCode }}</div>
                   <div class="beneficiary-details">
@@ -138,9 +141,50 @@
                 </div>
               </div>
 
-              <div class="text-center py-4" *ngIf="getPendingBeneficiaries().length === 0">
+              <div class="text-center py-4" *ngIf="getMainPendingDistribution().length === 0">
                 <i class="fe fe-check-circle fe-2x text-success mb-2"></i>
                 <p class="text-muted">{{ 'seasonalAid.allDistributionsComplete' | translate }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title">
+              <i class="fe fe-clock mr-1"></i>
+              {{ 'seasonalAid.selection.pendingFamilies' | translate }}
+            </h5>
+            <span class="badge badge-warning">{{ getPendingListDistribution().length }}</span>
+          </div>
+          <div class="card-body">
+            <div class="beneficiary-list">
+              <div class="beneficiary-item"
+                   *ngFor="let beneficiary of getPendingListDistribution(); trackBy: trackByBeneficiary">
+                <div class="beneficiary-info">
+                  <div class="beneficiary-code">{{ beneficiary.familyCode }}</div>
+                  <div class="beneficiary-details">
+                    <i class="fe fe-map-pin"></i> {{ beneficiary.familyAddress }}
+                  </div>
+                  <div class="beneficiary-details">
+                    <i class="fe fe-users"></i> {{ beneficiary.orphansCount }} {{ 'seasonalAid.orphans' | translate }}
+                  </div>
+                  <div class="beneficiary-amount">
+                    {{ beneficiary.allocationAmount | number }} {{ beneficiary.currency }}
+                  </div>
+                </div>
+                <div class="beneficiary-actions">
+                  <button class="btn btn-sm btn-success"
+                          [title]="'seasonalAid.recordDistribution' | translate"
+                          (click)="onRecordDistribution(beneficiary)">
+                    <i class="fe fe-check"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="text-center py-4" *ngIf="getPendingListDistribution().length === 0">
+                <i class="fe fe-inbox fe-2x text-muted mb-2"></i>
+                <p class="text-muted">{{ 'seasonalAid.selection.noPending' | translate }}</p>
               </div>
             </div>
           </div>

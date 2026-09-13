@@ -393,6 +393,7 @@ public class SeasonalAidService : ISeasonalAidService
                 AllocationAmount = allocationAmount,
                 Currency = currency,
                 IsRegistered = true,
+                IsMain = dto.IsMain,
                 RegistrationDate = DateTime.UtcNow,
                 RegistrationNotes = dto.RegistrationNotes
             };
@@ -696,6 +697,7 @@ public class SeasonalAidService : ISeasonalAidService
             AllocationAmount = campaign.PerFamilyAllocation,
             Currency = campaign.BudgetCurrency,
             IsRegistered = false,
+            IsMain = false,
             RegistrationDate = DateTime.UtcNow,
             IsDistributed = false
         });
@@ -727,6 +729,54 @@ public class SeasonalAidService : ISeasonalAidService
         await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Beneficiary removed successfully: {BeneficiaryId}", beneficiaryId);
+    }
+
+    /// <summary>
+    /// Moves one registration between the selection screen's two lists: main families
+    /// (UC-PRJ-06 الأسرة الأساسية) or the pending list awaiting confirmation. A registration
+    /// that already received its assistance keeps its list — moving it would distort reports.
+    /// </summary>
+    public async Task<SeasonalAidBeneficiaryDto?> SetBeneficiaryMainStatusAsync(Guid beneficiaryId, bool isMain)
+    {
+        _logger.LogInformation("Moving beneficiary {BeneficiaryId} to {List}", beneficiaryId, isMain ? "main" : "pending");
+
+        var beneficiary = await _beneficiaryRepository.GetByIdAsync(beneficiaryId);
+        if (beneficiary == null)
+        {
+            throw new KeyNotFoundException($"Beneficiary with ID '{beneficiaryId}' not found");
+        }
+
+        // Same tenancy checks as the detail read: campaign visibility + family ownership.
+        var campaign = await _campaignRepository.GetByIdAsync(beneficiary.CampaignId);
+        if (campaign == null || !IsCampaignVisibleToCaller(campaign))
+        {
+            throw new KeyNotFoundException($"Beneficiary with ID '{beneficiaryId}' not found");
+        }
+
+        var family = await _familyRepository.GetByIdAsync(beneficiary.FamilyId);
+        if (_currentUser.CharityId.HasValue && family?.FK_CharityId != _currentUser.CharityId)
+        {
+            throw new KeyNotFoundException($"Beneficiary with ID '{beneficiaryId}' not found");
+        }
+
+        if (campaign.IsClosed)
+        {
+            throw new InvalidOperationException("Cannot change the selection of a closed campaign");
+        }
+
+        if (beneficiary.IsDistributed)
+        {
+            throw new InvalidOperationException(
+                "A family that has already received its assistance cannot move between the main and pending lists");
+        }
+
+        beneficiary.IsMain = isMain;
+        _beneficiaryRepository.Update(beneficiary);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("Beneficiary {BeneficiaryId} now on the {List} list", beneficiaryId, isMain ? "main" : "pending");
+
+        return await GetBeneficiaryAsync(beneficiaryId);
     }
 
     #endregion
@@ -952,6 +1002,7 @@ public class SeasonalAidService : ISeasonalAidService
             campaignId,
             searchTerm: filter.SearchTerm,
             isDistributed: filter.IsDistributed,
+            isMain: filter.IsMain,
             charityId: filter.CharityId,
             regionId: filter.RegionId,
             centerId: filter.CenterId,
@@ -984,6 +1035,7 @@ public class SeasonalAidService : ISeasonalAidService
             AllocationAmount = b.AllocationAmount,
             Currency = b.Currency,
             IsRegistered = b.IsRegistered,
+            IsMain = b.IsMain,
             RegistrationDate = b.RegistrationDate,
             RegistrationNotes = b.RegistrationNotes,
             IsDistributed = b.IsDistributed,
@@ -1043,6 +1095,7 @@ public class SeasonalAidService : ISeasonalAidService
             AllocationAmount = beneficiary.AllocationAmount,
             Currency = beneficiary.Currency,
             IsRegistered = beneficiary.IsRegistered,
+            IsMain = beneficiary.IsMain,
             RegistrationDate = beneficiary.RegistrationDate,
             RegistrationNotes = beneficiary.RegistrationNotes,
             IsDistributed = beneficiary.IsDistributed,
@@ -1218,6 +1271,7 @@ public class SeasonalAidService : ISeasonalAidService
                 ? charityName
                 : null,
             RegionName = b.Family?.City?.Name,
+            IsMain = b.IsMain,
             AllocationAmount = b.AllocationAmount,
             DistributedAmount = b.Distributions.Sum(d => d.AmountDistributed),
             IsDistributed = b.IsDistributed,
@@ -1227,6 +1281,8 @@ public class SeasonalAidService : ISeasonalAidService
         }).ToList();
 
         // Calculate impact metrics
+        report.MainBeneficiaries = beneficiariesList.Count(b => b.IsMain);
+        report.PendingListBeneficiaries = beneficiariesList.Count(b => !b.IsMain);
         report.TotalFamiliesServed = beneficiariesList.Count;
         report.TotalOrphansServed = beneficiariesList.Sum(b => b.Family?.OrphansCount ?? 0);
         report.EstimatedIndividualsServed = beneficiariesList.Sum(b => b.Family?.FamilyMembersCount ?? 0);
