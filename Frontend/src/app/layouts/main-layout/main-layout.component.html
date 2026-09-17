@@ -717,6 +717,20 @@
                 <span class="ml-1 item-text">{{ "periodicReports.sidebar.allReports" | translate }}</span>
               </a>
             </li>
+            <!-- Report-entry shortcut: search an orphan, then add their periodic report -->
+            <li class="nav-item" *ngIf="hasPermission('PeriodicReports.Create')" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/periodic-orphan-reports/orphan-search">
+                <span class="ml-1 item-text">{{ "periodicReports.orphanSearch.title" | translate }}</span>
+              </a>
+            </li>
+            <!-- Orphan-centric register: an orphan's reports by date -->
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/periodic-orphan-reports/orphan-reports/by-date">
+                <span class="ml-1 item-text">{{ "periodicReports.orphanReportsByDate.title" | translate }}</span>
+              </a>
+            </li>
             <!-- UC-ORR-09 — §14.S.4 حالة اليتيم status search -->
             <li class="nav-item" routerLinkActive="active"
                 [routerLinkActiveOptions]="{ exact: true }">

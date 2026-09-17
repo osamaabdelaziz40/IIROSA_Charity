@@ -1,0 +1,249 @@
+- generic [ref=f15e5]:
+  - navigation [ref=f15e6]:
+    - button "" [ref=f15e7] [cursor=pointer]
+    - generic [ref=f15e9]:
+      - combobox [aria-hidden] [ref=f15e10]
+      - combobox [ref=f15e13] [cursor=pointer]:
+        - textbox "All Charities" [ref=f15e14]:
+          - generic "Remove all items" [ref=f15e15]: ×
+    - list [ref=f15e16]:
+      - listitem [ref=f15e17]:
+        - link "العربية " [ref=f15e266] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f15e19]: 
+          - text: العربية 
+      - listitem [ref=f15e20]:
+        - link "" [ref=f15e21] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f15e23]:
+        - link "" [ref=f15e24] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f15e27]:
+        - button [ref=f15e267] [cursor=pointer]:
+          - generic [ref=f15e29]:
+            - text: مرحبا System Admin
+            - img "..." [ref=f15e30]
+          - text: 
+  - complementary [ref=f15e31]:
+    - generic [ref=f15e36]:
+      - text: 
+      - navigation [ref=f15e37]:
+        - link [ref=f15e39] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f15e40]
+        - paragraph [ref=f15e41]: عناصر الموقع
+        - list [ref=f15e42]:
+          - listitem [ref=f15e43]:
+            - link " الصفحة الرئيسية (current) " [ref=f15e268] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f15e45]: 
+              - generic [ref=f15e46]: الصفحة الرئيسية
+              - generic [ref=f15e47]: (current)
+              - text: 
+            - list [ref=f15e48]:
+              - listitem [ref=f15e49]:
+                - link "الرئيسية" [ref=f15e269] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f15e51]:
+            - link " الإعدادات " [ref=f15e270] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=f15e53]: 
+              - generic [ref=f15e54]: الإعدادات
+              - text: 
+          - listitem [ref=f15e55]:
+            - link " الدعم الفني " [ref=f15e271] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f15e57]: 
+              - generic [ref=f15e58]: الدعم الفني
+              - text: 
+          - listitem [ref=f15e59]:
+            - link " الإشعارات " [ref=f15e272] [cursor=pointer]:
+              - /url: "#notifications"
+              - generic [ref=f15e61]: 
+              - generic [ref=f15e62]: الإشعارات
+              - text: 
+          - listitem [ref=f15e63]:
+            - link " المهام " [ref=f15e273] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f15e65]: 
+              - generic [ref=f15e66]: المهام
+              - text: 
+          - listitem [ref=f15e67]:
+            - link " مدفوعات الأيتام " [ref=f15e274] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f15e69]: 
+              - generic [ref=f15e70]: مدفوعات الأيتام
+              - text: 
+          - listitem [ref=f15e71]:
+            - link " مشاريع المكتب " [ref=f15e275] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f15e73]: 
+              - generic [ref=f15e74]: مشاريع المكتب
+              - text: 
+          - listitem [ref=f15e75]:
+            - link " مشاريع الإسكان " [ref=f15e276] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f15e77]: 
+              - generic [ref=f15e78]: مشاريع الإسكان
+              - text: 
+          - listitem [ref=f15e79]:
+            - link " المساعدات الموسمية " [ref=f15e277] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f15e81]: 
+              - generic [ref=f15e82]: المساعدات الموسمية
+              - text: 
+          - listitem [ref=f15e83]:
+            - link " الوارد والصادر " [ref=f15e278] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f15e85]: 
+              - generic [ref=f15e86]: الوارد والصادر
+              - text: 
+          - listitem [ref=f15e87]:
+            - link " الأسر " [ref=f15e279] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f15e89]: 
+              - generic [ref=f15e90]: الأسر
+              - text: 
+          - listitem [ref=f15e91]:
+            - link " التقارير " [ref=f15e280] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f15e93]: 
+              - generic [ref=f15e94]: التقارير
+              - text: 
+          - listitem [ref=f15e95]:
+            - link " الشيكات العامة " [ref=f15e281] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f15e97]: 
+              - generic [ref=f15e98]: الشيكات العامة
+              - text: 
+          - listitem [ref=f15e99]:
+            - link " التقارير الدورية للأيتام " [ref=f15e282] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f15e101]: 
+              - generic [ref=f15e102]: التقارير الدورية للأيتام
+              - text: 
+            - list [ref=f15e103]:
+              - listitem [ref=f15e104]:
+                - link "جميع التقارير الدورية" [ref=f15e283] [cursor=pointer]:
+                  - /url: "#/periodic-orphan-reports"
+              - listitem [ref=f15e106]:
+                - link "إضافة تقرير ليتيم" [ref=f15e284] [cursor=pointer]:
+                  - /url: "#/periodic-orphan-reports/orphan-search"
+              - listitem [ref=f15e108]:
+                - link "تقارير يتيم بالتاريخ" [ref=f15e285] [cursor=pointer]:
+                  - /url: "#/periodic-orphan-reports/orphan-reports/by-date"
+              - listitem [ref=f15e110]:
+                - link "حالة اليتيم" [ref=f15e286] [cursor=pointer]:
+                  - /url: "#/periodic-orphan-reports/orphan-reports/search"
+              - listitem [ref=f15e112]:
+                - link "احصائيات عامة للأيتام" [ref=f15e287] [cursor=pointer]:
+                  - /url: "#/periodic-orphan-reports/orphan-reports"
+          - listitem [ref=f15e114]:
+            - link " الحوالات المالية " [ref=f15e288] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f15e116]: 
+              - generic [ref=f15e117]: الحوالات المالية
+              - text: 
+  - main [ref=f15e118]:
+    - generic [ref=f15e289]:
+      - navigation "breadcrumb" [ref=f15e291]:
+        - list [ref=f15e292]:
+          - listitem [ref=f15e293]:
+            - link "الرئيسية" [ref=f15e294] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=f15e295]:
+            - text: /
+            - link "التقارير الدورية للأيتام" [ref=f15e296] [cursor=pointer]:
+              - /url: "#/periodic-orphan-reports"
+          - listitem [ref=f15e297]:
+            - text: /
+            - generic [ref=f15e298]: تقارير يتيم بالتاريخ
+      - generic [ref=f15e300]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f15e302]:
+          - generic [ref=f15e303]: 
+          - generic [ref=f15e304]:
+            - heading "تقارير يتيم بالتاريخ" [level=3] [ref=f15e305]
+            - paragraph [ref=f15e306]: ابحث عن يتيم بالاسم أو الكود ثم استعرض تقاريره الدورية بالتاريخ
+      - generic [ref=f15e308]:
+        - button " الفلاتر " [expanded] [ref=f15e309] [cursor=pointer]:
+          - heading " الفلاتر" [level=4] [ref=f15e310]:
+            - generic [ref=f15e311]: 
+            - text: الفلاتر
+          - generic [ref=f15e312]: 
+        - generic [ref=f15e317]:
+          - generic [ref=f15e318]: أدخل اسم اليتيم أو الكود
+          - textbox "اسم اليتيم أو الكود..." [ref=f15e319]
+      - generic [ref=f15e321]:
+        - button " النتائج " [expanded] [ref=f15e322] [cursor=pointer]:
+          - heading " النتائج" [level=4] [ref=f15e323]:
+            - generic [ref=f15e324]: 
+            - text: النتائج
+          - generic [ref=f15e325]: 
+        - generic [ref=f15e326]:
+          - table [ref=f15e328]:
+            - rowgroup [ref=f15e329]:
+              - row [ref=f15e330]:
+                - columnheader "الرقم" [ref=f15e331]
+                - columnheader "الكود" [ref=f15e332]
+                - columnheader "اسم اليتيم" [ref=f15e333]
+                - columnheader "اسم الأب" [ref=f15e334]
+                - columnheader "اسم الأم" [ref=f15e335]
+                - columnheader "الجمعية" [ref=f15e336]
+                - columnheader "الإجراءات" [ref=f15e337]
+            - rowgroup [ref=f15e338]:
+              - row [ref=f15e339]:
+                - cell "1" [ref=f15e340]
+                - cell [ref=f15e341]:
+                  - strong [ref=f15e342]: ORP-2026-69185
+                - cell "ابن التعديل 884525" [ref=f15e343]
+                - cell "-" [ref=f15e344]
+                - cell "-" [ref=f15e345]
+                - cell "-" [ref=f15e346]
+                - cell [ref=f15e347]:
+                  - button " عرض التقارير" [ref=f15e348] [cursor=pointer]:
+                    - generic [ref=f15e349]: 
+                    - text: عرض التقارير
+              - row [ref=f15e350]:
+                - cell "2" [ref=f15e351]
+                - cell [ref=f15e352]:
+                  - strong [ref=f15e353]: ORP-2026-23731
+                - cell "ابنة التعديل 884525" [ref=f15e354]
+                - cell "-" [ref=f15e355]
+                - cell "-" [ref=f15e356]
+                - cell "-" [ref=f15e357]
+                - cell [ref=f15e358]:
+                  - button " عرض التقارير" [ref=f15e359] [cursor=pointer]:
+                    - generic [ref=f15e360]: 
+                    - text: عرض التقارير
+              - row [ref=f15e361]:
+                - cell "3" [ref=f15e362]
+                - cell [ref=f15e363]:
+                  - strong [ref=f15e364]: ORP-2026-42717
+                - cell "كريم متولي السقا" [ref=f15e365]
+                - cell "-" [ref=f15e366]
+                - cell "-" [ref=f15e367]
+                - cell "dga" [ref=f15e368]
+                - cell [ref=f15e369]:
+                  - button " عرض التقارير" [ref=f15e370] [cursor=pointer]:
+                    - generic [ref=f15e371]: 
+                    - text: عرض التقارير
+              - row [ref=f15e372]:
+                - cell "4" [ref=f15e373]
+                - cell [ref=f15e374]:
+                  - strong [ref=f15e375]: ORP-2026-43223
+                - cell "ملك متولي السقا" [ref=f15e376]
+                - cell "-" [ref=f15e377]
+                - cell "-" [ref=f15e378]
+                - cell "dga" [ref=f15e379]
+                - cell [ref=f15e380]:
+                  - button " عرض التقارير" [ref=f15e381] [cursor=pointer]:
+                    - generic [ref=f15e382]: 
+                    - text: عرض التقارير
+          - generic [ref=f15e383]: عرض 1 إلى 4 من 4
+  - contentinfo [ref=f15e216]:
+    - generic [ref=f15e218]:
+      - paragraph [ref=f15e220]: © 2026 IIROSA. جميع الحقوق محفوظة
+      - paragraph [ref=f15e222]: الإصدار 1.0.0

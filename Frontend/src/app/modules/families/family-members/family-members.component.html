@@ -82,6 +82,12 @@
                         [title]="'families.members.move' | translate">
                   <i class="fe fe-corner-up-right"></i>
                 </button>
+                <!-- Add a periodic report for this orphan — the create form pre-resolves the ?code= subject -->
+                <a class="btn btn-sm btn-outline-success ml-1" *ngIf="orphan.code"
+                   [routerLink]="['/periodic-orphan-reports/create']" [queryParams]="{ code: orphan.code }"
+                   [title]="'families.members.addPeriodicReport' | translate">
+                  <i class="fe fe-file-plus"></i>
+                </a>
               </td>
             </tr>
             <tr *ngIf="loadError">
@@ -102,76 +108,80 @@
 </div>
 
 <!-- Move modal «هل انت متاكد من نقل ؟» -->
-<div class="modal-backdrop" *ngIf="showMoveModal"></div>
-<div class="modal-dialog" *ngIf="showMoveModal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h5 class="modal-title">{{ 'families.members.moveTitle' | translate }}</h5>
-      <button type="button" class="close" (click)="closeMoveModal()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="alert alert-info">
-        {{ 'families.members.moveMemberName' | translate }}: <strong>{{ moveTarget?.fullName }}</strong>
+<div class="modal-backdrop fade show" *ngIf="showMoveModal"></div>
+<div class="modal fade show d-block" role="dialog" *ngIf="showMoveModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ 'families.members.moveTitle' | translate }}</h5>
+        <button type="button" class="close" (click)="closeMoveModal()">&times;</button>
       </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          {{ 'families.members.moveMemberName' | translate }}: <strong>{{ moveTarget?.fullName }}</strong>
+        </div>
 
-      <div class="form-group">
-        <label>{{ 'families.members.targetFamilyCode' | translate }}</label>
-        <input type="text" class="form-control" name="moveTargetCode"
-               [(ngModel)]="moveTargetCode"
-               [placeholder]="'families.members.targetFamilyCodePlaceholder' | translate" />
-        <small class="form-text text-muted">{{ 'families.members.targetFamilyCodeHint' | translate }}</small>
-      </div>
+        <div class="form-group">
+          <label>{{ 'families.members.targetFamilyCode' | translate }}</label>
+          <input type="text" class="form-control" name="moveTargetCode"
+                 [(ngModel)]="moveTargetCode"
+                 [placeholder]="'families.members.targetFamilyCodePlaceholder' | translate" />
+          <small class="form-text text-muted">{{ 'families.members.targetFamilyCodeHint' | translate }}</small>
+        </div>
 
-      <div class="form-group">
-        <label>{{ 'families.members.justification' | translate }}</label>
-        <textarea class="form-control" name="moveJustification" rows="3"
-                  [(ngModel)]="moveJustification"
-                  [placeholder]="'families.members.justificationPlaceholder' | translate"></textarea>
-        <small class="form-text text-muted">{{ 'families.members.justificationHint' | translate }}</small>
+        <div class="form-group">
+          <label>{{ 'families.members.justification' | translate }}</label>
+          <textarea class="form-control" name="moveJustification" rows="3"
+                    [(ngModel)]="moveJustification"
+                    [placeholder]="'families.members.justificationPlaceholder' | translate"></textarea>
+          <small class="form-text text-muted">{{ 'families.members.justificationHint' | translate }}</small>
+        </div>
       </div>
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="btn btn-secondary" (click)="closeMoveModal()">
-        {{ 'families.members.cancel' | translate }}
-      </button>
-      <button type="button" class="btn btn-primary" [disabled]="moving" (click)="submitMove()">
-        <span class="spinner-border spinner-border-sm mr-1" *ngIf="moving"></span>
-        {{ 'families.members.confirmMove' | translate }}
-      </button>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeMoveModal()">
+          {{ 'families.members.cancel' | translate }}
+        </button>
+        <button type="button" class="btn btn-primary" [disabled]="moving" (click)="submitMove()">
+          <span class="spinner-border spinner-border-sm mr-1" *ngIf="moving"></span>
+          {{ 'families.members.confirmMove' | translate }}
+        </button>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- Delete-link modal «هل انت متاكد من حذف ؟» (UC-FAM-13 حذف كفالة العائل, §10.S.3) -->
-<div class="modal-backdrop" *ngIf="showDeleteModal"></div>
-<div class="modal-dialog" *ngIf="showDeleteModal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h5 class="modal-title">{{ 'families.members.removeLinkTitle' | translate }}</h5>
-      <button type="button" class="close" (click)="closeDeleteModal()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="alert alert-warning">
-        {{ 'families.members.removeLinkHint' | translate }}
-        <strong>{{ family?.provider?.fullName }}</strong>
+<div class="modal-backdrop fade show" *ngIf="showDeleteModal"></div>
+<div class="modal fade show d-block" role="dialog" *ngIf="showDeleteModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ 'families.members.removeLinkTitle' | translate }}</h5>
+        <button type="button" class="close" (click)="closeDeleteModal()">&times;</button>
       </div>
+      <div class="modal-body">
+        <div class="alert alert-warning">
+          {{ 'families.members.removeLinkHint' | translate }}
+          <strong>{{ family?.provider?.fullName }}</strong>
+        </div>
 
-      <div class="form-group">
-        <label>{{ 'families.members.removeLinkComment' | translate }}</label>
-        <textarea class="form-control" name="deleteComment" rows="3" maxlength="500"
-                  [(ngModel)]="deleteComment"
-                  [placeholder]="'families.members.removeLinkCommentPlaceholder' | translate"></textarea>
-        <small class="form-text text-muted">{{ 'families.members.removeLinkCommentHint' | translate }}</small>
+        <div class="form-group">
+          <label>{{ 'families.members.removeLinkComment' | translate }}</label>
+          <textarea class="form-control" name="deleteComment" rows="3" maxlength="500"
+                    [(ngModel)]="deleteComment"
+                    [placeholder]="'families.members.removeLinkCommentPlaceholder' | translate"></textarea>
+          <small class="form-text text-muted">{{ 'families.members.removeLinkCommentHint' | translate }}</small>
+        </div>
       </div>
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="btn btn-secondary" (click)="closeDeleteModal()">
-        {{ 'families.members.cancel' | translate }}
-      </button>
-      <button type="button" class="btn btn-danger" [disabled]="removing" (click)="submitRemoveLink()">
-        <span class="spinner-border spinner-border-sm mr-1" *ngIf="removing"></span>
-        {{ 'families.members.confirmRemoveLink' | translate }}
-      </button>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDeleteModal()">
+          {{ 'families.members.cancel' | translate }}
+        </button>
+        <button type="button" class="btn btn-danger" [disabled]="removing" (click)="submitRemoveLink()">
+          <span class="spinner-border spinner-border-sm mr-1" *ngIf="removing"></span>
+          {{ 'families.members.confirmRemoveLink' | translate }}
+        </button>
+      </div>
     </div>
   </div>
 </div>

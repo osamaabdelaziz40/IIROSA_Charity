@@ -32,7 +32,6 @@ public class IncomingRepository : Repository<Incoming>, IIncomingRepository
         var items = await query
             .Include(i => i.Department)
             .Include(i => i.AssignedUser)
-            .Include(i => i.UploadedFile)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -46,7 +45,6 @@ public class IncomingRepository : Repository<Incoming>, IIncomingRepository
         // carries an explicit !IsDeleted predicate (review P1)
         return _dbSet
             .Include(i => i.Department)
-            .Include(i => i.UploadedFile)
             .Include(i => i.AssignedUser)
             .Include(i => i.Charity)
             .FirstOrDefaultAsync(i => i.Id == id && !i.IsDeleted);

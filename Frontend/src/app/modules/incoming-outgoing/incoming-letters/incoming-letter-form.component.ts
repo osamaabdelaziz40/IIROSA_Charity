@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -52,8 +52,10 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
     return this.allUsers.map(u => ({ id: u.id, name: u.fullName || u.userName || u.email }));
   }
 
-  // Attachments
+  // Attachments — upload-first (immediateUpload): the file is persisted on selection
+  // and attachmentFileId holds the server Guid that buildPayload sends as uploadedFileId.
   attachmentFileId: string | null = null;
+  attachmentUploading = false;
   attachmentFileType = AttachmentFileType;
 
   // Collapsible section cards — opened programmatically on a failed submit so
@@ -107,12 +109,16 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
 
     // Review P13: serials are per charity + year — the advisory serial follows the
     // chosen registration date's year (create mode only; edit mode shows the stored serial).
+    // The cross-field letterDate rule is also re-checked here: its validator lives on the
+    // letterDate control, so it only re-runs when that control changes — not when the
+    // registration date moves beneath it.
     this.letterForm.get('date')!.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(value => {
         if (!this.isEditMode && value) {
           this.loadNextSerial(Number(String(value).slice(0, 4)));
         }
+        this.letterForm.get('letterDate')?.updateValueAndValidity();
       });
   }
 
@@ -167,7 +173,7 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
       // server — require them here too so an emptiness never reaches the 400.
       date: ['', Validators.required],
       letterNumber: ['', [Validators.required, Validators.maxLength(100)]],
-      letterDate: ['', Validators.required],
+      letterDate: ['', [Validators.required, letterDateNotAfterRegistration]],
       departmentId: [null, Validators.required],
       subject: ['', [Validators.required, Validators.maxLength(500)]],
       status: ['معلق'],
@@ -234,6 +240,12 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
   // Attachment handling
   onAttachmentChange(fileId: string | null): void {
     this.attachmentFileId = fileId;
+  }
+
+  // Blocks save while the attachment upload is in flight, so the letter can never be
+  // registered with a null uploadedFileId while the actor believes a file is attached.
+  onAttachmentUploading(uploading: boolean): void {
+    this.attachmentUploading = uploading;
   }
 
   onSubmit(): void {
@@ -310,6 +322,10 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
   private handleSaveError(httpError: any, fallbackKey: string): void {
     this.saving = false;
 
+    // Server-flagged fields live inside section cards that may be collapsed — open
+    // them (same as the client-invalid path) or the flagged control stays invisible.
+    this.collapsibleCards?.forEach(card => card.open());
+
     const errors = httpError?.details;
     if (errors && typeof errors === 'object') {
       for (const [field, messages] of Object.entries<any>(errors)) {
@@ -346,4 +362,19 @@ export class IncomingLetterFormComponent implements OnInit, OnDestroy {
       }
     });
   }
+}
+
+/**
+ * UC-COR-04 cross-field rule — the client mirror of the server's LetterDate ≤ Date
+ * validation (§21.S.2): a letter cannot be dated after its registration date. Both
+ * values are yyyy-MM-dd strings from type="date" inputs, so the comparison is
+ * lexicographic — exact, with no timezone parsing in play.
+ */
+function letterDateNotAfterRegistration(control: AbstractControl): ValidationErrors | null {
+  const registrationDate = control.parent?.get('date')?.value;
+  if (!registrationDate || !control.value) {
+    return null;
+  }
+
+  return control.value > registrationDate ? { letterDateAfterDate: true } : null;
 }

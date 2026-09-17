@@ -51,6 +51,7 @@ export class OutgoingLetterFormComponent implements OnInit, OnDestroy {
 
   // Attachments
   attachmentFileId: string | null = null;
+  attachmentUploading = false;
   attachmentFileType = AttachmentFileType;
 
   // Collapsible section cards — opened programmatically on a failed submit so
@@ -251,6 +252,12 @@ export class OutgoingLetterFormComponent implements OnInit, OnDestroy {
     this.attachmentFileId = fileId;
   }
 
+  // Blocks save while the attachment upload is in flight, so the letter can never be
+  // registered with a null uploadedFileId while the actor believes a file is attached.
+  onAttachmentUploading(uploading: boolean): void {
+    this.attachmentUploading = uploading;
+  }
+
   onSubmit(): void {
     if (this.letterForm.invalid) {
       this.markFormGroupTouched(this.letterForm);
@@ -321,6 +328,10 @@ export class OutgoingLetterFormComponent implements OnInit, OnDestroy {
    */
   private handleSaveError(httpError: any, fallbackKey: string): void {
     this.saving = false;
+
+    // Server-flagged fields live inside section cards that may be collapsed — open
+    // them (same as the client-invalid path) or the flagged control stays invisible.
+    this.collapsibleCards?.forEach(card => card.open());
 
     const errors = httpError?.details;
     if (errors && typeof errors === 'object') {

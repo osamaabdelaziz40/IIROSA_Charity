@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AttachmentDto } from '../../models';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { AttachmentService, AttachmentResponse } from '../../../core/services/attachment.service';
 
 export enum AttachmentFileType {
   General = 1,
@@ -39,7 +40,8 @@ export enum AttachmentFileType {
 export class AttachmentInputComponent implements ControlValueAccessor, Validator, OnInit {
   constructor(
     private sanitizer: DomSanitizer,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private attachmentService: AttachmentService
   ) {}
 
   @Input() labelKey: string = '';
@@ -56,12 +58,21 @@ export class AttachmentInputComponent implements ControlValueAccessor, Validator
   @Input() attachments: AttachmentDto[] = [];
   @Input() form: any;
 
+  // Upload-first mode (single-file Guid references — e.g. correspondence letters,
+  // family death certificates): the file is persisted through POST /api/attachments/upload
+  // as soon as it is picked, and fileIdChange emits the returned server id. Default
+  // (false) keeps the staging contract — base64 in AttachmentDto, temp id — that the
+  // charity/family/project forms rely on when they embed attachments in their DTOs.
+  @Input() immediateUpload: boolean = false;
+  @Input() uploadModuleName?: string;
+
   // Additional inputs for compatibility with forms
   @Input() fileType: AttachmentFileType = AttachmentFileType.Document;
   @Input() existingFileId: string | null = null;
 
   @Output() attachmentsChange = new EventEmitter<AttachmentDto[]>();
   @Output() fileIdChange = new EventEmitter<string | null>();
+  @Output() uploadingChange = new EventEmitter<boolean>();
 
   value: AttachmentDto[] = [];
   isDragging = false;
@@ -214,17 +225,32 @@ export class AttachmentInputComponent implements ControlValueAccessor, Validator
         return;
       }
 
-      // Convert to base64
-      const base64 = await this.fileToBase64(file);
+      // Upload-first: persist now and stage the returned server id — reference by id,
+      // never re-embed the bytes (BR-12). Staging mode converts to base64 instead.
+      let id = this.generateTempId();
+      let fileData: string | undefined;
+      let isNew = true;
+      if (this.immediateUpload) {
+        this.uploadingChange.emit(true);
+        const uploaded = await this.uploadFile(file);
+        this.uploadingChange.emit(false);
+        if (!uploaded) {
+          return; // validationError set by uploadFile; nothing staged
+        }
+        id = uploaded.id;
+        isNew = false;
+      } else {
+        fileData = await this.fileToBase64(file);
+      }
 
       const attachment: AttachmentDto = {
-        id: this.generateTempId(),
+        id: id,
         fileName: file.name,
         contentType: file.type,
         size: file.size,
         extension: file.name.split('.').pop(),
-        fileData: base64,
-        isNew: true,
+        fileData: fileData,
+        isNew: isNew,
         isDeleted: false
       };
 
@@ -274,6 +300,19 @@ export class AttachmentInputComponent implements ControlValueAccessor, Validator
       };
       reader.onerror = reject;
       reader.readAsDataURL(file);
+    });
+  }
+
+  /** Immediate-upload mode: multipart upload, resolved with the persisted id (null on failure). */
+  private uploadFile(file: File): Promise<AttachmentResponse | null> {
+    return new Promise(resolve => {
+      this.attachmentService.upload(file, this.uploadModuleName).subscribe({
+        next: response => resolve(response),
+        error: () => {
+          this.validationError = this.translate.instant('common.uploadFailed');
+          resolve(null);
+        }
+      });
     });
   }
 

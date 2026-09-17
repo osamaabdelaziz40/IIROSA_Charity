@@ -216,25 +216,35 @@
               </a>
             </td>
             <td>{{ letter.categoryName || '-' }}</td>
-            <td>{{ letter.uploadedFileName || '-' }}</td>
             <td>
-              <div class="btn-group">
-                <button type="button" class="btn btn-sm btn-light" [title]="'common.view' | translate" (click)="viewLetter(letter.id)">
-                  <i class="fe fe-eye"></i>
+              <a *ngIf="letter.uploadedFileId"
+                 role="button" style="cursor: pointer"
+                 (click)="downloadLetterFile(letter)"
+                 [title]="'common.download' | translate">
+                <i class="fe fe-file-text mr-1"></i>{{ letter.uploadedFileName }}
+              </a>
+              <span *ngIf="!letter.uploadedFileId">-</span>
+            </td>
+            <td>
+              <div class="dropdown">
+                <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown"
+                        [title]="'common.actions' | translate">
+                  <i class="fe fe-more-vertical"></i>
                 </button>
-                <button type="button" class="btn btn-sm btn-light" [title]="'common.edit' | translate" (click)="editLetter(letter.id)">
-                  <i class="fe fe-edit"></i>
-                </button>
-                <div class="dropdown" *ngIf="canDelete">
-                  <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown">
-                    <i class="fe fe-more-vertical"></i>
-                  </button>
-                  <div class="dropdown-menu dropdown-menu-right">
-                    <a class="dropdown-item text-danger" href="javascript:void(0)" (click)="deleteLetter(letter)">
-                      <i class="fe fe-trash mr-2"></i>
-                      {{ 'common.delete' | translate }}
-                    </a>
-                  </div>
+                <div class="dropdown-menu dropdown-menu-right">
+                  <a class="dropdown-item" href="javascript:void(0)" (click)="viewLetter(letter.id)">
+                    <i class="fe fe-eye mr-2"></i>
+                    {{ 'common.view' | translate }}
+                  </a>
+                  <a class="dropdown-item" href="javascript:void(0)" (click)="editLetter(letter.id)">
+                    <i class="fe fe-edit mr-2"></i>
+                    {{ 'common.edit' | translate }}
+                  </a>
+                  <div class="dropdown-divider" *ngIf="canDelete"></div>
+                  <a class="dropdown-item text-danger" href="javascript:void(0)" *ngIf="canDelete" (click)="deleteLetter(letter)">
+                    <i class="fe fe-trash mr-2"></i>
+                    {{ 'common.delete' | translate }}
+                  </a>
                 </div>
               </div>
             </td>

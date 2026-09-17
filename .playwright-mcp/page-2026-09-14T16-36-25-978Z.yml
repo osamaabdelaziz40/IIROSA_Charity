@@ -1,0 +1,382 @@
+- generic [ref=e42]:
+  - navigation [ref=e43]:
+    - button "" [ref=e44] [cursor=pointer]
+    - generic [ref=e46]:
+      - combobox [aria-hidden] [ref=e47]
+      - combobox [ref=e50] [cursor=pointer]:
+        - textbox "All Charities" [ref=e51]:
+          - generic "Remove all items" [ref=e52]: ×
+    - list [ref=e53]:
+      - listitem [ref=e54]:
+        - link "English " [ref=e55] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e56]: 
+          - text: English 
+      - listitem [ref=e57]:
+        - link "" [ref=e58] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=e60]:
+        - link "" [ref=e61] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=e64]:
+        - button [ref=e65] [cursor=pointer]:
+          - generic [ref=e66]:
+            - text: Welcome System Admin
+            - img "..." [ref=e67]
+          - text: 
+  - complementary [ref=e68]:
+    - generic [ref=e73]:
+      - text: 
+      - navigation [ref=e74]:
+        - link [ref=e76] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=e77]
+        - paragraph [ref=e78]: Website Elements
+        - list [ref=e79]:
+          - listitem [ref=e80]:
+            - link " Home Page (current) " [ref=e81] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=e82]: 
+              - generic [ref=e83]: Home Page
+              - generic [ref=e84]: (current)
+              - text: 
+            - list [ref=e85]:
+              - listitem [ref=e86]:
+                - link "Home" [ref=e87] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=e88]:
+            - link " Settings " [ref=e89] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=e90]: 
+              - generic [ref=e91]: Settings
+              - text: 
+          - listitem [ref=e92]:
+            - link " Technical Support " [ref=e93] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=e94]: 
+              - generic [ref=e95]: Technical Support
+              - text: 
+          - listitem [ref=e96]:
+            - link " Notifications " [ref=e97] [cursor=pointer]:
+              - /url: "#notifications"
+              - generic [ref=e98]: 
+              - generic [ref=e99]: Notifications
+              - text: 
+          - listitem [ref=e100]:
+            - link " Missions " [ref=e101] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=e102]: 
+              - generic [ref=e103]: Missions
+              - text: 
+          - listitem [ref=e104]:
+            - link " Orphan Payments " [ref=e105] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=e106]: 
+              - generic [ref=e107]: Orphan Payments
+              - text: 
+          - listitem [ref=e108]:
+            - link " Office Projects " [ref=e109] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=e110]: 
+              - generic [ref=e111]: Office Projects
+              - text: 
+          - listitem [ref=e112]:
+            - link " Housing Projects " [ref=e113] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=e114]: 
+              - generic [ref=e115]: Housing Projects
+              - text: 
+          - listitem [ref=e116]:
+            - link " Seasonal Aid " [ref=e117] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=e118]: 
+              - generic [ref=e119]: Seasonal Aid
+              - text: 
+          - listitem [ref=e120]:
+            - link " Incoming & Outgoing " [ref=e121] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=e122]: 
+              - generic [ref=e123]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=e124]:
+            - link " Families " [ref=e125] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=e126]: 
+              - generic [ref=e127]: Families
+              - text: 
+            - list [ref=e128]:
+              - listitem [ref=e129]:
+                - link "All Families" [ref=e130] [cursor=pointer]:
+                  - /url: "#/families"
+              - listitem [ref=e131]:
+                - link "Add Family" [ref=e132] [cursor=pointer]:
+                  - /url: "#/families/create"
+              - listitem [ref=e133]:
+                - link "Refugee Families" [ref=e134] [cursor=pointer]:
+                  - /url: "#/families/refugees"
+              - listitem [ref=e135]:
+                - link "Add Refugee Family" [ref=e136] [cursor=pointer]:
+                  - /url: "#/families/refugees/create"
+              - listitem [ref=e137]:
+                - link "Orphan Coding" [ref=e138] [cursor=pointer]:
+                  - /url: "#/families/orphans/coding"
+              - listitem [ref=e139]:
+                - link "Orphan Coding Worklist" [ref=e140] [cursor=pointer]:
+                  - /url: "#/families/orphans/coding/worklist"
+              - listitem [ref=e141]:
+                - link "Guardian-Change Requests" [ref=e142] [cursor=pointer]:
+                  - /url: "#/families/provider-requests"
+          - listitem [ref=e143]:
+            - link " Reports " [ref=e144] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=e145]: 
+              - generic [ref=e146]: Reports
+              - text: 
+          - listitem [ref=e147]:
+            - link " General Cheques " [ref=e148] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=e149]: 
+              - generic [ref=e150]: General Cheques
+              - text: 
+          - listitem [ref=e151]:
+            - link " Periodic Orphan Reports " [ref=e152] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=e153]: 
+              - generic [ref=e154]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=e155]:
+            - link " Financial Transfers " [ref=e156] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=e157]: 
+              - generic [ref=e158]: Financial Transfers
+              - text: 
+  - main [ref=e159]:
+    - generic [ref=e661]:
+      - navigation "breadcrumb" [ref=e663]:
+        - list [ref=e664]:
+          - listitem [ref=e665]:
+            - link "Home" [ref=e666] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=e667]:
+            - text: /
+            - generic [ref=e668]: Families
+      - generic [ref=e670]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=e671]:
+          - generic [ref=e672]:
+            - generic [ref=e673]: 
+            - generic [ref=e674]:
+              - heading "Families" [level=3] [ref=e675]
+              - paragraph [ref=e676]: Manage Families
+          - generic [ref=e677]:
+            - button "Add Family" [ref=e678] [cursor=pointer]:
+              - generic [ref=e679]: 
+              - text: Add Family
+            - button "Export to Excel" [ref=e680] [cursor=pointer]:
+              - generic [ref=e681]: 
+              - text: Export to Excel
+      - generic [ref=e699]:
+        - button " Statistics " [ref=e700] [cursor=pointer]:
+          - heading " Statistics" [level=4] [ref=e701]:
+            - generic [ref=e702]: 
+            - text: Statistics
+          - generic [ref=e703]: 
+        - text:    
+      - generic [ref=e683]:
+        - button " Filters " [ref=e684] [cursor=pointer]:
+          - heading " Filters" [level=4] [ref=e685]:
+            - generic [ref=e686]: 
+            - text: Filters
+          - generic [ref=e687]: 
+        - text: 
+      - generic [ref=e689]:
+        - button " Results " [expanded] [ref=e690] [cursor=pointer]:
+          - heading " Results" [level=4] [ref=e691]:
+            - generic [ref=e692]: 
+            - text: Results
+          - generic [ref=e693]: 
+        - generic [ref=e694]:
+          - table [ref=e705]:
+            - rowgroup [ref=e706]:
+              - row [ref=e707]:
+                - columnheader "Family Code" [ref=e708]
+                - columnheader "Address" [ref=e709]
+                - columnheader "Father Name" [ref=e710]
+                - columnheader "Mother Name" [ref=e711]
+                - columnheader "Provider Type" [ref=e712]
+                - columnheader "Orphans Count" [ref=e713]
+                - columnheader "Living Condition" [ref=e714]
+                - columnheader "Status" [ref=e715]
+                - columnheader "Actions" [ref=e716]
+            - rowgroup [ref=e717]:
+              - row [ref=e801]:
+                - cell [ref=e719]:
+                  - strong [ref=e720]: FAM-2026-3531
+                - cell "عنوان قابل للتعديل 884525" [ref=e721]
+                - cell "-" [ref=e723]
+                - cell "-" [ref=e724]
+                - cell "-" [ref=e725]
+                - cell "0" [ref=e727]
+                - cell "-" [ref=e729]
+                - cell "Active" [ref=e730]
+                - cell [ref=e802]:
+                  - generic [ref=e733]:
+                    - button "" [ref=e734] [cursor=pointer]
+                    - button "" [ref=e736] [cursor=pointer]
+                    - generic [ref=e738]:
+                      - button " " [ref=e739] [cursor=pointer]:
+                        - generic [ref=e740]: 
+                        - text: 
+                      - text:    
+              - row [ref=e741]:
+                - cell [ref=e742]:
+                  - strong [ref=e743]: FAM-2026-6455
+                - cell "???? ???????? 1" [ref=e744]
+                - cell "-" [ref=e746]
+                - cell "-" [ref=e747]
+                - cell "Father" [ref=e748]
+                - cell "0" [ref=e750]
+                - cell "-" [ref=e752]
+                - cell "Active" [ref=e753]
+                - cell [ref=e755]:
+                  - generic [ref=e756]:
+                    - button "" [ref=e757] [cursor=pointer]
+                    - button "" [ref=e759] [cursor=pointer]
+                    - generic [ref=e761]:
+                      - button " " [ref=e762] [cursor=pointer]:
+                        - generic [ref=e763]: 
+                        - text: 
+                      - text:    
+              - row [ref=e764]:
+                - cell [ref=e765]:
+                  - strong [ref=e766]: FAM-2026-8189
+                - cell "شارع الترع - عمارة الدخان" [ref=e767]
+                - cell "-" [ref=e769]
+                - cell "-" [ref=e770]
+                - cell "-" [ref=e771]
+                - cell "0" [ref=e773]
+                - cell "-" [ref=e775]
+                - cell "Active" [ref=e776]
+                - cell [ref=e778]:
+                  - generic [ref=e779]:
+                    - button "" [ref=e780] [cursor=pointer]
+                    - button "" [ref=e782] [cursor=pointer]
+                    - generic [ref=e784]:
+                      - button " " [ref=e785] [cursor=pointer]:
+                        - generic [ref=e786]: 
+                        - text: 
+                      - text:    
+          - generic [ref=e787]: Showing 1 to 3 of 3
+      - generic [ref=e804]:
+        - generic [ref=e805]:
+          - heading "Transfer family to another charity" [level=5] [ref=e806]
+          - button "×" [ref=e807] [cursor=pointer]
+        - generic [ref=e808]:
+          - generic [ref=e809]:
+            - strong [ref=e810]: FAM-2026-3531
+            - text: "Current charity: -"
+          - generic [ref=e811]:
+            - generic [ref=e812]:
+              - generic [ref=e813]: Receiving charity *
+              - combobox [ref=e814]:
+                - option "-- select charity --" [selected]
+                - option "dga"
+                - option "dga2"
+                - option "Headquarters"
+                - option "TestAdmin"
+                - option "أيتام مكتب مصر"
+                - option "اسم الجمعية *"
+                - option "الجمعية الإسلامية للخدمات الاجتماعية - أوسيم"
+                - option "الجمعية الإسلامية للخدمات الاجتماعية - الهياتم"
+                - option "الجمعية الخيرية الإسلامية بالعصايد"
+                - option "الجمعية الخيرية الاسلامية - بئر العبد - شمال سيناء"
+                - option "الجمعية الخيرية الاسلامية - ديو الوسطى"
+                - option "الجمعية الخيرية الاسلامية والتنمية - ديروط الشريف"
+                - option "الجمعية الخيرية لانشاء وتعمير المساجد - طهطا"
+                - option "الجمعية الشرعية - ابو كبير"
+                - option "الجمعية الشرعية - العريش"
+                - option "الجمعية الشرعية - قنتير"
+                - option "اللاجئين اليمنيين - الجيزة - فيصل"
+                - option "ايتام مدينة شبين القناطر - القليوبية"
+                - option "ايتام مدينة وادي النطرون"
+                - option "بوادي سيناء"
+                - option "جمعية الإصلاح للخدمات والتنمية - ناهيا"
+                - option "جمعية الايمان لكفالة الايتام - كفر الشيخ"
+                - option "جمعية الرحمة الخيرية"
+                - option "جمعية الرحمن الخيرية - قويسنا - المنوفية"
+                - option "جمعية الصفوة لتنمية المجتمع وكفالة اليتيم - الفيوم"
+                - option "جمعية الطيبين الخيرية"
+                - option "جمعية المحافظة على القرآن الكريم - ابو كبير"
+                - option "جمعية المحافظة على القرآن الكريم - الهجارسة"
+                - option "جمعية المحافظة على القرآن الكريم - شندويل - سوهاج"
+                - option "جمعية المحافظة على القرآن الكريم - كفر الغول"
+                - option "جمعية النهوض بالمرأة"
+                - option "جمعية انصار السنة المحمدية - شبين القناطر"
+                - option "جمعية انصار السنة المحمدية - صدقا"
+                - option "جمعية اولاد الاحباء - العريش - شمال سيناء"
+                - option "جمعية بصمة خير - نبروه - الدقهلية"
+                - option "جمعية تحفيظ القرآن الكريم - بنى مر - اسيوط"
+                - option "جمعية تحفيظ القرآن الكريم - كفر المنشي"
+                - option "جمعية تنمية المجتمع - الزوامل البحرية - كفر الشيخ"
+                - option "جمعية تنمية مجتمع العلم والإيمان- كفر الدوار"
+                - option "جمعية حقوق المرأة السيناوية"
+                - option "جمعية دعوة الحق - دمياط"
+                - option "جمعية دعوة الحق الاسلامية - الرياض"
+                - option "جمعية دمنهور الوحش الخيرية"
+                - option "جمعية رسالة - بني سويف"
+                - option "جمعية رسالة نور على نور"
+                - option "جمعية رعاية الأسرة - ايتاي البارود- البحيرة"
+                - option "جمعية رعاية المجتمع بابو داود العنب"
+                - option "جمعية زكاة الفاتح عمرو"
+                - option "جمعية زهرة مصر - مدينة نصر - القاهرة"
+                - option "جمعية سفراء الهداية"
+                - option "جمعية عمر بن الخطاب لتنمية المجتمع - وادي النطرون"
+                - option "جمعية كفالة اليتيم والتنمية -المدمر - سوهاج"
+                - option "جمعية مسجد تبارك بحلوان"
+                - option "جمعية مصعب بن عمير الخيرية الاسلامية"
+                - option "جمعية هيئة علماء الوعظ"
+                - option "لجنة زكاة ابو شعبان - المنصورية - الجيزة"
+                - option "لجنة زكاة الجندية - بني مزار - المنيا"
+                - option "لجنة زكاة الحاج فارس - المنيا"
+                - option "لجنة زكاة الكوم الطويل - كفر الشيخ"
+                - option "لجنة زكاة المسجد البحري - ميت غراب"
+                - option "لجنة زكاة المسجد الكبير - الدروتين"
+                - option "لجنة زكاة سمالوط - بالمنيا"
+                - option "لجنة زكاة كفر الشيخ سليم بطنطا"
+                - option "لجنة زكاة كفر حكيم"
+                - option "لجنة زكاة مدرسة البرانية الثانوية"
+                - option "لجنة زكاة مسجد أبو سنة"
+                - option "لجنة زكاة مسجد الخمسة الاهلي - سنبلاوين - الدقهلية"
+                - option "لجنة زكاة مسجد الدعوة - شبرا"
+                - option "لجنة زكاة مسجد السلام - بنا ابو صير"
+                - option "لجنة زكاة مسجد الهداية - مدينة نصر- القاهرة"
+                - option "لجنة زكاة مسجد عمر بن الخطاب -وادي حوف- حلوان"
+                - option "لجنة زكاة مسجد محمد شحاته عبيد - الغربية"
+                - option "لجنة زكاة منيل شيحة"
+                - option "مؤسسة بناء الانسان للمستقبل"
+                - option "مؤسسة سوريا الغد للإغاثة - القاهرة"
+                - option "مؤسسة سوريا الغد للإغاثة / 6 اكتوبر"
+                - option "مؤسسة سوريا الغد للإغاثة / العبور"
+                - option "مؤسسة سوريا الغد للإغاثة / القاهرة"
+                - option "مؤسسة سوريا الغد للإغاثة / جسر السويس"
+                - option "مؤسسة سوريا الغد للإغاثة / فيصل"
+                - option "مؤسسة سوريا الغد للإغاثة / مدينة السادات"
+                - option "مؤسسة سوريا الغد للإغاثة/ دمياط"
+                - option "مؤسسة سوريا الغد للإغاثة/العاشر من رمضان"
+                - option "مؤسسة محمد نادي الخيرية"
+                - option "مؤسسة مصر الامل للتنمية الانسانية"
+                - option "مؤسسة نماء للتنمية الاجتماعية - الصف - القاهرة"
+            - generic [ref=e815]:
+              - generic [ref=e816]: Transfer reason
+              - textbox "Reason (optional)" [ref=e817]
+        - generic [ref=e818]:
+          - button "Cancel" [ref=e819] [cursor=pointer]
+          - button " Transfer family" [ref=e820] [cursor=pointer]:
+            - generic [ref=e821]: 
+            - text: Transfer family
+  - contentinfo [ref=e286]:
+    - generic [ref=e288]:
+      - paragraph [ref=e290]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=e292]: Version 1.0.0

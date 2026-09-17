@@ -15,30 +15,33 @@ public class IncomingOutgoingMappingProfile : Profile
     {
         // ========== Incoming (§21.S.1 / §21.S.2) ==========
 
+        // UploadedFileName stays null on the wire (kept for shape compatibility): the file
+        // is a framework Attachment referenced by id — its display name hydrates client-side
+        // through the attachments endpoints (UC-SYS-02/03), not from a letter-join nav.
         CreateMap<Incoming, IncomingDto>()
+            .ForMember(dest => dest.UploadedFileName, opt => opt.Ignore())
             .ForMember(dest => dest.SerialTxt, opt => opt.MapFrom(src => src.Serial_Txt))
             .ForMember(dest => dest.DepartmentId, opt => opt.MapFrom(src => src.FK_DepartmentId))
             .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department != null ? src.Department.Name : null))
             .ForMember(dest => dest.AssignedUserId, opt => opt.MapFrom(src => src.FK_UserId))
             .ForMember(dest => dest.AssignedUserName, opt => opt.MapFrom(src => src.AssignedUser != null ? src.AssignedUser.FullName : null))
-            .ForMember(dest => dest.UploadedFileName, opt => opt.MapFrom(src => src.UploadedFile != null ? src.UploadedFile.FileName : null))
             .ForMember(dest => dest.CharityId, opt => opt.MapFrom(src => src.FK_CharityId))
             .ForMember(dest => dest.CharityName, opt => opt.MapFrom(src => src.Charity != null ? src.Charity.Name : null));
 
         CreateMap<Incoming, IncomingListDto>()
+            .ForMember(dest => dest.UploadedFileName, opt => opt.Ignore())
             .ForMember(dest => dest.SerialTxt, opt => opt.MapFrom(src => src.Serial_Txt))
             .ForMember(dest => dest.DepartmentId, opt => opt.MapFrom(src => src.FK_DepartmentId))
             .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department != null ? src.Department.Name : null))
             .ForMember(dest => dest.AssignedUserName, opt => opt.MapFrom(src => src.AssignedUser != null ? src.AssignedUser.FullName : null))
-            .ForMember(dest => dest.UploadedFileId, opt => opt.MapFrom(src => src.UploadedFileId))
-            .ForMember(dest => dest.UploadedFileName, opt => opt.MapFrom(src => src.UploadedFile != null ? src.UploadedFile.FileName : null));
+            .ForMember(dest => dest.UploadedFileId, opt => opt.MapFrom(src => src.UploadedFileId));
 
         // ========== Outgoing (§21.S.4 / §21.S.5) ==========
 
         CreateMap<Outgoing, OutgoingDto>()
+            .ForMember(dest => dest.UploadedFileName, opt => opt.Ignore())
             .ForMember(dest => dest.DepartmentId, opt => opt.MapFrom(src => src.Fk_DepartmentId))
             .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department != null ? src.Department.Name : null))
-            .ForMember(dest => dest.UploadedFileName, opt => opt.MapFrom(src => src.UploadedFile != null ? src.UploadedFile.FileName : null))
             .ForMember(dest => dest.OutgoingCategoryId, opt => opt.MapFrom(src => src.OutgoingCategoryId))
             .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : null))
             .ForMember(dest => dest.IncomingLetterNumber, opt => opt.MapFrom(src => src.IncomingLetter != null ? src.IncomingLetter.LetterNumber : null))
@@ -54,11 +57,11 @@ public class IncomingOutgoingMappingProfile : Profile
                 })));
 
         CreateMap<Outgoing, OutgoingListDto>()
+            .ForMember(dest => dest.UploadedFileName, opt => opt.Ignore())
             .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department != null ? src.Department.Name : null))
             .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : null))
             .ForMember(dest => dest.HasReply, opt => opt.MapFrom(src => src.IncomingId != null))
             .ForMember(dest => dest.IncomingLetterNumber, opt => opt.MapFrom(src => src.IncomingLetter != null ? src.IncomingLetter.LetterNumber : null))
-            .ForMember(dest => dest.UploadedFileId, opt => opt.MapFrom(src => src.UploadedFileId))
-            .ForMember(dest => dest.UploadedFileName, opt => opt.MapFrom(src => src.UploadedFile != null ? src.UploadedFile.FileName : null));
+            .ForMember(dest => dest.UploadedFileId, opt => opt.MapFrom(src => src.UploadedFileId));
     }
 }

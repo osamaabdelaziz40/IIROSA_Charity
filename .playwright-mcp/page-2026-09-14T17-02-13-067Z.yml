@@ -1,0 +1,209 @@
+- generic [ref=f14e5]:
+  - navigation [ref=f14e6]:
+    - button "" [ref=f14e7] [cursor=pointer]
+    - generic [ref=f14e9]:
+      - combobox [aria-hidden] [ref=f14e10]
+      - combobox [ref=f14e13] [cursor=pointer]:
+        - textbox "All Charities" [ref=f14e14]:
+          - generic "Remove all items" [ref=f14e15]: ×
+    - list [ref=f14e16]:
+      - listitem [ref=f14e17]:
+        - link "English " [ref=f14e18] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f14e19]: 
+          - text: English 
+      - listitem [ref=f14e20]:
+        - link "" [ref=f14e21] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f14e23]:
+        - link "" [ref=f14e24] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f14e27]:
+        - button [ref=f14e28] [cursor=pointer]:
+          - generic [ref=f14e29]:
+            - text: Welcome System Admin
+            - img "..." [ref=f14e30]
+          - text: 
+  - complementary [ref=f14e31]:
+    - generic [ref=f14e36]:
+      - text: 
+      - navigation [ref=f14e37]:
+        - link [ref=f14e39] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f14e40]
+        - paragraph [ref=f14e41]: Website Elements
+        - list [ref=f14e42]:
+          - listitem [ref=f14e43]:
+            - link " Home Page (current) " [ref=f14e44] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f14e45]: 
+              - generic [ref=f14e46]: Home Page
+              - generic [ref=f14e47]: (current)
+              - text: 
+            - list [ref=f14e48]:
+              - listitem [ref=f14e49]:
+                - link "Home" [ref=f14e50] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f14e51]:
+            - link " Settings " [ref=f14e52] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=f14e53]: 
+              - generic [ref=f14e54]: Settings
+              - text: 
+          - listitem [ref=f14e55]:
+            - link " Technical Support " [ref=f14e56] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f14e57]: 
+              - generic [ref=f14e58]: Technical Support
+              - text: 
+          - listitem [ref=f14e59]:
+            - link " Notifications " [ref=f14e60] [cursor=pointer]:
+              - /url: "#notifications"
+              - generic [ref=f14e61]: 
+              - generic [ref=f14e62]: Notifications
+              - text: 
+          - listitem [ref=f14e63]:
+            - link " Missions " [ref=f14e64] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f14e65]: 
+              - generic [ref=f14e66]: Missions
+              - text: 
+          - listitem [ref=f14e67]:
+            - link " Orphan Payments " [ref=f14e68] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f14e69]: 
+              - generic [ref=f14e70]: Orphan Payments
+              - text: 
+          - listitem [ref=f14e71]:
+            - link " Office Projects " [ref=f14e72] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f14e73]: 
+              - generic [ref=f14e74]: Office Projects
+              - text: 
+          - listitem [ref=f14e75]:
+            - link " Housing Projects " [ref=f14e76] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f14e77]: 
+              - generic [ref=f14e78]: Housing Projects
+              - text: 
+          - listitem [ref=f14e79]:
+            - link " Seasonal Aid " [ref=f14e80] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f14e81]: 
+              - generic [ref=f14e82]: Seasonal Aid
+              - text: 
+          - listitem [ref=f14e83]:
+            - link " Incoming & Outgoing " [ref=f14e84] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f14e85]: 
+              - generic [ref=f14e86]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=f14e87]:
+            - link " Families " [ref=f14e88] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f14e89]: 
+              - generic [ref=f14e90]: Families
+              - text: 
+            - list [ref=f14e91]:
+              - listitem [ref=f14e92]:
+                - link "All Families" [ref=f14e93] [cursor=pointer]:
+                  - /url: "#/families"
+              - listitem [ref=f14e94]:
+                - link "Add Family" [ref=f14e95] [cursor=pointer]:
+                  - /url: "#/families/create"
+              - listitem [ref=f14e96]:
+                - link "Refugee Families" [ref=f14e97] [cursor=pointer]:
+                  - /url: "#/families/refugees"
+              - listitem [ref=f14e98]:
+                - link "Add Refugee Family" [ref=f14e99] [cursor=pointer]:
+                  - /url: "#/families/refugees/create"
+              - listitem [ref=f14e100]:
+                - link "Orphan Coding" [ref=f14e101] [cursor=pointer]:
+                  - /url: "#/families/orphans/coding"
+              - listitem [ref=f14e102]:
+                - link "Orphan Coding Worklist" [ref=f14e103] [cursor=pointer]:
+                  - /url: "#/families/orphans/coding/worklist"
+              - listitem [ref=f14e104]:
+                - link "Guardian-Change Requests" [ref=f14e105] [cursor=pointer]:
+                  - /url: "#/families/provider-requests"
+          - listitem [ref=f14e106]:
+            - link " Reports " [ref=f14e107] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f14e108]: 
+              - generic [ref=f14e109]: Reports
+              - text: 
+          - listitem [ref=f14e110]:
+            - link " General Cheques " [ref=f14e111] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f14e112]: 
+              - generic [ref=f14e113]: General Cheques
+              - text: 
+          - listitem [ref=f14e114]:
+            - link " Periodic Orphan Reports " [ref=f14e115] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f14e116]: 
+              - generic [ref=f14e117]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=f14e118]:
+            - link " Financial Transfers " [ref=f14e119] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f14e120]: 
+              - generic [ref=f14e121]: Financial Transfers
+              - text: 
+  - main [ref=f14e122]:
+    - generic [ref=f14e124]:
+      - generic [ref=f14e126]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=f14e129]:
+          - heading "Family Members" [level=3] [ref=f14e130]
+          - paragraph [ref=f14e131]: FAM-2026-3531
+      - generic [ref=f14e132]:
+        - generic [ref=f14e134]:
+          - heading "FAM-2026-3531" [level=5] [ref=f14e136]
+          - link "Back to family file" [ref=f14e137] [cursor=pointer]:
+            - /url: "#/families/758cb345-15c3-4a66-ad98-1d6966cd6004"
+            - generic [ref=f14e138]: 
+            - text: Back to family file
+        - generic [ref=f14e139]:
+          - heading "Family members" [level=5] [ref=f14e141]
+          - table [ref=f14e144]:
+            - rowgroup [ref=f14e145]:
+              - row [ref=f14e146]:
+                - columnheader "Name" [ref=f14e147]
+                - columnheader "National ID" [ref=f14e148]
+                - columnheader "Relation" [ref=f14e149]
+                - columnheader "Code" [ref=f14e150]
+                - columnheader "Actions" [ref=f14e151]
+            - rowgroup [ref=f14e152]:
+              - row [ref=f14e153]:
+                - cell "???? ??? ???????? 884525" [ref=f14e154]
+                - cell "299188452512345" [ref=f14e155]
+                - cell "Guardian" [ref=f14e156]
+                - cell "FAM-2026-3531" [ref=f14e157]
+                - cell [ref=f14e158]:
+                  - button "" [ref=f14e159] [cursor=pointer]
+                  - button "" [ref=f14e161] [cursor=pointer]
+              - row [ref=f14e163]:
+                - cell "ابن التعديل 884525" [ref=f14e164]
+                - cell "39918845251234" [ref=f14e165]
+                - cell "Orphan" [ref=f14e166]
+                - cell "ORP-2026-69185" [ref=f14e167]
+                - cell [ref=f14e168]:
+                  - button "" [ref=f14e169] [cursor=pointer]
+                  - link "" [ref=f14e171] [cursor=pointer]:
+                    - /url: "#/periodic-orphan-reports/create?code=ORP-2026-69185"
+              - row [ref=f14e173]:
+                - cell "ابنة التعديل 884525" [ref=f14e174]
+                - cell "-" [ref=f14e175]
+                - cell "Orphan" [ref=f14e176]
+                - cell "ORP-2026-23731" [ref=f14e177]
+                - cell [ref=f14e178]:
+                  - button "" [ref=f14e179] [cursor=pointer]
+                  - link "" [ref=f14e181] [cursor=pointer]:
+                    - /url: "#/periodic-orphan-reports/create?code=ORP-2026-23731"
+  - contentinfo [ref=f14e183]:
+    - generic [ref=f14e185]:
+      - paragraph [ref=f14e187]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=f14e189]: Version 1.0.0

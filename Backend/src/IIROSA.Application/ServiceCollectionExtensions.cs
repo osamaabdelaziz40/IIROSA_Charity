@@ -176,8 +176,25 @@ namespace IIROSA.Application
                     },
                     OnMessageReceived = context =>
                     {
+                        // SignalR's browser transports cannot set the Authorization header
+                        // (a WebSocket upgrade is not a fetch), so the JS client sends the
+                        // access token as access_token=... on the transport request. Without
+                        // handing it over here the hub connection authenticates as anonymous,
+                        // Context.UserIdentifier is null, and Clients.Users(...) pushes never
+                        // reach anyone. Scoped to /hubs so query tokens are not accepted on
+                        // arbitrary endpoints.
+                        var accessToken = context.Request.Query["access_token"].ToString();
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                        {
+                            context.Token = accessToken;
+                        }
+
                         var token = context.Request.Headers["Authorization"].FirstOrDefault();
-                        Console.WriteLine($"📨 JWT Message Received: {(!string.IsNullOrEmpty(token) ? "Token present" : "No token")}");
+                        Console.WriteLine($"📨 JWT Message Received: {(!string.IsNullOrEmpty(token) ? "Token present" : "No token")}"
+                            + (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs")
+                                ? " (hub connection token from query string)"
+                                : string.Empty));
                         return Task.CompletedTask;
                     }
                 };

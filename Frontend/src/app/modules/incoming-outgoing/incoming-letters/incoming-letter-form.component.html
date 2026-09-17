@@ -139,7 +139,10 @@
               [labelKey]="'incomingOutgoing.attachedFile'"
               [fileType]="attachmentFileType.Document"
               [existingFileId]="attachmentFileId"
+              [immediateUpload]="true"
+              [uploadModuleName]="'Incoming'"
               (fileIdChange)="onAttachmentChange($event)"
+              (uploadingChange)="onAttachmentUploading($event)"
               [acceptedFileTypes]="[attachmentFileType.Document]">
             </app-attachment-input>
           </div>
@@ -153,7 +156,7 @@
           <i class="fe fe-x mr-1"></i>
           {{ 'common.cancel' | translate }}
         </button>
-        <button type="submit" class="btn btn-primary" [disabled]="saving">
+        <button type="submit" class="btn btn-primary" [disabled]="saving || attachmentUploading">
           <i class="fe fe-save mr-1" *ngIf="!saving"></i>
           <i class="fe fe-spinner fe-spin mr-1" *ngIf="saving"></i>
           {{ saving ? ('common.saving' | translate) : ('common.save' | translate) }}

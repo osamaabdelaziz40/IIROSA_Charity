@@ -32,7 +32,6 @@ public class OutgoingRepository : Repository<Outgoing>, IOutgoingRepository
         var items = await query
             .Include(o => o.Department)
             .Include(o => o.Category)
-            .Include(o => o.UploadedFile)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -48,7 +47,6 @@ public class OutgoingRepository : Repository<Outgoing>, IOutgoingRepository
         return _dbSet
             .Include(o => o.Department)
             .Include(o => o.Category)
-            .Include(o => o.UploadedFile)
             .Include(o => o.IncomingLetter)
             .Include(o => o.Charity)
             .Include(o => o.OrphanReports.Where(r => !r.IsDeleted)).ThenInclude(r => r.Orphan).ThenInclude(or => or!.Family)

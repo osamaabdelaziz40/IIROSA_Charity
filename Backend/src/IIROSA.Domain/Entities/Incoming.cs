@@ -31,12 +31,14 @@ public class Incoming : FullAuditedEntity
     // Foreign Keys
     public int? FK_DepartmentId { get; set; }
     public Guid? FK_UserId { get; set; }  // The employee the letter is routed to (الموظف المناط به)
+    // The letter's file (الملف, §21.S.2) — a framework Attachment id minted by
+    // POST /api/attachments/upload. Loose Guid reference with no EF navigation, the
+    // platform's established pattern for framework attachments (e.g. orphan photo ids).
     public Guid? UploadedFileId { get; set; }
     public Guid? FK_CharityId { get; set; }  // Owning charity — tenancy (stamped server-side)
 
     // Navigation Properties
     public virtual Department? Department { get; set; }
-    public virtual UploadedFile? UploadedFile { get; set; }
     public virtual ApplicationUser? AssignedUser { get; set; }
     public virtual Charity? Charity { get; set; }
 

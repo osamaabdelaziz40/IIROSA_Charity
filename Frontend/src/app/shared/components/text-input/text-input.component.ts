@@ -247,6 +247,10 @@ export class InputTextComponent implements OnInit, OnDestroy, OnChanges {
     if (field.errors['nationalIdInvalid']) {
       return this.translate.instant('validation.nationalIdInvalid');
     }
+    // Raised by the UC-COR-04 cross-field rule: letter date after registration date.
+    if (field.errors['letterDateAfterDate']) {
+      return this.translate.instant('validation.letterDateAfterDate');
+    }
     if (field.errors['email']) {
       return this.translate.instant('validation.email');
     }

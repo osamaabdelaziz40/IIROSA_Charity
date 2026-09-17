@@ -93,6 +93,15 @@ export class PeriodicReportFormComponent implements OnInit {
 
     if (this.isEditMode && this.reportId) {
       this.loadReport(this.reportId);
+    } else {
+      // Entry shortcuts (orphan-search screen / family members row icon) deep-link the
+      // create form with the subject's sponsorship code — resolve it up front through
+      // the same UC-ORR-02 lookup manual entry uses, so scope rules stay in one place.
+      const code = this.route.snapshot.queryParamMap.get('code');
+      if (code) {
+        this.orphanCodeInput = code;
+        this.lookupOrphan();
+      }
     }
   }
 

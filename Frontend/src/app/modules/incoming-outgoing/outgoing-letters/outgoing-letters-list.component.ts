@@ -10,6 +10,7 @@ import { CharityService } from '../../charities/services/charity.service';
 import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { AttachmentService } from '../../../core/services/attachment.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { RouterModule } from '@angular/router';
@@ -126,6 +127,7 @@ export class OutgoingLettersListComponent implements OnInit, OnDestroy {
     private lookupService: LookupManagementService,
     private authService: AuthService,
     private notification: NotificationService,
+    private attachmentService: AttachmentService,
     private translate: TranslateService,
     private router: Router
   ) {
@@ -338,6 +340,18 @@ export class OutgoingLettersListComponent implements OnInit, OnDestroy {
 
   editLetter(id: string): void {
     this.router.navigate(['/incoming-outgoing/outgoing', id, 'edit']);
+  }
+
+  /** الملف column — authenticated download of the dispatch's attached file (UC-SYS-02). */
+  downloadLetterFile(letter: OutgoingListDto): void {
+    if (!letter.uploadedFileId) {
+      return;
+    }
+    this.attachmentService.downloadAndSave(
+      letter.uploadedFileId,
+      letter.uploadedFileName || 'attachment',
+      () => this.notification.error(this.translate.instant('common.downloadFailed'))
+    );
   }
 
   async deleteLetter(letter: OutgoingListDto): Promise<void> {

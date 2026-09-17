@@ -30,7 +30,7 @@ export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   currentUser$ = this.authService.currentUser$;
   isSidebarCollapsed = false;
   currentLang = 'en';
-  unreadCount = 0;
+  unreadCount = 0; // retained for the future header badge — not rendered yet
   currentYear = new Date().getFullYear();
   appVersion = '1.0.0';
   startHeader: boolean = false;
@@ -147,19 +147,14 @@ export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
     // Header charity switcher — see loadCharities() for the scoping note
     this.loadCharities();
 
-    // Start SignalR connection (wrapped to handle gracefully if not available)
+    // Start SignalR connection (wrapped to handle gracefully if not available).
+    // Display lives in <app-signalr-toast> only — an extra subscription here used to
+    // stack a blocking SweetAlert on top of that toast for every push.
     try {
       this.signalRService.startConnection();
     } catch (error) {
       console.warn('SignalR not available (this is expected):', error);
     }
-
-    // Listen for notifications
-    this.signalRService.notifications$.subscribe(notification => {
-      this.unreadCount++;
-      // Show toast notification
-      this.showNotification(notification);
-    });
   }
 
   ngAfterViewInit(): void {
@@ -459,14 +454,6 @@ export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   getColSize(field: any): number {
     // TODO: Implement based on field
     return 6;
-  }
-
-  /**
-   * Toast a live web notification (UC-NTF) pushed over SignalR — title and body
-   * as composed by the sender, held a little longer than a default toast.
-   */
-  showNotification(notification: { title: string; message: string; type: 'success' | 'error' | 'warning' | 'info' }): void {
-    this.notificationService.show(notification.message, notification.type, notification.title, 6000);
   }
 
   runDiagnostics(): void {

@@ -28,6 +28,8 @@ import { OrphanReportStateExtractComponent } from './orphan-report-state-extract
 import { NonRenewedReportsComponent } from './non-renewed-reports/non-renewed-reports.component';
 import { ReportNumbersComponent } from './report-numbers/report-numbers.component';
 import { PeriodicReportPrintComponent } from './periodic-report-print/periodic-report-print.component';
+import { OrphanSearchComponent } from './orphan-search/orphan-search.component';
+import { OrphanReportsByDateComponent } from './orphan-reports-by-date/orphan-reports-by-date.component';
 
 // Guards
 import { AuthGuard } from '../../core/guards/auth.guard';
@@ -56,6 +58,32 @@ const periodicOrphanReportsRoutes: Routes = [
       pageTitle: 'periodicReports.createReport',
       breadcrumb: 'periodicReports.breadcrumb.create',
       permission: 'PeriodicReports.Create'
+    }
+  },
+
+  // Report-entry shortcut: search an orphan by name/code, then create their report —
+  // the create form pre-resolves the ?code= subject through the UC-ORR-02 lookup.
+  {
+    path: 'orphan-search',
+    component: OrphanSearchComponent,
+    canActivate: [AuthGuard, PermissionGuard],
+    data: {
+      pageTitle: 'periodicReports.orphanSearch.title',
+      breadcrumb: 'periodicReports.orphanSearch.title',
+      permission: 'PeriodicReports.Create'
+    }
+  },
+
+  // Orphan-centric register: pick an orphan by name/code, page their reports by date
+  // (newest first) with an optional من/إلى window.
+  {
+    path: 'orphan-reports/by-date',
+    component: OrphanReportsByDateComponent,
+    canActivate: [AuthGuard, PermissionGuard],
+    data: {
+      pageTitle: 'periodicReports.orphanReportsByDate.title',
+      breadcrumb: 'periodicReports.orphanReportsByDate.title',
+      permission: 'PeriodicReports.View'
     }
   },
 

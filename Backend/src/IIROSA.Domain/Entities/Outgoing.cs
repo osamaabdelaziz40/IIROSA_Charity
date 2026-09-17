@@ -24,6 +24,9 @@ public class Outgoing : FullAuditedEntity
 
     // Foreign Keys
     public int? Fk_DepartmentId { get; set; }
+    // The dispatch's file (الملف, §21.S.5) — a framework Attachment id minted by
+    // POST /api/attachments/upload. Loose Guid reference with no EF navigation, the
+    // platform's established pattern for framework attachments (e.g. orphan photo ids).
     public Guid? UploadedFileId { get; set; }
     public int? OutgoingCategoryId { get; set; }
     public Guid? IncomingId { get; set; }
@@ -31,7 +34,6 @@ public class Outgoing : FullAuditedEntity
 
     // Navigation Properties
     public virtual Department? Department { get; set; }
-    public virtual UploadedFile? UploadedFile { get; set; }
     public virtual OutgoingCategory? Category { get; set; }
     public virtual Incoming? IncomingLetter { get; set; }
     public virtual Charity? Charity { get; set; }
