@@ -30,6 +30,18 @@
     </a>
   </div>
 
+  <!-- Family pin (?familyId=) — this family's children only -->
+  <div class="alert alert-info d-flex align-items-center justify-content-between mb-3" *ngIf="familyId" role="status">
+    <span>
+      <i class="fe fe-users mr-2" aria-hidden="true"></i>
+      {{ 'periodicReports.familyFilter.showing' | translate: { code: familyCode || '-' } }}
+    </span>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="clearFamilyFilter()">
+      <i class="fe fe-x mr-1" aria-hidden="true"></i>
+      {{ 'periodicReports.familyFilter.clear' | translate }}
+    </button>
+  </div>
+
   <!-- Statistics band — caller-scoped server-side; describes the caller's whole register -->
   <app-collapsible-card titleKey="periodicReports.stats.title" icon="fe-bar-chart-2" *ngIf="statistics">
     <div class="row">

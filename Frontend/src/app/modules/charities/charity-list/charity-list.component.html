@@ -7,132 +7,28 @@
   [actions]="pageActions">
 </app-page-header>
 
-<div class="">
-  <div class="">
-
 <!-- Register statistics band (UC-CHR-01) — caller-scoped server-side, refreshed after
      the row mutations that move its numbers. Not tied to the filters below. -->
 <app-collapsible-card titleKey="charities.statistics.title" icon="fe-bar-chart-2" *ngIf="statistics">
-  <div class="row">
-  <div class="col-6 col-md-4">
-    <div class="card shadow mb-4 h-100">
-      <div class="card-body">
-        <div class="row align-items-center">
-          <div class="col-3 text-center">
-            <span class="circle circle-md bg-primary">
-              <span class="fe fe-heart fe-24 text-white"></span>
-            </span>
-          </div>
-          <div class="col">
-            <h3 class="mb-0">{{ statistics.totalCharities }}</h3>
-            <p class="small text-muted mb-0">{{ 'charities.statistics.total' | translate }}</p>
-          </div>
+  <div class="row g-3 stat-band">
+    <div class="col-6 col-md-4" *ngFor="let stat of statCards; trackBy: trackByStatKey">
+      <div class="stat-item">
+        <span class="stat-icon {{ stat.tone }}">
+          <i class="fe {{ stat.icon }}" aria-hidden="true"></i>
+        </span>
+        <div class="stat-body">
+          <span class="stat-value">{{ stat.value }}</span>
+          <span class="stat-label">{{ 'charities.statistics.' + stat.key | translate }}</span>
         </div>
       </div>
     </div>
-  </div>
-  <div class="col-6 col-md-4">
-    <div class="card shadow mb-4 h-100">
-      <div class="card-body">
-        <div class="row align-items-center">
-          <div class="col-3 text-center">
-            <span class="circle circle-md bg-success">
-              <span class="fe fe-check-circle fe-24 text-white"></span>
-            </span>
-          </div>
-          <div class="col">
-            <h3 class="mb-0">{{ statistics.activeCharities }}</h3>
-            <p class="small text-muted mb-0">{{ 'charities.statistics.active' | translate }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-4">
-    <div class="card shadow mb-4 h-100">
-      <div class="card-body">
-        <div class="row align-items-center">
-          <div class="col-3 text-center">
-            <span class="circle circle-md bg-warning">
-              <span class="fe fe-slash fe-24 text-white"></span>
-            </span>
-          </div>
-          <div class="col">
-            <h3 class="mb-0">{{ statistics.inactiveCharities }}</h3>
-            <p class="small text-muted mb-0">{{ 'charities.statistics.inactive' | translate }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-4">
-    <div class="card shadow mb-4 h-100">
-      <div class="card-body">
-        <div class="row align-items-center">
-          <div class="col-3 text-center">
-            <span class="circle circle-md bg-danger">
-              <span class="fe fe-lock fe-24 text-white"></span>
-            </span>
-          </div>
-          <div class="col">
-            <h3 class="mb-0">{{ statistics.lockedCharities }}</h3>
-            <p class="small text-muted mb-0">{{ 'charities.statistics.locked' | translate }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-4">
-    <div class="card shadow mb-4 h-100">
-      <div class="card-body">
-        <div class="row align-items-center">
-          <div class="col-3 text-center">
-            <span class="circle circle-md bg-info">
-              <span class="fe fe-gift fe-24 text-white"></span>
-            </span>
-          </div>
-          <div class="col">
-            <h3 class="mb-0">{{ statistics.receivingDonations }}</h3>
-            <p class="small text-muted mb-0">{{ 'charities.statistics.receivingDonations' | translate }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-4">
-    <div class="card shadow mb-4 h-100">
-      <div class="card-body">
-        <div class="row align-items-center">
-          <div class="col-3 text-center">
-            <span class="circle circle-md bg-secondary">
-              <span class="fe fe-calendar fe-24 text-white"></span>
-            </span>
-          </div>
-          <div class="col">
-            <h3 class="mb-0">{{ statistics.addedThisMonth }}</h3>
-            <p class="small text-muted mb-0">{{ 'charities.statistics.addedThisMonth' | translate }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
   </div>
 </app-collapsible-card>
 
-<!-- By-country breakdown — one pill per country with charities in the caller's scope -->
-<!-- <div class="card shadow-sm mb-4" *ngIf="statistics?.byCountry?.length">
-  <div class="card-body py-3">
-    <span class="text-muted mr-2">{{ 'charities.statistics.byCountry' | translate }}:</span>
-    <span class="badge badge-light mr-1 mb-1 p-2" *ngFor="let row of statistics!.byCountry; trackBy: trackByCountry">
-      {{ countryName(row) }} <strong>{{ row.count }}</strong>
-    </span>
-  </div>
-</div> -->
-
 <app-collapsible-card titleKey="charities.filters" icon="fe-filter">
-  <!-- Filters using shared components -->
-  <form [formGroup]="filterForm">
-      <div class="row mb-3">
+  <!-- Filters using shared components. ngSubmit lets Enter in the search box apply the filters -->
+  <form [formGroup]="filterForm" (ngSubmit)="onSearch()">
+      <div class="row">
         <!-- Search -->
         <div class="col-md-3">
           <app-input-text
@@ -196,12 +92,12 @@
 
       <div class="row">
         <div class="col-12">
-          <button class="btn btn-primary" (click)="onSearch()">
-            <i class="fe fe-search mr-1"></i>
+          <button type="submit" class="btn btn-primary">
+            <i class="fe fe-search mr-1" aria-hidden="true"></i>
             {{ 'common.search' | translate }}
           </button>
-          <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary ml-2" (click)="clearFilters()">
-            <i class="fe fe-x mr-1"></i>
+          <button *ngIf="hasActiveFilters()" type="button" class="btn btn-outline-secondary ml-2" (click)="clearFilters()">
+            <i class="fe fe-x mr-1" aria-hidden="true"></i>
             {{ 'common.clearFilters' | translate }}
           </button>
         </div>
@@ -210,108 +106,123 @@
 </app-collapsible-card>
 
 <app-collapsible-card titleKey="charities.results" icon="fe-list" [expanded]="true">
-  <!-- Loading State -->
-    <div *ngIf="loading" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status">
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-5" role="status">
+      <div class="spinner-border text-primary">
         <span class="sr-only">{{ 'common.loading' | translate }}</span>
       </div>
     </div>
 
-    <!-- Charities Table -->
-    <div *ngIf="!loading" class="table-responsive">
-      <table class="table table-hover table-striped">
+    <!-- Charities Table. While a row menu is open the wrapper lets content overflow
+         so the dropdown is not clipped by the scroll container (Bootstrap caveat). -->
+    <div *ngIf="!loading" class="table-responsive" [class.menu-open]="openRowMenuId">
+      <table class="table table-hover table-striped charities-table">
         <thead>
           <tr>
-            <th>{{ 'charities.charityCode' | translate }}</th>
-            <th>{{ 'charities.charityName' | translate }}</th>
-            <th>{{ 'charities.region' | translate }}</th>
-            <th>{{ 'charities.center' | translate }}</th>
-            <th>{{ 'charities.contactPhone' | translate }}</th>
-            <th>{{ 'charities.contactEmail' | translate }}</th>
-            <th>{{ 'common.status' | translate }}</th>
-            <th>{{ 'charities.addRights' | translate }}</th>
-            <th>{{ 'charities.updateRights' | translate }}</th>
-            <th>{{ 'common.actions' | translate }}</th>
+            <th scope="col">{{ 'charities.charityCode' | translate }}</th>
+            <th scope="col">{{ 'charities.charityName' | translate }}</th>
+            <th scope="col">{{ 'charities.region' | translate }}</th>
+            <th scope="col">{{ 'charities.center' | translate }}</th>
+            <th scope="col">{{ 'charities.contactPhone' | translate }}</th>
+            <th scope="col">{{ 'charities.contactEmail' | translate }}</th>
+            <th scope="col">{{ 'common.status' | translate }}</th>
+            <th scope="col">{{ 'charities.rights' | translate }}</th>
+            <th scope="col">{{ 'common.actions' | translate }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let charity of charities">
-            <td><strong>{{ charity.code || '-' }}</strong></td>
-            <td>
-              <div>{{ charity.name }}</div>
-              <small class="text-muted">{{ charity.ngoType || '' }}</small>
+          <tr *ngFor="let charity of charities; trackBy: trackByCharity">
+            <td class="text-nowrap"><strong>{{ charity.code || '—' }}</strong></td>
+            <td class="name-cell">
+              <div class="text-truncate" [title]="charity.name">{{ charity.name }}</div>
+              <small class="text-muted" *ngIf="charity.ngoType">{{ ngoTypeLabel(charity.ngoType) }}</small>
             </td>
-            <td>{{ charity.regionName || '-' }}</td>
-            <td>{{ charity.centerName || '-' }}</td>
-            <td>{{ charity.phone }}</td>
-            <td>{{ charity.email }}</td>
+            <td>{{ charity.regionName || '—' }}</td>
+            <td>{{ charity.centerName || '—' }}</td>
+            <td class="ltr-cell text-truncate" [title]="charity.phone">{{ charity.phone || '—' }}</td>
+            <td class="ltr-cell text-truncate" [title]="charity.email">{{ charity.email || '—' }}</td>
             <td>
-              <span [class]="'badge ' + getStatusBadgeClass(charity)">
+              <span class="badge" [ngClass]="getStatusBadgeClass(charity)">
                 {{ getStatusText(charity) }}
               </span>
             </td>
-            <td>
-              <span [class]="'badge ' + (charity.isAddEnabled ? 'badge-success' : 'badge-secondary')">
-                {{ charity.isAddEnabled ? ('common.enabled' | translate) : ('common.disabled' | translate) }}
+            <td class="rights-cell">
+              <span class="rights-chip" [class.on]="charity.isAddEnabled" [title]="addRightsTitle(charity)">
+                <i class="fe fe-plus-circle" aria-hidden="true"></i>
+                {{ 'common.add' | translate }}
               </span>
-            </td>
-            <td>
-              <span [class]="'badge ' + (charity.isUpdateEnabled ? 'badge-success' : 'badge-secondary')">
-                {{ charity.isUpdateEnabled ? ('common.enabled' | translate) : ('common.disabled' | translate) }}
+              <span class="rights-chip" [class.on]="charity.isUpdateEnabled" [title]="updateRightsTitle(charity)">
+                <i class="fe fe-edit-2" aria-hidden="true"></i>
+                {{ 'common.edit' | translate }}
               </span>
+              <span class="sr-only">{{ addRightsTitle(charity) }} — {{ updateRightsTitle(charity) }}</span>
             </td>
-            <td>
-              <div class="btn-group">
-                <button type="button" class="btn btn-sm btn-light" [title]="'common.view' | translate" (click)="viewCharity(charity.id)">
-                  <i class="fe fe-eye"></i>
+            <!-- Every row action lives behind one kebab menu — view/edit included —
+                 so the column stays one control wide. -->
+            <td class="actions-cell">
+              <div class="dropdown" [class.show]="openRowMenuId === charity.id">
+                <button type="button" class="btn btn-sm btn-icon dropdown-toggle"
+                        [attr.aria-expanded]="openRowMenuId === charity.id"
+                        [attr.aria-label]="'common.actions' | translate"
+                        (click)="toggleRowMenu(charity)">
+                  <i class="fe fe-more-vertical" aria-hidden="true"></i>
                 </button>
-                <button type="button" class="btn btn-sm btn-light" [title]="'common.edit' | translate" (click)="editCharity(charity.id)">
-                  <i class="fe fe-edit"></i>
-                </button>
-                <div class="dropdown" [class.show]="openRowMenuId === charity.id">
-                  <button type="button" class="btn btn-sm btn-light dropdown-toggle"
-                          [attr.aria-expanded]="openRowMenuId === charity.id"
-                          (click)="toggleRowMenu(charity)">
-                    <i class="fe fe-more-vertical"></i>
+                <div class="dropdown-menu" [class.show]="openRowMenuId === charity.id">
+                  <button type="button" class="dropdown-item" (click)="viewCharity(charity.id)">
+                    <i class="fe fe-eye mr-2" aria-hidden="true"></i>
+                    {{ 'common.view' | translate }}
                   </button>
-                  <div class="dropdown-menu dropdown-menu-right" [class.show]="openRowMenuId === charity.id">
-                    <a class="dropdown-item" href="javascript:void(0)" (click)="toggleCharityStatus(charity)">
-                      <i class="fe fe-power mr-2" [ngClass]="charity.isActive ? 'fe-alert-circle' : 'fe-check-circle'"></i>
-                      {{ charity.isActive ? ('charities.deactivate' | translate) : ('charities.activate' | translate) }}
-                    </a>
-                    <a class="dropdown-item" href="javascript:void(0)" (click)="toggleCharityLock(charity)">
-                      <i class="fe fe-lock mr-2" [ngClass]="charity.isLocked ? 'fe-unlock' : 'fe-lock'"></i>
-                      {{ charity.isLocked ? ('charities.unlock' | translate) : ('charities.lock' | translate) }}
-                    </a>
-                    <a class="dropdown-item" href="javascript:void(0)" (click)="toggleAddRights(charity)">
-                      <i class="fe fe-plus-circle mr-2"></i>
-                      {{ charity.isAddEnabled ? ('charities.disableAddRights' | translate) : ('charities.enableAddRights' | translate) }}
-                    </a>
-                    <a class="dropdown-item" href="javascript:void(0)" (click)="toggleUpdateRights(charity)">
-                      <i class="fe fe-edit-2 mr-2"></i>
-                      {{ charity.isUpdateEnabled ? ('charities.disableUpdateRights' | translate) : ('charities.enableUpdateRights' | translate) }}
-                    </a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="javascript:void(0)" (click)="resetPassword(charity)">
-                      <i class="fe fe-refresh-cw mr-2"></i>
-                      {{ 'charities.resetPassword' | translate }}
-                    </a>
-                    <a class="dropdown-item text-danger" href="javascript:void(0)" (click)="deleteCharity(charity)">
-                      <i class="fe fe-trash mr-2"></i>
-                      {{ 'common.delete' | translate }}
-                    </a>
-                  </div>
+                  <button type="button" class="dropdown-item" (click)="editCharity(charity.id)">
+                    <i class="fe fe-edit mr-2" aria-hidden="true"></i>
+                    {{ 'common.edit' | translate }}
+                  </button>
+                  <div class="dropdown-divider"></div>
+                  <button type="button" class="dropdown-item" (click)="toggleCharityStatus(charity)">
+                    <i class="fe mr-2" [ngClass]="charity.isActive ? 'fe-alert-circle' : 'fe-check-circle'" aria-hidden="true"></i>
+                    {{ charity.isActive ? ('charities.deactivate' | translate) : ('charities.activate' | translate) }}
+                  </button>
+                  <button type="button" class="dropdown-item" (click)="toggleCharityLock(charity)">
+                    <i class="fe mr-2" [ngClass]="charity.isLocked ? 'fe-unlock' : 'fe-lock'" aria-hidden="true"></i>
+                    {{ charity.isLocked ? ('charities.unlock' | translate) : ('charities.lock' | translate) }}
+                  </button>
+                  <button type="button" class="dropdown-item" (click)="toggleAddRights(charity)">
+                    <i class="fe fe-plus-circle mr-2" aria-hidden="true"></i>
+                    {{ charity.isAddEnabled ? ('charities.disableAddRights' | translate) : ('charities.enableAddRights' | translate) }}
+                  </button>
+                  <button type="button" class="dropdown-item" (click)="toggleUpdateRights(charity)">
+                    <i class="fe fe-edit-2 mr-2" aria-hidden="true"></i>
+                    {{ charity.isUpdateEnabled ? ('charities.disableUpdateRights' | translate) : ('charities.enableUpdateRights' | translate) }}
+                  </button>
+                  <div class="dropdown-divider"></div>
+                  <button type="button" class="dropdown-item" (click)="resetPassword(charity)">
+                    <i class="fe fe-refresh-cw mr-2" aria-hidden="true"></i>
+                    {{ 'charities.resetPassword' | translate }}
+                  </button>
+                  <button type="button" class="dropdown-item text-danger" (click)="deleteCharity(charity)" *ngIf="canDelete">
+                    <i class="fe fe-trash mr-2" aria-hidden="true"></i>
+                    {{ 'common.delete' | translate }}
+                  </button>
                 </div>
               </div>
             </td>
           </tr>
 
-          <!-- Empty State -->
+          <!-- Empty State: distinguish "nothing matches these filters" from "register is empty" -->
           <tr *ngIf="charities.length === 0">
-            <td colspan="10" class="text-center py-5">
+            <td colspan="9" class="text-center py-5">
               <div class="empty-state">
-                <i class="fe fe-inbox fe-3x text-muted mb-3"></i>
-                <p class="text-muted">{{ 'charities.noCharitiesFound' | translate }}</p>
+                <i class="fe fe-inbox" aria-hidden="true"></i>
+                <p class="text-muted mb-3">
+                  {{ hasActiveFilters() ? ('charities.noMatchForFilters' | translate) : ('charities.noCharitiesFound' | translate) }}
+                </p>
+                <button type="button" class="btn btn-sm btn-outline-primary" *ngIf="hasActiveFilters()" (click)="clearFilters()">
+                  <i class="fe fe-x mr-1" aria-hidden="true"></i>
+                  {{ 'common.clearFilters' | translate }}
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" *ngIf="!hasActiveFilters()" (click)="createCharity()">
+                  <i class="fe fe-plus mr-1" aria-hidden="true"></i>
+                  {{ 'charities.addCharity' | translate }}
+                </button>
               </div>
             </td>
           </tr>
@@ -327,7 +238,3 @@
       (pageChange)="onPageChange($event)">
     </app-pagination>
 </app-collapsible-card>
-
-    
-  </div>
-</div>

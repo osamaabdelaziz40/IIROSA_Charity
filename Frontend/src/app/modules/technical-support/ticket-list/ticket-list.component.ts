@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -532,6 +532,30 @@ export class TicketListComponent implements OnInit, OnDestroy {
 
   trackByActionKey(index: number, action: ActionItem): string {
     return action.action;
+  }
+
+  trackByListActionKey(index: number, action: ListAction): string {
+    return action.key;
+  }
+
+  // Id of the ticket whose row menu is open (null = all closed). Driven from Angular rather
+  // than Bootstrap's data-api, mirroring the charities list.
+  openRowMenuId: string | null = null;
+
+  toggleRowMenu(ticket: SupportTicket): void {
+    this.openRowMenuId = this.openRowMenuId === ticket.id ? null : ticket.id;
+  }
+
+  onRowMenuAction(ticket: SupportTicket, action: string): void {
+    this.openRowMenuId = null;
+    this.onAction({ item: ticket, action });
+  }
+
+  // The actions cell stops propagation (so the row's routerLink doesn't fire), so any click
+  // that reaches the document came from outside the open menu — close it.
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.openRowMenuId = null;
   }
 
   getDisplayEnd(): number {

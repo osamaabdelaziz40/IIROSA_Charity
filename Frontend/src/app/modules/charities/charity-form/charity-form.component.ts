@@ -57,13 +57,6 @@ export class CharityFormComponent implements OnInit, OnDestroy {
   filteredCenters: CenterDto[] = [];
   loadingLookups = false;
 
-  // Generated credentials
-  generatedCredentials: {
-    username: string;
-    password: string;
-    email: string;
-  } | null = null;
-
   // NGO Types - will be populated from translations (for dropdown component)
   ngoTypes: string[] = [];
   ngoTypeOptions: Array<{ id: string; name: string }> = [];
@@ -71,15 +64,16 @@ export class CharityFormComponent implements OnInit, OnDestroy {
   // Bank options for dropdown - loaded from API (id can be string or number)
   bankOptions: Array<{ id: string | number; name: string }> = [];
 
-  // Page actions for header
-  pageActions = [
-    {
-      label: 'common.cancel',
-      type: 'secondary',
-      icon: 'x',
-      click: () => this.cancel()
-    }
-  ];
+  // Generated credentials — shown once after save; navigation waits for the
+  // operator's acknowledgment instead of a timer.
+  generatedCredentials: {
+    username: string;
+    password: string;
+    email: string;
+  } | null = null;
+
+  /** Charity id to open once the operator acknowledges the generated credentials. */
+  private credentialsRedirectId: string | null = null;
 
   breadcrumbs: BreadcrumbItem[] = [
     { label: 'common.home', url: '/dashboard' },
@@ -112,12 +106,11 @@ export class CharityFormComponent implements OnInit, OnDestroy {
       this.loadNgoTypes();
     });
 
-    // Add value listener for ngoType to log and convert empty string to null
+    // Select2 can leave an empty string in ngoType; normalize it to null so the
+    // required validator reads it as "not chosen" rather than a chosen empty value.
     this.charityForm.get('ngoType')?.valueChanges.subscribe(value => {
-      console.log('[CharityForm] ngoType valueChanges:', value);
       if (value === '') {
         this.charityForm.get('ngoType')?.setValue(null, { emitEvent: false });
-        console.log('[CharityForm] Converted empty ngoType string to null');
       }
     });
 
@@ -296,7 +289,6 @@ export class CharityFormComponent implements OnInit, OnDestroy {
 
   onIconAttachmentChange(attachments: AttachmentDto[]): void {
     this.icon_Attach_List = attachments;
-    console.log('Icon attachments changed:', attachments);
   }
 
   attachmentFileType = AttachmentFileType;
@@ -414,21 +406,6 @@ export class CharityFormComponent implements OnInit, OnDestroy {
     }
   }
 
-  onCountryChange(): void {
-    debugger;
-    const countryId = this.charityForm.get('countryId')?.value;
-    this.loadRegionsByCountry(countryId);
-    this.charityForm.patchValue({ regionId: null, centerId: null });
-    this.filteredCenters = [];
-  }
-
-  onRegionChange(): void {
-    debugger;
-    const regionId = this.charityForm.get('regionId')?.value;
-    this.loadCentersByRegion(regionId);
-    this.charityForm.patchValue({ centerId: null });
-  }
-
   // Drop-down component event handlers
   onCountryDropDownChanged(value: any): void {
     // Fix: Check for null/undefined explicitly, not falsy values (0 is valid!)
@@ -470,7 +447,6 @@ export class CharityFormComponent implements OnInit, OnDestroy {
   }
 
   onNgoTypeDropDownChanged(value: any): void {
-    console.log('[CharityForm] onNgoTypeDropDownChanged called with:', value);
     const ngoTypeControl = this.charityForm.get('ngoType');
     if (value && value.id !== undefined && value.id !== null && value.id !== '') {
       // Set the value and ensure validation is updated
@@ -478,19 +454,14 @@ export class CharityFormComponent implements OnInit, OnDestroy {
       ngoTypeControl?.markAsDirty();
       ngoTypeControl?.markAsTouched();
       ngoTypeControl?.updateValueAndValidity({ onlySelf: false, emitEvent: true });
-      console.log('[CharityForm] ngoType set to:', value.id, 'valid:', ngoTypeControl?.valid, 'errors:', ngoTypeControl?.errors);
     } else {
       ngoTypeControl?.setValue(null, { emitEvent: true });
       ngoTypeControl?.updateValueAndValidity({ onlySelf: false, emitEvent: true });
-      console.log('[CharityForm] ngoType cleared');
     }
   }
 
   // Load Regions by Country ID from API
   private loadRegionsByCountry(countryId: any): void {
-    debugger;
-    console.log('[CharityForm] loadRegionsByCountry called with countryId:', countryId);
-    debugger;
     if (!countryId) {
       this.filteredRegions = [];
       return;
@@ -498,17 +469,13 @@ export class CharityFormComponent implements OnInit, OnDestroy {
 
     // Trim whitespace and convert to number to ensure clean URL
     const cleanCountryId = typeof countryId === 'string' ? parseInt(countryId.trim(), 10) : countryId;
-    console.log('[CharityForm] Clean countryId:', cleanCountryId);
 
     this.lookupService.getRegionsByCountry(cleanCountryId).subscribe({
       next: (regions) => {
-        console.log('[CharityForm] Regions loaded:', regions);
-        debugger;
         this.filteredRegions = regions || [];
       },
       error: (error) => {
         console.error('[CharityForm] Error loading regions:', error);
-        debugger;
         this.filteredRegions = [];
       }
     });
@@ -516,7 +483,6 @@ export class CharityFormComponent implements OnInit, OnDestroy {
 
   // Load Centers by Region ID from API
   private loadCentersByRegion(regionId: any): void {
-    console.log('[CharityForm] loadCentersByRegion called with regionId:', regionId);
     if (!regionId) {
       this.filteredCenters = [];
       return;
@@ -524,11 +490,9 @@ export class CharityFormComponent implements OnInit, OnDestroy {
 
     // Trim whitespace and convert to number to ensure clean URL
     const cleanRegionId = typeof regionId === 'string' ? parseInt(regionId.trim(), 10) : regionId;
-    console.log('[CharityForm] Clean regionId:', cleanRegionId);
 
     this.lookupService.getCentersByRegion(cleanRegionId).subscribe({
       next: (centers) => {
-        console.log('[CharityForm] Centers loaded:', centers);
         this.filteredCenters = centers || [];
       },
       error: () => {
@@ -604,6 +568,78 @@ export class CharityFormComponent implements OnInit, OnDestroy {
     return password;
   }
 
+  /** One-click strong password for the account being provisioned. */
+  useGeneratedPassword(): void {
+    const control = this.charityForm.get('password');
+    control?.setValue(this.generatePassword());
+    control?.markAsDirty();
+    control?.markAsTouched();
+    control?.updateValueAndValidity();
+  }
+
+  /** Leaves the credentials panel and opens the saved charity. */
+  continueAfterCredentials(): void {
+    const target = this.credentialsRedirectId;
+    this.generatedCredentials = null;
+    this.credentialsRedirectId = null;
+    this.router.navigate(target ? ['/charities', target] : ['/charities']);
+  }
+
+  /** Copies the one-time credentials to the clipboard before they are gone for good. */
+  copyCredentials(): void {
+    if (!this.generatedCredentials) {
+      return;
+    }
+    const t = this.translate;
+    const text =
+      `${t.instant('charities.username')}: ${this.generatedCredentials.username}\n` +
+      `${t.instant('charities.password')}: ${this.generatedCredentials.password}\n` +
+      `${t.instant('charities.email')}: ${this.generatedCredentials.email}`;
+
+    navigator.clipboard?.writeText(text).then(
+      () => this.notification.success(t.instant('common.copied')),
+      () => this.notification.error(t.instant('common.error'))
+    );
+  }
+
+  /**
+   * Uppercases the IBAN as it is typed. The IBAN validator only accepts uppercase letters,
+   * while the visual text-transform alone would leave the underlying value lowercase —
+   * the operator would see a valid-looking IBAN flagged as invalid.
+   */
+  onIbanInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const control = this.charityForm.get('iban');
+    if (!input || !control) {
+      return;
+    }
+
+    const upper = input.value.toUpperCase();
+    if (upper !== input.value) {
+      const start = input.selectionStart ?? upper.length;
+      const end = input.selectionEnd ?? start;
+      input.value = upper;
+      input.setSelectionRange(start, end);
+      control.setValue(upper, { emitEvent: false });
+      control.updateValueAndValidity();
+    }
+  }
+
+  /** An existing account's username is managed from the detail page, not this form. */
+  get hasExistingUserAccount(): boolean {
+    return !!(this.isEditMode && this.charityForm.get('username')?.value);
+  }
+
+  /** Username/password inputs are relevant while a new account would be provisioned. */
+  get showAccountFields(): boolean {
+    return !!this.charityForm.get('createUserAccount')?.value && !this.hasExistingUserAccount;
+  }
+
+  /** The account section itself: always in create mode; in edit mode only for a to-be-created account. */
+  get showUserAccountSection(): boolean {
+    return !this.isEditMode || this.showAccountFields;
+  }
+
   onSubmit(): void {
     // Re-entrancy guard: without it a second click during the PENDING window queues a second
     // submit, producing duplicate charity rows and duplicate user accounts.
@@ -611,34 +647,19 @@ export class CharityFormComponent implements OnInit, OnDestroy {
       return;
     }
 
-    debugger;
-    // Debug logging
-    console.log('[CharityForm] onSubmit called');
-    console.log('[CharityForm] Form valid:', this.charityForm.valid);
-    console.log('[CharityForm] Form errors:', this.charityForm.errors);
     const ngoTypeControl = this.charityForm.get('ngoType');
-    console.log('[CharityForm] ngoType value:', ngoTypeControl?.value);
-    console.log('[CharityForm] ngoType valid:', ngoTypeControl?.valid);
-    console.log('[CharityForm] ngoType errors:', ngoTypeControl?.errors);
-    console.log('[CharityForm] ngoType dirty:', ngoTypeControl?.dirty);
-    console.log('[CharityForm] ngoType touched:', ngoTypeControl?.touched);
-    console.log('[CharityForm] ngoTypeOptions:', this.ngoTypeOptions);
-debugger;
+
     // Convert empty string to null for ngoType (workaround for Select2 issue)
     if (ngoTypeControl?.value === '' || ngoTypeControl?.value === null) {
       // Try to get the value directly from Select2
-      debugger;
       const selectElement = $('select[name="ngoType"]');
       const select2Value = selectElement.select2('val');
-      console.log('[CharityForm] Select2 value:', select2Value);
       if (select2Value && select2Value !== '') {
         ngoTypeControl?.setValue(select2Value, { emitEvent: true });
         ngoTypeControl?.markAsDirty();
         ngoTypeControl?.markAsTouched();
-        console.log('[CharityForm] Set ngoType from Select2:', select2Value);
       } else if (ngoTypeControl?.value === '') {
         ngoTypeControl.setValue(null, { emitEvent: false });
-        console.log('[CharityForm] Converted empty ngoType to null');
       }
     }
 
@@ -674,13 +695,17 @@ debugger;
       // Reveal the collapsed cards hiding the invalid fields
       this.collapsibleCards?.forEach(card => card.open());
       this.notification.error(this.translate.instant('charities.fixValidationErrors'));
+
+      // Once the opened cards have rendered, bring the first flagged field into view so
+      // the operator is not left hunting for it through seven reopened sections.
+      setTimeout(() => {
+        document.querySelector('.charity-form .is-invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
       return;
     }
 
     this.saving = true;
-debugger;
     if (this.isEditMode && this.charityId) {
-      debugger;
       this.updateCharity();
     } else {
       this.createCharity();
@@ -742,10 +767,10 @@ debugger;
         this.saving = false;
 
         if (this.generatedCredentials) {
-          // Show credentials dialog
-          setTimeout(() => {
-            this.router.navigate(['/charities', response.id]);
-          }, 3000);
+          // Credentials are shown exactly once. Navigation waits for explicit
+          // acknowledgment — a fixed timeout steals the screen mid-read and the
+          // password is never shown again.
+          this.credentialsRedirectId = response.id;
         } else {
           this.router.navigate(['/charities', response.id]);
         }
@@ -817,7 +842,6 @@ debugger;
   }
 
   private updateCharity(): void {
-    debugger;
     const formValue = this.charityForm.value;
 
     const charity: UpdateCharityDto = {
@@ -861,7 +885,6 @@ debugger;
 
     this.charityService.updateCharity(this.charityId!, charity).subscribe({
       next: (response: CharityDto) => {
-        debugger;
         if (formValue.createUserAccount && response.password) {
           this.generatedCredentials = {
             username: formValue.username,
@@ -873,15 +896,12 @@ debugger;
         this.saving = false;
 
         if (this.generatedCredentials) {
-          setTimeout(() => {
-            this.router.navigate(['/charities', this.charityId]);
-          }, 3000);
+          this.credentialsRedirectId = this.charityId;
         } else {
           this.router.navigate(['/charities', this.charityId]);
         }
       },
       error: (error: any) => {
-        debugger;
         console.error('Error updating charity:', error);
         this.notification.error(this.translate.instant('charities.updateFailed'));
         this.saving = false;

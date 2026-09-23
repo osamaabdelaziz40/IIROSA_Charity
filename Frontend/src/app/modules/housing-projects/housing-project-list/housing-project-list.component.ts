@@ -6,7 +6,7 @@
  * Roles: Charity + HQ (Admin/SuperAdmin).
  */
 
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
@@ -370,6 +370,41 @@ export class HousingProjectListComponent implements OnInit, OnDestroy {
   onPageChange(page: number): void {
     this.currentPage = page;
     this.loadHousingFamilies();
+  }
+
+  // Edit is permission-gated server-side too; hiding it here just avoids offering a 403.
+  canEdit = this.auth.hasPermission('HousingProjects.Edit');
+
+  // Id of the family whose row menu is open (null = all closed) — Angular-driven,
+  // mirroring the charities list rather than Bootstrap's data-api toggle.
+  openRowMenuId: string | null = null;
+
+  toggleRowMenu(id: string): void {
+    this.openRowMenuId = this.openRowMenuId === id ? null : id;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    // Close when clicking outside any dropdown, or on a menu item (after its
+    // action handler has fired — document listeners run last in the bubble phase).
+    if (!target.closest('.dropdown') || target.closest('.dropdown-item')) {
+      this.openRowMenuId = null;
+    }
+  }
+
+  editFamily(id: string): void {
+    this.router.navigate(['/housing-projects', id, 'edit']);
+  }
+
+  // The orphan periodic-reports register is its own permission; the endpoint enforces it too.
+  canViewChildReports = this.auth.hasPermission('PeriodicReports.View');
+
+  /** The family's children in the orphan periodic-reports register (ch. 14), pinned by familyId. */
+  viewChildrenReports(family: FamilyListItemDto): void {
+    this.router.navigate(['/periodic-orphan-reports'], {
+      queryParams: { familyId: family.id, familyCode: family.code }
+    });
   }
 
   viewFamily(id: string): void {

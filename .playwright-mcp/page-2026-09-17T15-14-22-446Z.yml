@@ -1,0 +1,190 @@
+- generic [ref=e42]:
+  - navigation [ref=e43]:
+    - button "" [ref=e44] [cursor=pointer]
+    - generic [ref=e46]:
+      - combobox [aria-hidden] [ref=e482]
+      - combobox [ref=e485] [cursor=pointer]:
+        - textbox "كل الجمعيات" [ref=e486]:
+          - generic "Remove all items" [ref=e487]: ×
+    - list [ref=e48]:
+      - listitem [ref=e49]:
+        - link "العربية " [ref=e50] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e51]: 
+          - text: العربية 
+      - listitem [ref=e52]:
+        - link "" [ref=e488] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=e55]:
+        - link "" [ref=e56] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=e59]:
+        - button [ref=e60] [cursor=pointer]:
+          - generic [ref=e61]:
+            - text: مرحبا System Admin
+            - img "..." [ref=e62]
+          - text: 
+  - complementary [ref=e63]:
+    - generic [ref=e68]:
+      - text: 
+      - navigation [ref=e69]:
+        - link [ref=e71] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=e72]
+        - paragraph [ref=e73]: عناصر الموقع
+        - list [ref=e74]:
+          - listitem [ref=e75]:
+            - link " الصفحة الرئيسية (current) " [ref=e76] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=e77]: 
+              - generic [ref=e78]: الصفحة الرئيسية
+              - generic [ref=e79]: (current)
+              - text: 
+            - list [ref=e80]:
+              - listitem [ref=e81]:
+                - link "الرئيسية" [ref=e82] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=e83]:
+            - link " الإعدادات " [ref=e84] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=e85]: 
+              - generic [ref=e86]: الإعدادات
+              - text: 
+            - list [ref=e489]:
+              - listitem [ref=e490]:
+                - link "المستخدمون" [ref=e491] [cursor=pointer]:
+                  - /url: "#/user-management/users"
+              - listitem [ref=e492]:
+                - link "الموظفون" [ref=e493] [cursor=pointer]:
+                  - /url: "#/employees"
+              - listitem [ref=e494]:
+                - link "الجمعيات" [ref=e495] [cursor=pointer]:
+                  - /url: "#/charities"
+              - listitem [ref=e496]:
+                - link "إدارة الجداول المرجعية" [ref=e497] [cursor=pointer]:
+                  - /url: "#/lookup-management"
+          - listitem [ref=e87]:
+            - link " الدعم الفني " [ref=e88] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=e89]: 
+              - generic [ref=e90]: الدعم الفني
+              - text: 
+          - listitem [ref=e91]:
+            - link " الإشعارات " [ref=e92] [cursor=pointer]:
+              - /url: "#notifications"
+              - generic [ref=e93]: 
+              - generic [ref=e94]: الإشعارات
+              - text: 
+          - listitem [ref=e95]:
+            - link " المهام " [ref=e96] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=e97]: 
+              - generic [ref=e98]: المهام
+              - text: 
+          - listitem [ref=e99]:
+            - link " مدفوعات الأيتام " [ref=e100] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=e101]: 
+              - generic [ref=e102]: مدفوعات الأيتام
+              - text: 
+          - listitem [ref=e103]:
+            - link " مشاريع المكتب " [ref=e104] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=e105]: 
+              - generic [ref=e106]: مشاريع المكتب
+              - text: 
+          - listitem [ref=e107]:
+            - link " مشاريع الإسكان " [ref=e108] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=e109]: 
+              - generic [ref=e110]: مشاريع الإسكان
+              - text: 
+          - listitem [ref=e111]:
+            - link " المساعدات الموسمية " [ref=e112] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=e113]: 
+              - generic [ref=e114]: المساعدات الموسمية
+              - text: 
+          - listitem [ref=e115]:
+            - link " الوارد والصادر " [ref=e116] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=e117]: 
+              - generic [ref=e118]: الوارد والصادر
+              - text: 
+          - listitem [ref=e119]:
+            - link " الأسر " [ref=e120] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=e121]: 
+              - generic [ref=e122]: الأسر
+              - text: 
+          - listitem [ref=e123]:
+            - link " التقارير " [ref=e124] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=e125]: 
+              - generic [ref=e126]: التقارير
+              - text: 
+          - listitem [ref=e127]:
+            - link " الشيكات العامة " [ref=e128] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=e129]: 
+              - generic [ref=e130]: الشيكات العامة
+              - text: 
+          - listitem [ref=e131]:
+            - link " التقارير الدورية للأيتام " [ref=e132] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=e133]: 
+              - generic [ref=e134]: التقارير الدورية للأيتام
+              - text: 
+          - listitem [ref=e135]:
+            - link " الحوالات المالية " [ref=e136] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=e137]: 
+              - generic [ref=e138]: الحوالات المالية
+              - text: 
+  - main [ref=e139]:
+    - generic [ref=e873]:
+      - navigation "breadcrumb" [ref=e875]:
+        - list [ref=e876]:
+          - listitem [ref=e877]:
+            - link "الرئيسية" [ref=e878] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=e879]:
+            - text: /
+            - generic [ref=e880]: الجمعيات
+      - generic [ref=e882]:
+        - generic:
+          - navigation "breadcrumb":
+            - list
+        - generic [ref=e883]:
+          - generic [ref=e884]:
+            - generic [ref=e885]: 
+            - generic [ref=e886]:
+              - heading "الجمعيات" [level=3] [ref=e887]
+              - paragraph [ref=e888]: إدارة الجمعيات الخيرية
+          - generic [ref=e889]:
+            - button "إضافة جمعية" [ref=e890] [cursor=pointer]:
+              - generic [ref=e891]: 
+              - text: إضافة جمعية
+            - button "تصدير إلى Excel" [ref=e892] [cursor=pointer]:
+              - generic [ref=e893]: 
+              - text: تصدير إلى Excel
+      - generic [ref=e895]:
+        - generic [ref=e897]:
+          - button " الفلاتر " [ref=e898] [cursor=pointer]:
+            - heading " الفلاتر" [level=4] [ref=e899]:
+              - generic [ref=e900]: 
+              - text: الفلاتر
+            - generic [ref=e901]: 
+          - text: 
+        - generic [ref=e903]:
+          - button " النتائج " [expanded] [ref=e904] [cursor=pointer]:
+            - heading " النتائج" [level=4] [ref=e905]:
+              - generic [ref=e906]: 
+              - text: النتائج
+            - generic [ref=e907]: 
+          - status [ref=e910]:
+            - generic [ref=e911]: جاري التحميل...
+  - contentinfo [ref=e475]:
+    - generic [ref=e477]:
+      - paragraph [ref=e479]: © 2026 IIROSA. جميع الحقوق محفوظة
+      - paragraph [ref=e481]: الإصدار 1.0.0

@@ -192,3 +192,49 @@
   }
 }
 
+
+// Row action menu — same look and behaviour as the charities list.
+// While a menu is open, stop clipping at the scroll container so it can overlay the table.
+.table-responsive.menu-open {
+  overflow: visible;
+}
+
+.actions-cell {
+  width: 3.5rem;
+  text-align: center;
+
+  .dropdown-toggle::after {
+    display: none;
+  }
+
+  .dropdown-menu {
+    // The actions cell sits at the table's inline-end edge; anchor the menu to that edge
+    // so it opens over the table instead of off-screen (TinyDash RTL rules set left/right).
+    left: auto;
+    right: 0;
+    min-width: 13rem;
+    text-align: start;
+
+    .dropdown-item {
+      cursor: pointer;
+      font-family: inherit;
+
+      > i {
+        width: 1.25rem;
+        text-align: center;
+        opacity: 0.85;
+      }
+
+      &:hover,
+      &:focus {
+        background: rgba(77, 124, 254, 0.12);
+        color: inherit;
+      }
+    }
+  }
+}
+
+:host-context([dir='rtl']) .actions-cell .dropdown-menu {
+  left: 0;
+  right: auto;
+}

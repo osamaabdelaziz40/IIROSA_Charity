@@ -13,6 +13,8 @@ import { filter, map, mergeMap } from 'rxjs/operators';
 })
 export class TitleService {
   private readonly defaultTitle = 'IIROSA';
+  /** Route data of the last navigation, so language changes can re-translate it. */
+  private lastRouteData: any = null;
 
   constructor(
     private title: Title,
@@ -38,8 +40,15 @@ export class TitleService {
       filter(route => route.outlet === 'primary'),
       mergeMap(route => route.data)
     ).subscribe(data => {
+      this.lastRouteData = data;
       this.updateTitle(data);
     });
+
+    // NavigationEnd can fire before the i18n bundle has loaded on a cold start, leaving
+    // the raw translation key in the tab title. Re-apply once translations are ready,
+    // and again whenever the operator switches languages.
+    this.translate.onLangChange.subscribe(() => this.updateTitle(this.lastRouteData));
+    this.translate.onDefaultLangChange.subscribe(() => this.updateTitle(this.lastRouteData));
   }
 
   /**

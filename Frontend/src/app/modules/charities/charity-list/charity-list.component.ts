@@ -8,6 +8,7 @@ import { CharityService } from '../services/charity.service';
 import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
 import { CountryDto, RegionDto, CenterDto } from '../../lookup-management/models/lookup.model';
 import { NotificationService } from '../../../core/services/notification.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
 import { TranslateModule, TranslateService, LangChangeEvent } from '@ngx-translate/core';
@@ -40,8 +41,6 @@ export class CharityListComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private langChangeSubscription?: Subscription;
 
-  // Expose Math to template for pagination calculations
-  Math = Math;
   charities: CharityDto[] = [];
 
   // Register statistics band (UC-CHR-01) — caller-scoped server-side, refreshed after
@@ -73,6 +72,10 @@ export class CharityListComponent implements OnInit, OnDestroy {
   // this table, so the table manages its own menus.
   openRowMenuId: string | null = null;
 
+  // DELETE /api/Charities/{id} is SuperAdmin-only server-side; hiding the action
+  // from other roles keeps the menu from offering an operation that can only 403.
+  canDelete = this.auth.hasPermission('Charities.Delete');
+
   toggleRowMenu(charity: CharityDto): void {
     this.openRowMenuId = this.openRowMenuId === charity.id ? null : (charity.id ?? null);
   }
@@ -96,8 +99,8 @@ export class CharityListComponent implements OnInit, OnDestroy {
     },
     {
       label: 'common.exportToExcel',
-      type: 'success',
-      icon: 'fe-file-plus',
+      type: 'outline-light',
+      icon: 'fe-download',
       click: () => this.exportToExcel()
     }
   ];
@@ -113,7 +116,8 @@ export class CharityListComponent implements OnInit, OnDestroy {
     private lookupService: LookupManagementService,
     private notification: NotificationService,
     private router: Router,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private auth: AuthService
   ) {
     // Initialize filter form
     this.filterForm = this.fb.group({
@@ -318,6 +322,54 @@ export class CharityListComponent implements OnInit, OnDestroy {
 
   trackByCountry(index: number, row: CharityCountryStatistics): number {
     return row.countryId;
+  }
+
+  trackByCharity(index: number, charity: CharityDto): string {
+    return charity.id;
+  }
+
+  /** Tiles for the statistics band — label resolved from 'charities.statistics.<key>'. */
+  get statCards(): Array<{ key: string; value: number; icon: string; tone: string }> {
+    const s = this.statistics;
+    if (!s) {
+      return [];
+    }
+    return [
+      { key: 'total', value: s.totalCharities, icon: 'fe-heart', tone: 'primary' },
+      { key: 'active', value: s.activeCharities, icon: 'fe-check-circle', tone: 'success' },
+      { key: 'inactive', value: s.inactiveCharities, icon: 'fe-slash', tone: 'warning' },
+      { key: 'locked', value: s.lockedCharities, icon: 'fe-lock', tone: 'danger' },
+      { key: 'receivingDonations', value: s.receivingDonations, icon: 'fe-gift', tone: 'info' },
+      { key: 'addedThisMonth', value: s.addedThisMonth, icon: 'fe-calendar', tone: 'secondary' }
+    ];
+  }
+
+  trackByStatKey(index: number, stat: { key: string }): string {
+    return stat.key;
+  }
+
+  /** Localized type name for the secondary line under a charity's name. */
+  ngoTypeLabel(value: string): string {
+    const keys: Record<string, string> = {
+      charity: 'charities.ngoTypeCharityOrganization',
+      ngo: 'charities.ngoTypeNGO',
+      nonProfit: 'charities.ngoTypeNonProfit',
+      religious: 'charities.ngoTypeReligious',
+      community: 'charities.ngoTypeCommunity'
+    };
+    return keys[value] ? this.getTranslation(keys[value]) : value;
+  }
+
+  addRightsTitle(charity: CharityDto): string {
+    return `${this.getTranslation('charities.addRights')}: ${
+      charity.isAddEnabled ? this.getTranslation('common.enabled') : this.getTranslation('common.disabled')
+    }`;
+  }
+
+  updateRightsTitle(charity: CharityDto): string {
+    return `${this.getTranslation('charities.updateRights')}: ${
+      charity.isUpdateEnabled ? this.getTranslation('common.enabled') : this.getTranslation('common.disabled')
+    }`;
   }
 
   // Country dropdown change handler

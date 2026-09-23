@@ -1,0 +1,690 @@
+- generic [ref=f44e5]:
+  - navigation [ref=f44e6]:
+    - button "" [ref=f44e7] [cursor=pointer]
+    - generic [ref=f44e9]:
+      - combobox [aria-hidden] [ref=f44e10]
+      - combobox [ref=f44e13] [cursor=pointer]:
+        - textbox "كل الجمعيات" [ref=f44e14]:
+          - generic "Remove all items" [ref=f44e15]: ×
+    - list [ref=f44e16]:
+      - listitem [ref=f44e17]:
+        - link "العربية " [ref=f44e18] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=f44e19]: 
+          - text: العربية 
+      - listitem [ref=f44e20]:
+        - link "" [ref=f44e21] [cursor=pointer]:
+          - /url: "#"
+      - listitem [ref=f44e23]:
+        - link "" [ref=f44e24] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=f44e27]:
+        - button [ref=f44e28] [cursor=pointer]:
+          - generic [ref=f44e29]:
+            - text: مرحبا System Admin
+            - img "..." [ref=f44e30]
+          - text: 
+  - complementary [ref=f44e31]:
+    - generic [ref=f44e36]:
+      - text: 
+      - navigation [ref=f44e37]:
+        - link [ref=f44e39] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=f44e40]
+        - paragraph [ref=f44e41]: عناصر الموقع
+        - list [ref=f44e42]:
+          - listitem [ref=f44e43]:
+            - link " الصفحة الرئيسية (current) " [ref=f44e44] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=f44e45]: 
+              - generic [ref=f44e46]: الصفحة الرئيسية
+              - generic [ref=f44e47]: (current)
+              - text: 
+            - list [ref=f44e48]:
+              - listitem [ref=f44e49]:
+                - link "الرئيسية" [ref=f44e50] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=f44e51]:
+            - link " الإعدادات " [ref=f44e52] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=f44e53]: 
+              - generic [ref=f44e54]: الإعدادات
+              - text: 
+            - list [ref=f44e55]:
+              - listitem [ref=f44e56]:
+                - link "المستخدمون" [ref=f44e57] [cursor=pointer]:
+                  - /url: "#/user-management/users"
+              - listitem [ref=f44e58]:
+                - link "الموظفون" [ref=f44e59] [cursor=pointer]:
+                  - /url: "#/employees"
+              - listitem [ref=f44e60]:
+                - link "الجمعيات" [ref=f44e61] [cursor=pointer]:
+                  - /url: "#/charities"
+              - listitem [ref=f44e62]:
+                - link "إدارة الجداول المرجعية" [ref=f44e63] [cursor=pointer]:
+                  - /url: "#/lookup-management"
+          - listitem [ref=f44e64]:
+            - link " الدعم الفني " [ref=f44e65] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=f44e66]: 
+              - generic [ref=f44e67]: الدعم الفني
+              - text: 
+          - listitem [ref=f44e68]:
+            - link " الإشعارات " [ref=f44e69] [cursor=pointer]:
+              - /url: "#notifications"
+              - generic [ref=f44e70]: 
+              - generic [ref=f44e71]: الإشعارات
+              - text: 
+          - listitem [ref=f44e72]:
+            - link " المهام " [ref=f44e73] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=f44e74]: 
+              - generic [ref=f44e75]: المهام
+              - text: 
+          - listitem [ref=f44e76]:
+            - link " مدفوعات الأيتام " [ref=f44e77] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=f44e78]: 
+              - generic [ref=f44e79]: مدفوعات الأيتام
+              - text: 
+          - listitem [ref=f44e80]:
+            - link " مشاريع المكتب " [ref=f44e81] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=f44e82]: 
+              - generic [ref=f44e83]: مشاريع المكتب
+              - text: 
+          - listitem [ref=f44e84]:
+            - link " مشاريع الإسكان " [ref=f44e85] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=f44e86]: 
+              - generic [ref=f44e87]: مشاريع الإسكان
+              - text: 
+          - listitem [ref=f44e88]:
+            - link " المساعدات الموسمية " [ref=f44e89] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=f44e90]: 
+              - generic [ref=f44e91]: المساعدات الموسمية
+              - text: 
+          - listitem [ref=f44e92]:
+            - link " الوارد والصادر " [ref=f44e93] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=f44e94]: 
+              - generic [ref=f44e95]: الوارد والصادر
+              - text: 
+          - listitem [ref=f44e96]:
+            - link " الأسر " [ref=f44e97] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=f44e98]: 
+              - generic [ref=f44e99]: الأسر
+              - text: 
+          - listitem [ref=f44e100]:
+            - link " التقارير " [ref=f44e101] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=f44e102]: 
+              - generic [ref=f44e103]: التقارير
+              - text: 
+          - listitem [ref=f44e104]:
+            - link " الشيكات العامة " [ref=f44e105] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=f44e106]: 
+              - generic [ref=f44e107]: الشيكات العامة
+              - text: 
+          - listitem [ref=f44e108]:
+            - link " التقارير الدورية للأيتام " [ref=f44e109] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=f44e110]: 
+              - generic [ref=f44e111]: التقارير الدورية للأيتام
+              - text: 
+          - listitem [ref=f44e112]:
+            - link " الحوالات المالية " [ref=f44e113] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=f44e114]: 
+              - generic [ref=f44e115]: الحوالات المالية
+              - text: 
+  - main [ref=f44e116]:
+    - generic [ref=f44e118]:
+      - navigation "breadcrumb" [ref=f44e120]:
+        - list [ref=f44e121]:
+          - listitem [ref=f44e122]:
+            - link "الرئيسية" [ref=f44e123] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=f44e124]:
+            - text: /
+            - generic [ref=f44e125]: الجمعيات
+      - generic [ref=f44e128]:
+        - generic [ref=f44e129]:
+          - generic [ref=f44e130]: 
+          - generic [ref=f44e131]:
+            - heading "الجمعيات" [level=3] [ref=f44e132]
+            - paragraph [ref=f44e133]: إدارة الجمعيات الخيرية
+        - generic [ref=f44e134]:
+          - button "إضافة جمعية" [ref=f44e135] [cursor=pointer]:
+            - generic [ref=f44e136]: 
+            - text: إضافة جمعية
+          - button "تصدير إلى Excel" [ref=f44e137] [cursor=pointer]:
+            - generic [ref=f44e138]: 
+            - text: تصدير إلى Excel
+      - generic [ref=f44e140]:
+        - button " الإحصائيات " [ref=f44e141] [cursor=pointer]:
+          - heading " الإحصائيات" [level=4] [ref=f44e142]:
+            - generic [ref=f44e143]: 
+            - text: الإحصائيات
+          - generic [ref=f44e144]: 
+        - text:      
+      - generic [ref=f44e146]:
+        - button " الفلاتر " [ref=f44e147] [cursor=pointer]:
+          - heading " الفلاتر" [level=4] [ref=f44e148]:
+            - generic [ref=f44e149]: 
+            - text: الفلاتر
+          - generic [ref=f44e150]: 
+        - text: 
+      - generic [ref=f44e152]:
+        - button " النتائج " [expanded] [ref=f44e153] [cursor=pointer]:
+          - heading " النتائج" [level=4] [ref=f44e154]:
+            - generic [ref=f44e155]: 
+            - text: النتائج
+          - generic [ref=f44e156]: 
+        - generic [ref=f44e157]:
+          - table [ref=f44e159]:
+            - rowgroup [ref=f44e160]:
+              - row [ref=f44e161]:
+                - columnheader "رمز الجمعية" [ref=f44e162]
+                - columnheader "اسم الجمعية" [ref=f44e163]
+                - columnheader "المنطقة" [ref=f44e164]
+                - columnheader "المركز" [ref=f44e165]
+                - columnheader "هاتف الاتصال" [ref=f44e166]
+                - columnheader "البريد الإلكتروني" [ref=f44e167]
+                - columnheader "الحالة" [ref=f44e168]
+                - columnheader "الصلاحيات" [ref=f44e169]
+                - columnheader "الإجراءات" [ref=f44e170]
+            - rowgroup [ref=f44e171]:
+              - row [ref=f44e172]:
+                - cell [ref=f44e173]:
+                  - strong [ref=f44e174]: "12345"
+                - cell "dga" [ref=f44e175]
+                - cell "جنوب سيناء" [ref=f44e177]
+                - cell "دهب" [ref=f44e178]
+                - cell "01067471965" [ref=f44e179]
+                - cell "osamaabdelaziz41@gmail.com" [ref=f44e180]
+                - cell "نشط" [ref=f44e181]
+                - 'cell "إضافة تعديل حقوق الإضافة: مفعل — حقوق التعديل: مفعل" [ref=f44e183]':
+                  - 'generic "حقوق الإضافة: مفعل" [ref=f44e184]':
+                    - generic [aria-hidden] [ref=f44e185]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: مفعل" [ref=f44e186]':
+                    - generic [aria-hidden] [ref=f44e187]: 
+                    - text: تعديل
+                  - generic [ref=f44e188]: "حقوق الإضافة: مفعل — حقوق التعديل: مفعل"
+                - cell [ref=f44e189]:
+                  - generic [ref=f44e190]:
+                    - button "الإجراءات" [ref=f44e191] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e192]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e193]:
+                - cell [ref=f44e194]:
+                  - strong [ref=f44e195]: "345678"
+                - cell "dga2" [ref=f44e196]
+                - cell "جنوب سيناء" [ref=f44e198]
+                - cell "دهب" [ref=f44e199]
+                - cell "01067471965" [ref=f44e200]
+                - cell "osamaabdelaziz4100@gmail.com" [ref=f44e201]
+                - cell "نشط" [ref=f44e202]
+                - 'cell "إضافة تعديل حقوق الإضافة: مفعل — حقوق التعديل: مفعل" [ref=f44e204]':
+                  - 'generic "حقوق الإضافة: مفعل" [ref=f44e205]':
+                    - generic [aria-hidden] [ref=f44e206]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: مفعل" [ref=f44e207]':
+                    - generic [aria-hidden] [ref=f44e208]: 
+                    - text: تعديل
+                  - generic [ref=f44e209]: "حقوق الإضافة: مفعل — حقوق التعديل: مفعل"
+                - cell [ref=f44e210]:
+                  - generic [ref=f44e211]:
+                    - button "الإجراءات" [ref=f44e212] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e213]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e214]:
+                - cell [ref=f44e215]:
+                  - strong [ref=f44e216]: "10002"
+                - cell "Headquarters" [ref=f44e217]
+                - cell "—" [ref=f44e219]
+                - cell "غير محدد" [ref=f44e220]
+                - cell "—" [ref=f44e221]
+                - cell "—" [ref=f44e222]
+                - cell "مقفل" [ref=f44e223]
+                - 'cell "إضافة تعديل حقوق الإضافة: معطل — حقوق التعديل: معطل" [ref=f44e225]':
+                  - 'generic "حقوق الإضافة: معطل" [ref=f44e226]':
+                    - generic [aria-hidden] [ref=f44e227]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: معطل" [ref=f44e228]':
+                    - generic [aria-hidden] [ref=f44e229]: 
+                    - text: تعديل
+                  - generic [ref=f44e230]: "حقوق الإضافة: معطل — حقوق التعديل: معطل"
+                - cell [ref=f44e231]:
+                  - generic [ref=f44e232]:
+                    - button "الإجراءات" [ref=f44e233] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e234]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e235]:
+                - cell [ref=f44e236]:
+                  - strong [ref=f44e237]: "5555"
+                - cell "TestAdmin" [ref=f44e238]
+                - cell "—" [ref=f44e240]
+                - cell "غير محدد" [ref=f44e241]
+                - cell "—" [ref=f44e242]
+                - cell "—" [ref=f44e243]
+                - cell "نشط" [ref=f44e244]
+                - 'cell "إضافة تعديل حقوق الإضافة: معطل — حقوق التعديل: معطل" [ref=f44e246]':
+                  - 'generic "حقوق الإضافة: معطل" [ref=f44e247]':
+                    - generic [aria-hidden] [ref=f44e248]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: معطل" [ref=f44e249]':
+                    - generic [aria-hidden] [ref=f44e250]: 
+                    - text: تعديل
+                  - generic [ref=f44e251]: "حقوق الإضافة: معطل — حقوق التعديل: معطل"
+                - cell [ref=f44e252]:
+                  - generic [ref=f44e253]:
+                    - button "الإجراءات" [ref=f44e254] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e255]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e256]:
+                - cell [ref=f44e257]:
+                  - strong [ref=f44e258]: "10009"
+                - cell "أيتام مكتب مصر" [ref=f44e259]
+                - cell "—" [ref=f44e261]
+                - cell "غير محدد" [ref=f44e262]
+                - cell "—" [ref=f44e263]
+                - cell "—" [ref=f44e264]
+                - cell "نشط" [ref=f44e265]
+                - 'cell "إضافة تعديل حقوق الإضافة: معطل — حقوق التعديل: معطل" [ref=f44e267]':
+                  - 'generic "حقوق الإضافة: معطل" [ref=f44e268]':
+                    - generic [aria-hidden] [ref=f44e269]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: معطل" [ref=f44e270]':
+                    - generic [aria-hidden] [ref=f44e271]: 
+                    - text: تعديل
+                  - generic [ref=f44e272]: "حقوق الإضافة: معطل — حقوق التعديل: معطل"
+                - cell [ref=f44e273]:
+                  - generic [ref=f44e274]:
+                    - button "الإجراءات" [ref=f44e275] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e276]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e277]:
+                - cell [ref=f44e278]:
+                  - strong [ref=f44e279]: رمز الجمعية *
+                - cell "اسم الجمعية *" [ref=f44e280]
+                - cell "مرسى مطروح" [ref=f44e282]
+                - cell "مركز الضبعة" [ref=f44e283]
+                - cell "01054545111" [ref=f44e284]
+                - cell "01054545111@yahoo.com" [ref=f44e285]
+                - cell "نشط" [ref=f44e286]
+                - 'cell "إضافة تعديل حقوق الإضافة: مفعل — حقوق التعديل: مفعل" [ref=f44e288]':
+                  - 'generic "حقوق الإضافة: مفعل" [ref=f44e289]':
+                    - generic [aria-hidden] [ref=f44e290]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: مفعل" [ref=f44e291]':
+                    - generic [aria-hidden] [ref=f44e292]: 
+                    - text: تعديل
+                  - generic [ref=f44e293]: "حقوق الإضافة: مفعل — حقوق التعديل: مفعل"
+                - cell [ref=f44e294]:
+                  - generic [ref=f44e295]:
+                    - button "الإجراءات" [ref=f44e296] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e297]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e298]:
+                - cell [ref=f44e299]:
+                  - strong [ref=f44e300]: "10003"
+                - cell "الجمعية الإسلامية للخدمات الاجتماعية - أوسيم" [ref=f44e301]
+                - cell "—" [ref=f44e303]
+                - cell "غير محدد" [ref=f44e304]
+                - cell "—" [ref=f44e305]
+                - cell "—" [ref=f44e306]
+                - cell "نشط" [ref=f44e307]
+                - 'cell "إضافة تعديل حقوق الإضافة: معطل — حقوق التعديل: معطل" [ref=f44e309]':
+                  - 'generic "حقوق الإضافة: معطل" [ref=f44e310]':
+                    - generic [aria-hidden] [ref=f44e311]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: معطل" [ref=f44e312]':
+                    - generic [aria-hidden] [ref=f44e313]: 
+                    - text: تعديل
+                  - generic [ref=f44e314]: "حقوق الإضافة: معطل — حقوق التعديل: معطل"
+                - cell [ref=f44e315]:
+                  - generic [ref=f44e316]:
+                    - button "الإجراءات" [ref=f44e317] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e318]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e319]:
+                - cell [ref=f44e320]:
+                  - strong [ref=f44e321]: "52466"
+                - cell "الجمعية الإسلامية للخدمات الاجتماعية - الهياتم" [ref=f44e322]
+                - cell "—" [ref=f44e324]
+                - cell "المحلة الكبرى - حي ثاني" [ref=f44e325]
+                - cell "01126262963" [ref=f44e326]
+                - cell "alhyatem71@yahoo.com" [ref=f44e327]
+                - cell "نشط" [ref=f44e328]
+                - 'cell "إضافة تعديل حقوق الإضافة: مفعل — حقوق التعديل: مفعل" [ref=f44e330]':
+                  - 'generic "حقوق الإضافة: مفعل" [ref=f44e331]':
+                    - generic [aria-hidden] [ref=f44e332]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: مفعل" [ref=f44e333]':
+                    - generic [aria-hidden] [ref=f44e334]: 
+                    - text: تعديل
+                  - generic [ref=f44e335]: "حقوق الإضافة: مفعل — حقوق التعديل: مفعل"
+                - cell [ref=f44e336]:
+                  - generic [ref=f44e337]:
+                    - button "الإجراءات" [ref=f44e338] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e339]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e340]:
+                - cell [ref=f44e341]:
+                  - strong [ref=f44e342]: "52423"
+                - cell "الجمعية الخيرية - وادى النطرون" [ref=f44e343]
+                - cell "—" [ref=f44e345]
+                - cell "وادي النطرون" [ref=f44e346]
+                - cell "—" [ref=f44e347]
+                - cell "—" [ref=f44e348]
+                - cell "مقفل" [ref=f44e349]
+                - 'cell "إضافة تعديل حقوق الإضافة: مفعل — حقوق التعديل: مفعل" [ref=f44e351]':
+                  - 'generic "حقوق الإضافة: مفعل" [ref=f44e352]':
+                    - generic [aria-hidden] [ref=f44e353]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: مفعل" [ref=f44e354]':
+                    - generic [aria-hidden] [ref=f44e355]: 
+                    - text: تعديل
+                  - generic [ref=f44e356]: "حقوق الإضافة: مفعل — حقوق التعديل: مفعل"
+                - cell [ref=f44e357]:
+                  - generic [ref=f44e358]:
+                    - button "الإجراءات" [ref=f44e359] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e360]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e361]:
+                - cell [ref=f44e362]:
+                  - strong [ref=f44e363]: "10010"
+                - cell "الجمعية الخيرية الإسلامية بالعصايد" [ref=f44e364]
+                - cell "—" [ref=f44e366]
+                - cell "غير محدد" [ref=f44e367]
+                - cell "—" [ref=f44e368]
+                - cell "—" [ref=f44e369]
+                - cell "نشط" [ref=f44e370]
+                - 'cell "إضافة تعديل حقوق الإضافة: معطل — حقوق التعديل: معطل" [ref=f44e372]':
+                  - 'generic "حقوق الإضافة: معطل" [ref=f44e373]':
+                    - generic [aria-hidden] [ref=f44e374]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: معطل" [ref=f44e375]':
+                    - generic [aria-hidden] [ref=f44e376]: 
+                    - text: تعديل
+                  - generic [ref=f44e377]: "حقوق الإضافة: معطل — حقوق التعديل: معطل"
+                - cell [ref=f44e378]:
+                  - generic [ref=f44e379]:
+                    - button "الإجراءات" [ref=f44e380] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e381]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e382]:
+                - cell [ref=f44e383]:
+                  - strong [ref=f44e384]: "52442"
+                - cell "الجمعية الخيرية الاسلامية - بئر العبد - شمال سيناء" [ref=f44e385]
+                - cell "—" [ref=f44e387]
+                - cell "بئر العبد" [ref=f44e388]
+                - cell "01007725406" [ref=f44e389]
+                - cell "gm3ia5yrea@gmail.com" [ref=f44e390]
+                - cell "نشط" [ref=f44e391]
+                - 'cell "إضافة تعديل حقوق الإضافة: مفعل — حقوق التعديل: مفعل" [ref=f44e393]':
+                  - 'generic "حقوق الإضافة: مفعل" [ref=f44e394]':
+                    - generic [aria-hidden] [ref=f44e395]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: مفعل" [ref=f44e396]':
+                    - generic [aria-hidden] [ref=f44e397]: 
+                    - text: تعديل
+                  - generic [ref=f44e398]: "حقوق الإضافة: مفعل — حقوق التعديل: مفعل"
+                - cell [ref=f44e399]:
+                  - generic [ref=f44e400]:
+                    - button "الإجراءات" [ref=f44e401] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e402]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e403]:
+                - cell [ref=f44e404]:
+                  - strong [ref=f44e405]: "81004"
+                - cell "الجمعية الخيرية الاسلامية - ديو الوسطى" [ref=f44e406]
+                - cell "—" [ref=f44e408]
+                - cell "غير محدد" [ref=f44e409]
+                - cell "—" [ref=f44e410]
+                - cell "—" [ref=f44e411]
+                - cell "نشط" [ref=f44e412]
+                - 'cell "إضافة تعديل حقوق الإضافة: معطل — حقوق التعديل: معطل" [ref=f44e414]':
+                  - 'generic "حقوق الإضافة: معطل" [ref=f44e415]':
+                    - generic [aria-hidden] [ref=f44e416]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: معطل" [ref=f44e417]':
+                    - generic [aria-hidden] [ref=f44e418]: 
+                    - text: تعديل
+                  - generic [ref=f44e419]: "حقوق الإضافة: معطل — حقوق التعديل: معطل"
+                - cell [ref=f44e420]:
+                  - generic [ref=f44e421]:
+                    - button "الإجراءات" [ref=f44e422] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e423]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e424]:
+                - cell [ref=f44e425]:
+                  - strong [ref=f44e426]: "81001"
+                - cell "الجمعية الخيرية الاسلامية والتنمية - ديروط الشريف" [ref=f44e427]
+                - cell "—" [ref=f44e429]
+                - cell "ديروط" [ref=f44e430]
+                - cell "01018588883" [ref=f44e431]
+                - cell "diroutelshref_296@yahoo.com" [ref=f44e432]
+                - cell "نشط" [ref=f44e433]
+                - 'cell "إضافة تعديل حقوق الإضافة: مفعل — حقوق التعديل: مفعل" [ref=f44e435]':
+                  - 'generic "حقوق الإضافة: مفعل" [ref=f44e436]':
+                    - generic [aria-hidden] [ref=f44e437]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: مفعل" [ref=f44e438]':
+                    - generic [aria-hidden] [ref=f44e439]: 
+                    - text: تعديل
+                  - generic [ref=f44e440]: "حقوق الإضافة: مفعل — حقوق التعديل: مفعل"
+                - cell [ref=f44e441]:
+                  - generic [ref=f44e442]:
+                    - button "الإجراءات" [ref=f44e443] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e444]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e445]:
+                - cell [ref=f44e446]:
+                  - strong [ref=f44e447]: "52452"
+                - cell "الجمعية الخيرية لانشاء وتعمير المساجد - طهطا" [ref=f44e448]
+                - cell "—" [ref=f44e450]
+                - cell "غير محدد" [ref=f44e451]
+                - cell "—" [ref=f44e452]
+                - cell "—" [ref=f44e453]
+                - cell "نشط" [ref=f44e454]
+                - 'cell "إضافة تعديل حقوق الإضافة: معطل — حقوق التعديل: معطل" [ref=f44e456]':
+                  - 'generic "حقوق الإضافة: معطل" [ref=f44e457]':
+                    - generic [aria-hidden] [ref=f44e458]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: معطل" [ref=f44e459]':
+                    - generic [aria-hidden] [ref=f44e460]: 
+                    - text: تعديل
+                  - generic [ref=f44e461]: "حقوق الإضافة: معطل — حقوق التعديل: معطل"
+                - cell [ref=f44e462]:
+                  - generic [ref=f44e463]:
+                    - button "الإجراءات" [ref=f44e464] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e465]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e466]:
+                - cell [ref=f44e467]:
+                  - strong [ref=f44e468]: "52434"
+                - cell "الجمعية الشرعية - ابو كبير" [ref=f44e469]
+                - cell "—" [ref=f44e471]
+                - cell "أبو كبير" [ref=f44e472]
+                - cell "—" [ref=f44e473]
+                - cell "—" [ref=f44e474]
+                - cell "نشط" [ref=f44e475]
+                - 'cell "إضافة تعديل حقوق الإضافة: معطل — حقوق التعديل: معطل" [ref=f44e477]':
+                  - 'generic "حقوق الإضافة: معطل" [ref=f44e478]':
+                    - generic [aria-hidden] [ref=f44e479]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: معطل" [ref=f44e480]':
+                    - generic [aria-hidden] [ref=f44e481]: 
+                    - text: تعديل
+                  - generic [ref=f44e482]: "حقوق الإضافة: معطل — حقوق التعديل: معطل"
+                - cell [ref=f44e483]:
+                  - generic [ref=f44e484]:
+                    - button "الإجراءات" [ref=f44e485] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e486]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e487]:
+                - cell [ref=f44e488]:
+                  - strong [ref=f44e489]: "52422"
+                - cell "الجمعية الشرعية - العريش" [ref=f44e490]
+                - cell "—" [ref=f44e492]
+                - cell "العريش" [ref=f44e493]
+                - cell "—" [ref=f44e494]
+                - cell "—" [ref=f44e495]
+                - cell "نشط" [ref=f44e496]
+                - 'cell "إضافة تعديل حقوق الإضافة: معطل — حقوق التعديل: معطل" [ref=f44e498]':
+                  - 'generic "حقوق الإضافة: معطل" [ref=f44e499]':
+                    - generic [aria-hidden] [ref=f44e500]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: معطل" [ref=f44e501]':
+                    - generic [aria-hidden] [ref=f44e502]: 
+                    - text: تعديل
+                  - generic [ref=f44e503]: "حقوق الإضافة: معطل — حقوق التعديل: معطل"
+                - cell [ref=f44e504]:
+                  - generic [ref=f44e505]:
+                    - button "الإجراءات" [ref=f44e506] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e507]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e508]:
+                - cell [ref=f44e509]:
+                  - strong [ref=f44e510]: "52465"
+                - cell "الجمعية الشرعية - قنتير" [ref=f44e511]
+                - cell "—" [ref=f44e513]
+                - cell "غير محدد" [ref=f44e514]
+                - cell "—" [ref=f44e515]
+                - cell "—" [ref=f44e516]
+                - cell "نشط" [ref=f44e517]
+                - 'cell "إضافة تعديل حقوق الإضافة: معطل — حقوق التعديل: معطل" [ref=f44e519]':
+                  - 'generic "حقوق الإضافة: معطل" [ref=f44e520]':
+                    - generic [aria-hidden] [ref=f44e521]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: معطل" [ref=f44e522]':
+                    - generic [aria-hidden] [ref=f44e523]: 
+                    - text: تعديل
+                  - generic [ref=f44e524]: "حقوق الإضافة: معطل — حقوق التعديل: معطل"
+                - cell [ref=f44e525]:
+                  - generic [ref=f44e526]:
+                    - button "الإجراءات" [ref=f44e527] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e528]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e529]:
+                - cell [ref=f44e530]:
+                  - strong [ref=f44e531]: "55555"
+                - cell "اللاجئين اليمنيين - الجيزة - فيصل" [ref=f44e532]
+                - cell "—" [ref=f44e534]
+                - cell "حي فيصل" [ref=f44e535]
+                - cell "—" [ref=f44e536]
+                - cell "—" [ref=f44e537]
+                - cell "نشط" [ref=f44e538]
+                - 'cell "إضافة تعديل حقوق الإضافة: معطل — حقوق التعديل: معطل" [ref=f44e540]':
+                  - 'generic "حقوق الإضافة: معطل" [ref=f44e541]':
+                    - generic [aria-hidden] [ref=f44e542]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: معطل" [ref=f44e543]':
+                    - generic [aria-hidden] [ref=f44e544]: 
+                    - text: تعديل
+                  - generic [ref=f44e545]: "حقوق الإضافة: معطل — حقوق التعديل: معطل"
+                - cell [ref=f44e546]:
+                  - generic [ref=f44e547]:
+                    - button "الإجراءات" [ref=f44e548] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e549]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e550]:
+                - cell [ref=f44e551]:
+                  - strong [ref=f44e552]: "81014"
+                - cell "ايتام مدينة شبين القناطر - القليوبية" [ref=f44e553]
+                - cell "—" [ref=f44e555]
+                - cell "شبين القناطر" [ref=f44e556]
+                - cell "—" [ref=f44e557]
+                - cell "—" [ref=f44e558]
+                - cell "نشط" [ref=f44e559]
+                - 'cell "إضافة تعديل حقوق الإضافة: معطل — حقوق التعديل: مفعل" [ref=f44e561]':
+                  - 'generic "حقوق الإضافة: معطل" [ref=f44e562]':
+                    - generic [aria-hidden] [ref=f44e563]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: مفعل" [ref=f44e564]':
+                    - generic [aria-hidden] [ref=f44e565]: 
+                    - text: تعديل
+                  - generic [ref=f44e566]: "حقوق الإضافة: معطل — حقوق التعديل: مفعل"
+                - cell [ref=f44e567]:
+                  - generic [ref=f44e568]:
+                    - button "الإجراءات" [ref=f44e569] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e570]: 
+                      - text: 
+                    - text:       
+              - row [ref=f44e571]:
+                - cell [ref=f44e572]:
+                  - strong [ref=f44e573]: "81013"
+                - cell "ايتام مدينة وادي النطرون" [ref=f44e574]
+                - cell "—" [ref=f44e576]
+                - cell "وادي النطرون" [ref=f44e577]
+                - cell "—" [ref=f44e578]
+                - cell "—" [ref=f44e579]
+                - cell "نشط" [ref=f44e580]
+                - 'cell "إضافة تعديل حقوق الإضافة: معطل — حقوق التعديل: معطل" [ref=f44e582]':
+                  - 'generic "حقوق الإضافة: معطل" [ref=f44e583]':
+                    - generic [aria-hidden] [ref=f44e584]: 
+                    - text: إضافة
+                  - 'generic "حقوق التعديل: معطل" [ref=f44e585]':
+                    - generic [aria-hidden] [ref=f44e586]: 
+                    - text: تعديل
+                  - generic [ref=f44e587]: "حقوق الإضافة: معطل — حقوق التعديل: معطل"
+                - cell [ref=f44e588]:
+                  - generic [ref=f44e589]:
+                    - button "الإجراءات" [ref=f44e590] [cursor=pointer]:
+                      - generic [aria-hidden] [ref=f44e591]: 
+                      - text: 
+                    - text:       
+          - generic [ref=f44e592]:
+            - navigation "pagination" [ref=f44e593]:
+              - list [ref=f44e594]:
+                - listitem [ref=f44e595]:
+                  - button "الأول" [disabled]:
+                    - generic [aria-hidden]: 
+                - listitem [ref=f44e596]:
+                  - button "السابق" [disabled]:
+                    - generic [aria-hidden]: 
+                - listitem [ref=f44e597]:
+                  - button "1" [ref=f44e598] [cursor=pointer]
+                - listitem [ref=f44e599]:
+                  - button "2" [ref=f44e600] [cursor=pointer]
+                - listitem [ref=f44e601]:
+                  - button "3" [ref=f44e602] [cursor=pointer]
+                - listitem [ref=f44e603]:
+                  - button "4" [ref=f44e604] [cursor=pointer]
+                - listitem [ref=f44e605]:
+                  - button "5" [ref=f44e606] [cursor=pointer]
+                - listitem [ref=f44e607]:
+                  - button "التالي" [ref=f44e608] [cursor=pointer]:
+                    - generic [aria-hidden] [ref=f44e609]: 
+                - listitem [ref=f44e610]:
+                  - button "الأخير" [ref=f44e611] [cursor=pointer]:
+                    - generic [aria-hidden] [ref=f44e612]: 
+            - generic [ref=f44e613]: عرض 1 إلى 20 من 88
+  - contentinfo [ref=f44e614]:
+    - generic [ref=f44e616]:
+      - paragraph [ref=f44e618]: © 2026 IIROSA. جميع الحقوق محفوظة
+      - paragraph [ref=f44e620]: الإصدار 1.0.0

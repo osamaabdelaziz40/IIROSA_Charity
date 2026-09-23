@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subject, takeUntil } from 'rxjs';
 
@@ -78,6 +78,14 @@ export class PeriodicReportsListComponent implements OnInit, OnDestroy {
     sortDirection: 'DESC'
   };
 
+  /**
+   * Family pin from ?familyId= — the register opened from a family row (the housing
+   * register's row menu) lists only that family's children's reports. familyCode is
+   * display-only; the server scopes the rows (caller scope still applies).
+   */
+  familyId: string | null = null;
+  familyCode: string | null = null;
+
   /** Review P27 2026-08-26 precedent: teardown for the screen's subscriptions. */
   private readonly destroy$ = new Subject<void>();
 
@@ -88,7 +96,9 @@ export class PeriodicReportsListComponent implements OnInit, OnDestroy {
     public auth: AuthService,
     private notification: NotificationService,
     private translate: TranslateService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute,
+    private router: Router
   ) {
     this.filterForm = this.fb.group({
       charityId: ['all'],
@@ -140,8 +150,22 @@ export class PeriodicReportsListComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       });
 
-    this.loadReports();
+    // Re-read on every param change — the same component instance survives a
+    // familyId → no-familyId navigation (e.g. the sidebar's "all reports" link).
+    this.route.queryParamMap
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        this.familyId = params.get('familyId');
+        this.familyCode = params.get('familyCode');
+        this.filter.pageNumber = 1;
+        this.loadReports();
+      });
     this.loadStatistics();
+  }
+
+  /** Drops the family pin — back to the whole register. */
+  clearFamilyFilter(): void {
+    this.router.navigate([], { relativeTo: this.route, queryParams: {} });
   }
 
   ngOnDestroy(): void {
@@ -190,6 +214,7 @@ export class PeriodicReportsListComponent implements OnInit, OnDestroy {
     this.filter.orphanCode = (filters.orphanCode || '').trim() || undefined;
     this.filter.orphanName = (filters.orphanName || '').trim() || undefined;
     this.filter.reviewStatus = filters.reviewStatusFilter !== 'all' ? filters.reviewStatusFilter : undefined;
+    this.filter.familyId = this.familyId || undefined;
 
     this.periodicReportService.getReports(this.filter).subscribe({
       next: result => {

@@ -143,7 +143,7 @@
     </div>
 
     <!-- §11.S.1 grid: الرقم · إسم الأب · إسم الأم · الأبناء · الهواتف · كود العائله · الجمعية -->
-    <div *ngIf="!loading" class="table-responsive">
+    <div *ngIf="!loading" class="table-responsive" [class.menu-open]="openRowMenuId">
       <table class="table table-hover table-striped">
         <thead>
           <tr>
@@ -173,16 +173,33 @@
             <td><strong>{{ family.code }}</strong></td>
             <!-- الجمعية -->
             <td>{{ family.charityName || '-' }}</td>
-            <!-- الاجراءات -->
-            <td>
-              <div class="btn-group">
-                <button
-                  type="button"
-                  class="btn btn-sm btn-light"
-                  [title]="'housingProjects.actions.view' | translate"
-                  (click)="viewFamily(family.id)">
-                  <i class="fe fe-eye"></i>
+            <!-- الاجراءات — every row action behind one Angular-driven kebab menu, as on the charities list -->
+            <td class="actions-cell">
+              <div class="dropdown" [class.show]="openRowMenuId === family.id">
+                <button type="button" class="btn btn-sm btn-icon dropdown-toggle"
+                        [attr.aria-expanded]="openRowMenuId === family.id"
+                        [attr.aria-label]="'common.actions' | translate"
+                        (click)="toggleRowMenu(family.id)">
+                  <i class="fe fe-more-vertical" aria-hidden="true"></i>
                 </button>
+                <div class="dropdown-menu" [class.show]="openRowMenuId === family.id">
+                  <button type="button" class="dropdown-item" (click)="viewFamily(family.id)">
+                    <i class="fe fe-eye mr-2" aria-hidden="true"></i>
+                    {{ 'housingProjects.actions.view' | translate }}
+                  </button>
+                  <button type="button" class="dropdown-item" *ngIf="canEdit" (click)="editFamily(family.id)">
+                    <i class="fe fe-edit mr-2" aria-hidden="true"></i>
+                    {{ 'common.edit' | translate }}
+                  </button>
+                  <ng-container *ngIf="canViewChildReports">
+                    <div class="dropdown-divider"></div>
+                    <!-- The family's children in the orphan periodic-reports register (ch. 14) -->
+                    <button type="button" class="dropdown-item" (click)="viewChildrenReports(family)">
+                      <i class="fe fe-file-text mr-2" aria-hidden="true"></i>
+                      {{ 'housingProjects.actions.childrenReports' | translate }}
+                    </button>
+                  </ng-container>
+                </div>
               </div>
             </td>
           </tr>

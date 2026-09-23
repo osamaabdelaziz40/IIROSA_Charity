@@ -65,7 +65,7 @@ export class HousingProjectDetailComponent implements OnInit, OnDestroy {
       click: () => this.edit()
     },
     {
-      label: 'housingProjects.reports.title',
+      label: 'housingProjects.actions.childrenReports',
       type: 'secondary',
       icon: 'fe-file-text',
       click: () => this.viewReports()
@@ -132,10 +132,12 @@ export class HousingProjectDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** التقارير الدورية — the §11.S.3 beneficiary reports screen (UC-HOU-06). */
+  /** The family's children in the orphan periodic-reports register (ch. 14), pinned by familyId. */
   viewReports(): void {
     if (this.family) {
-      this.router.navigate(['/housing-projects', this.family.id, 'reports']);
+      this.router.navigate(['/periodic-orphan-reports'], {
+        queryParams: { familyId: this.family.id, familyCode: this.family.code }
+      });
     }
   }
 

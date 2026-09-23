@@ -1049,6 +1049,11 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
         if (filter.HousingFamilyId.HasValue)
             query = query.Where(r => r.FK_HousingFamilyId == filter.HousingFamilyId.Value);
 
+        // A family's children — the orphan register opened from a family row
+        if (filter.FamilyId.HasValue)
+            query = query.Where(r => r.ChildOrParent == Domain.Enums.ReportBeneficiaryType.Child
+                                  && r.Orphan.FamilyId == filter.FamilyId.Value);
+
         // A charity-scoped caller is already pinned by ApplyCallerScope; for head office
         // this is a plain filter over every charity.
         if (filter.CharityId.HasValue)

@@ -38,6 +38,12 @@ public class PeriodicOrphanReportFilterDto
     public Guid? HousingFamilyId { get; set; }
 
     /// <summary>
+    /// The family whose children's periodic reports are listed — the §14.S.1 register opened
+    /// from a family row (e.g. the housing register's row menu). Child reports only.
+    /// </summary>
+    public Guid? FamilyId { get; set; }
+
+    /// <summary>
     /// Filter by charity (Admin/Super Admin only) - UC-6.14, UC-6.15
     /// </summary>
     public Guid? CharityId { get; set; }

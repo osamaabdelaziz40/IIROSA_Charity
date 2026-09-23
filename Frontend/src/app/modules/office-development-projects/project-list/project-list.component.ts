@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -348,6 +348,28 @@ export class ProjectListComponent implements OnInit, OnDestroy {
     this.allRegions = [];
     this.allCenters = [];
     this.onSearch();
+  }
+
+  // Id of the project whose row menu is open (null = all closed) — Angular-driven,
+  // mirroring the charities list rather than Bootstrap's data-api toggle.
+  openRowMenuId: string | null = null;
+
+  toggleRowMenu(projectId: string): void {
+    this.openRowMenuId = this.openRowMenuId === projectId ? null : projectId;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    // Close when clicking outside any dropdown, or on a menu item (after its
+    // action handler has fired — document listeners run last in the bubble phase).
+    if (!target.closest('.dropdown') || target.closest('.dropdown-item')) {
+      this.openRowMenuId = null;
+    }
+  }
+
+  trackByProjectId(index: number, project: OfficeProjectListItem): string {
+    return project.id;
   }
 
   viewProject(projectId: string): void {

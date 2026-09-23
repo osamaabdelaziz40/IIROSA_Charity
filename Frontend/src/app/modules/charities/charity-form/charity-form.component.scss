@@ -1,0 +1,35 @@
+// Charity create/edit form styling.
+
+// One-click generated password, tucked under the password field
+.generate-password-btn {
+  margin-top: -0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+// One-time credentials panel
+.credentials-alert {
+  .ltr-value {
+    direction: ltr;
+    unicode-bidi: embed;
+    display: inline-block;
+  }
+
+  code.ltr-value {
+    color: #1c7a5e;
+    font-weight: 600;
+  }
+
+  .card.bg-light {
+    // keep the embedded credential box legible on the dark theme
+    background-color: rgba(0, 0, 0, 0.15) !important;
+  }
+}
+
+// Direction-aware chevrons on the "continue" button
+.ltr-only { display: none; }
+[dir='rtl'] .ltr-only { display: none; }
+[dir='rtl'] .rtl-only { display: inline-block; }
+[dir='ltr'] .ltr-only { display: inline-block; }
+[dir='ltr'] .rtl-only { display: none; }

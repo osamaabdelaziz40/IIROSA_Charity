@@ -1,74 +1,223 @@
-.empty-state {
-  padding: 3rem 0;
+// ---------------------------------------------------------------------------
+// Charity register page styling. All colors go through CSS variables / rgba
+// tints so the light and dark TinyDash themes both render correctly.
+// ---------------------------------------------------------------------------
 
-  i {
-    display: block;
-    margin: 0 auto 1rem;
-  }
-}
-
-.pagination-info {
-  font-size: 0.875rem;
-  color: var(--text-muted);
-}
-
+// Soft status badges — tinted background + colored text instead of solid fills
 .badge {
   font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
+  padding: 0.3rem 0.6rem;
+  font-weight: 500;
 
   &.badge-success {
-    background-color: var(--success);
+    background-color: rgba(60, 192, 154, 0.16);
+    color: #52d3b2;
   }
 
   &.badge-warning {
-    background-color: var(--warning);
-    color: #000;
+    background-color: rgba(245, 185, 33, 0.16);
+    color: #f5b921;
   }
 
   &.badge-danger {
-    background-color: var(--danger);
+    background-color: rgba(229, 91, 107, 0.16);
+    color: #e55b6b;
   }
 
   &.badge-secondary {
-    background-color: var(--secondary);
+    background-color: rgba(108, 114, 147, 0.2);
+    color: #9aa0bd;
   }
 }
 
-.btn-group {
-  .btn {
-    margin-right: 0.25rem;
+// Statistics band — one flat grid of stat tiles inside the collapsible card,
+// not a stack of nested cards.
+.stat-band {
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    height: 100%;
+  }
 
-    &:last-child {
-      margin-right: 0;
-    }
+  .stat-icon {
+    flex: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.625rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.125rem;
+
+    &.primary   { background: rgba(77, 124, 254, 0.15); color: var(--primary); }
+    &.success   { background: rgba(60, 192, 154, 0.15); color: var(--success); }
+    &.warning   { background: rgba(245, 185, 33, 0.15); color: var(--warning); }
+    &.danger    { background: rgba(229, 91, 107, 0.15); color: var(--danger); }
+    &.info      { background: rgba(56, 173, 249, 0.15); color: var(--info); }
+    &.secondary { background: rgba(108, 114, 147, 0.18); color: #9aa0bd; }
+  }
+
+  .stat-value {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+    margin-top: 0.125rem;
   }
 }
 
+// Register table
+.charities-table {
+  margin-bottom: 0;
+
+  th { white-space: nowrap; }
+  th, td { padding-inline: 0.55rem; }
+  td { vertical-align: middle; }
+
+  .name-cell > div {
+    // give .text-truncate a definite box so long charity names ellipsize
+    max-width: 14rem;
+  }
+
+  // Phone numbers and emails are LTR data; keep digits readable inside the RTL page
+  .ltr-cell {
+    direction: ltr;
+    max-width: 9rem;
+  }
+
+  .rights-cell {
+    white-space: nowrap;
+  }
+
+  // One kebab menu per row — the column is a single control wide.
+  .actions-cell {
+    width: 3.5rem;
+    text-align: center;
+  }
+}
+
+// While any row menu is open, stop clipping at the scroll container so the
+// dropdown can overlay the table (Bootstrap .table-responsive caveat).
+.table-responsive.menu-open {
+  overflow: visible;
+}
+
+// Rights state chips — tinted pills instead of bare icons, so "enabled" and
+// "disabled" stay unmistakable at a glance and never read as dead buttons.
+.rights-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 0.32rem 0.55rem;
+  border-radius: 1rem;
+  background: rgba(108, 114, 147, 0.18);
+  color: var(--text-muted);
+  opacity: 0.75;
+
+  & + & {
+    margin-inline-start: 0.35rem;
+  }
+
+  > i { font-size: 0.8rem; }
+
+  &.on {
+    background: rgba(60, 192, 154, 0.15);
+    color: var(--success);
+    opacity: 1;
+  }
+}
+
+// Ghost icon buttons — quieter than boxed btn-light in a dense table
+.btn-icon {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  line-height: 1;
+
+  &:hover,
+  &:focus {
+    background: rgba(77, 124, 254, 0.14);
+    // --text-color is a dark-theme-only light gray; --primary exists in both theme sheets
+    color: var(--primary);
+  }
+}
+
+// Icon-only toggle: the kebab glyph is the affordance, Bootstrap's extra caret is noise
+.actions-cell .dropdown-toggle::after {
+  display: none;
+}
+
+// Row action menu
 .dropdown-menu {
-  a.dropdown-item {
-    cursor: pointer;
+  // TinyDash's [dir="rtl"] rule right-anchors menus (right:0). The actions cell sits at the
+  // table's inline-end edge, so a right-anchored menu opens off-screen. Anchor the menu to
+  // the toggle's inline-start edge so it opens over the table instead.
+  left: 0;
+  right: auto;
 
-    &:hover {
-      background-color: rgba(var(--primary-rgb), 0.1);
+  min-width: 13rem;
+
+  .dropdown-item {
+    cursor: pointer;
+    font-family: inherit;
+
+    > i {
+      width: 1.25rem;
+      text-align: center;
+      opacity: 0.85;
+    }
+
+    &:hover,
+    &:focus {
+      background: rgba(77, 124, 254, 0.12);
+      color: inherit;
     }
 
     &.text-danger {
       color: var(--danger);
 
-      &:hover {
-        background-color: rgba(var(--danger-rgb), 0.1);
+      &:hover,
+      &:focus {
+        background: rgba(229, 91, 107, 0.12);
       }
     }
   }
 }
 
-// RTL Support
-[dir='rtl'] {
-  .dropdown-menu {
-    right: auto !important;
-    left: 0 !important;
+// Empty state
+.empty-state {
+  padding: 2.5rem 0;
+
+  i {
+    display: block;
+    margin: 0 auto 1rem;
+    font-size: 2.5rem;
+    color: var(--text-muted);
+    opacity: 0.6;
   }
 
+  p {
+    font-size: 0.95rem;
+  }
+}
+
+// RTL Support
+[dir='rtl'] {
   .mr-2 {
     margin-right: 0 !important;
     margin-left: 0.5rem !important;

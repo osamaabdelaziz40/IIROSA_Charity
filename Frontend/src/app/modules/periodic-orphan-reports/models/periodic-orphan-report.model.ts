@@ -360,6 +360,8 @@ export interface PeriodicOrphanReportFilterDto {
   orphanCode?: string;
   orphanName?: string;
   orphanId?: string;
+  /** A family's children — the register opened from a family row (housing register menu). */
+  familyId?: string;
   charityId?: string;
   reportNo?: string;
   reviewStatus?: string;

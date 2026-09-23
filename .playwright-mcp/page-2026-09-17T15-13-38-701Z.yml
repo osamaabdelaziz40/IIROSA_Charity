@@ -1,0 +1,417 @@
+- generic [ref=e1]:
+  - generic [ref=e42]:
+    - navigation [ref=e43]:
+      - button "" [ref=e44] [cursor=pointer]
+      - generic [ref=e46]:
+        - combobox [aria-hidden] [ref=e482]
+        - combobox [ref=e485] [cursor=pointer]:
+          - textbox "كل الجمعيات" [ref=e486]:
+            - generic "Remove all items" [ref=e487]: ×
+      - list [ref=e48]:
+        - listitem [ref=e49]:
+          - link "العربية " [ref=e50] [cursor=pointer]:
+            - /url: "#"
+            - generic [ref=e51]: 
+            - text: العربية 
+        - listitem [ref=e52]:
+          - link "" [ref=e488] [cursor=pointer]:
+            - /url: "#"
+        - listitem [ref=e55]:
+          - link "" [ref=e56] [cursor=pointer]:
+            - /url: ./#
+        - listitem [ref=e59]:
+          - button [ref=e60] [cursor=pointer]:
+            - generic [ref=e61]:
+              - text: مرحبا System Admin
+              - img "..." [ref=e62]
+            - text: 
+    - complementary [ref=e63]:
+      - generic [ref=e68]:
+        - text: 
+        - navigation [ref=e69]:
+          - link [ref=e71] [cursor=pointer]:
+            - /url: "#/"
+            - img "IIROSA Logo" [ref=e72]
+          - paragraph [ref=e73]: عناصر الموقع
+          - list [ref=e74]:
+            - listitem [ref=e75]:
+              - link " الصفحة الرئيسية (current) " [ref=e76] [cursor=pointer]:
+                - /url: "#dashboard"
+                - generic [ref=e77]: 
+                - generic [ref=e78]: الصفحة الرئيسية
+                - generic [ref=e79]: (current)
+                - text: 
+              - list [ref=e80]:
+                - listitem [ref=e81]:
+                  - link "الرئيسية" [ref=e82] [cursor=pointer]:
+                    - /url: "#/"
+            - listitem [ref=e83]:
+              - link " الإعدادات " [ref=e84] [cursor=pointer]:
+                - /url: "#settings"
+                - generic [ref=e85]: 
+                - generic [ref=e86]: الإعدادات
+                - text: 
+              - list [ref=e489]:
+                - listitem [ref=e490]:
+                  - link "المستخدمون" [ref=e491] [cursor=pointer]:
+                    - /url: "#/user-management/users"
+                - listitem [ref=e492]:
+                  - link "الموظفون" [ref=e493] [cursor=pointer]:
+                    - /url: "#/employees"
+                - listitem [ref=e494]:
+                  - link "الجمعيات" [ref=e495] [cursor=pointer]:
+                    - /url: "#/charities"
+                - listitem [ref=e496]:
+                  - link "إدارة الجداول المرجعية" [ref=e497] [cursor=pointer]:
+                    - /url: "#/lookup-management"
+            - listitem [ref=e87]:
+              - link " الدعم الفني " [ref=e88] [cursor=pointer]:
+                - /url: "#technical-support"
+                - generic [ref=e89]: 
+                - generic [ref=e90]: الدعم الفني
+                - text: 
+            - listitem [ref=e91]:
+              - link " الإشعارات " [ref=e92] [cursor=pointer]:
+                - /url: "#notifications"
+                - generic [ref=e93]: 
+                - generic [ref=e94]: الإشعارات
+                - text: 
+            - listitem [ref=e95]:
+              - link " المهام " [ref=e96] [cursor=pointer]:
+                - /url: "#missions"
+                - generic [ref=e97]: 
+                - generic [ref=e98]: المهام
+                - text: 
+            - listitem [ref=e99]:
+              - link " مدفوعات الأيتام " [ref=e100] [cursor=pointer]:
+                - /url: "#orphan-payments"
+                - generic [ref=e101]: 
+                - generic [ref=e102]: مدفوعات الأيتام
+                - text: 
+            - listitem [ref=e103]:
+              - link " مشاريع المكتب " [ref=e104] [cursor=pointer]:
+                - /url: "#office-development-projects"
+                - generic [ref=e105]: 
+                - generic [ref=e106]: مشاريع المكتب
+                - text: 
+            - listitem [ref=e107]:
+              - link " مشاريع الإسكان " [ref=e108] [cursor=pointer]:
+                - /url: "#housing-projects"
+                - generic [ref=e109]: 
+                - generic [ref=e110]: مشاريع الإسكان
+                - text: 
+            - listitem [ref=e111]:
+              - link " المساعدات الموسمية " [ref=e112] [cursor=pointer]:
+                - /url: "#seasonal-aid"
+                - generic [ref=e113]: 
+                - generic [ref=e114]: المساعدات الموسمية
+                - text: 
+            - listitem [ref=e115]:
+              - link " الوارد والصادر " [ref=e116] [cursor=pointer]:
+                - /url: "#incoming-outgoing"
+                - generic [ref=e117]: 
+                - generic [ref=e118]: الوارد والصادر
+                - text: 
+            - listitem [ref=e119]:
+              - link " الأسر " [ref=e120] [cursor=pointer]:
+                - /url: "#families"
+                - generic [ref=e121]: 
+                - generic [ref=e122]: الأسر
+                - text: 
+            - listitem [ref=e123]:
+              - link " التقارير " [ref=e124] [cursor=pointer]:
+                - /url: "#reports"
+                - generic [ref=e125]: 
+                - generic [ref=e126]: التقارير
+                - text: 
+            - listitem [ref=e127]:
+              - link " الشيكات العامة " [ref=e128] [cursor=pointer]:
+                - /url: "#general-checks"
+                - generic [ref=e129]: 
+                - generic [ref=e130]: الشيكات العامة
+                - text: 
+            - listitem [ref=e131]:
+              - link " التقارير الدورية للأيتام " [ref=e132] [cursor=pointer]:
+                - /url: "#periodic-orphan-reports"
+                - generic [ref=e133]: 
+                - generic [ref=e134]: التقارير الدورية للأيتام
+                - text: 
+            - listitem [ref=e135]:
+              - link " الحوالات المالية " [ref=e136] [cursor=pointer]:
+                - /url: "#hq-transfers"
+                - generic [ref=e137]: 
+                - generic [ref=e138]: الحوالات المالية
+                - text: 
+    - main [ref=e139]:
+      - generic [ref=e537]:
+        - navigation "breadcrumb" [ref=e539]:
+          - list [ref=e540]:
+            - listitem [ref=e541]:
+              - link "الرئيسية" [ref=e542] [cursor=pointer]:
+                - /url: "#/dashboard"
+            - listitem [ref=e543]:
+              - text: /
+              - link "الجمعيات" [ref=e544] [cursor=pointer]:
+                - /url: "#/charities"
+            - listitem [ref=e545]:
+              - text: /
+              - generic [ref=e546]: إضافة جمعية
+        - generic [ref=e548]:
+          - generic:
+            - navigation "breadcrumb":
+              - list
+          - generic [ref=e549]:
+            - heading "إضافة جمعية" [level=3] [ref=e552]
+            - button "إلغاء" [ref=e554] [cursor=pointer]
+        - generic [ref=e556]:
+          - generic [ref=e558]:
+            - button " المعلومات الأساسية " [expanded] [ref=e605] [cursor=pointer]:
+              - heading " المعلومات الأساسية" [level=4] [ref=e560]:
+                - generic [ref=e561]: 
+                - text: المعلومات الأساسية
+              - generic [ref=e562]: 
+            - generic [ref=e606]:
+              - generic [ref=e607]:
+                - generic [ref=e610]:
+                  - generic [ref=e611]: اسم الجمعية *
+                  - textbox "اسم الجمعية *" [ref=e612]:
+                    - /placeholder: أدخل اسم الجمعية
+                  - generic [ref=e613]: هذا الحقل مطلوب
+                - generic [ref=e616]:
+                  - generic [ref=e617]: رمز الجمعية *
+                  - textbox "رمز الجمعية *" [ref=e618]:
+                    - /placeholder: ""
+                  - generic [ref=e619]: هذا الحقل مطلوب
+                  - generic [ref=e620]:
+                    - generic [ref=e621]: 
+                    - text: اترك فارغاً لتوليد رمز الجمعية تلقائياً
+              - generic [ref=e625]:
+                - generic [ref=e626]: نوع الجمعية *
+                - combobox [ref=e629] [cursor=pointer]:
+                  - textbox [ref=e630]
+                - generic [ref=e631]: هذا الحقل مطلوب
+          - generic [ref=e564]:
+            - button " معلومات الاتصال " [expanded] [ref=e632] [cursor=pointer]:
+              - heading " معلومات الاتصال" [level=4] [ref=e566]:
+                - generic [ref=e567]: 
+                - text: معلومات الاتصال
+              - generic [ref=e568]: 
+            - generic [ref=e633]:
+              - generic [ref=e637]:
+                - generic [ref=e638]: العنوان *
+                - textbox "العنوان *" [ref=e639]:
+                  - /placeholder: ""
+                - generic [ref=e640]: هذا الحقل مطلوب
+              - generic [ref=e641]:
+                - generic [ref=e644]:
+                  - generic [ref=e645]: اسم الشارع *
+                  - textbox "اسم الشارع *" [ref=e646]:
+                    - /placeholder: ""
+                  - generic [ref=e647]: هذا الحقل مطلوب
+                - generic [ref=e650]:
+                  - generic [ref=e651]: القرية *
+                  - textbox "القرية *" [ref=e652]:
+                    - /placeholder: ""
+                  - generic [ref=e653]: هذا الحقل مطلوب
+              - generic [ref=e654]:
+                - generic [ref=e657]:
+                  - generic [ref=e658]: الرمز البريدي *
+                  - textbox "الرمز البريدي *" [ref=e659]:
+                    - /placeholder: ""
+                  - generic [ref=e660]: هذا الحقل مطلوب
+                - generic [ref=e663]:
+                  - generic [ref=e664]: صندوق البريد *
+                  - textbox "صندوق البريد *" [ref=e665]:
+                    - /placeholder: ""
+                  - generic [ref=e666]: هذا الحقل مطلوب
+                - generic [ref=e669]:
+                  - generic [ref=e670]: الهاتف *
+                  - textbox "الهاتف *" [ref=e671]:
+                    - /placeholder: ""
+                  - generic [ref=e672]: هذا الحقل مطلوب
+              - generic [ref=e673]:
+                - generic [ref=e676]:
+                  - generic [ref=e677]: هاتف 2 *
+                  - textbox "هاتف 2 *" [ref=e678]:
+                    - /placeholder: ""
+                  - generic [ref=e679]: هذا الحقل مطلوب
+                - generic [ref=e682]:
+                  - generic [ref=e683]: هاتف المنزل *
+                  - textbox "هاتف المنزل *" [ref=e684]:
+                    - /placeholder: ""
+                  - generic [ref=e685]: هذا الحقل مطلوب
+                - generic [ref=e688]:
+                  - generic [ref=e689]: الفاكس *
+                  - textbox "الفاكس *" [ref=e690]:
+                    - /placeholder: ""
+                  - generic [ref=e691]: هذا الحقل مطلوب
+              - generic [ref=e695]:
+                - generic [ref=e696]: البريد الإلكتروني *
+                - textbox "البريد الإلكتروني *" [ref=e697]:
+                  - /placeholder: ""
+                - generic [ref=e698]: هذا الحقل مطلوب
+          - generic [ref=e570]:
+            - button " الموقع " [expanded] [ref=e699] [cursor=pointer]:
+              - heading " الموقع" [level=4] [ref=e572]:
+                - generic [ref=e573]: 
+                - text: الموقع
+              - generic [ref=e574]: 
+            - generic [ref=e700]:
+              - generic [ref=e701]:
+                - generic [ref=e704]:
+                  - generic [ref=e705]: الدولة *
+                  - combobox [ref=e708] [cursor=pointer]:
+                    - textbox [ref=e709]
+                  - generic [ref=e710]: هذا الحقل مطلوب
+                - generic [ref=e713]:
+                  - generic [ref=e714]: المنطقة *
+                  - combobox [disabled] [ref=e717]:
+                    - textbox [disabled] [ref=e718]
+                - generic [ref=e721]:
+                  - generic [ref=e722]: المركز *
+                  - combobox [disabled] [ref=e725]:
+                    - textbox [disabled] [ref=e726]
+              - generic [ref=e730]:
+                - generic [ref=e731]: الموقع على الخريطة *
+                - textbox "الموقع على الخريطة *" [ref=e732]:
+                  - /placeholder: أدخل إحداثيات GPS أو رابط الخريطة
+                - generic [ref=e733]: هذا الحقل مطلوب
+                - generic [ref=e734]:
+                  - generic [ref=e735]: 
+                  - text: أدخل إحداثيات GPS (خط العرض، خط الطول) أو رابط خرائط جوجل
+          - generic [ref=e576]:
+            - button " التفاصيل البنكية " [expanded] [ref=e736] [cursor=pointer]:
+              - heading " التفاصيل البنكية" [level=4] [ref=e578]:
+                - generic [ref=e579]: 
+                - text: التفاصيل البنكية
+              - generic [ref=e580]: 
+            - generic [ref=e738]:
+              - generic [ref=e741]:
+                - generic [ref=e742]: البنك *
+                - combobox [ref=e745] [cursor=pointer]:
+                  - textbox [ref=e746]
+                - generic [ref=e747]: هذا الحقل مطلوب
+              - generic [ref=e750]:
+                - generic [ref=e751]: الحساب البنكي *
+                - textbox "الحساب البنكي *" [ref=e752]:
+                  - /placeholder: ""
+                - generic [ref=e753]: هذا الحقل مطلوب
+              - generic [ref=e756]:
+                - generic [ref=e757]: رقم الآيبان *
+                - textbox "رقم الآيبان *" [ref=e758]:
+                  - /placeholder: ""
+                - generic [ref=e759]: هذا الحقل مطلوب
+                - generic [ref=e760]:
+                  - generic [ref=e761]: 
+                  - text: "أدخل رقم آيبان صحيح (مثال: SA1234567890123456789012)"
+          - generic [ref=e582]:
+            - button " جهات الاتصال الإدارية " [expanded] [ref=e762] [cursor=pointer]:
+              - heading " جهات الاتصال الإدارية" [level=4] [ref=e584]:
+                - generic [ref=e585]: 
+                - text: جهات الاتصال الإدارية
+              - generic [ref=e586]: 
+            - generic [ref=e763]:
+              - heading "تفاصيل المدير" [level=6] [ref=e766]
+              - generic [ref=e767]:
+                - generic [ref=e770]:
+                  - generic [ref=e771]: اسم المدير *
+                  - textbox "اسم المدير *" [ref=e772]:
+                    - /placeholder: ""
+                  - generic [ref=e773]: هذا الحقل مطلوب
+                - generic [ref=e776]:
+                  - generic [ref=e777]: المسمى الوظيفي للمدير *
+                  - textbox "المسمى الوظيفي للمدير *" [ref=e778]:
+                    - /placeholder: ""
+                  - generic [ref=e779]: هذا الحقل مطلوب
+                - generic [ref=e782]:
+                  - generic [ref=e783]: هاتف المدير 1 *
+                  - textbox "هاتف المدير 1 *" [ref=e784]:
+                    - /placeholder: ""
+                  - generic [ref=e785]: هذا الحقل مطلوب
+                - generic [ref=e788]:
+                  - generic [ref=e789]: هاتف المدير 2 *
+                  - textbox "هاتف المدير 2 *" [ref=e790]:
+                    - /placeholder: ""
+                  - generic [ref=e791]: هذا الحقل مطلوب
+              - heading "تفاصيل الشخص المسؤول" [level=6] [ref=e794]
+              - generic [ref=e795]:
+                - generic [ref=e798]:
+                  - generic [ref=e799]: المسمى الوظيفي للمسؤول *
+                  - textbox "المسمى الوظيفي للمسؤول *" [ref=e800]:
+                    - /placeholder: ""
+                  - generic [ref=e801]: هذا الحقل مطلوب
+                - generic [ref=e804]:
+                  - generic [ref=e805]: هاتف المسؤول 1 *
+                  - textbox "هاتف المسؤول 1 *" [ref=e806]:
+                    - /placeholder: ""
+                  - generic [ref=e807]: هذا الحقل مطلوب
+                - generic [ref=e810]:
+                  - generic [ref=e811]: هاتف المسؤول 2 *
+                  - textbox "هاتف المسؤول 2 *" [ref=e812]:
+                    - /placeholder: ""
+                  - generic [ref=e813]: هذا الحقل مطلوب
+          - generic [ref=e588]:
+            - button " الإعدادات " [expanded] [ref=e814] [cursor=pointer]:
+              - heading " الإعدادات" [level=4] [ref=e590]:
+                - generic [ref=e591]: 
+                - text: الإعدادات
+              - generic [ref=e592]: 
+            - generic [ref=e815]:
+              - generic [ref=e819]:
+                - generic [ref=e820]: أيقونة المكتب
+                - generic [ref=e823]:
+                  - generic [ref=e824]: 
+                  - paragraph [ref=e825]: اسحب وأفلت الملفات هنا
+                  - paragraph [ref=e826]: أو
+                  - generic [ref=e827] [cursor=pointer]:
+                    - generic [ref=e828]: 
+                    - text: تصفح
+              - generic [ref=e831]:
+                - checkbox "استقبال التبرعات" [checked] [ref=e832]
+                - generic [ref=e833]: استقبال التبرعات
+              - generic [ref=e837]:
+                - generic [ref=e838]: ملاحظات *
+                - textbox "ملاحظات *" [ref=e839]:
+                  - /placeholder: ""
+                - generic [ref=e840]: هذا الحقل مطلوب
+          - generic [ref=e594]:
+            - button " حساب المستخدم " [expanded] [ref=e841] [cursor=pointer]:
+              - heading " حساب المستخدم" [level=4] [ref=e596]:
+                - generic [ref=e597]: 
+                - text: حساب المستخدم
+              - generic [ref=e598]: 
+            - generic [ref=e842]:
+              - generic [ref=e845]:
+                - checkbox "إنشاء حساب مستخدم" [checked] [ref=e846]
+                - generic [ref=e847]: إنشاء حساب مستخدم
+              - generic [ref=e848]:
+                - generic [ref=e851]:
+                  - generic [ref=e852]: اسم المستخدم/البريد الإلكتروني *
+                  - textbox "اسم المستخدم/البريد الإلكتروني *" [ref=e853]:
+                    - /placeholder: ""
+                  - generic [ref=e854]: هذا الحقل مطلوب
+                  - generic [ref=e855]:
+                    - generic [ref=e856]: 
+                    - text: أدخل عنوان البريد الإلكتروني الذي سيتم استخدامه كاسم مستخدم لتسجيل الدخول
+                - generic [ref=e859]:
+                  - generic [ref=e860]: كلمة المرور *
+                  - textbox "كلمة المرور *" [ref=e861]:
+                    - /placeholder: ""
+                  - generic [ref=e862]: هذا الحقل مطلوب
+                  - generic [ref=e863]:
+                    - generic [ref=e864]: 
+                    - text: يجب أن تكون كلمة المرور 8 أحرف على الأقل
+          - generic [ref=e600]:
+            - button " إنشاء" [active] [ref=e601] [cursor=pointer]:
+              - generic [ref=e602]: 
+              - text: إنشاء
+            - button " إلغاء" [ref=e603] [cursor=pointer]:
+              - generic [ref=e604]: 
+              - text: إلغاء
+    - contentinfo [ref=e475]:
+      - generic [ref=e477]:
+        - paragraph [ref=e479]: © 2026 IIROSA. جميع الحقوق محفوظة
+        - paragraph [ref=e481]: الإصدار 1.0.0
+  - alert [ref=e865]:
+    - 'heading "Error: يرجى إصلاح أخطاء التحقق قبل الإرسال" [level=2] [ref=e870]'
+    - text: "!"

@@ -218,7 +218,7 @@ export class CharityService {
   // ==================== STATUS MANAGEMENT ====================
 
   activateCharity(id: string): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${id}/activate`, {}, {
+    return this.http.post<void>(`${this.apiUrl}/${id}/activate`, {}, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -226,7 +226,7 @@ export class CharityService {
   }
 
   deactivateCharity(id: string): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${id}/deactivate`, {}, {
+    return this.http.post<void>(`${this.apiUrl}/${id}/deactivate`, {}, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -234,7 +234,7 @@ export class CharityService {
   }
 
   lockCharity(id: string): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${id}/lock`, {}, {
+    return this.http.post<void>(`${this.apiUrl}/${id}/lock`, {}, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -242,7 +242,7 @@ export class CharityService {
   }
 
   unlockCharity(id: string): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${id}/unlock`, {}, {
+    return this.http.post<void>(`${this.apiUrl}/${id}/unlock`, {}, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -279,9 +279,10 @@ export class CharityService {
   }
 
   // ==================== RIGHTS MANAGEMENT ====================
+  // One PUT per right; the new state is the bare JSON boolean body ([FromBody] bool isEnabled).
 
   enableAddRights(id: string): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${id}/enable-add`, {}, {
+    return this.http.put<void>(`${this.apiUrl}/${id}/add-rights`, true, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -289,7 +290,7 @@ export class CharityService {
   }
 
   disableAddRights(id: string): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${id}/disable-add`, {}, {
+    return this.http.put<void>(`${this.apiUrl}/${id}/add-rights`, false, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -297,7 +298,7 @@ export class CharityService {
   }
 
   enableUpdateRights(id: string): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${id}/enable-update`, {}, {
+    return this.http.put<void>(`${this.apiUrl}/${id}/update-rights`, true, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -305,7 +306,7 @@ export class CharityService {
   }
 
   disableUpdateRights(id: string): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${id}/disable-update`, {}, {
+    return this.http.put<void>(`${this.apiUrl}/${id}/update-rights`, false, {
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
