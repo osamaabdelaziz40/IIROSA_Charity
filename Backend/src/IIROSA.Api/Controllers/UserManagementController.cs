@@ -202,18 +202,23 @@ namespace IIROSA.Api.Controllers
         {
             try
             {
-                var success = await _userAppService.ResetUserPasswordAsync(id, model.NewPassword);
-                if (!success)
+                var appliedPassword = await _userAppService.ResetUserPasswordAsync(id, model.NewPassword);
+                if (appliedPassword == null)
                 {
-                    return BadRequest(new { message = "Failed to reset password" });
+                    return BadRequest(new
+                    {
+                        message = "Password reset failed. The account may not exist, be locked, or the new password may not satisfy the password policy."
+                    });
                 }
 
                 _logger.LogInformation("Password reset for user {UserId} by {ResetBy}", id, User.Identity?.Name);
 
+                // The applied password is returned exactly once: no e-mail delivery exists yet, so
+                // the client must show it to the operator now (NotificationService.showGeneratedPassword).
                 return Ok(new
                 {
                     message = "Password reset successfully",
-                    newPassword = model.SendEmail ? null : model.NewPassword // Only return password if not sending email
+                    newPassword = appliedPassword
                 });
             }
             catch (Exception ex)

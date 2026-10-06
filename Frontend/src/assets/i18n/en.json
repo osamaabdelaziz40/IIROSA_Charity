@@ -267,6 +267,7 @@
     "usernameEmail": "Username/Email",
     "username": "Username",
     "password": "Password",
+    "newPassword": "New password",
     "createUserAccount": "Create User Account",
     "accountCreated": "Account Created Successfully",
     "credentialsMessage": "Please save these credentials securely. They will not be shown again.",
@@ -346,7 +347,9 @@
     "confirmDisableAddRights": "Are you sure you want to disable add rights for this charity?",
     "confirmEnableUpdateRights": "Are you sure you want to enable update rights for this charity?",
     "confirmDisableUpdateRights": "Are you sure you want to disable update rights for this charity?",
-    "confirmResetPassword": "Are you sure you want to reset this charity's password? A new password will be generated and sent to their email.",
+    "confirmResetPassword": "Are you sure you want to reset the password for charity \"{{name}}\"? A new password will be generated and shown to you so you can hand it to the charity.",
+    "noUserAccount": "This charity does not have a login account yet. Create one first from the charity edit form ('Create user account' option), then try again.",
+    "noUserAccountShort": "Password reset unavailable: the charity has no login account",
     "confirmDelete": "Are you sure you want to delete charity \"{{name}}\"? This action cannot be undone.",
     "activateSuccess": "Charity activated successfully",
     "additionalInformation": "Additional Information",
@@ -365,7 +368,7 @@
     "updateRightsDisableSuccess": "Update rights disabled successfully",
     "updateRightsEnableFailed": "Failed to enable update rights",
     "updateRightsDisableFailed": "Failed to disable update rights",
-    "resetPasswordSuccess": "Password reset successfully. New password sent to charity email.",
+    "resetPasswordSuccess": "Password reset successfully",
     "resetPasswordFailed": "Failed to reset password",
     "deleteSuccess": "Charity deleted successfully",
     "deleteFailed": "Failed to delete charity",
@@ -1201,7 +1204,15 @@
     "addProvider": "Add Provider",
     "attachments": "Attachments",
     "familyInfo": "Family Information",
-    "searchPlaceholder": "Search by family code, address, or parent name...",
+    "searchBy": "Search By",
+    "searchByFather": "Father Name",
+    "searchByMother": "Mother Name",
+    "searchByOrphan": "Orphan Name",
+    "searchByProvider": "Provider Name",
+    "searchByNationalId": "National ID",
+    "searchByOrphanCode": "Orphan Code",
+    "searchByPhone": "Phone",
+    "searchValuePlaceholder": "Enter search value...",
     "noFamiliesFound": "No families found",
     "refugeeTitle": "Refugee Families",
     "refugeeSubtitle": "Manage the refugee family register",
@@ -1775,6 +1786,11 @@
     "managePermissions": "Manage Permissions",
     "viewActivity": "View Activity",
     "resetPassword": "Reset Password",
+    "confirmResetPassword": "Are you sure you want to reset the password for user \"{{name}}\"? A new password will be generated and shown to you so you can hand it to them.",
+    "newPassword": "New Password",
+    "resetPasswordFailed": "Failed to reset password",
+    "credentialsMessage": "Please store these credentials securely. They will not be shown again.",
+    "credentialsWarning": "Please share these credentials with the user through a secure channel.",
     "activate": "Activate",
     "deactivate": "Deactivate",
     "activityLog": "Activity Log",
@@ -1979,6 +1995,30 @@
     "editOutgoingCategory": "Edit Category",
     "outgoingCategoryDetails": "Category Details",
     "noOutgoingCategoriesFound": "No categories found",
+    "countries": {
+      "title": "Countries"
+    },
+    "regions": {
+      "title": "Regions"
+    },
+    "centers": {
+      "title": "Centers"
+    },
+    "departments": {
+      "title": "Departments"
+    },
+    "missionTypes": {
+      "title": "Mission Types"
+    },
+    "projectTypes": {
+      "title": "Project Types"
+    },
+    "banks": {
+      "title": "Banks"
+    },
+    "ngoTypes": {
+      "title": "NGO Types"
+    },
     "officeProjectTypes": {
       "title": "Office Development Project Types"
     },

@@ -40,7 +40,12 @@
           <i class="fe fe-edit-2 mr-2"></i>{{ charity.isUpdateEnabled ? ('charities.disableUpdateRights' | translate) : ('charities.enableUpdateRights' | translate) }}
         </a>
         <div class="dropdown-divider"></div>
-        <a class="dropdown-item" href="#" (click)="resetPassword()">
+        <a
+          class="dropdown-item"
+          href="#"
+          [class.disabled]="!charity.userId"
+          [title]="!charity.userId ? ('charities.noUserAccountShort' | translate) : null"
+          (click)="resetPassword()">
           <i class="fe fe-refresh-cw mr-2"></i>{{ 'charities.resetPassword' | translate }}
         </a>
       </div>
@@ -493,7 +498,11 @@
           </div>
         </div>
         <div class="card-footer" *ngIf="canEdit">
-          <button class="btn btn-sm btn-outline-primary" (click)="resetPassword()">
+          <button
+            class="btn btn-sm btn-outline-primary"
+            [disabled]="!charity.userId"
+            [title]="!charity.userId ? ('charities.noUserAccountShort' | translate) : null"
+            (click)="resetPassword()">
             <i class="fe fe-refresh-cw mr-1"></i>{{ 'charities.resetPassword' | translate }}
           </button>
         </div>

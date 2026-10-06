@@ -307,24 +307,47 @@ export class UserListComponent implements OnInit, OnDestroy {
    * Reset user password
    * UC-1.5: Reset User Password
    */
+  /**
+   * UC-1.5 — resets the user's password to a new server-generated value.
+   *
+   * Same one-time-value handling as the charity register (UC-3.5): the generated password comes
+   * back exactly once and is unrecoverable afterwards, so it is shown in a modal the operator has
+   * to acknowledge — a toast would disappear before it could be written down or handed over.
+   */
   resetPassword(user: User): void {
-    // TODO: Implement confirmation dialog
-    const confirmed = true; // Placeholder
-
-    if (confirmed) {
-      this.userManagementService.resetPassword(user.id).subscribe({
-        next: (response: any) => {
-          this.notification.success('Password reset successfully');
-          if (response.newPassword) {
-            console.log('New password:', response.newPassword);
+    this.translate
+      .get('userManagement.confirmResetPassword', { name: user.fullName || user.email })
+      .subscribe((message: string) => {
+        this.notification.confirm(message).then((confirmed: boolean) => {
+          if (!confirmed) {
+            return;
           }
-        },
-        error: (error) => {
-          console.error('Error resetting password:', error);
-          this.notification.error('Failed to reset password');
-        }
+
+          this.userManagementService.resetPassword(user.id).subscribe({
+            next: (result) => {
+              this.notification.showGeneratedPassword({
+                title: this.translate.instant('userManagement.passwordReset'),
+                loginLabel: this.translate.instant('userManagement.email'),
+                // UserName is the e-mail in this system; the row's value is the login being reset.
+                login: user.email,
+                passwordLabel: this.translate.instant('userManagement.newPassword'),
+                password: result.newPassword,
+                copyLabel: this.translate.instant('common.copy'),
+                copiedLabel: this.translate.instant('common.copied'),
+                closeLabel: this.translate.instant('common.close'),
+                note: `${this.translate.instant('userManagement.credentialsMessage')} ${this.translate.instant(
+                  'userManagement.credentialsWarning'
+                )}`
+              });
+            },
+            error: (error) => {
+              console.error('Error resetting password:', error);
+              const failed = this.translate.instant('userManagement.resetPasswordFailed');
+              this.notification.error(error?.message ? `${failed}: ${error.message}` : failed);
+            }
+          });
+        });
       });
-    }
   }
 
   /**

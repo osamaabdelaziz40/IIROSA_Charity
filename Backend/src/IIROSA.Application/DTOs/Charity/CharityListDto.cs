@@ -13,6 +13,12 @@ public class CharityListDto
     public string Phone { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Back-reference to the charity's login account. Null when the charity has no login yet —
+    /// the list uses it to disable actions that need an account (password reset, UC-3.5).
+    /// </summary>
+    public string? UserId { get; set; }
+
     // Status
     public bool IsActive { get; set; }
     public string StatusText => IsLocked ? "Locked" : (IsActive ? "Active" : "Inactive");

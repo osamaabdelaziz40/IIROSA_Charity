@@ -184,10 +184,19 @@ export interface CharityAuditLog {
   ipAddress?: string;
 }
 
-export interface PasswordResetDto {
-  charityId: string;
-  newPassword?: string;
-  sendEmail: boolean;
+/**
+ * Result of POST /api/Charities/{id}/reset-password (UC-3.5).
+ *
+ * The new password is generated and applied server-side and travels back exactly once. It cannot be
+ * read again afterwards, so the screen that receives this response has to show it to the operator
+ * immediately — which is what the reset popup does.
+ */
+export interface CharityPasswordResetResult {
+  message: string;
+  /** The login the new password belongs to (the charity's linked account user name). */
+  username: string;
+  /** The password the charity's account was actually set to. */
+  newPassword: string;
 }
 
 export interface CharityStatusUpdateDto {
@@ -196,13 +205,6 @@ export interface CharityStatusUpdateDto {
   isLocked?: boolean;
   isAddEnabled?: boolean;
   isUpdateEnabled?: boolean;
-}
-
-export interface CharityCredentialsDto {
-  username: string;
-  password: string;
-  email: string;
-  temporaryPassword: boolean;
 }
 
 /**

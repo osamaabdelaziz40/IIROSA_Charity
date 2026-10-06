@@ -251,10 +251,10 @@ namespace Framework.Identity.Data.Services
         /// <summary>
         /// Reset user password
         /// </summary>
-        public async Task<bool> ResetUserPasswordAsync(Guid id, string? newPassword = null)
+        public async Task<string?> ResetUserPasswordAsync(Guid id, string? newPassword = null)
         {
             var user = await _userManager.FindByIdAsync(id.ToString());
-            if (user == null) return false;
+            if (user == null) return null;
 
             // Generate new password if not provided
             var password = newPassword ?? GenerateRandomPassword();
@@ -262,7 +262,22 @@ namespace Framework.Identity.Data.Services
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             var result = await _userManager.ResetPasswordAsync(user, token, password);
 
-            return result.Succeeded;
+            // The applied password travels back to the caller: it is shown to the operator exactly
+            // once and can never be read again from the Identity store.
+            return result.Succeeded ? password : null;
+        }
+
+        /// <inheritdoc />
+        public async Task<UserDto?> FindByCharityIdAsync(Guid charityId)
+        {
+            // CharityId is the authoritative charity→account link (it feeds the tenancy claim);
+            // prefer an active account when more than one points at the same charity.
+            var user = await _userRepository.TableNoTracking
+                .Where(x => x.CharityId == charityId)
+                .OrderByDescending(x => x.IsActive)
+                .FirstOrDefaultAsync();
+
+            return user == null ? null : user.MapTo<UserDto>();
         }
 
         /// <summary>

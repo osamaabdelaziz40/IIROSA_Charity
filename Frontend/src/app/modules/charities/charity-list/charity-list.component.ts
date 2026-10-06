@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { CharityDto, CharitySearchRequest, CharityStatistics, CharityCountryStatistics } from '../models/charity.model';
+import { CharityDto, CharitySearchRequest, CharityStatistics, CharityCountryStatistics, CharityPasswordResetResult } from '../models/charity.model';
 import { CharityService } from '../services/charity.service';
 import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
 import { CountryDto, RegionDto, CenterDto } from '../../lookup-management/models/lookup.model';
@@ -543,25 +543,55 @@ export class CharityListComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * UC-3.5 — resets the charity's login password.
+   *
+   * The new password comes back from the server exactly once and cannot be read again, so it is
+   * shown in a modal the operator has to acknowledge — a toast would disappear before it could be
+   * written down or handed over.
+   */
   async resetPassword(charity: CharityDto): Promise<void> {
+    // Most charities copied from the legacy register predate account creation and have no login.
+    // There is nothing to reset for them — guide the operator to create the account instead.
+    if (!charity.userId) {
+      this.notification.warning(this.getTranslation('charities.noUserAccount'));
+      return;
+    }
+
     const confirmed = await this.notification.confirm(
-      this.getTranslation('charities.confirmResetPassword')
+      this.getTranslation('charities.confirmResetPassword', { name: charity.name })
     );
 
-    if (confirmed) {
-      this.charityService.resetPassword({
-        charityId: charity.id,
-        sendEmail: true
-      }).subscribe({
-        next: () => {
-          this.notification.success(this.getTranslation('charities.resetPasswordSuccess'));
-        },
-        error: (error: any) => {
-          console.error('Error resetting password:', error);
-          this.notification.error(this.getTranslation('charities.resetPasswordFailed'));
-        }
-      });
+    if (!confirmed) {
+      return;
     }
+
+    this.charityService.resetPassword(charity.id).subscribe({
+      next: (result: CharityPasswordResetResult) => {
+        this.notification.showGeneratedPassword({
+          title: this.getTranslation('charities.resetPasswordSuccess'),
+          loginLabel: this.getTranslation('charities.username'),
+          // The server reports the login it actually reset; the row's e-mail is only a fallback for
+          // an account whose user name was never set.
+          login: result.username || charity.email,
+          passwordLabel: this.getTranslation('charities.newPassword'),
+          password: result.newPassword,
+          copyLabel: this.getTranslation('common.copy'),
+          copiedLabel: this.getTranslation('common.copied'),
+          closeLabel: this.getTranslation('common.close'),
+          note: `${this.getTranslation('charities.credentialsMessage')} ${this.getTranslation(
+            'charities.credentialsWarning'
+          )}`
+        });
+      },
+      error: (error: any) => {
+        console.error('Error resetting password:', error);
+        const failed = this.getTranslation('charities.resetPasswordFailed');
+        // A reset fails for a reason the operator has to act on — no linked account, a locked
+        // account — so the server's message travels with the translated prefix.
+        this.notification.error(error?.message ? `${failed}: ${error.message}` : failed);
+      }
+    });
   }
 
   async deleteCharity(charity: CharityDto): Promise<void> {

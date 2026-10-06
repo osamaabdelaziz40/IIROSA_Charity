@@ -433,14 +433,22 @@ public class CharitiesController : ControllerBase
     /// </summary>
     [HttpPost("{id}/reset-password")]
     [Authorize(Roles = "SuperAdmin,Admin")]
-    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CharityPasswordResetResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<string>> ResetPassword(Guid id)
+    public async Task<ActionResult<CharityPasswordResetResultDto>> ResetPassword(Guid id)
     {
         try
         {
-            var newPassword = await _charityService.ResetPasswordAsync(id);
-            return Ok(new { message = "Password reset successfully", newPassword });
+            var result = await _charityService.ResetPasswordAsync(id);
+
+            // The new password travels back once, for the operator to read off the popup and hand to
+            // the charity. There is no second chance to display it.
+            return Ok(new
+            {
+                message = "Password reset successfully",
+                username = result.Username,
+                newPassword = result.NewPassword
+            });
         }
         catch (KeyNotFoundException ex)
         {

@@ -281,6 +281,7 @@
     "usernameEmail": "اسم المستخدم/البريد الإلكتروني",
     "username": "اسم المستخدم",
     "password": "كلمة المرور",
+    "newPassword": "كلمة المرور الجديدة",
     "createUserAccount": "إنشاء حساب مستخدم",
     "accountCreated": "تم إنشاء الحساب بنجاح",
     "credentialsMessage": "يرجى حفظ بيانات الاعتماد هذه بأمان. لن يتم عرضها مرة أخرى.",
@@ -360,7 +361,9 @@
     "confirmDisableAddRights": "هل أنت متأكد من تعطيل حقوق الإضافة لهذه الجمعية؟",
     "confirmEnableUpdateRights": "هل أنت متأكد من تمكين حقوق التعديل لهذه الجمعية؟",
     "confirmDisableUpdateRights": "هل أنت متأكد من تعطيل حقوق التعديل لهذه الجمعية؟",
-    "confirmResetPassword": "هل أنت متأكد من إعادة تعيين كلمة مرور هذه الجمعية؟ سيتم إنشاء كلمة مرور جديدة وإرسالها إلى بريدهم الإلكتروني.",
+    "confirmResetPassword": "هل أنت متأكد من إعادة تعيين كلمة مرور الجمعية «{{name}}»؟ سيتم إنشاء كلمة مرور جديدة وعرضها لك في نافذة لتسليمها إلى الجمعية.",
+    "noUserAccount": "هذه الجمعية لا تملك حساب دخول بعد. أنشئ الحساب أولاً من نموذج تعديل الجمعية (خيار «إنشاء حساب مستخدم») ثم أعد المحاولة.",
+    "noUserAccountShort": "لا يمكن إعادة تعيين كلمة المرور: لا تملك الجمعية حساب دخول",
     "confirmDelete": "هل أنت متأكد من حذف الجمعية \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء.",
     "activateSuccess": "تم تفعيل الجمعية بنجاح",
     "deactivateSuccess": "تم تعطيل الجمعية بنجاح",
@@ -378,7 +381,7 @@
     "updateRightsDisableSuccess": "تم تعطيل حقوق التعديل بنجاح",
     "updateRightsEnableFailed": "فشل تمكين حقوق التعديل",
     "updateRightsDisableFailed": "فشل تعطيل حقوق التعديل",
-    "resetPasswordSuccess": "تم إعادة تعيين كلمة المرور بنجاح. تم إرسال كلمة المرور الجديدة إلى البريد الإلكتروني للجمعية.",
+    "resetPasswordSuccess": "تم إعادة تعيين كلمة المرور بنجاح",
     "resetPasswordFailed": "فشل إعادة تعيين كلمة المرور",
     "deleteSuccess": "تم حذف الجمعية بنجاح",
     "deleteFailed": "فشل حذف الجمعية",
@@ -1214,7 +1217,15 @@
     "addProvider": "إضافة مقدم الدعم",
     "attachments": "المرفقات",
     "familyInfo": "معلومات الأسرة",
-    "searchPlaceholder": "البحث برمز الأسرة أو العنوان أو اسم الوالدين...",
+    "searchBy": "البحث عن طريق",
+    "searchByFather": "إسم الاب",
+    "searchByMother": "إسم الام",
+    "searchByOrphan": "إسم اليتيم",
+    "searchByProvider": "إسم المعيل",
+    "searchByNationalId": "الرقم القومي",
+    "searchByOrphanCode": "كود اليتيم",
+    "searchByPhone": "الهاتف",
+    "searchValuePlaceholder": "أدخل قيمة البحث...",
     "noFamiliesFound": "لم يتم العثور على أسر",
     "refugeeTitle": "الأسر اللاجئة",
     "refugeeSubtitle": "إدارة سجل الأسر اللاجئة",
@@ -1762,6 +1773,11 @@
     "managePermissions": "إدارة الصلاحيات",
     "viewActivity": "عرض النشاط",
     "resetPassword": "إعادة تعيين كلمة المرور",
+    "confirmResetPassword": "هل أنت متأكد من إعادة تعيين كلمة مرور المستخدم «{{name}}»؟ سيتم إنشاء كلمة مرور جديدة وعرضها لك في نافذة لتسليمها إليه.",
+    "newPassword": "كلمة المرور الجديدة",
+    "resetPasswordFailed": "فشل إعادة تعيين كلمة المرور",
+    "credentialsMessage": "يرجى حفظ بيانات الاعتماد هذه بأمان. لن يتم عرضها مرة أخرى.",
+    "credentialsWarning": "يرجى مشاركة بيانات الاعتماد هذه مع المستخدم عبر قناة آمنة.",
     "activate": "تفعيل",
     "deactivate": "تعطيل",
     "activityLog": "سجل النشاط",
@@ -1978,6 +1994,30 @@
     "editOutgoingCategory": "تعديل التصنيف",
     "outgoingCategoryDetails": "تفاصيل التصنيف",
     "noOutgoingCategoriesFound": "لا توجد تصنيفات",
+    "countries": {
+      "title": "البلدان"
+    },
+    "regions": {
+      "title": "المناطق"
+    },
+    "centers": {
+      "title": "المراكز"
+    },
+    "departments": {
+      "title": "الأقسام"
+    },
+    "missionTypes": {
+      "title": "أنواع المهام"
+    },
+    "projectTypes": {
+      "title": "أنواع المشاريع"
+    },
+    "banks": {
+      "title": "البنوك"
+    },
+    "ngoTypes": {
+      "title": "أنواع الجمعيات"
+    },
     "officeProjectTypes": {
       "title": "أنواع مشاريع تطوير المكاتب"
     },

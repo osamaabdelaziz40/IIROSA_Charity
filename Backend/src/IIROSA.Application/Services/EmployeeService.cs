@@ -579,9 +579,9 @@ public class EmployeeService : IEmployeeService
             }
 
             var password = newPassword ?? GenerateDefaultPassword();
-            var success = await _userAppService.ResetUserPasswordAsync(employee.FK_UserId.Value, password);
+            var appliedPassword = await _userAppService.ResetUserPasswordAsync(employee.FK_UserId.Value, password);
 
-            if (!success)
+            if (appliedPassword == null)
             {
                 throw new InvalidOperationException("Failed to reset user password");
             }

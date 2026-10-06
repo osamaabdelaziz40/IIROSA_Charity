@@ -431,6 +431,80 @@ body.dark {
   }
 }
 
+/* ---------------------------------------------------------------------------
+   One-time password popup (UC-3.5 charity password reset).
+   SweetAlert2 injects its markup outside the component tree, so these classes
+   have to live in the global stylesheet. The popup itself is Swal's light
+   surface, so the colours below are chosen to read on white rather than on the
+   application's dark theme.
+   --------------------------------------------------------------------------- */
+.swal-password {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: start;
+}
+
+.swal-password-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0.75rem;
+  background: #f4f6f9;
+  border: 1px solid #e3e7ee;
+  border-radius: 0.375rem;
+}
+
+.swal-password-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6c7293;
+}
+
+.swal-password-value {
+  font-size: 0.95rem;
+  color: #1c1e21;
+  word-break: break-all;
+}
+
+.swal-password-code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #1c1e21;
+}
+
+.swal-password-copy {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.83rem;
+  font-weight: 500;
+  color: #fff;
+  background-color: var(--primary);
+  border: 0;
+  border-radius: 0.375rem;
+  cursor: pointer;
+
+  &:hover {
+    filter: brightness(0.94);
+  }
+
+  &.is-copied {
+    background-color: var(--success);
+  }
+}
+
+.swal-password-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #6c7293;
+}
+
 /* RTL Support for custom controls */
 [dir="rtl"] {
   .custom-control {

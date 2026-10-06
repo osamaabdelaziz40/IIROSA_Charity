@@ -5,6 +5,13 @@ import { User, CreateUserRequest, UpdateUserRequest, UserListResponse, UserSearc
 import { Role, CreateRoleRequest, UpdateRoleRequest } from '../../../core/models/role.model';
 import { ApiResponse, PagedResponse } from '../../../core/models/common.model';
 
+/** Response of POST /api/usermanagement/{id}/reset-password (UC-1.5). */
+export interface UserPasswordResetResult {
+  message: string;
+  /** The generated password the account was set to — shown once, never retrievable again. */
+  newPassword: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -42,8 +49,15 @@ export class UserManagementService {
     return this.api.patch(`${this.endpoint}/${id}/activate`, {});
   }
 
-  resetPassword(id: string, newPassword?: string): Observable<ApiResponse<string>> {
-    return this.api.post(`${this.endpoint}/${id}/reset-password`, { newPassword });
+  /**
+   * UC-1.5 — resets the user's password to a server-generated value.
+   *
+   * The response carries the password the account was actually set to; it is the only place the
+   * value ever appears, so the caller has to display it to the operator straight away
+   * (see `NotificationService.showGeneratedPassword`).
+   */
+  resetPassword(id: string): Observable<UserPasswordResetResult> {
+    return this.api.post(`${this.endpoint}/${id}/reset-password`, {});
   }
 
   exportUsers(search: UserSearchRequest): Observable<Blob> {

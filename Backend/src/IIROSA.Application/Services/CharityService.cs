@@ -30,6 +30,7 @@ public class CharityService : ICharityService
     private readonly IAttachmentHelperService _attachmentHelperService;
     private readonly UserAppService _userAppService;
     private readonly IRoleAppService _roleAppService;
+    private readonly IUserAppServiceExtended _userAppServiceExtended;
     private readonly ICurrentUserService _currentUser;
     private readonly IValidator<CreateCharityDto> _createCharityValidator;
     private readonly IValidator<UpdateCharityDto> _updateCharityValidator;
@@ -43,6 +44,7 @@ public class CharityService : ICharityService
         IAttachmentHelperService attachmentHelperService,
         UserAppService userAppService,
         IRoleAppService roleAppService,
+        IUserAppServiceExtended userAppServiceExtended,
         ICurrentUserService currentUser,
         IValidator<CreateCharityDto> createCharityValidator,
         IValidator<UpdateCharityDto> updateCharityValidator)
@@ -55,6 +57,7 @@ public class CharityService : ICharityService
         _attachmentHelperService = attachmentHelperService;
         _userAppService = userAppService;
         _roleAppService = roleAppService;
+        _userAppServiceExtended = userAppServiceExtended;
         _currentUser = currentUser;
         _createCharityValidator = createCharityValidator;
         _updateCharityValidator = updateCharityValidator;
@@ -108,6 +111,7 @@ public class CharityService : ICharityService
         }
 
         string? createdPassword = null;
+        string? linkedUserId = null;
 
         // Allocated up front because the user account must carry this charity's id as its tenancy
         // claim, and the account is created before the charity row is persisted.
@@ -130,6 +134,10 @@ public class CharityService : ICharityService
             }
 
             createdPassword = dto.Password;
+            // Link from the account that was just created, not from a re-fetch by username — a
+            // lookup miss here would leave the charity permanently unlinked to an account that
+            // exists, which the profile and password-reset flows both depend on.
+            linkedUserId = userDto.Id.ToString();
         }
 
         var charity = new Charity
@@ -165,7 +173,7 @@ public class CharityService : ICharityService
             IconId = iconId,
             ReceivingDonations = dto.ReceivingDonations,
             Notes = dto.Notes,
-            UserId = createdPassword != null ? (await GetUserByUsernameAsync(dto.Username))?.Id.ToString() : null,
+            UserId = linkedUserId,
             IsActive = true,
             IsAddEnabled = true,
             IsUpdateEnabled = true,
@@ -379,7 +387,7 @@ public class CharityService : ICharityService
 
     #region UC-3.5: Change Charity Password
 
-    public async Task<string> ResetPasswordAsync(Guid id)
+    public async Task<CharityPasswordResetResultDto> ResetPasswordAsync(Guid id)
     {
         _logger.LogInformation("Resetting password for charity: {Id}", id);
 
@@ -391,20 +399,56 @@ public class CharityService : ICharityService
 
         if (string.IsNullOrEmpty(charity.UserId))
         {
-            throw new InvalidOperationException($"Charity does not have a linked user account");
+            // The account may exist without the back-reference: ApplicationUser.CharityId is the
+            // authoritative link (it feeds the tenancy claim), while Charity.UserId is a
+            // convenience copy that older rows never got. Heal the copy rather than fail.
+            var linkedUser = await _userAppServiceExtended.FindByCharityIdAsync(id);
+
+            if (linkedUser == null || linkedUser.Id == null)
+            {
+                throw new InvalidOperationException(
+                    "Charity does not have a linked user account. Create one from the charity edit form ('create user account') first.");
+            }
+
+            charity.UserId = linkedUser.Id.Value.ToString();
+            _charityRepository.Update(charity);
+            await _unitOfWork.SaveChangesAsync();
+            _logger.LogInformation("Back-filled missing Charity.UserId from identity link for charity {Id}", id);
+        }
+
+        if (!Guid.TryParse(charity.UserId, out var userId))
+        {
+            throw new InvalidOperationException($"Charity's linked user account id '{charity.UserId}' is not a valid user id");
+        }
+
+        var user = await _userAppService.FindByIdAsync(userId);
+        if (user == null)
+        {
+            throw new InvalidOperationException($"Charity's linked user account '{charity.UserId}' no longer exists");
         }
 
         // Generate new password
         var newPassword = GenerateRandomPassword();
 
-        // TODO: Reset password via user management service
-        // await _userManagementService.ResetPasswordAsync(charity.UserId, newPassword);
+        // The new password has to be applied, not merely returned: the operator is shown this value
+        // as the charity's new password, so a reset that never reaches the Identity store would hand
+        // them a password the account does not accept.
+        var appliedPassword = await _userAppServiceExtended.ResetUserPasswordAsync(userId, newPassword);
+        if (appliedPassword == null)
+        {
+            throw new InvalidOperationException("The charity's password could not be reset. The account may be locked, or the new password may not satisfy the password policy.");
+        }
 
         _logger.LogInformation("Password reset successfully for charity: {Id}", id);
 
-        // TODO: Send email with new password
+        // TODO: Send email with new password — until that exists the password is displayed once on
+        // the operator's screen instead (UC-3.5).
 
-        return newPassword;
+        return new CharityPasswordResetResultDto
+        {
+            Username = user.UserName ?? string.Empty,
+            NewPassword = newPassword
+        };
     }
 
     #endregion
@@ -1016,12 +1060,44 @@ public class CharityService : ICharityService
         return code;
     }
 
+    /// <summary>
+    /// Builds a password that satisfies the Identity policy the account is stored under: at least one
+    /// lower-case letter, one upper-case letter, one digit and one symbol, twelve characters long.
+    ///
+    /// The classes are seeded deliberately instead of being left to chance. A pure random draw from
+    /// the whole alphabet can miss a class, and Identity would then reject a password the operator has
+    /// already been shown as the charity's new one.
+    /// </summary>
     private string GenerateRandomPassword()
     {
-        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+        const string lowercase = "abcdefghijklmnopqrstuvwxyz";
+        const string uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const string digits = "0123456789";
+        const string special = "!@#$%^&*";
+        const string all = lowercase + uppercase + digits + special;
+
         var random = new Random();
-        return new string(Enumerable.Repeat(chars, 12)
-            .Select(s => s[random.Next(s.Length)]).ToArray());
+        var password = new char[12];
+
+        // One character of each required class first, then fill to length from the whole alphabet.
+        password[0] = lowercase[random.Next(lowercase.Length)];
+        password[1] = uppercase[random.Next(uppercase.Length)];
+        password[2] = digits[random.Next(digits.Length)];
+        password[3] = special[random.Next(special.Length)];
+
+        for (var i = 4; i < password.Length; i++)
+        {
+            password[i] = all[random.Next(all.Length)];
+        }
+
+        // Fixed positions would leak the layout of the generated password, so shuffle before use.
+        for (var i = password.Length - 1; i > 0; i--)
+        {
+            var j = random.Next(i + 1);
+            (password[i], password[j]) = (password[j], password[i]);
+        }
+
+        return new string(password);
     }
 
     private bool IsValidIBAN(string iban)
@@ -1107,22 +1183,6 @@ public class CharityService : ICharityService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating user account for charity: {Username}", username);
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Gets a user by username
-    /// </summary>
-    private async Task<UserDto?> GetUserByUsernameAsync(string username)
-    {
-        try
-        {
-            return await _userAppService.FindByUsernameAsync(username);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error finding user by username: {Username}", username);
             return null;
         }
     }

@@ -7,3 +7,8 @@
   min-width: 24px;
   text-align: center;
 }
+
+// Keeps the selector from squeezing the value box out of the shared input-group
+.search-type-select {
+  max-width: 45%;
+}

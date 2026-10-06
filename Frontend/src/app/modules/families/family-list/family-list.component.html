@@ -85,14 +85,19 @@
     <!-- Filters -->
     <form [formGroup]="filterForm">
       <div class="row mb-3">
-        <!-- Search -->
+        <!-- Search — selector + value in one field (legacy WAR.IIROSA family filter) -->
         <div class="col-md-3">
-          <app-input-text
-            [fg]="filterForm"
-            fcn="searchValue"
-            [label]="'common.search'"
-            [placeholder]="'families.searchPlaceholder' | translate">
-          </app-input-text>
+          <label class="form-label">{{ 'families.searchBy' | translate }}</label>
+          <div class="input-group">
+            <select class="form-select search-type-select" formControlName="searchType"
+                    (change)="onSearchTypeChange()">
+              <option *ngFor="let option of searchTypeOptions; trackBy: trackBySearchTypeId"
+                      [value]="option.id">{{ option.name }}</option>
+            </select>
+            <input type="text" class="form-control" formControlName="searchValue"
+                   [placeholder]="'families.searchValuePlaceholder' | translate"
+                   (keyup.enter)="onSearch()">
+          </div>
         </div>
 
         <!-- Provider Type -->

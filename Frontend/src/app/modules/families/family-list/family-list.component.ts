@@ -58,6 +58,7 @@ export class FamilyListComponent implements OnInit, OnDestroy {
   livingConditionOptions: Array<{ id: string; name: string }> = [];
   housingTypeOptions: Array<{ id: string; name: string }> = [];
   statusOptions: Array<{ id: string; name: string }> = [];
+  searchTypeOptions: Array<{ id: string; name: string }> = [];
 
   // Charity transfer (UC-FAM-06 نقل الأسرة لجمعية أخرى) — HQ-only action
   canTransfer = false;
@@ -101,6 +102,8 @@ export class FamilyListComponent implements OnInit, OnDestroy {
   ) {
     this.filterForm = this.fb.group({
       searchValue: [''],
+      // Legacy WAR.IIROSA filter — كود اليتيم is the default selector
+      searchType: ['code'],
       providerType: ['all'],
       livingCondition: ['all'],
       housingType: ['all'],
@@ -168,6 +171,18 @@ export class FamilyListComponent implements OnInit, OnDestroy {
       { id: 'active', name: this.translate.instant('common.active') },
       { id: 'inactive', name: this.translate.instant('common.inactive') }
     ];
+
+    // Typed search selector — the SHARED FamilyFilterDto.SearchType vocabulary handled by
+    // one switch server-side (Father/Mother/Orphan/Provider/NationalId/OrphanCode/Phone).
+    this.searchTypeOptions = [
+      { id: 'father', name: this.translate.instant('families.searchByFather') },
+      { id: 'mother', name: this.translate.instant('families.searchByMother') },
+      { id: 'student', name: this.translate.instant('families.searchByOrphan') },
+      { id: 'provider', name: this.translate.instant('families.searchByProvider') },
+      { id: 'nationalId', name: this.translate.instant('families.searchByNationalId') },
+      { id: 'code', name: this.translate.instant('families.searchByOrphanCode') },
+      { id: 'phone', name: this.translate.instant('families.searchByPhone') }
+    ];
   }
 
   loadFamilies(): void {
@@ -181,6 +196,9 @@ export class FamilyListComponent implements OnInit, OnDestroy {
 
     if (formValues.searchValue && formValues.searchValue.trim()) {
       searchRequest.searchTerm = formValues.searchValue.trim();
+      if (formValues.searchType) {
+        searchRequest.searchType = formValues.searchType;
+      }
     }
     if (formValues.providerType && formValues.providerType !== 'all') {
       searchRequest.providerType = formValues.providerType;
@@ -255,9 +273,15 @@ export class FamilyListComponent implements OnInit, OnDestroy {
     this.onSearch();
   }
 
+  /** A different selector branch is a different query — reload page 1 with the same text */
+  onSearchTypeChange(): void {
+    this.onSearch();
+  }
+
   clearFilters(): void {
     this.filterForm.reset({
       searchValue: '',
+      searchType: 'code',
       providerType: 'all',
       livingCondition: 'all',
       housingType: 'all',
@@ -424,6 +448,10 @@ export class FamilyListComponent implements OnInit, OnDestroy {
     return item.id;
   }
 
+  trackBySearchTypeId(index: number, item: { id: string; name: string }): string {
+    return item.id;
+  }
+
   exportToExcel(): void {
     this.loading = true;
     const formValues = this.filterForm.value;
@@ -435,6 +463,9 @@ export class FamilyListComponent implements OnInit, OnDestroy {
 
     if (formValues.searchValue && formValues.searchValue.trim()) {
       searchRequest.searchTerm = formValues.searchValue.trim();
+      if (formValues.searchType) {
+        searchRequest.searchType = formValues.searchType;
+      }
     }
     if (formValues.providerType && formValues.providerType !== 'all') {
       searchRequest.providerType = formValues.providerType;

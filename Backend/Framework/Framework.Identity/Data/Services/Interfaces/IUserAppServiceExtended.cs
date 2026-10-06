@@ -21,7 +21,20 @@ namespace Framework.Identity.Data.Services.Interfaces
         Task<UserManagementInsertResultDto> CreateUserAsync(CreateUserDto user);
         Task<Guid> UpdateUserDetailAsync(Guid id, UpdateUserDto user);
         Task<bool> SetUserActiveStatusAsync(Guid id, bool isActive);
-        Task<bool> ResetUserPasswordAsync(Guid id, string? newPassword = null);
+
+        /// <summary>
+        /// Resets the user's password and returns the password that was applied — the value the
+        /// caller must display to the operator, since it is generated server-side whenever
+        /// <paramref name="newPassword"/> is null and is unrecoverable afterwards. Returns null
+        /// when the reset failed (unknown user, locked account, password policy violation).
+        /// </summary>
+        Task<string?> ResetUserPasswordAsync(Guid id, string? newPassword = null);
+
+        /// <summary>
+        /// Finds the login account bound to a charity through its CharityId tenancy column.
+        /// Used to heal charities whose Charity.UserId back-reference was never written.
+        /// </summary>
+        Task<UserDto?> FindByCharityIdAsync(Guid charityId);
         Task<bool> AssignUserToRoleAsync(Guid userId, string roleName);
         Task<bool> RemoveUserFromRoleAsync(Guid userId, string roleName);
         Task<List<string>> GetUserRolesAsync(Guid userId);

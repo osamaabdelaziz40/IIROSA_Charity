@@ -98,4 +98,74 @@ export class NotificationService {
     });
     return result.isConfirmed;
   }
+
+  /**
+   * Modal that shows a one-time generated password (and optionally the login it belongs to) with a
+   * copy action.
+   *
+   * Used where the value is not retrievable afterwards — a charity password reset (UC-3.5) is the
+   * current caller — so the operator has to read it off the screen and hand it over now. A toast
+   * would be gone before they could write it down, which is why this is a modal with an explicit
+   * close button.
+   *
+   * Built on SweetAlert2 like every other dialog in the application so RTL, focus handling and
+   * styling stay consistent. The layout classes live in `styles.scss` because Swal renders outside
+   * the component tree and scoped styles would not reach it.
+   */
+  showGeneratedPassword(params: {
+    title: string;
+    loginLabel: string;
+    login?: string;
+    passwordLabel: string;
+    password: string;
+    copyLabel: string;
+    copiedLabel: string;
+    closeLabel: string;
+    note?: string;
+  }): Promise<void> {
+    // The values are server data; escape them rather than trusting them as markup.
+    const escapeHtml = (value: string) =>
+      value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const loginRow = params.login
+      ? `<div class="swal-password-row">
+           <span class="swal-password-label">${escapeHtml(params.loginLabel)}</span>
+           <span class="swal-password-value" dir="ltr">${escapeHtml(params.login)}</span>
+         </div>`
+      : '';
+
+    return Swal.fire({
+      icon: 'success',
+      title: params.title,
+      html: `
+        <div class="swal-password" dir="${this.languageService.isRTL() ? 'rtl' : 'ltr'}">
+          ${loginRow}
+          <div class="swal-password-row">
+            <span class="swal-password-label">${escapeHtml(params.passwordLabel)}</span>
+            <code class="swal-password-value swal-password-code" dir="ltr">${escapeHtml(params.password)}</code>
+          </div>
+          <button type="button" class="swal-password-copy" id="swal-password-copy">
+            <i class="fe fe-copy" aria-hidden="true"></i>
+            <span>${escapeHtml(params.copyLabel)}</span>
+          </button>
+          ${params.note ? `<p class="swal-password-note">${escapeHtml(params.note)}</p>` : ''}
+        </div>`,
+      confirmButtonText: params.closeLabel,
+      didOpen: () => {
+        const copyButton = document.getElementById('swal-password-copy');
+        copyButton?.addEventListener('click', () => {
+          // The value stays on screen whether or not the clipboard API is available, so a failure is
+          // silent rather than an error the operator can do nothing about.
+          navigator.clipboard?.writeText(params.password).then(
+            () => {
+              copyButton.classList.add('is-copied');
+              copyButton.innerHTML =
+                `<i class="fe fe-check" aria-hidden="true"></i><span>${escapeHtml(params.copiedLabel)}</span>`;
+            },
+            () => undefined
+          );
+        });
+      }
+    }).then(() => undefined);
+  }
 }

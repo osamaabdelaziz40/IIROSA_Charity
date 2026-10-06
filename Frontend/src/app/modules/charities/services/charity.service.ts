@@ -10,9 +10,8 @@ import {
   CharitySearchRequest,
   CharityPagedResult,
   CharityAuditLog,
-  PasswordResetDto,
+  CharityPasswordResetResult,
   CharityStatusUpdateDto,
-  CharityCredentialsDto,
   CharityNameAvailability,
   AttachmentDto,
   CharityStatistics
@@ -259,10 +258,19 @@ export class CharityService {
 
   // ==================== PASSWORD MANAGEMENT ====================
 
-  resetPassword(passwordReset: PasswordResetDto): Observable<CharityCredentialsDto> {
-    return this.http.post<CharityCredentialsDto>(`${this.apiUrl}/${passwordReset.charityId}/reset-password`, passwordReset, {
-      headers: this.getHeaders()
-    }).pipe(
+  /**
+   * UC-3.5 — resets the charity's login to a new server-generated password.
+   *
+   * The response carries the password the account was actually set to. That response is the only
+   * place the value ever appears, so the caller has to display it to the operator straight away
+   * (see `NotificationService.showGeneratedPassword`).
+   */
+  resetPassword(charityId: string): Observable<CharityPasswordResetResult> {
+    return this.http.post<CharityPasswordResetResult>(
+      `${this.apiUrl}/${charityId}/reset-password`,
+      null,
+      { headers: this.getHeaders() }
+    ).pipe(
       catchError(this.handleError)
     );
   }

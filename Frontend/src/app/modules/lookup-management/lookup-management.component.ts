@@ -90,6 +90,37 @@ export class LookupManagementComponent implements OnInit {
     return icons[tableName] || 'fe fe-list';
   }
 
+  /**
+   * Localized card title per lookup table, keyed by the API's `tableName`.
+   *
+   * The summary endpoint returns a single `tableDisplayName` that concatenates both
+   * languages ("{Arabic} - {English}"), which renders mixed-language titles. The grid
+   * therefore resolves a language-specific i18n key instead and only falls back to the
+   * API value for tables it does not know about yet.
+   */
+  private readonly tableTitleKeys: { [tableName: string]: string } = {
+    'Countries': 'lookupManagement.countries.title',
+    'Regions': 'lookupManagement.regions.title',
+    'Centers': 'lookupManagement.centers.title',
+    'Departments': 'lookupManagement.departments.title',
+    'MissionTypes': 'lookupManagement.missionTypes.title',
+    'ProjectTypes': 'lookupManagement.projectTypes.title',
+    'Banks': 'lookupManagement.banks.title',
+    'NGOTypes': 'lookupManagement.ngoTypes.title',
+    'OfficeProjectTypes': 'lookupManagement.officeProjectTypes.title',
+    'HousingBuildings': 'lookupManagement.housingBuildings.title',
+    'HousingFlats': 'lookupManagement.housingFlats.title',
+    'OutgoingCategories': 'lookupManagement.outgoingCategories.title',
+    'HouseOwnerships': 'lookupManagement.houseOwnerships.title',
+    'IncomeTypes': 'lookupManagement.incomeTypes.title',
+    'FamilyProjectStatuses': 'lookupManagement.familyProjectStatuses.title'
+  };
+
+  /** i18n key for a card title — the raw API display name for unmapped tables. */
+  getTableTitle(table: LookupTableSummaryDto): string {
+    return this.tableTitleKeys[table.tableName] ?? table.tableDisplayName;
+  }
+
   /** Rotating accent colors for the icon circles, mirroring the contacts-grid avatars */
   getIconColorClass(index: number): string {
     const colors = ['bg-primary', 'bg-success', 'bg-info', 'bg-warning', 'bg-danger'];

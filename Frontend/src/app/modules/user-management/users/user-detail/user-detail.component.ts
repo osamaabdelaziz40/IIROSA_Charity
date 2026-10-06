@@ -8,7 +8,7 @@ import { Role } from '../../../../core/models/role.model';
 import { Observable } from 'rxjs';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { LoadingComponent } from '../../../../shared/components/loading/loading.component';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AppDatePipe } from '../../../../shared/pipes/date.pipe';
 import { SharedPipesModule } from '../../../../shared/pipes/shared-pipes.module';
 import { BreadcrumbComponent, BreadcrumbItem } from '../../../../shared/components';
@@ -63,7 +63,8 @@ export class UserDetailComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private userManagementService: UserManagementService,
-    private notification: NotificationService
+    private notification: NotificationService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit() {
@@ -144,17 +145,43 @@ export class UserDetailComponent implements OnInit {
     }
   }
 
-  resetPassword() {
-    if (confirm('Are you sure you want to reset this user\'s password?')) {
-      this.userManagementService.resetPassword(this.userId!, 'P@ssw0rd@2022').subscribe({
-        next: (response: any) => {
-          this.notification.success(`Password reset successfully. New password sent to user email.`);
-        },
-        error: () => {
-          this.notification.error('Failed to reset password');
-        }
-      });
-    }
+  /**
+   * UC-1.5 — resets to a server-generated password shown once in a modal, mirroring the users
+   * grid. (The previous version set a hard-coded password and claimed it had been e-mailed —
+   * no mailer exists, and a fixed password handed nothing to the operator.)
+   */
+  async resetPassword() {
+    if (!this.user) return;
+
+    const confirmed = await this.notification.confirm(
+      this.translate.instant('userManagement.confirmResetPassword', {
+        name: this.user.fullName || this.user.email
+      })
+    );
+    if (!confirmed) return;
+
+    this.userManagementService.resetPassword(this.userId!).subscribe({
+      next: (result) => {
+        this.notification.showGeneratedPassword({
+          title: this.translate.instant('userManagement.passwordReset'),
+          loginLabel: this.translate.instant('userManagement.email'),
+          login: this.user?.email,
+          passwordLabel: this.translate.instant('userManagement.newPassword'),
+          password: result.newPassword,
+          copyLabel: this.translate.instant('common.copy'),
+          copiedLabel: this.translate.instant('common.copied'),
+          closeLabel: this.translate.instant('common.close'),
+          note: `${this.translate.instant('userManagement.credentialsMessage')} ${this.translate.instant(
+            'userManagement.credentialsWarning'
+          )}`
+        });
+      },
+      error: (error) => {
+        console.error('Error resetting password:', error);
+        const failed = this.translate.instant('userManagement.resetPasswordFailed');
+        this.notification.error(error?.message ? `${failed}: ${error.message}` : failed);
+      }
+    });
   }
 
   viewActivity() {

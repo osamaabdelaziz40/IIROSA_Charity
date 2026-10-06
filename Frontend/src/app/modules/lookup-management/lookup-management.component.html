@@ -31,7 +31,7 @@
                   <i class="{{ getTableIcon(table.tableName) }} fe-24 align-self-center"></i>
                 </div>
                 <div class="card-text my-2">
-                  <strong class="card-title my-0 d-block">{{ table.tableDisplayName }}</strong>
+                  <strong class="card-title my-0 d-block">{{ getTableTitle(table) | translate }}</strong>
                   <p class="small text-muted mb-0">{{ 'lookupManagement.totalItems' | translate }}: {{ table.itemCount }}</p>
                   <p class="small mb-0" *ngIf="table.lastModified">
                     <span class="badge badge-light text-muted">{{ table.lastModified | date:'mediumDate' }}</span>

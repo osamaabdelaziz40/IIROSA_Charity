@@ -22,7 +22,7 @@ public interface ICharityService
     Task DeactivateCharityAsync(Guid id);
 
     // UC-3.5: Change Charity Password
-    Task<string> ResetPasswordAsync(Guid id);
+    Task<CharityPasswordResetResultDto> ResetPasswordAsync(Guid id);
 
     // UC-3.6: Enable/Disable Add Rights
     Task SetAddRightsAsync(Guid id, bool isEnabled);

@@ -194,7 +194,12 @@
                     {{ charity.isUpdateEnabled ? ('charities.disableUpdateRights' | translate) : ('charities.enableUpdateRights' | translate) }}
                   </button>
                   <div class="dropdown-divider"></div>
-                  <button type="button" class="dropdown-item" (click)="resetPassword(charity)">
+                  <button
+                    type="button"
+                    class="dropdown-item"
+                    [class.disabled]="!charity.userId"
+                    [title]="!charity.userId ? ('charities.noUserAccountShort' | translate) : null"
+                    (click)="resetPassword(charity)">
                     <i class="fe fe-refresh-cw mr-2" aria-hidden="true"></i>
                     {{ 'charities.resetPassword' | translate }}
                   </button>
