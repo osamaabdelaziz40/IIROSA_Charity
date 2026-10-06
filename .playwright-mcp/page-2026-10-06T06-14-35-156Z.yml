@@ -1,0 +1,390 @@
+- generic [ref=e5]:
+  - navigation [ref=e6]:
+    - button "" [ref=e413] [cursor=pointer]
+    - generic [ref=e9]:
+      - combobox [aria-hidden] [ref=e10]
+      - combobox [ref=e13] [cursor=pointer]:
+        - textbox "All Charities" [ref=e14]:
+          - generic "Remove all items" [ref=e15]: ×
+    - list [ref=e16]:
+      - listitem [ref=e17]:
+        - link "English " [ref=e414] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e415]: 
+          - text: English 
+      - listitem [ref=e19]:
+        - link "Theme" [ref=e20] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e416]: 
+          - text: 
+        - text:   
+      - listitem [ref=e21]:
+        - link "" [ref=e417] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=e24]:
+        - button [ref=e25] [cursor=pointer]:
+          - generic [ref=e26]:
+            - text: Welcome System Admin
+            - img "..." [ref=e27]
+          - text: 
+  - complementary [ref=e28]:
+    - generic [ref=e423]:
+      - text: 
+      - navigation [ref=e29]:
+        - link [ref=e31] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=e32]
+        - paragraph [ref=e33]: Website Elements
+        - list [ref=e34]:
+          - listitem [ref=e35]:
+            - link " Home Page (current) " [ref=e424] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=e425]: 
+              - generic [ref=e37]: Home Page
+              - generic [ref=e38]: (current)
+              - text: 
+            - list [ref=e39]:
+              - listitem [ref=e40]:
+                - link "Home" [ref=e41] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=e42]:
+            - link " Settings " [ref=e426] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=e427]: 
+              - generic [ref=e44]: Settings
+              - text: 
+          - listitem [ref=e45]:
+            - link " Technical Support " [ref=e428] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=e429]: 
+              - generic [ref=e47]: Technical Support
+              - text: 
+          - listitem [ref=e48]:
+            - link " Notifications " [ref=e430] [cursor=pointer]:
+              - /url: "#notifications"
+              - generic [ref=e431]: 
+              - generic [ref=e50]: Notifications
+              - text: 
+          - listitem [ref=e51]:
+            - link " Missions " [ref=e432] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=e433]: 
+              - generic [ref=e53]: Missions
+              - text: 
+          - listitem [ref=e54]:
+            - link " Orphan Payments " [ref=e434] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=e435]: 
+              - generic [ref=e56]: Orphan Payments
+              - text: 
+          - listitem [ref=e57]:
+            - link " Office Projects " [ref=e436] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=e437]: 
+              - generic [ref=e59]: Office Projects
+              - text: 
+          - listitem [ref=e60]:
+            - link " Housing Projects " [ref=e438] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=e439]: 
+              - generic [ref=e62]: Housing Projects
+              - text: 
+          - listitem [ref=e63]:
+            - link " Seasonal Aid " [ref=e440] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=e441]: 
+              - generic [ref=e65]: Seasonal Aid
+              - text: 
+          - listitem [ref=e66]:
+            - link " Incoming & Outgoing " [ref=e442] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=e443]: 
+              - generic [ref=e68]: Incoming & Outgoing
+              - text: 
+          - listitem [ref=e69]:
+            - link " Families " [ref=e444] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=e445]: 
+              - generic [ref=e71]: Families
+              - text: 
+          - listitem [ref=e72]:
+            - link " Reports " [ref=e446] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=e447]: 
+              - generic [ref=e74]: Reports
+              - text: 
+          - listitem [ref=e75]:
+            - link " General Cheques " [ref=e448] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=e449]: 
+              - generic [ref=e77]: General Cheques
+              - text: 
+          - listitem [ref=e78]:
+            - link " Periodic Orphan Reports " [ref=e450] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=e451]: 
+              - generic [ref=e80]: Periodic Orphan Reports
+              - text: 
+          - listitem [ref=e81]:
+            - link " Financial Transfers " [ref=e452] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=e453]: 
+              - generic [ref=e83]: Financial Transfers
+              - text: 
+  - main [ref=e84]:
+    - generic [ref=e490]:
+      - generic [ref=e493]:
+        - heading "Dashboard" [level=3] [ref=e494]
+        - navigation "breadcrumb" [ref=e496]:
+          - list [ref=e497]:
+            - listitem [ref=e498]:
+              - link "Home" [ref=e499] [cursor=pointer]:
+                - /url: "#/dashboard"
+      - generic [ref=e500]:
+        - generic [ref=e504]:
+          - generic [ref=e505]:
+            - heading "Total Charities" [level=6] [ref=e506]
+            - text: "152"
+          - generic [ref=e507]: 
+        - generic [ref=e512]:
+          - generic [ref=e513]:
+            - heading "Total Orphans" [level=6] [ref=e514]
+            - text: "2840"
+          - generic [ref=e515]: 
+        - generic [ref=e520]:
+          - generic [ref=e521]:
+            - heading "Total Families" [level=6] [ref=e522]
+            - text: "485"
+          - generic [ref=e523]: 
+        - generic [ref=e528]:
+          - generic [ref=e529]:
+            - heading "Active Missions" [level=6] [ref=e530]
+            - text: "24"
+          - generic [ref=e531]: 
+      - generic [ref=e533]:
+        - generic [ref=e535]:
+          - strong [ref=e537]: Monthly Statistics
+          - generic [ref=e541]:
+            - img [ref=e542]:
+              - generic [ref=e545]:
+                - generic "80" [ref=e546]
+                - generic "60" [ref=e547]
+                - generic "40" [ref=e548]
+                - generic "20" [ref=e549]
+                - generic "0" [ref=e550]
+              - generic [ref=e551]:
+                - generic [ref=e555]:
+                  - generic:
+                    - generic: "32"
+                    - generic: "66"
+                    - generic: "44"
+                    - generic: "55"
+                    - generic: "41"
+                    - generic: "24"
+                    - generic: "67"
+                    - generic: "22"
+                    - generic: "43"
+                    - generic: "32"
+                    - generic: "66"
+                    - generic: "44"
+                  - generic:
+                    - generic: "7"
+                    - generic: "30"
+                    - generic: "13"
+                    - generic: "23"
+                    - generic: "20"
+                    - generic: "12"
+                    - generic: "8"
+                    - generic: "13"
+                    - generic: "27"
+                    - generic: "7"
+                    - generic: "30"
+                    - generic: "13"
+                - generic [ref=e563]:
+                  - generic "Jan" [ref=e564]
+                  - generic "Feb" [ref=e565]
+                  - generic "Mar" [ref=e566]
+                  - generic "Apr" [ref=e567]
+                  - generic "May" [ref=e568]
+                  - generic "Jun" [ref=e569]
+                  - generic "Jul" [ref=e570]
+                  - generic "Aug" [ref=e571]
+                  - generic "Sep" [ref=e572]
+                  - generic "Oct" [ref=e573]
+                  - generic "Nov" [ref=e574]
+                  - generic "Dec" [ref=e575]
+            - generic [ref=e576]:
+              - generic [ref=e577] [cursor=pointer]: Charities
+              - generic [ref=e580] [cursor=pointer]: Orphans
+            - generic: ● ●
+        - generic [ref=e584]:
+          - strong [ref=e586]: Financial Overview
+          - generic [ref=e590]:
+            - img [ref=e591]:
+              - generic [ref=e594]:
+                - generic "120" [ref=e595]
+                - generic "100" [ref=e596]
+                - generic "80" [ref=e597]
+                - generic "60" [ref=e598]
+                - generic "40" [ref=e599]
+                - generic "20" [ref=e600]
+                - generic "0" [ref=e601]
+              - generic [ref=e610]:
+                - generic "Jan" [ref=e611]
+                - generic "Feb" [ref=e612]
+                - generic "Mar" [ref=e613]
+                - generic "Apr" [ref=e614]
+                - generic "May" [ref=e615]
+                - generic "Jun" [ref=e616]
+                - generic "Jul" [ref=e617]
+                - generic "Aug" [ref=e618]
+                - generic "Sep" [ref=e619]
+                - generic "Oct" [ref=e620]
+                - generic "Nov" [ref=e621]
+                - generic "Dec" [ref=e622]
+            - generic [ref=e623]:
+              - generic [ref=e624] [cursor=pointer]: Donations
+              - generic [ref=e627] [cursor=pointer]: Expenses
+            - generic: ● ●
+      - generic [ref=e630]:
+        - generic [ref=e632]:
+          - strong [ref=e634]: Family Growth
+          - generic [ref=e638]:
+            - img [ref=e639]:
+              - generic [ref=e642]:
+                - generic "200" [ref=e643]
+                - generic "150" [ref=e644]
+                - generic "100" [ref=e645]
+                - generic "50" [ref=e646]
+                - generic "0" [ref=e647]
+              - generic [ref=e648]:
+                - generic [ref=e652]:
+                  - generic:
+                    - generic:
+                      - generic: "11"
+                      - generic: "45"
+                    - generic: "20"
+                    - generic: "32"
+                    - generic: "34"
+                    - generic: "52"
+                    - generic: "41"
+                    - generic: "11"
+                    - generic: "32"
+                    - generic: "45"
+                    - generic: "11"
+                    - generic: "75"
+                  - generic:
+                    - generic:
+                      - generic: "31"
+                      - generic: "28"
+                    - generic: "30"
+                    - generic: "51"
+                    - generic: "42"
+                    - generic: "109"
+                    - generic: "100"
+                    - generic: "31"
+                    - generic: "40"
+                    - generic: "28"
+                    - generic: "31"
+                    - generic: "58"
+                - generic [ref=e656]:
+                  - generic "Jan" [ref=e657]
+                  - generic "Feb" [ref=e658]
+                  - generic "Mar" [ref=e659]
+                  - generic "Apr" [ref=e660]
+                  - generic "May" [ref=e661]
+                  - generic "Jun" [ref=e662]
+                  - generic "Jul" [ref=e663]
+                  - generic "Aug" [ref=e664]
+                  - generic "Sep" [ref=e665]
+                  - generic "Oct" [ref=e666]
+                  - generic "Nov" [ref=e667]
+                  - generic "Dec" [ref=e668]
+            - generic [ref=e669]:
+              - generic [ref=e670] [cursor=pointer]: Active Families
+              - generic [ref=e673] [cursor=pointer]: New Families
+            - generic: ● ●
+        - generic [ref=e677]:
+          - strong [ref=e679]: Budget Allocation
+          - generic [ref=e683]:
+            - img [ref=e684]:
+              - generic [ref=e690]:
+                - generic: 27.5%
+                - generic: 34.4%
+                - generic: 12.5%
+                - generic: 25.6%
+            - generic [ref=e693]:
+              - generic [ref=e694] [cursor=pointer]: Education
+              - generic [ref=e697] [cursor=pointer]: Healthcare
+              - generic [ref=e700] [cursor=pointer]: Housing
+              - generic [ref=e703] [cursor=pointer]: Food
+            - generic: ● ● ● ●
+        - generic [ref=e707]:
+          - strong [ref=e709]: Performance
+          - generic [ref=e713]:
+            - img [ref=e714]:
+              - generic [ref=e718]:
+                - generic [ref=e723]:
+                  - generic [ref=e724]: Q1
+                  - generic [ref=e725]: Q2
+                  - generic [ref=e726]: Q3
+                  - generic [ref=e727]: Q4
+                  - generic [ref=e728]: Q5
+                  - generic [ref=e729]: Q6
+                - generic:
+                  - generic: "100"
+                  - generic: "80"
+                  - generic: "60"
+                  - generic: "40"
+                  - generic: "20"
+                  - generic: "0"
+            - generic [ref=e758]:
+              - generic [ref=e759] [cursor=pointer]: This Year
+              - generic [ref=e762] [cursor=pointer]: Last Year
+            - generic: ● ●
+      - generic [ref=e765]:
+        - generic [ref=e767]:
+          - strong [ref=e769]: Recent Activities
+          - generic [ref=e771]:
+            - generic [ref=e773]:
+              - generic [ref=e774]: success
+              - generic [ref=e776]:
+                - paragraph [ref=e777]: New charity registered
+                - text: 5 minutes ago
+            - generic [ref=e779]:
+              - generic [ref=e780]: info
+              - generic [ref=e782]:
+                - paragraph [ref=e783]: Orphan sponsorship updated
+                - text: 15 minutes ago
+            - generic [ref=e785]:
+              - generic [ref=e786]: primary
+              - generic [ref=e788]:
+                - paragraph [ref=e789]: Housing project completed
+                - text: 1 hour ago
+            - generic [ref=e791]:
+              - generic [ref=e792]: warning
+              - generic [ref=e794]:
+                - paragraph [ref=e795]: Mission report submitted
+                - text: 2 hours ago
+        - generic [ref=e797]:
+          - strong [ref=e799]: Upcoming Events
+          - generic [ref=e801]:
+            - generic [ref=e803]:
+              - generic [ref=e804]: 
+              - generic [ref=e806]:
+                - heading "Board Meeting" [level=6] [ref=e807]
+                - text: 2026-05-15 at 10:00 AM
+            - generic [ref=e809]:
+              - generic [ref=e810]: 
+              - generic [ref=e812]:
+                - heading "Charity Audit" [level=6] [ref=e813]
+                - text: 2026-05-18 at 09:00 AM
+            - generic [ref=e815]:
+              - generic [ref=e816]: 
+              - generic [ref=e818]:
+                - heading "Orphanage Visit" [level=6] [ref=e819]
+                - text: 2026-05-20 at 02:00 PM
+  - contentinfo [ref=e406]:
+    - generic [ref=e408]:
+      - paragraph [ref=e410]: © 2026 IIROSA. All rights reserved
+      - paragraph [ref=e412]: Version 1.0.0

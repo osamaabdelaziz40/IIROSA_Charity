@@ -38,10 +38,28 @@
       </li>
 
       <!-- Theme Switcher -->
-      <li class="nav-item">
-        <a class="nav-link text-muted my-2" href="#" id="modeSwitcher" data-mode="light">
-          <i class="fe fe-moon fe-16"></i>
+      <li class="dropdown nav-item">
+        <a class="dropdown-toggle nav-link my-2" href="#" id="themeDropdown" data-toggle="dropdown"
+           aria-haspopup="true" aria-expanded="false" [attr.aria-label]="'layout.theme' | translate">
+          <i class="fe fe-16"
+             [class.fe-sun]="currentTheme === 'light'"
+             [class.fe-moon]="currentTheme === 'dark'"
+             [class.fe-droplet]="currentTheme === 'navy'"></i>
         </a>
+        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="themeDropdown">
+          <a class="dropdown-item" href="#" (click)="setTheme('light'); $event.preventDefault()">
+            <i class="fe fe-sun mr-2"></i>{{ 'layout.themeLight' | translate }}
+            <i class="fe fe-check ml-2" *ngIf="currentTheme === 'light'"></i>
+          </a>
+          <a class="dropdown-item" href="#" (click)="setTheme('dark'); $event.preventDefault()">
+            <i class="fe fe-moon mr-2"></i>{{ 'layout.themeDark' | translate }}
+            <i class="fe fe-check ml-2" *ngIf="currentTheme === 'dark'"></i>
+          </a>
+          <a class="dropdown-item" href="#" (click)="setTheme('navy'); $event.preventDefault()">
+            <i class="fe fe-droplet mr-2"></i>{{ 'layout.themeNavy' | translate }}
+            <i class="fe fe-check ml-2" *ngIf="currentTheme === 'navy'"></i>
+          </a>
+        </div>
       </li>
 
       <!-- Notifications -->

@@ -30,6 +30,8 @@ export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   currentUser$ = this.authService.currentUser$;
   isSidebarCollapsed = false;
   currentLang = 'en';
+  // TinyDash theme in effect — mirrors the "mode" key config.js reads.
+  currentTheme: 'light' | 'dark' | 'navy' = 'light';
   unreadCount = 0; // retained for the future header badge — not rendered yet
   currentYear = new Date().getFullYear();
   appVersion = '1.0.0';
@@ -271,7 +273,8 @@ export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
    * Get theme icon
    */
   getThemeIcon(): string {
-    return 'fe-sun'; // Reference project uses static icon
+    // Kept for any leftover template use — the dropdown shows its own icons.
+    return this.currentTheme === 'dark' ? 'fe-moon' : this.currentTheme === 'navy' ? 'fe-droplet' : 'fe-sun';
   }
 
   /**
@@ -472,17 +475,29 @@ export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
    * Load user preferences from localStorage
    */
   private loadPreferences(): void {
-    const savedTheme = localStorage.getItem('theme');
+    // Same key config.js reads ("mode"); the shell ships <body class="dark">,
+    // which is the fallback default before any explicit choice is saved.
+    const savedMode = localStorage.getItem('mode');
+    this.currentTheme =
+      savedMode === 'dark' || savedMode === 'navy'
+        ? savedMode
+        : document.body.classList.contains('dark') ? 'dark' : 'light';
     // Language is now handled by LanguageService
   }
 
   /**
-   * Toggle between dark and light theme
-   * TinyDash handles this automatically via modeSwitcher click
+   * Switch the TinyDash theme. config.js enables exactly one of the
+   * #lightTheme / #darkTheme / #navyTheme <link> tags on boot, so the choice
+   * is persisted and applied via reload — the same flow the legacy
+   * modeSwitcher toggle used.
    */
-  toggleTheme(): void {
-    // TinyDash config.js handles theme switching via modeSwitcher element
-    console.log('Theme toggle clicked - TinyDash modeSwitch should handle this');
+  setTheme(theme: 'light' | 'dark' | 'navy'): void {
+    if (theme === this.currentTheme) {
+      return;
+    }
+    this.currentTheme = theme;
+    localStorage.setItem('mode', theme);
+    setTimeout(() => window.location.reload(), 100);
   }
 
   /**

@@ -12294,3 +12294,45 @@ html {
     .rtl.horizontal .navbar-slide .navbar-nav .dropdown-menu .nav-item .dropdown-toggle::after {
       left: 0;
       content: "\e92e"; } }
+
+/* ===== IIROSA app footer — fixed to the viewport bottom ===================
+   position:fixed keeps the bar always on screen. The side margins mirror the
+   topnav's sidebar offsets state by state (default, collapsed mini,
+   hover-expand, mobile off-canvas), RTL included, so the bar always starts
+   at the sidebar's edge and never hides behind it.
+   Mirrored (with theme colours only) in app-dark.css and app-navy.css —
+   keep the geometry in sync across the three files. */
+.wrapper { display: flex; flex-direction: column; min-height: 100vh; }
+/* Flex-grow keeps short pages filled so the page background extends
+   behind the fixed footer bar. */
+.wrapper > .main-content { flex: 1 0 auto; min-height: 0; }
+footer.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 995; /* above content, below the sidebar (1000) and modals (1050) */
+  background-color: #ffffff;
+  border-top: 1px solid #e9ecef;
+  box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.04);
+  color: #6c757d;
+  font-size: 0.8rem;
+  padding: 0.75rem 2.2rem;
+  margin-left: 16rem; /* mirrors .vertical .topnav */
+  transition: margin-left .3s ease-in-out, margin-right .3s ease-in-out;
+}
+footer.footer p { color: inherit; margin-bottom: 0; }
+/* RTL default — mirrors .rtl.vertical .topnav */
+.rtl footer.footer { margin-left: 0; margin-right: 16rem; }
+/* Sidebar collapsed to its mini width — mirrors .vertical.collapsed .topnav */
+.vertical.collapsed footer.footer { margin-left: 5rem; }
+.rtl.vertical.collapsed footer.footer { margin-left: 0; margin-right: 5rem; }
+/* Sidebar re-expanded on hover — mirrors .vertical.hover .topnav */
+.vertical.hover footer.footer { margin-left: 16rem; }
+.rtl.vertical.hover footer.footer { margin-left: 0; margin-right: 16rem; }
+/* Mobile: the sidebar is an off-canvas overlay, the bar spans full width */
+@media (max-width: 991.98px) {
+  footer.footer { margin-left: 0 !important; margin-right: 0 !important; }
+}
+/* Breathing room so page content clears the fixed bar */
+.vertical .main-content { padding-bottom: 4rem; }
