@@ -517,6 +517,14 @@
                 <span class="ml-1 item-text">{{ "reports.allReports.title" | translate }}</span>
               </a>
             </li>
+            <!-- UC-ORC-09 — تقارير الدورات: the reported / not-reported split of one cycle.
+                 Endpoint admits Charity (scope pinned server-side); gate follows Reports.View. -->
+            <li class="nav-item" *ngIf="hasPermission('Reports.View')" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/reports/cycle-reports">
+                <span class="ml-1 item-text">{{ "reports.cycleCoverage.title" | translate }}</span>
+              </a>
+            </li>
             <!-- <li class="nav-item" *ngIf="hasPermission('Families.FollowUp')" routerLinkActive="active"
                 [routerLinkActiveOptions]="{ exact: true }">
               <a class="nav-link pl-3" routerLink="/reports/family-orphans">
@@ -761,6 +769,33 @@
                 [routerLinkActiveOptions]="{ exact: true }">
               <a class="nav-link pl-3" routerLink="/periodic-orphan-reports/orphan-reports">
                 <span class="ml-1 item-text">{{ "orphanReports.statistics.title" | translate }}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Orphan Report Cycles (UC-ORC, docs/Modules/26-UC-ORC) — HQ-only management;
+             matches OrphanReportCyclesController's [Authorize(Roles = "Admin,SuperAdmin")]. -->
+        <li class="nav-item dropdown" *ngIf="hasPermission('OrphanReportCycles.View')"
+            [class.show]="isActive('/orphan-report-cycles')">
+          <a href="#orphan-report-cycles" data-toggle="collapse" aria-expanded="false"
+             class="dropdown-toggle nav-link">
+            <i class="fe fe-repeat fe-16"></i>
+            <span class="ml-3 item-text">{{ "orphanReportCycles.title" | translate }}</span>
+          </a>
+          <ul class="collapse list-unstyled pl-4 w-100"
+              [class.show]="isActive('/orphan-report-cycles')"
+              id="orphan-report-cycles">
+            <li class="nav-item" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/orphan-report-cycles">
+                <span class="ml-1 item-text">{{ "orphanReportCycles.sidebar.allCycles" | translate }}</span>
+              </a>
+            </li>
+            <li class="nav-item" *ngIf="hasPermission('OrphanReportCycles.Create')" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }">
+              <a class="nav-link pl-3" routerLink="/orphan-report-cycles/create">
+                <span class="ml-1 item-text">{{ "orphanReportCycles.addCycle" | translate }}</span>
               </a>
             </li>
           </ul>

@@ -82,12 +82,15 @@
                         [title]="'families.members.move' | translate">
                   <i class="fe fe-corner-up-right"></i>
                 </button>
-                <!-- Add a periodic report for this orphan — the create form pre-resolves the ?code= subject -->
-                <a class="btn btn-sm btn-outline-success ml-1" *ngIf="orphan.code"
-                   [routerLink]="['/periodic-orphan-reports/create']" [queryParams]="{ code: orphan.code }"
-                   [title]="'families.members.addPeriodicReport' | translate">
+                <!-- UC-ORC-06: add a periodic report — rendered only while a cycle runs;
+                     the click routes through the cycle chooser (create / edit-submitted /
+                     pick between several running cycles). -->
+                <button type="button" class="btn btn-sm btn-outline-success ml-1"
+                        *ngIf="orphan.code && hasRunningCycle"
+                        (click)="addPeriodicReport(orphan)"
+                        [title]="'families.members.addPeriodicReport' | translate">
                   <i class="fe fe-file-plus"></i>
-                </a>
+                </button>
               </td>
             </tr>
             <tr *ngIf="loadError">
@@ -185,3 +188,6 @@
     </div>
   </div>
 </div>
+
+<!-- UC-ORC-06 cycle chooser — the orphan row's report action routes through it -->
+<app-cycle-report-chooser></app-cycle-report-chooser>

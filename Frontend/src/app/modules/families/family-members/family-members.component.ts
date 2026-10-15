@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -9,6 +9,9 @@ import { FamilyService } from '../services/family.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { FamilyDto, OrphanDto } from '../models/family.model';
+import { OrphanReportCycleService } from '../../orphan-report-cycles/services/orphan-report-cycle.service';
+import { OrphanReportCycleStatus } from '../../orphan-report-cycles/models/orphan-report-cycle.model';
+import { CycleReportChooserComponent } from '../../orphan-report-cycles/cycle-report-chooser/cycle-report-chooser.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 
 /**
@@ -31,7 +34,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 @Component({
   selector: 'app-family-members',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TranslateModule, PageHeaderComponent],
+  imports: [CommonModule, FormsModule, RouterModule, TranslateModule, PageHeaderComponent, CycleReportChooserComponent],
   templateUrl: './family-members.component.html',
   styleUrls: ['./family-members.component.scss']
 })
@@ -43,6 +46,10 @@ export class FamilyMembersComponent implements OnInit, OnDestroy {
   /** True when the members load failed — the grid then shows an error row, not the empty state
    * (an error and a genuinely member-less family must not look the same). */
   loadError = false;
+
+  /** UC-ORC-06 — the orphan row's report action exists only while a cycle runs. */
+  hasRunningCycle = false;
+  @ViewChild(CycleReportChooserComponent) private cycleChooser?: CycleReportChooserComponent;
 
   // Move modal state (one modal, both actions — the legacy contract). The target is the generic
   // member shape: orphans (memberType 1, UC-FAM-07) and the guardian/provider row (memberType 2,
@@ -64,6 +71,7 @@ export class FamilyMembersComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private familyService: FamilyService,
+    private cycleService: OrphanReportCycleService,
     private notification: NotificationService,
     private translate: TranslateService,
     private auth: AuthService
@@ -74,6 +82,13 @@ export class FamilyMembersComponent implements OnInit, OnDestroy {
   private paramMapSub?: Subscription;
 
   ngOnInit(): void {
+    // UC-ORC-06 — one screen-scoped read gates the orphan rows' report action.
+    this.cycleService.getSelector().subscribe({
+      next: cycles => (this.hasRunningCycle =
+        cycles.some(c => c.status === OrphanReportCycleStatus.InProgress)),
+      error: () => (this.hasRunningCycle = false)
+    });
+
     this.paramMapSub = this.route.paramMap.subscribe(params => {
       const id = params.get('id');
       if (id) {
@@ -193,6 +208,18 @@ export class FamilyMembersComponent implements OnInit, OnDestroy {
 
   goToFamily(): void {
     this.router.navigate(['/families', this.familyId]);
+  }
+
+  /**
+   * UC-ORC-06 — the row's «إضافة تقرير دوري» routes through the cycle chooser (create
+   * deep-link, edit-already-submitted, or the pick modal for several running cycles);
+   * the server re-derives the window at write time (BR-ORC-11).
+   */
+  addPeriodicReport(orphan: OrphanDto): void {
+    if (!orphan.code || !this.hasRunningCycle || !this.cycleChooser) {
+      return;
+    }
+    this.cycleChooser.openFor({ orphanId: orphan.id, code: orphan.code, fullName: orphan.fullName });
   }
 
   openDeleteModal(): void {

@@ -1,0 +1,144 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<app-page-header
+  [title]="'orphanReportCycles.title' | translate"
+  [subtitle]="'orphanReportCycles.subtitle' | translate"
+  [icon]="'fe fe-repeat'"
+  [actions]="pageActions">
+</app-page-header>
+
+<!-- Filters -->
+<app-collapsible-card titleKey="common.filters" icon="fe-filter">
+  <form [formGroup]="filterForm">
+    <div class="row mb-3">
+      <!-- Free text over the bilingual titles -->
+      <div class="col-md-4">
+        <app-input-text
+          [fg]="filterForm"
+          fcn="searchValue"
+          [label]="'common.search'"
+          [placeholder]="'orphanReportCycles.list.searchPlaceholder' | translate">
+        </app-input-text>
+      </div>
+
+      <!-- Derived status (filter only — never an input on write) -->
+      <div class="col-md-3">
+        <app-drop-down
+          [fg]="filterForm"
+          fcn="status"
+          [label]="'orphanReportCycles.status.label'"
+          [initialData]="statusOptions"
+          [hasDefaultValue]="true"
+          (onDropDownChanged)="onFilterChange()">
+        </app-drop-down>
+      </div>
+
+      <div class="col-md-3 d-flex align-items-end">
+        <button class="btn btn-primary" type="button" (click)="onFilterChange()">
+          <i class="fe fe-search mr-1"></i>
+          {{ 'common.search' | translate }}
+        </button>
+        <button *ngIf="hasActiveFilters()" class="btn btn-outline-secondary ml-2" type="button" (click)="clearFilters()">
+          <i class="fe fe-x mr-1"></i>
+          {{ 'common.clearFilters' | translate }}
+        </button>
+      </div>
+    </div>
+  </form>
+</app-collapsible-card>
+
+<!-- Register (§26.S.1) -->
+<app-collapsible-card titleKey="common.results" icon="fe-list" [expanded]="true">
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">{{ 'common.loading' | translate }}</span>
+    </div>
+  </div>
+
+  <div class="table-responsive" *ngIf="!loading">
+    <table class="table table-hover table-striped">
+      <thead>
+        <tr>
+          <th>{{ 'orphanCoding.serial' | translate }}</th>
+          <th>{{ 'orphanReportCycles.list.colTitle' | translate }}</th>
+          <th>{{ 'orphanReportCycles.list.colPeriod' | translate }}</th>
+          <th>{{ 'orphanReportCycles.status.label' | translate }}</th>
+          <th>{{ 'orphanReportCycles.list.colCoverage' | translate }}</th>
+          <th>{{ 'common.actions' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let cycle of cycles; let i = index; trackBy: trackByCycleId">
+          <td>{{ getSerial(i) }}</td>
+          <td>
+            <a [routerLink]="['/orphan-report-cycles', cycle.id, 'edit']" class="text-primary">
+              <strong>{{ cycle.titleAr }}</strong>
+            </a>
+            <div class="small text-muted" *ngIf="cycle.titleEn">{{ cycle.titleEn }}</div>
+          </td>
+          <td>
+            <div class="small">
+              <div>{{ cycle.startDate | date:'mediumDate' }}</div>
+              <div class="text-muted">{{ cycle.endDate | date:'mediumDate' }}</div>
+            </div>
+          </td>
+          <td>
+            <span class="badge" [ngClass]="statusClass(cycle)">
+              {{ statusKey(cycle) | translate }}
+            </span>
+          </td>
+          <td>
+            <div class="d-flex align-items-center">
+              <div class="progress coverage-bar flex-grow-1 mr-2">
+                <div class="progress-bar" role="progressbar"
+                     [style.width.%]="cycle.progressPercent"
+                     [attr.aria-valuenow]="cycle.progressPercent"
+                     aria-valuemin="0" aria-valuemax="100">
+                </div>
+              </div>
+              <span class="small text-nowrap">
+                {{ cycle.reportsCount }} / {{ cycle.codedOrphansCount }}
+              </span>
+            </div>
+          </td>
+          <td>
+            <div class="btn-group">
+              <button type="button" class="btn btn-sm btn-light"
+                      [title]="'common.edit' | translate"
+                      [disabled]="isCompleted(cycle)"
+                      (click)="editCycle(cycle)">
+                <i class="fe fe-edit"></i>
+              </button>
+              <!-- UC-ORC-04: only a never-started cycle may be deleted -->
+              <button type="button" class="btn btn-sm btn-light text-danger"
+                      *ngIf="isNotStarted(cycle)"
+                      [title]="'common.delete' | translate"
+                      [disabled]="deletingId === cycle.id"
+                      (click)="deleteCycle(cycle)">
+                <span class="spinner-border spinner-border-sm" *ngIf="deletingId === cycle.id; else trashIcon"></span>
+                <ng-template #trashIcon><i class="fe fe-trash-2"></i></ng-template>
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Empty state -->
+        <tr *ngIf="cycles.length === 0">
+          <td colspan="6" class="text-center py-5">
+            <div class="empty-state">
+              <i class="fe fe-repeat fe-3x text-muted mb-3"></i>
+              <p class="text-muted">{{ 'orphanReportCycles.list.noCycles' | translate }}</p>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <app-pagination
+    [currentPage]="currentPage"
+    [pageSize]="pageSize"
+    [totalCount]="totalCount"
+    (pageChange)="onPageChange($event)">
+  </app-pagination>
+</app-collapsible-card>

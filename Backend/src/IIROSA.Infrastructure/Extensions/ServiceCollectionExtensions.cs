@@ -281,6 +281,10 @@ public static class ServiceCollectionExtensions
         // Periodic Orphan Reports Services (epic 9, UC-ORR-01 … UC-ORR-17 from WAR UC-6.11–6.17)
         services.AddScoped<IIROSA.Application.Interfaces.IPeriodicOrphanReportService, IIROSA.Application.Services.PeriodicOrphanReportService>();
 
+        // Orphan Report Cycles (UC-ORC-01…09, docs/Modules/26-UC-ORC — new-platform capability)
+        services.AddScoped<IIROSA.Application.Interfaces.IOrphanReportCycleService, IIROSA.Application.Services.OrphanReportCycleService>();
+        services.AddScoped<IIROSA.Domain.Interfaces.IOrphanReportCycleRepository, IIROSA.Infrastructure.Data.Repository.OrphanReportCycleRepository>();
+
         // Orphan Summary Reports Services (UC-6.1 through UC-6.10 — reworked per epics 9/10 stories)
         services.AddScoped<IIROSA.Application.Interfaces.IOrphanReportService, IIROSA.Application.Services.OrphanReportService>();
 

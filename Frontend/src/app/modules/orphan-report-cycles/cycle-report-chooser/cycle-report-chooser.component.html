@@ -1,0 +1,45 @@
+<!-- UC-ORC-06 chooser modal — one row per running cycle, the action set by that
+     cycle's own submission state (رفع تقرير / تعديل التقرير). -->
+<div class="modal-backdrop fade show" *ngIf="show"></div>
+<div class="modal fade show d-block" role="dialog" *ngIf="show">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ 'orphanReportCycles.chooser.title' | translate }}</h5>
+        <button type="button" class="close" (click)="close()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          {{ 'orphanReportCycles.chooser.pickHint' | translate }}
+        </div>
+
+        <div class="cycle-row d-flex align-items-center justify-content-between"
+             *ngFor="let row of rows; trackBy: trackByCycleId">
+          <div class="cycle-info">
+            <strong>{{ row.titleAr }}</strong>
+            <div class="small text-muted">
+              {{ row.startDate | date:'mediumDate' }} — {{ row.endDate | date:'mediumDate' }}
+            </div>
+            <span class="badge mr-1" *ngIf="row.submitted"
+                  [ngClass]="reviewStateClass(row.reviewState)">
+              {{ reviewStateKey(row.reviewState) | translate }}
+            </span>
+          </div>
+
+          <button type="button"
+                  class="btn btn-sm"
+                  [ngClass]="row.submitted ? 'btn-outline-primary' : 'btn-primary'"
+                  (click)="choose(row)">
+            <i class="fe mr-1" [ngClass]="row.submitted ? 'fe-edit' : 'fe-file-plus'"></i>
+            {{ (row.submitted ? 'orphanReportCycles.chooser.edit' : 'orphanReportCycles.chooser.submit') | translate }}
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="close()">
+          {{ 'common.cancel' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -139,6 +139,11 @@ builder.Services.Configure<FormOptions>(o =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.InitHangfire(connectionString);
 
+// UC-ORC-05 (26-UC-ORC): advances orphan report cycles NotStarted → InProgress →
+// Completed as their dates pass. Interval: OrphanReportCycles:StatusCheckIntervalMinutes
+// (default 15). The project's first hosted service.
+builder.Services.AddHostedService<IIROSA.Api.Services.OrphanReportCycleStatusService>();
+
 #region Nlog
 
 builder.Logging.ClearProviders();

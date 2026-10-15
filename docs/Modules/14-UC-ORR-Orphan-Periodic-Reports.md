@@ -679,3 +679,8 @@ behind each controller, never in the controller itself.
 
 Shared context - system architecture, actors and roles, the sponsorship lifecycle, the full module map and all appendices - is in the companion document [00-Overview-and-Common-Context](00-Overview-and-Common-Context.md). The delivery backlog for this module is epic EP-09 in [00-EPICS-and-User-Stories](00-EPICS-and-User-Stories.md).
 
+> **Cycle-bound reporting.** Submitting chapter-14 reports inside HQ-defined reporting cycles -
+> the submission window, the orphan-page «إضافة تقرير دوري» action, the multi-cycle chooser and
+> the coverage report - is specified in [26-UC-ORC-Orphan-Report-Cycles](26-UC-ORC-Orphan-Report-Cycles.md).
+> Everything on this page still applies to the report itself once the cycle is bound.
+

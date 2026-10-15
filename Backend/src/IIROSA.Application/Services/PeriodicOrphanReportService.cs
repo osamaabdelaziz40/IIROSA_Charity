@@ -29,6 +29,7 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
     private readonly IRepository<PeriodicOrphanReport> _reportRepository;
     private readonly IRepository<Orphan> _orphanRepository;
     private readonly IRepository<Charity> _charityRepository;
+    private readonly IRepository<OrphanReportCycle> _cycleRepository;
     private readonly IRepository<ApplicationUser> _userRepository;
     private readonly IRepository<EducationLevel> _educationLevelRepository;
     private readonly IRepository<RefuseReason> _refuseReasonRepository;
@@ -47,6 +48,7 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
         IRepository<PeriodicOrphanReport> reportRepository,
         IRepository<Orphan> orphanRepository,
         IRepository<Charity> charityRepository,
+        IRepository<OrphanReportCycle> cycleRepository,
         IRepository<ApplicationUser> userRepository,
         IRepository<EducationLevel> educationLevelRepository,
         IRepository<RefuseReason> refuseReasonRepository,
@@ -63,6 +65,7 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
         _reportRepository = reportRepository;
         _orphanRepository = orphanRepository;
         _charityRepository = charityRepository;
+        _cycleRepository = cycleRepository;
         _userRepository = userRepository;
         _educationLevelRepository = educationLevelRepository;
         _refuseReasonRepository = refuseReasonRepository;
@@ -92,12 +95,18 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
         // housing link; the orphan identity never comes straight from the client payload.
         var beneficiaryType = ParseBeneficiaryType(dto.ChildOrParent);
 
+        // UC-ORC-07 (26-UC-ORC, BR-ORC-10): cycles bind the orphan screens' Child reports
+        // only — a housing guardian report (UC-HOU-06/08) is never cycle-bound.
+        if (dto.CycleId.HasValue && beneficiaryType == Domain.Enums.ReportBeneficiaryType.Parent)
+            throw new BusinessException("Housing beneficiary reports are not submitted inside a reporting cycle.");
+
         var reportYear = dto.ReportDate.Year;
         var reportMonth = dto.ReportDate.Month;
 
         Guid orphanId;
         Guid? charityId;
         Guid? housingFamilyId = null;
+        Guid? cycleId = null;
 
         if (beneficiaryType == Domain.Enums.ReportBeneficiaryType.Parent)
         {
@@ -123,7 +132,14 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
                 throw new BusinessException(
                     "This orphan has no sponsorship code on record; periodic reports are filed for coded orphans only.");
 
-            await EnsureNoDuplicateAsync(orphan.Id, reportYear, reportMonth, excludeReportId: null);
+            // UC-ORC-07 (BR-ORC-04/05/09/11): a cycle-bound report answers to the
+            // (orphan, cycle) window rule; the calendar-month rule keeps governing
+            // cycle-less reports only. Two overlapping cycles inside one month are the
+            // multi-cycle scenario the chooser exists for.
+            if (dto.CycleId.HasValue)
+                cycleId = await ResolveOpenCycleAsync(dto.CycleId.Value, orphan.Id);
+            else
+                await EnsureNoDuplicateAsync(orphan.Id, reportYear, reportMonth, excludeReportId: null);
 
             orphanId = orphan.Id;
             charityId = orphan.FK_CharityId;
@@ -158,6 +174,7 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
             Id = Guid.NewGuid(),
             OrphanId = orphanId,
             OrphanPaymentId = dto.OrphanPaymentId,
+            CycleId = cycleId,
             CharityId = charityId,
             ChildOrParent = beneficiaryType,
             FK_HousingFamilyId = housingFamilyId,
@@ -269,14 +286,22 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
         if (report.Locked || report.IsAccepted)
             throw new BusinessException("You can not update old report");
 
+        // UC-ORC-08 (26-UC-ORC, BR-ORC-06/11): once the bound cycle completes, the report
+        // is read-only for the association — head office keeps chapter-14's correction
+        // path, and the HQ review endpoints are not gated here at all.
+        await EnsureCycleEditWindowAsync(report);
+
         // Period keys follow the (possibly new) report date.
         if (dto.ReportDate.HasValue && dto.ReportDate.Value != report.ReportDate)
         {
             report.ReportDate = dto.ReportDate.Value;
             report.ReportYear = dto.ReportDate.Value.Year;
             report.ReportMonth = dto.ReportDate.Value.Month;
-            await EnsureNoDuplicateAsync(report.OrphanId, report.ReportYear!.Value, report.ReportMonth!.Value,
-                excludeReportId: report.Id);
+            // UC-ORC (BR-ORC-09): the month rule governs cycle-less reports; a cycle-bound
+            // row answers to the (orphan, cycle) rule, which a re-date cannot violate.
+            if (report.CycleId == null)
+                await EnsureNoDuplicateAsync(report.OrphanId, report.ReportYear!.Value, report.ReportMonth!.Value,
+                    excludeReportId: report.Id);
 
             // Review P11 2026-08-24: a re-dated guardian report must respect the
             // one-guardian-report-per-family-month rule too — its unique index spans the
@@ -1495,16 +1520,75 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
     /// </summary>
     private async Task EnsureNoDuplicateAsync(Guid orphanId, int reportYear, int reportMonth, Guid? excludeReportId)
     {
+        // UC-ORC (BR-ORC-09): the calendar-month slot now belongs to cycle-less reports
+        // only — the matching filtered unique index carries the same [CycleId] IS NULL.
         var duplicate = await _reportRepository.AsQueryable()
             .AnyAsync(r => r.OrphanId == orphanId
                         && r.ReportYear == reportYear
                         && r.ReportMonth == reportMonth
+                        && r.CycleId == null
                         && !r.IsDeleted
                         && (excludeReportId == null || r.Id != excludeReportId.Value));
 
         if (duplicate)
             throw new BusinessException(
                 $"A periodic report already exists for this orphan in {reportYear}/{reportMonth:D2}.");
+    }
+
+    /// <summary>
+    /// UC-ORC-07 (26-UC-ORC): the submission window re-derived server-side at write time —
+    /// the hidden «إضافة تقرير دوري» button is UX, not the control (BR-ORC-11). A cycle
+    /// that is not live reads as NotFound (a caller has no business probing foreign cycle
+    /// ids), and the one-live-report-per-(orphan, cycle) rule (BR-ORC-05) is checked ahead
+    /// of the filtered unique index that hard-guards it.
+    /// </summary>
+    private async Task<Guid> ResolveOpenCycleAsync(Guid cycleId, Guid orphanId)
+    {
+        var cycle = await _cycleRepository.AsQueryable()
+            .FirstOrDefaultAsync(c => c.Id == cycleId && !c.IsDeleted)
+            ?? throw new NotFoundException(nameof(OrphanReportCycle), cycleId);
+
+        var derived = OrphanReportCycleService.DeriveStatus(cycle.StartDate, cycle.EndDate, DateTime.UtcNow);
+        if (derived != Domain.Enums.OrphanReportCycleStatus.InProgress)
+            throw new BusinessException(derived == Domain.Enums.OrphanReportCycleStatus.Completed
+                ? "The reporting cycle has ended; reports can no longer be submitted in it."
+                : "The reporting cycle has not started yet; reports cannot be submitted before its start date.");
+
+        var duplicate = await _reportRepository.AsQueryable()
+            .AnyAsync(r => r.OrphanId == orphanId && r.CycleId == cycleId && !r.IsDeleted);
+        if (duplicate)
+            throw new BusinessException(
+                "A periodic report for this orphan already exists inside this cycle; edit it instead of adding another.");
+
+        return cycleId;
+    }
+
+    /// <summary>
+    /// UC-ORC-08 (26-UC-ORC, BR-ORC-06/11): the charity edit window — while the bound
+    /// cycle is In Progress. Head office is exempt (chapter-14's HQ correction path);
+    /// the HQ accept/refuse flow (ReviewReportAsync) is deliberately not gated here.
+    /// The window is re-derived from the dates at write time, so a delayed background
+    /// status tick cannot leave a completed cycle editable.
+    /// </summary>
+    private async Task EnsureCycleEditWindowAsync(PeriodicOrphanReport report)
+    {
+        if (report.CycleId == null || _currentUser.IsHeadOffice)
+            return;
+
+        var cycle = await _cycleRepository.AsQueryable()
+            .FirstOrDefaultAsync(c => c.Id == report.CycleId && !c.IsDeleted);
+
+        // A bound cycle that no longer resolves (soft-deleted by HQ) keeps its reports
+        // locked, same as a completed one — the round is over either way.
+        if (cycle == null)
+            throw new BusinessException(
+                "The reporting cycle this report belongs to is no longer active; the report is read-only.");
+
+        var derived = OrphanReportCycleService.DeriveStatus(cycle.StartDate, cycle.EndDate, DateTime.UtcNow);
+        if (derived != Domain.Enums.OrphanReportCycleStatus.InProgress)
+            throw new BusinessException(derived == Domain.Enums.OrphanReportCycleStatus.Completed
+                ? "The reporting cycle has ended; the association can no longer edit its reports."
+                : "The reporting cycle is not open; the report cannot be edited right now.");
     }
 
     /// <summary>
@@ -1542,6 +1626,11 @@ public class PeriodicOrphanReportService : IPeriodicOrphanReportService
             if (msg.Contains("IX_PeriodicOrphanReport_OrphanId_ReportMonth_ReportYear"))
             {
                 message = "A periodic report already exists for this orphan in that month.";
+                return true;
+            }
+            if (msg.Contains("IX_PeriodicOrphanReport_OrphanId_CycleId"))
+            {
+                message = "A periodic report for this orphan already exists inside this cycle.";
                 return true;
             }
             if (msg.Contains("IX_PeriodicOrphanReport_FK_HousingFamilyId_ReportYear_ReportMonth"))

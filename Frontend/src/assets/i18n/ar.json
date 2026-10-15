@@ -400,6 +400,20 @@
       "subtitle": "دليل التقارير — اختر تقريراً لفتحه",
       "emptyState": "لا توجد تقارير متاحة لك"
     },
+    "cycleCoverage": {
+      "title": "تقارير الدورات",
+      "subtitle": "الأيتام الذين قُدّمت تقاريرهم ومن لم تُقدّم تقاريرهم في دورة محددة",
+      "all": "الكل",
+      "submitted": "قدّموا تقارير",
+      "notSubmitted": "لم يقدّموا تقارير",
+      "reported": "تم التقرير",
+      "reportDate": "تاريخ التقرير",
+      "reviewState": "حالة المراجعة",
+      "searchPlaceholder": "كود اليتيم أو الاسم...",
+      "pickCycleFirst": "اختر الدورة أولاً",
+      "loadFailed": "تعذر تشغيل التقرير",
+      "noRows": "لا توجد بيانات مطابقة"
+    },
     "actions": {
       "search": "بحث",
       "export": "استخراج البيانات"
@@ -3573,6 +3587,63 @@
       "nationalIdRegistered": "يوجد يتيم مسجل بهذا الرقم القومي"
     }
   },
+  "orphanReportCycles": {
+    "title": "دورات التقارير الدورية للأيتام",
+    "subtitle": "دورات زمنية لتقديم التقارير الدورية تنشئها الإدارة العامة",
+    "label": "الدورة",
+    "addCycle": "إضافة دورة",
+    "createCycle": "إضافة دورة جديدة",
+    "editCycle": "تعديل الدورة",
+    "sidebar": {
+      "allCycles": "جميع الدورات"
+    },
+    "status": {
+      "label": "الحالة",
+      "notStarted": "لم تبدأ",
+      "inProgress": "جارية",
+      "completed": "منتهية"
+    },
+    "list": {
+      "searchPlaceholder": "عنوان الدورة...",
+      "colTitle": "عنوان الدورة",
+      "colPeriod": "فترة الدورة",
+      "colCoverage": "التغطية",
+      "noCycles": "لا توجد دورات",
+      "deleteConfirm": "هل أنت متأكد من حذف الدورة «{{title}}»؟",
+      "deleted": "تم حذف الدورة",
+      "deleteFailed": "تعذر حذف الدورة"
+    },
+    "form": {
+      "titleAr": "العنوان (عربي)",
+      "titleArPlaceholder": "مثال: دورة التقارير — الربع الأول 2026",
+      "titleEn": "العنوان (إنجليزي)",
+      "titleEnPlaceholder": "e.g. Q1 2026 Report Cycle",
+      "descriptionAr": "الوصف (عربي)",
+      "descriptionEn": "الوصف (إنجليزي)",
+      "startDate": "تاريخ البداية",
+      "endDate": "تاريخ النهاية",
+      "endAfterStart": "يجب أن يكون تاريخ النهاية بعد تاريخ البداية",
+      "completedReadOnly": "هذه الدورة منتهية — الدورات المنتهية للقراءة فقط",
+      "saved": "تم حفظ الدورة بنجاح",
+      "saveFailed": "تعذر حفظ الدورة",
+      "loadFailed": "تعذر تحميل الدورة",
+      "codedOrphans": "الأيتام المكودون",
+      "submittedReports": "تقارير مقدمة"
+    },
+    "chooser": {
+      "title": "اختيار الدورة",
+      "pickHint": "هناك أكثر من دورة مفتوحة — اختر الدورة المطلوبة لهذا اليتيم",
+      "submit": "رفع تقرير",
+      "edit": "تعديل التقرير",
+      "noActiveCycles": "لا توجد دورة تقارير مفتوحة حالياً",
+      "loadFailed": "تعذر تحميل الدورات"
+    },
+    "review": {
+      "accepted": "مقبول",
+      "refused": "مرفوض",
+      "pending": "قيد المراجعة"
+    }
+  },
   "periodicReports": {
     "title": "التقارير الدورية للأيتام",
     "stats": {
@@ -3590,6 +3661,7 @@
       "searchPlaceholder": "اسم اليتيم أو الكود...",
       "addReport": "إضافة تقرير دوري",
       "uncodedHint": "يجب تكويد اليتيم أولاً قبل إضافة تقرير",
+      "noRunningCycleHint": "لا توجد دورة تقارير مفتوحة حالياً",
       "noResults": "لم يتم العثور على أيتام",
       "loadFailed": "تعذر تحميل الأيتام"
     },

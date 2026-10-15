@@ -478,8 +478,11 @@ export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
     // Same key config.js reads ("mode"); the shell ships <body class="dark">,
     // which is the fallback default before any explicit choice is saved.
     const savedMode = localStorage.getItem('mode');
+    // Trust any of the three values config.js persists — including 'light'.
+    // The static <body class="dark"> fallback is only for the first visit
+    // before any choice is saved; it must not override an explicit 'light'.
     this.currentTheme =
-      savedMode === 'dark' || savedMode === 'navy'
+      savedMode === 'dark' || savedMode === 'navy' || savedMode === 'light'
         ? savedMode
         : document.body.classList.contains('dark') ? 'dark' : 'light';
     // Language is now handled by LanguageService

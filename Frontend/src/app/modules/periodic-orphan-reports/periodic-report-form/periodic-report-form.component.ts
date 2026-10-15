@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -11,27 +11,32 @@ import {
   PeriodicOrphanReportDto,
   OrphanLookupDto
 } from '../models/periodic-orphan-report.model';
-import { LoadingComponent } from '../../../shared/components/loading/loading.component';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AttachmentService } from '../../../core/services/attachment.service';
 import { LookupManagementService } from '../../lookup-management/services/lookup-management.service';
 import { LookupDto } from '../../lookup-management/models/lookup.model';
 import { AttachmentComponent } from '../../../shared/components/attachment/attachment.component';
+import {
+  BreadcrumbComponent,
+  BreadcrumbItem,
+  CollapsibleCardComponent,
+  PageHeaderComponent
+} from '../../../shared/components';
 
-import { BreadcrumbComponent } from '../../../shared/components/breadcrumb/breadcrumb.component';
 @Component({
   selector: 'app-periodic-report-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     BreadcrumbComponent,
+    PageHeaderComponent,
+    CollapsibleCardComponent,
     AttachmentComponent,
 
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    TranslateModule,
-    LoadingComponent
+    TranslateModule
   ],
   templateUrl: './periodic-report-form.component.html',
   styleUrls: ['./periodic-report-form.component.scss']
@@ -47,6 +52,33 @@ export class PeriodicReportFormComponent implements OnInit {
   isEditMode = false;
   reportId?: string;
   saving = false;
+
+  // Breadcrumb trail — the create/edit leaf is appended via breadcrumbsWithAction
+  breadcrumbs: BreadcrumbItem[] = [
+    { label: 'common.home', url: '/dashboard' },
+    { label: 'periodicReports.title', url: '/periodic-orphan-reports' }
+  ];
+
+  get breadcrumbsWithAction(): BreadcrumbItem[] {
+    return [
+      ...this.breadcrumbs,
+      { label: this.isEditMode ? 'periodicReports.editReport' : 'periodicReports.createReport' }
+    ];
+  }
+
+  // Page actions for header
+  pageActions = [
+    {
+      label: 'common.cancel',
+      type: 'secondary',
+      icon: 'x',
+      click: () => this.cancel()
+    }
+  ];
+
+  /** Collapsible section cards — expanded on a failed submit to reveal the
+   *  red fields hidden inside collapsed cards. */
+  @ViewChildren(CollapsibleCardComponent) collapsibleCards?: QueryList<CollapsibleCardComponent>;
 
   // §14.U.5 — locked or accepted reports are immutable; the form refuses up front.
   editBlocked = false;
@@ -101,6 +133,13 @@ export class PeriodicReportFormComponent implements OnInit {
       if (code) {
         this.orphanCodeInput = code;
         this.lookupOrphan();
+      }
+
+      // UC-ORC-07 — the cycle chooser's pick rides along as ?cycleId and binds the
+      // report to that cycle server-side (the window is re-derived there, BR-ORC-11).
+      const cycleId = this.route.snapshot.queryParamMap.get('cycleId');
+      if (cycleId) {
+        this.reportForm.patchValue({ cycleId });
       }
     }
   }
@@ -236,6 +275,9 @@ export class PeriodicReportFormComponent implements OnInit {
       // Basic Information
       orphanId: ['', Validators.required],
       orphanPaymentId: [''],
+      // UC-ORC-07 — hidden carrier: the cycle chosen in the orphan-context chooser rides
+      // the create payload; the server re-derives the window (BR-ORC-11), never the client.
+      cycleId: [''],
       // Review P47b 2026-08-24: toISOString() is UTC — between 00:00 and 03:00 in
       // Riyadh the "default today" silently became yesterday. Local date parts
       // instead (en-CA yields the YYYY-MM-DD shape the date input expects).
@@ -443,6 +485,7 @@ export class PeriodicReportFormComponent implements OnInit {
   save(): void {
     if (this.reportForm.invalid) {
       this.reportForm.markAllAsTouched();
+      this.collapsibleCards?.forEach(c => c.open());
       return;
     }
 
@@ -547,11 +590,34 @@ export class PeriodicReportFormComponent implements OnInit {
     this.router.navigate(['../'], { relativeTo: this.route });
   }
 
-  /**
-   * Get form section title
-   */
-  getSectionTitle(section: string): string {
-    return `periodicReports.form.sections.${section}`;
+  /** i18n label keys for controls that render inline validation (ticket-form idiom). */
+  private static readonly FIELD_LABEL_KEYS: Record<string, string> = {
+    reportDate: 'periodicReports.form.reportDate'
+  };
+
+  // Form validation helpers
+  isFieldInvalid(fieldName: string): boolean {
+    const field = this.reportForm.get(fieldName);
+    return field ? field.invalid && (field.dirty || field.touched) : false;
+  }
+
+  getErrorMessage(fieldName: string): string {
+    const field = this.reportForm.get(fieldName);
+    if (!field || !field.errors) return '';
+
+    const errors = field.errors;
+    if (errors['server']) {
+      return errors['server'] as string;
+    }
+    if (errors['required']) {
+      const labelKey = PeriodicReportFormComponent.FIELD_LABEL_KEYS[fieldName] ?? fieldName;
+      return `${this.translate.instant(labelKey)} ${this.translate.instant('validation.required')}`;
+    }
+    if (errors['maxlength']) {
+      return `${this.translate.instant('validation.maxLength')} ${errors['maxlength'].requiredLength}`;
+    }
+
+    return this.translate.instant('validation.invalidFormat');
   }
 
   trackByLookupId(index: number, item: LookupDto): number {

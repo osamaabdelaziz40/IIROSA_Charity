@@ -95,6 +95,13 @@ const routes: Routes = [
         data: { title: 'seasonalAid.title' }
       },
       {
+        // UC-ORC — HQ-only management of orphan report cycles (docs/Modules/26-UC-ORC);
+        // the charity-facing chooser/coverage surfaces live in the reports of this feature.
+        path: 'orphan-report-cycles',
+        loadChildren: () => import('./modules/orphan-report-cycles/orphan-report-cycles.module').then(m => m.OrphanReportCyclesModule),
+        data: { title: 'orphanReportCycles.title' }
+      },
+      {
         path: 'office-development-projects',
         loadChildren: () => import('./modules/office-development-projects/office-development-projects.module').then(m => m.OfficeDevelopmentProjectsModule),
         data: { title: 'officeDevelopmentProjects.title' }

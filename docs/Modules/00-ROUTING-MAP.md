@@ -87,6 +87,8 @@ delivery epic.
 | 22 | `UC-TRF` | HQ Financial Transfers | `hq-transfers` *(planned)* | `#/hq-transfers` *(planned)* | `api/HqTransfers` *(planned)* | EP-17 |
 | 23 | `UC-RPT` | Reports & Printing | `reports` *(planned)* | `#/reports` *(planned)* | `api/Reports` *(planned)* | EP-18 |
 | 24 | `UC-SYS` | Cross-Cutting Services | `core` · `shared` | — (embedded) | `api/LookupManagement` · `api/Attachments` · `api/Notification` | EP-19 |
+| — | `UC-NTF` | Web Notifications *(new-platform)* | `notifications` | `#/notifications` | `api/Notification` | — |
+| — | `UC-ORC` | Orphan Report Cycles *(new-platform)* | `orphan-report-cycles` | `#/orphan-report-cycles` · `#/reports/cycle-reports` *(planned)* | `api/OrphanReportCycles` *(planned)* | — |
 
 ## 3. Gaps this map exposes
 

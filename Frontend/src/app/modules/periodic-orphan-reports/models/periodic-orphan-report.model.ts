@@ -202,6 +202,8 @@ export interface PeriodicOrphanReportListDto {
 export interface CreatePeriodicOrphanReportDto {
   orphanId: string;
   orphanPaymentId?: string;
+  /** UC-ORC-07 — the cycle this report belongs to; absent for the legacy monthly flow. */
+  cycleId?: string;
   reportDate: string;
   reportPeriodFrom?: string;
   reportPeriodTo?: string;

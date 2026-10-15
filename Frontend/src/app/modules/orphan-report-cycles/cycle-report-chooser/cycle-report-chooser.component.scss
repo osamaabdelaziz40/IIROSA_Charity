@@ -1,0 +1,12 @@
+.cycle-row {
+  padding: 0.75rem 0.25rem;
+  border-bottom: 1px solid var(--border-color, #e6ecf5);
+
+  &:last-of-type {
+    border-bottom: none;
+  }
+
+  .cycle-info {
+    text-align: start;
+  }
+}

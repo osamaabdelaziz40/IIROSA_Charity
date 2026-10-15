@@ -387,6 +387,20 @@
       "subtitle": "Report directory — pick a report to open it",
       "emptyState": "No reports are available to you"
     },
+    "cycleCoverage": {
+      "title": "Cycle Reports",
+      "subtitle": "Orphans with and without a submitted report inside a chosen cycle",
+      "all": "All",
+      "submitted": "Reported",
+      "notSubmitted": "Not Reported",
+      "reported": "Reported",
+      "reportDate": "Report Date",
+      "reviewState": "Review State",
+      "searchPlaceholder": "Orphan code or name...",
+      "pickCycleFirst": "Pick a cycle first",
+      "loadFailed": "Failed to run the report",
+      "noRows": "No matching rows"
+    },
     "actions": {
       "search": "Search",
       "export": "Extract data"
@@ -3574,6 +3588,63 @@
       "nationalIdRegistered": "An orphan with this national ID is already registered"
     }
   },
+  "orphanReportCycles": {
+    "title": "Orphan Report Cycles",
+    "subtitle": "Head-office defined reporting windows for periodic orphan reports",
+    "label": "Cycle",
+    "addCycle": "Add Cycle",
+    "createCycle": "New Report Cycle",
+    "editCycle": "Edit Cycle",
+    "sidebar": {
+      "allCycles": "All Cycles"
+    },
+    "status": {
+      "label": "Status",
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "completed": "Completed"
+    },
+    "list": {
+      "searchPlaceholder": "Cycle title...",
+      "colTitle": "Cycle Title",
+      "colPeriod": "Period",
+      "colCoverage": "Coverage",
+      "noCycles": "No cycles yet",
+      "deleteConfirm": "Delete the cycle \"{{title}}\"?",
+      "deleted": "Cycle deleted",
+      "deleteFailed": "Failed to delete the cycle"
+    },
+    "form": {
+      "titleAr": "Title (Arabic)",
+      "titleArPlaceholder": "e.g. Q1 2026 Report Cycle",
+      "titleEn": "Title (English)",
+      "titleEnPlaceholder": "e.g. Q1 2026 Report Cycle",
+      "descriptionAr": "Description (Arabic)",
+      "descriptionEn": "Description (English)",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "endAfterStart": "The end date must be after the start date",
+      "completedReadOnly": "This cycle is completed — completed cycles are read-only",
+      "saved": "Cycle saved successfully",
+      "saveFailed": "Failed to save the cycle",
+      "loadFailed": "Failed to load the cycle",
+      "codedOrphans": "Coded Orphans",
+      "submittedReports": "Submitted Reports"
+    },
+    "chooser": {
+      "title": "Choose Cycle",
+      "pickHint": "More than one cycle is open — pick the cycle for this orphan",
+      "submit": "Submit Report",
+      "edit": "Edit Report",
+      "noActiveCycles": "No report cycle is currently open",
+      "loadFailed": "Failed to load the cycles"
+    },
+    "review": {
+      "accepted": "Accepted",
+      "refused": "Refused",
+      "pending": "Pending"
+    }
+  },
   "periodicReports": {
     "title": "Periodic Orphan Reports",
     "stats": {
@@ -3591,6 +3662,7 @@
       "searchPlaceholder": "Orphan name or code...",
       "addReport": "Add Periodic Report",
       "uncodedHint": "The orphan must be coded before a report can be added",
+      "noRunningCycleHint": "No report cycle is currently open",
       "noResults": "No orphans found",
       "loadFailed": "Failed to load orphans"
     },

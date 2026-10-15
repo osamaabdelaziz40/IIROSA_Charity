@@ -3676,6 +3676,73 @@ namespace IIROSA.Infrastructure.Migrations
                     b.ToTable("OrphanPaymentItem", "IIROSA");
                 });
 
+            modelBuilder.Entity("IIROSA.Domain.Entities.OrphanReportCycle", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DescriptionAr")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("DescriptionEn")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("StatusChangedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TitleAr")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("TitleEn")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("StartDate", "EndDate");
+
+                    b.ToTable("OrphanReportCycle", "IIROSA");
+                });
+
             modelBuilder.Entity("IIROSA.Domain.Entities.Outgoing", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3861,6 +3928,9 @@ namespace IIROSA.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CycleId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool?>("Dead")
                         .HasColumnType("bit");
@@ -4137,6 +4207,8 @@ namespace IIROSA.Infrastructure.Migrations
 
                     b.HasIndex("CharityId");
 
+                    b.HasIndex("CycleId");
+
                     b.HasIndex("OrphanId");
 
                     b.HasIndex("OrphanPaymentId");
@@ -4151,13 +4223,17 @@ namespace IIROSA.Infrastructure.Migrations
 
                     b.HasIndex("FK_HousingFamilyId", "ChildOrParent");
 
+                    b.HasIndex("OrphanId", "CycleId")
+                        .IsUnique()
+                        .HasFilter("[CycleId] IS NOT NULL AND [ChildOrParent] = 1 AND [IsDeleted] = 0");
+
                     b.HasIndex("FK_HousingFamilyId", "ReportYear", "ReportMonth")
                         .IsUnique()
                         .HasFilter("[ChildOrParent] = 2 AND [IsDeleted] = 0");
 
                     b.HasIndex("OrphanId", "ReportMonth", "ReportYear")
                         .IsUnique()
-                        .HasFilter("[ChildOrParent] = 1 AND [IsDeleted] = 0");
+                        .HasFilter("[ChildOrParent] = 1 AND [IsDeleted] = 0 AND [CycleId] IS NULL");
 
                     b.ToTable("PeriodicOrphanReport", "IIROSA");
                 });
@@ -5778,6 +5854,11 @@ namespace IIROSA.Infrastructure.Migrations
                         .HasForeignKey("CharityId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("IIROSA.Domain.Entities.OrphanReportCycle", "Cycle")
+                        .WithMany("Reports")
+                        .HasForeignKey("CycleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("IIROSA.Domain.Entities.Family", "HousingFamily")
                         .WithMany()
                         .HasForeignKey("FK_HousingFamilyId")
@@ -5794,6 +5875,8 @@ namespace IIROSA.Infrastructure.Migrations
                         .HasForeignKey("OrphanPaymentId");
 
                     b.Navigation("Charity");
+
+                    b.Navigation("Cycle");
 
                     b.Navigation("HousingFamily");
 
@@ -6074,6 +6157,11 @@ namespace IIROSA.Infrastructure.Migrations
             modelBuilder.Entity("IIROSA.Domain.Entities.OrphanPayment", b =>
                 {
                     b.Navigation("Orphans");
+                });
+
+            modelBuilder.Entity("IIROSA.Domain.Entities.OrphanReportCycle", b =>
+                {
+                    b.Navigation("Reports");
                 });
 
             modelBuilder.Entity("IIROSA.Domain.Entities.Outgoing", b =>

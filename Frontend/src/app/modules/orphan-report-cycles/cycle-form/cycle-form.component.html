@@ -1,0 +1,125 @@
+<app-breadcrumb [items]="breadcrumbs"></app-breadcrumb>
+
+<div class="container-fluid cycle-form">
+  <div class="card">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap">
+      <h5 class="card-title mb-0">
+        {{ (isEditMode ? 'orphanReportCycles.editCycle' : 'orphanReportCycles.createCycle') | translate }}
+      </h5>
+      <!-- Status is server-derived (BR-ORC-02) — displayed, never entered -->
+      <span class="badge" *ngIf="isEditMode && cycle" [ngClass]="statusClass()">
+        {{ statusKey() | translate }}
+      </span>
+    </div>
+
+    <div class="card-body">
+      <div class="text-center py-5" *ngIf="loading">
+        <div class="spinner-border text-primary" role="status"></div>
+      </div>
+
+      <!-- BR-ORC-08: a completed cycle opens read-only -->
+      <div class="alert alert-secondary" *ngIf="readOnly">
+        {{ 'orphanReportCycles.form.completedReadOnly' | translate }}
+      </div>
+
+      <form [formGroup]="cycleForm" *ngIf="!loading">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>{{ 'orphanReportCycles.form.titleAr' | translate }} <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" formControlName="titleAr" maxlength="250"
+                     [class.is-invalid]="!!fieldError('titleAr')"
+                     [placeholder]="'orphanReportCycles.form.titleArPlaceholder' | translate"
+                     [readonly]="readOnly" />
+              <div class="invalid-feedback" *ngIf="fieldError('titleAr')">{{ fieldError('titleAr') }}</div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>{{ 'orphanReportCycles.form.titleEn' | translate }}</label>
+              <input type="text" class="form-control" formControlName="titleEn" maxlength="250"
+                     [class.is-invalid]="!!fieldError('titleEn')"
+                     [placeholder]="'orphanReportCycles.form.titleEnPlaceholder' | translate"
+                     [readonly]="readOnly" />
+              <div class="invalid-feedback" *ngIf="fieldError('titleEn')">{{ fieldError('titleEn') }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>{{ 'orphanReportCycles.form.startDate' | translate }} <span class="text-danger">*</span></label>
+              <input type="date" class="form-control" formControlName="startDate"
+                     [class.is-invalid]="!!fieldError('startDate')"
+                     [readonly]="readOnly" />
+              <div class="invalid-feedback" *ngIf="fieldError('startDate')">{{ fieldError('startDate') }}</div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>{{ 'orphanReportCycles.form.endDate' | translate }} <span class="text-danger">*</span></label>
+              <input type="date" class="form-control" formControlName="endDate"
+                     [class.is-invalid]="!!fieldError('endDate')"
+                     [readonly]="readOnly" />
+              <div class="invalid-feedback" *ngIf="fieldError('endDate')">{{ fieldError('endDate') }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>{{ 'orphanReportCycles.form.descriptionAr' | translate }}</label>
+              <textarea class="form-control" formControlName="descriptionAr" rows="4" maxlength="2000"
+                        [class.is-invalid]="!!fieldError('descriptionAr')"
+                        [readonly]="readOnly"></textarea>
+              <div class="invalid-feedback" *ngIf="fieldError('descriptionAr')">{{ fieldError('descriptionAr') }}</div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>{{ 'orphanReportCycles.form.descriptionEn' | translate }}</label>
+              <textarea class="form-control" formControlName="descriptionEn" rows="4" maxlength="2000"
+                        [class.is-invalid]="!!fieldError('descriptionEn')"
+                        [readonly]="readOnly"></textarea>
+              <div class="invalid-feedback" *ngIf="fieldError('descriptionEn')">{{ fieldError('descriptionEn') }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live coverage band (edit mode) — the numbers behind the register's progress column -->
+        <div class="coverage-band" *ngIf="isEditMode && cycle">
+          <div class="row text-center">
+            <div class="col-4">
+              <h5 class="mb-0">{{ cycle.codedOrphansCount }}</h5>
+              <small class="text-muted">{{ 'orphanReportCycles.form.codedOrphans' | translate }}</small>
+            </div>
+            <div class="col-4">
+              <h5 class="mb-0">{{ cycle.reportsCount }}</h5>
+              <small class="text-muted">{{ 'orphanReportCycles.form.submittedReports' | translate }}</small>
+            </div>
+            <div class="col-4">
+              <h5 class="mb-0">{{ cycle.progressPercent }}%</h5>
+              <small class="text-muted">{{ 'orphanReportCycles.list.colCoverage' | translate }}</small>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="card-footer d-flex justify-content-end" *ngIf="!loading">
+      <button type="button" class="btn btn-secondary ml-2" (click)="cancel()">
+        {{ 'common.cancel' | translate }}
+      </button>
+      <button type="button" class="btn btn-primary" *ngIf="!readOnly"
+              [disabled]="saving" (click)="save()">
+        <span class="spinner-border spinner-border-sm mr-1" *ngIf="saving"></span>
+        {{ 'common.save' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

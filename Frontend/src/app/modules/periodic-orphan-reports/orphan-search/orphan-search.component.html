@@ -63,12 +63,18 @@
           <td>{{ orphan.motherName || '-' }}</td>
           <td>{{ orphan.charityName || '-' }}</td>
           <td>
-            <!-- Report entry requires a code — the form resolves its subject by code (UC-ORR-02) -->
-            <button type="button" class="btn btn-sm btn-primary" *ngIf="orphan.code" (click)="addReport(orphan)"
+            <!-- UC-ORC-06: report entry needs a code (the form resolves its subject by it,
+                 UC-ORR-02) AND a running cycle; the chooser behind the click decides between
+                 create, edit-already-submitted, or the pick modal for several open cycles. -->
+            <button type="button" class="btn btn-sm btn-primary" *ngIf="orphan.code && hasRunningCycle" (click)="addReport(orphan)"
                     [title]="'periodicReports.orphanSearch.addReport' | translate">
               <i class="fe fe-file-plus mr-1"></i>
               {{ 'periodicReports.orphanSearch.addReport' | translate }}
             </button>
+            <span class="text-muted" *ngIf="orphan.code && !hasRunningCycle"
+                  [title]="'periodicReports.orphanSearch.noRunningCycleHint' | translate">
+              <i class="fe fe-file-minus"></i>
+            </span>
             <span class="text-muted" *ngIf="!orphan.code"
                   [title]="'periodicReports.orphanSearch.uncodedHint' | translate">-</span>
           </td>
@@ -94,3 +100,6 @@
     (pageChange)="onPageChange($event)">
   </app-pagination>
 </app-collapsible-card>
+
+<!-- UC-ORC-06 cycle chooser — the add-report click routes through it -->
+<app-cycle-report-chooser></app-cycle-report-chooser>

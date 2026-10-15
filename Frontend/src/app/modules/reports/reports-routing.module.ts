@@ -33,6 +33,7 @@ import { NewBeneficiariesReportComponent } from './new-beneficiaries-report/new-
 import { FollowUpSheetsComponent } from './follow-up-sheets/follow-up-sheets.component';
 import { MissingOutgoingAttachmentsComponent } from './missing-outgoing-attachments/missing-outgoing-attachments.component';
 import { FamilyOrphansByDateReportComponent } from './family-orphans-by-date-report/family-orphans-by-date-report.component';
+import { CycleReportCoverageComponent } from './cycle-report-coverage/cycle-report-coverage.component';
 import { AllReportsComponent } from './all-reports/all-reports.component';
 
 // Guards
@@ -353,6 +354,18 @@ const reportsRoutes: Routes = [
     canActivate: [AuthGuard, PermissionGuard],
     data: {
       pageTitle: 'reports.familyOrphansByDate.title',
+      permission: 'Reports.View'
+    }
+  },
+  {
+    // UC-ORC-09 (26-UC-ORC): تقارير الدورات — the reported / not-reported split of one
+    // cycle over the caller's coded-orphan population. The endpoint admits Charity too
+    // and pins its scope server-side, so the route gate follows Reports.View.
+    path: 'cycle-reports',
+    component: CycleReportCoverageComponent,
+    canActivate: [AuthGuard, PermissionGuard],
+    data: {
+      pageTitle: 'reports.cycleCoverage.title',
       permission: 'Reports.View'
     }
   }

@@ -21,6 +21,15 @@ public class CreatePeriodicOrphanReportDto
     public Guid? OrphanPaymentId { get; set; }
 
     /// <summary>
+    /// The reporting cycle this report is submitted inside (UC-ORC-07) — the chooser's
+    /// pick. Child reports only (housing guardian reports are never cycle-bound,
+    /// BR-ORC-10). When present the service re-validates the window server-side at write
+    /// time (BR-ORC-11) and the one-live-report-per-(orphan, cycle) rule applies instead
+    /// of the calendar-month rule (BR-ORC-09). Absent ⇒ the epic-9 monthly flow unchanged.
+    /// </summary>
+    public Guid? CycleId { get; set; }
+
+    /// <summary>
     /// Report Date (Required) - UC-6.11
     /// </summary>
     [Required(ErrorMessage = "Report date is required")]

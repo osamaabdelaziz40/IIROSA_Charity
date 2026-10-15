@@ -102,6 +102,15 @@ public class PeriodicOrphanReportConfiguration : IEntityTypeConfiguration<Period
             .HasForeignKey(x => x.FK_HousingFamilyId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        // UC-ORC-07 (26-UC-ORC): the reporting cycle this report was submitted inside.
+        // Restrict mirrors BR-ORC-07 — a live report blocks cycle deletion rather than
+        // cascading the round's evidence away. Nullable forever: pre-cycle rows, ad-hoc
+        // chapter-14 reports and housing reports stay cycle-less (BR-ORC-10).
+        builder.HasOne(x => x.Cycle)
+            .WithMany(x => x.Reports)
+            .HasForeignKey(x => x.CycleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.Property(x => x.ReportNo)
             .HasMaxLength(50);
 
@@ -109,6 +118,9 @@ public class PeriodicOrphanReportConfiguration : IEntityTypeConfiguration<Period
         builder.HasIndex(x => x.OrphanId);
         builder.HasIndex(x => x.ReportMonth);
         builder.HasIndex(x => x.ReportYear);
+        // Cycle reads: the chooser (UC-ORC-06), the coverage report (UC-ORC-09) and the
+        // submission window checks all resolve a report by its cycle first.
+        builder.HasIndex(x => x.CycleId);
         // One CHILD report per orphan per month. The filter matters (review follow-up
         // 2026-08-24): guardian rows ride the carrier child's OrphanId, so unfiltered this
         // index made (a) a live child + live guardian report in the same month on a
@@ -120,9 +132,19 @@ public class PeriodicOrphanReportConfiguration : IEntityTypeConfiguration<Period
         // flow (delete a wrong report, re-enter the same month) and there is no restore
         // endpoint, so a slot held by a soft-deleted row bricks that orphan's month
         // forever. Same liveness rule the guardian index below already applies.
+        // UC-ORC (BR-ORC-09, 26-UC-ORC): [CycleId] IS NULL added — the monthly rule now
+        // governs cycle-less reports only. Cycle-bound reports answer to the
+        // (orphan, cycle) index below, so two overlapping cycles inside one calendar
+        // month can no longer collide.
         builder.HasIndex(x => new { x.OrphanId, x.ReportMonth, x.ReportYear })
             .IsUnique()
-            .HasFilter("[ChildOrParent] = 1 AND [IsDeleted] = 0");
+            .HasFilter("[ChildOrParent] = 1 AND [IsDeleted] = 0 AND [CycleId] IS NULL");
+        // One live Child report per orphan per cycle (BR-ORC-05) — the DB backing for the
+        // service's check-then-insert. Same liveness and discriminator rules as the
+        // monthly index above; guardian/housing rows are never cycle-bound.
+        builder.HasIndex(x => new { x.OrphanId, x.CycleId })
+            .IsUnique()
+            .HasFilter("[CycleId] IS NOT NULL AND [ChildOrParent] = 1 AND [IsDeleted] = 0");
         // The housing screen's read path: one family × discriminator
         builder.HasIndex(x => new { x.FK_HousingFamilyId, x.ChildOrParent });
 

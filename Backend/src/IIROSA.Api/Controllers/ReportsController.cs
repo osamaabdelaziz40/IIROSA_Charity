@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using IIROSA.Application.DTOs.Reports;
+using IIROSA.Application.DTOs.OrphanReportCycles;
 using IIROSA.Application.Interfaces;
 using IIROSA.Application.Exceptions;
 using Framework.Core;
@@ -22,6 +23,7 @@ public class ReportsController : ApiController
     private readonly IReportSheetService _reportSheetService;
     private readonly IReportService _reportService;
     private readonly IPeriodicOrphanReportService _periodicReportService;
+    private readonly IOrphanReportCycleService _orphanReportCycleService;
 
     // Review P18 2026-08-24: the catch-alls swallowed exceptions with no trace — the
     // base class keeps its own logger private, so this controller carries a local one.
@@ -31,12 +33,55 @@ public class ReportsController : ApiController
         IReportSheetService reportSheetService,
         IReportService reportService,
         IPeriodicOrphanReportService periodicReportService,
+        IOrphanReportCycleService orphanReportCycleService,
         ILogger<ReportsController> logger) : base(logger)
     {
         _reportSheetService = reportSheetService;
         _reportService = reportService;
         _periodicReportService = periodicReportService;
+        _orphanReportCycleService = orphanReportCycleService;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// UC-ORC-09 (§26.S.4 تقارير الدورة) — the coverage split: the coded-orphan population
+    /// of the caller's scope, each row flagged submitted (with report date and review state)
+    /// or not. The charity scope is resolved inside the service from the token — an explicit
+    /// filter charity is honored for head office only (pin, never widen). Category pages one
+    /// tab; SubmittedCount/NotSubmittedCount cover both.
+    /// </summary>
+    [HttpPost("cycle-reports")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetCycleReports([FromBody] CycleReportCoverageFilterDto filter)
+    {
+        try
+        {
+            var result = await _orphanReportCycleService.GetCoverageAsync(filter);
+            return Ok(result);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            var errors = ex.Errors
+                .GroupBy(error => error.PropertyName ?? string.Empty)
+                .ToDictionary(
+                    group => group.Key,
+                    group => string.Join(" ", group.Select(error => error.ErrorMessage)));
+
+            return BadRequest(new { message = "One or more fields are invalid", errors });
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error running the cycle-reports coverage report");
+            return StatusCode(500, new { message = "Error running the cycle-reports coverage report" });
+        }
     }
 
     /// <summary>

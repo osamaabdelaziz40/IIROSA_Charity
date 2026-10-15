@@ -24,8 +24,8 @@ architecture — read `00-Overview-and-Common-Context` §2 first, and
 | Field | Value |
 | --- | --- |
 | Document title | IIROSA Charities - Module Documentation Set (Index) |
-| Documents in set | 23 |
-| Total use cases | 230 |
+| Documents in set | 24 |
+| Total use cases | 230 (WAR.IIROSA) + 16 new-platform (UC-NTF, UC-ORC) |
 | Screen field specifications | 661 fields across 19 chapters |
 | Use case scenarios | 230 |
 | Version | 1.3 |
@@ -60,6 +60,8 @@ architecture — read `00-Overview-and-Common-Context` §2 first, and
 | 17 | [22-UC-TRF-HQ-Financial-Transfers](22-UC-TRF-HQ-Financial-Transfers.md) | 22 | `UC-TRF` | HQ Financial Transfers | 8 |
 | 18 | [23-UC-RPT-Reports-and-Printing](23-UC-RPT-Reports-and-Printing.md) | 23 | `UC-RPT` | Reports & Printing | 41 |
 | 19 | [24-UC-SYS-Cross-Cutting-Services](24-UC-SYS-Cross-Cutting-Services.md) | 24 | `UC-SYS` | Cross-Cutting Services | 13 |
+| 20 | [25-UC-NTF-Web-Notifications](25-UC-NTF-Web-Notifications.md) | — | `UC-NTF` | Web Notifications *(new-platform capability)* | 7 |
+| 21 | [26-UC-ORC-Orphan-Report-Cycles](26-UC-ORC-Orphan-Report-Cycles.md) | — | `UC-ORC` | Orphan Report Cycles *(new-platform capability)* | 9 |
 
 ## What each module document contains
 
@@ -106,5 +108,7 @@ architecture — read `00-Overview-and-Common-Context` §2 first, and
 | UC-TRF | HQ financial transfers | 8 | 22 |
 | UC-RPT | Reports & printing | 41 | 23 |
 | UC-SYS | Cross-cutting services | 13 | 24 |
+| UC-NTF | Web notifications *(new-platform)* | 7 | — |
+| UC-ORC | Orphan report cycles *(new-platform)* | 9 | — |
 | Total |  | 230 |  |
 

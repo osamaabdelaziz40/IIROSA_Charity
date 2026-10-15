@@ -1,0 +1,307 @@
+- generic [ref=e34]:
+  - navigation [ref=e35]:
+    - button "" [ref=e36] [cursor=pointer]
+    - generic [ref=e38]:
+      - combobox [aria-hidden] [ref=e39]
+      - combobox [ref=e42] [cursor=pointer]:
+        - textbox "كل الجمعيات" [ref=e43]:
+          - generic "Remove all items" [ref=e44]: ×
+    - list [ref=e45]:
+      - listitem [ref=e46]:
+        - link "العربية " [ref=e47] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e48]: 
+          - text: العربية 
+      - listitem [ref=e49]:
+        - link "المظهر" [ref=e50] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e51]: 
+          - text: 
+        - text:   
+      - listitem [ref=e52]:
+        - link "" [ref=e53] [cursor=pointer]:
+          - /url: ./#
+      - listitem [ref=e56]:
+        - button [ref=e57] [cursor=pointer]:
+          - generic [ref=e58]:
+            - text: مرحبا System Admin
+            - img "..." [ref=e59]
+          - text: 
+  - complementary [ref=e60]:
+    - generic [ref=e65]:
+      - text: 
+      - navigation [ref=e66]:
+        - link [ref=e68] [cursor=pointer]:
+          - /url: "#/"
+          - img "IIROSA Logo" [ref=e69]
+        - paragraph [ref=e70]: عناصر الموقع
+        - list [ref=e71]:
+          - listitem [ref=e72]:
+            - link " الصفحة الرئيسية (current) " [ref=e73] [cursor=pointer]:
+              - /url: "#dashboard"
+              - generic [ref=e74]: 
+              - generic [ref=e75]: الصفحة الرئيسية
+              - generic [ref=e76]: (current)
+              - text: 
+            - list [ref=e77]:
+              - listitem [ref=e78]:
+                - link "الرئيسية" [ref=e79] [cursor=pointer]:
+                  - /url: "#/"
+          - listitem [ref=e80]:
+            - link " الإعدادات " [ref=e81] [cursor=pointer]:
+              - /url: "#settings"
+              - generic [ref=e82]: 
+              - generic [ref=e83]: الإعدادات
+              - text: 
+          - listitem [ref=e84]:
+            - link " الدعم الفني " [ref=e85] [cursor=pointer]:
+              - /url: "#technical-support"
+              - generic [ref=e86]: 
+              - generic [ref=e87]: الدعم الفني
+              - text: 
+          - listitem [ref=e88]:
+            - link " الإشعارات " [ref=e89] [cursor=pointer]:
+              - /url: "#notifications"
+              - generic [ref=e90]: 
+              - generic [ref=e91]: الإشعارات
+              - text: 
+          - listitem [ref=e92]:
+            - link " المهام " [ref=e93] [cursor=pointer]:
+              - /url: "#missions"
+              - generic [ref=e94]: 
+              - generic [ref=e95]: المهام
+              - text: 
+          - listitem [ref=e96]:
+            - link " مدفوعات الأيتام " [ref=e97] [cursor=pointer]:
+              - /url: "#orphan-payments"
+              - generic [ref=e98]: 
+              - generic [ref=e99]: مدفوعات الأيتام
+              - text: 
+          - listitem [ref=e100]:
+            - link " مشاريع المكتب " [ref=e101] [cursor=pointer]:
+              - /url: "#office-development-projects"
+              - generic [ref=e102]: 
+              - generic [ref=e103]: مشاريع المكتب
+              - text: 
+          - listitem [ref=e104]:
+            - link " مشاريع الإسكان " [ref=e105] [cursor=pointer]:
+              - /url: "#housing-projects"
+              - generic [ref=e106]: 
+              - generic [ref=e107]: مشاريع الإسكان
+              - text: 
+          - listitem [ref=e108]:
+            - link " المساعدات الموسمية " [ref=e109] [cursor=pointer]:
+              - /url: "#seasonal-aid"
+              - generic [ref=e110]: 
+              - generic [ref=e111]: المساعدات الموسمية
+              - text: 
+          - listitem [ref=e112]:
+            - link " الوارد والصادر " [ref=e113] [cursor=pointer]:
+              - /url: "#incoming-outgoing"
+              - generic [ref=e114]: 
+              - generic [ref=e115]: الوارد والصادر
+              - text: 
+          - listitem [ref=e116]:
+            - link " الأسر " [ref=e117] [cursor=pointer]:
+              - /url: "#families"
+              - generic [ref=e118]: 
+              - generic [ref=e119]: الأسر
+              - text: 
+          - listitem [ref=e120]:
+            - link " التقارير " [ref=e121] [cursor=pointer]:
+              - /url: "#reports"
+              - generic [ref=e122]: 
+              - generic [ref=e123]: التقارير
+              - text: 
+          - listitem [ref=e124]:
+            - link " الشيكات العامة " [ref=e125] [cursor=pointer]:
+              - /url: "#general-checks"
+              - generic [ref=e126]: 
+              - generic [ref=e127]: الشيكات العامة
+              - text: 
+          - listitem [ref=e128]:
+            - link " التقارير الدورية للأيتام " [ref=e129] [cursor=pointer]:
+              - /url: "#periodic-orphan-reports"
+              - generic [ref=e130]: 
+              - generic [ref=e131]: التقارير الدورية للأيتام
+              - text: 
+            - list [ref=e505]:
+              - listitem [ref=e506]:
+                - link "جميع التقارير الدورية" [ref=e507] [cursor=pointer]:
+                  - /url: "#/periodic-orphan-reports"
+              - listitem [ref=e508]:
+                - link "إضافة تقرير ليتيم" [ref=e509] [cursor=pointer]:
+                  - /url: "#/periodic-orphan-reports/orphan-search"
+              - listitem [ref=e510]:
+                - link "تقارير يتيم بالتاريخ" [ref=e511] [cursor=pointer]:
+                  - /url: "#/periodic-orphan-reports/orphan-reports/by-date"
+              - listitem [ref=e512]:
+                - link "حالة اليتيم" [ref=e513] [cursor=pointer]:
+                  - /url: "#/periodic-orphan-reports/orphan-reports/search"
+              - listitem [ref=e514]:
+                - link "احصائيات عامة للأيتام" [ref=e515] [cursor=pointer]:
+                  - /url: "#/periodic-orphan-reports/orphan-reports"
+          - listitem [ref=e132]:
+            - link " دورات التقارير الدورية للأيتام " [ref=e133] [cursor=pointer]:
+              - /url: "#orphan-report-cycles"
+              - generic [ref=e134]: 
+              - generic [ref=e135]: دورات التقارير الدورية للأيتام
+              - text: 
+          - listitem [ref=e136]:
+            - link " الحوالات المالية " [ref=e137] [cursor=pointer]:
+              - /url: "#hq-transfers"
+              - generic [ref=e138]: 
+              - generic [ref=e139]: الحوالات المالية
+              - text: 
+  - main [ref=e140]:
+    - generic [ref=e516]:
+      - navigation "breadcrumb" [ref=e518]:
+        - list [ref=e519]:
+          - listitem [ref=e520]:
+            - link "الرئيسية" [ref=e521] [cursor=pointer]:
+              - /url: "#/dashboard"
+          - listitem [ref=e522]:
+            - text: /
+            - link "التقارير الدورية للأيتام" [ref=e523] [cursor=pointer]:
+              - /url: "#/periodic-orphan-reports"
+          - listitem [ref=e524]:
+            - text: /
+            - generic [ref=e525]: إضافة تقرير دوري
+      - generic [ref=e528]:
+        - heading "إضافة تقرير دوري" [level=3] [ref=e531]
+        - button "إلغاء" [ref=e533] [cursor=pointer]
+      - generic [ref=e537]:
+        - generic [ref=e539]:
+          - button " البيانات الأساسية " [expanded] [ref=e540] [cursor=pointer]:
+            - heading " البيانات الأساسية" [level=4] [ref=e541]:
+              - generic [ref=e542]: 
+              - text: البيانات الأساسية
+            - generic [ref=e543]: 
+          - generic [ref=e544]:
+            - generic [ref=e545]:
+              - generic [ref=e546]: كود اليتيم *
+              - generic [ref=e547]:
+                - textbox "كود اليتيم *" [ref=e548]:
+                  - /placeholder: أدخل كود الكفالة ثم اضغط استدعاء
+                  - text: ORP-2026-69185
+                - button " استدعاء" [ref=e549] [cursor=pointer]:
+                  - generic [ref=e550]: 
+                  - text: استدعاء
+            - generic [ref=e553]:
+              - generic [ref=e554]:
+                - generic [ref=e555]: اسم اليتيم
+                - text: ابن التعديل 884525
+              - generic [ref=e556]:
+                - generic [ref=e557]: العمر
+                - text: "11"
+              - generic [ref=e558]:
+                - generic [ref=e559]: الجمعية
+                - text: الجمعية الخيرية - وادى النطرون
+              - generic [ref=e560]:
+                - generic [ref=e561]: مرجع العائلة
+                - text: FAM-2026-3531
+              - generic [ref=e562]:
+                - generic [ref=e563]: المعيل
+                - text: "???? ??? ???????? 884525"
+              - generic [ref=e564]:
+                - generic [ref=e565]: التقارير المسجلة
+                - generic [ref=e566]: "0"
+            - generic [ref=e567]:
+              - generic [ref=e569]:
+                - generic [ref=e570]: تاريخ التقرير *
+                - textbox "تاريخ التقرير *" [ref=e571]: 2026-10-14
+              - generic [ref=e573]:
+                - generic [ref=e574]: الفترة من
+                - textbox "الفترة من" [ref=e575]
+              - generic [ref=e577]:
+                - generic [ref=e578]: الفترة إلى
+                - textbox "الفترة إلى" [ref=e579]
+              - generic [ref=e581]:
+                - generic [ref=e582]: رقم التقرير
+                - textbox "رقم التقرير" [ref=e583]
+        - button " الالتزام الديني والسلوك " [ref=e586] [cursor=pointer]:
+          - heading " الالتزام الديني والسلوك" [level=4] [ref=e587]:
+            - generic [ref=e588]: 
+            - text: الالتزام الديني والسلوك
+          - generic [ref=e589]: 
+        - button " حفظ القرآن الكريم " [ref=e592] [cursor=pointer]:
+          - heading " حفظ القرآن الكريم" [level=4] [ref=e593]:
+            - generic [ref=e594]: 
+            - text: حفظ القرآن الكريم
+          - generic [ref=e595]: 
+        - button " الحالة الصحية والطبية " [ref=e598] [cursor=pointer]:
+          - heading " الحالة الصحية والطبية" [level=4] [ref=e599]:
+            - generic [ref=e600]: 
+            - text: الحالة الصحية والطبية
+          - generic [ref=e601]: 
+        - button " الأنشطة والتطور الشخصي " [ref=e604] [cursor=pointer]:
+          - heading " الأنشطة والتطور الشخصي" [level=4] [ref=e605]:
+            - generic [ref=e606]: 
+            - text: الأنشطة والتطور الشخصي
+          - generic [ref=e607]: 
+        - generic [ref=e609]:
+          - button " الحالة التعليمية " [expanded] [ref=e634] [cursor=pointer]:
+            - heading " الحالة التعليمية" [level=4] [ref=e611]:
+              - generic [ref=e612]: 
+              - text: الحالة التعليمية
+            - generic [ref=e613]: 
+          - generic [ref=e636]:
+            - generic [ref=e638]:
+              - generic [ref=e639]: المرحلة الدراسية
+              - combobox "المرحلة الدراسية" [ref=e640]:
+                - option "— اختر المرحلة —" [selected]
+                - option "Primary"
+                - option "Preparatory"
+                - option "Secondary"
+                - option "University"
+            - generic [ref=e642]:
+              - generic [ref=e643]: اسم المؤسسة التعليمية
+              - textbox "اسم المؤسسة التعليمية" [ref=e644]
+            - generic [ref=e646]:
+              - generic [ref=e647]: الصف الدراسي
+              - textbox "الصف الدراسي" [ref=e648]
+            - generic [ref=e650]:
+              - generic [ref=e651]: نوع التعليم
+              - textbox "نوع التعليم" [ref=e652]
+            - generic [ref=e654]:
+              - generic [ref=e655]: الكلية
+              - textbox "الكلية" [ref=e656]
+            - generic [ref=e658]:
+              - generic [ref=e659]: القسم
+              - textbox "القسم" [ref=e660]
+            - generic [ref=e662]:
+              - generic [ref=e663]: التخصص
+              - textbox "التخصص" [ref=e664]
+            - generic [ref=e666]:
+              - generic [ref=e667]: طلب كفالة طالب
+              - generic [ref=e668]:
+                - checkbox "طلب كفالة طالب نعم" [ref=e669]
+                - generic [ref=e670]: نعم
+            - generic [ref=e672]:
+              - generic [ref=e673]: ترك الدراسة
+              - generic [ref=e674]:
+                - checkbox "ترك الدراسة نعم" [ref=e675]
+                - generic [ref=e676]: نعم
+        - button " أحداث الحياة " [ref=e616] [cursor=pointer]:
+          - heading " أحداث الحياة" [level=4] [ref=e617]:
+            - generic [ref=e618]: 
+            - text: أحداث الحياة
+          - generic [ref=e619]: 
+        - generic [ref=e621]:
+          - button " الملفات المطلوبة " [ref=e622] [cursor=pointer]:
+            - heading " الملفات المطلوبة" [level=4] [ref=e623]:
+              - generic [ref=e624]: 
+              - text: الملفات المطلوبة
+            - generic [ref=e625]: 
+          - text:          
+        - generic [ref=e629]:
+          - button " إضافة تقرير دوري" [ref=e630] [cursor=pointer]:
+            - generic [ref=e631]: 
+            - text: إضافة تقرير دوري
+          - button " إلغاء" [ref=e632] [cursor=pointer]:
+            - generic [ref=e633]: 
+            - text: إلغاء
+  - contentinfo [ref=e498]:
+    - generic [ref=e500]:
+      - paragraph [ref=e502]: © 2026 IIROSA. جميع الحقوق محفوظة
+      - paragraph [ref=e504]: الإصدار 1.0.0

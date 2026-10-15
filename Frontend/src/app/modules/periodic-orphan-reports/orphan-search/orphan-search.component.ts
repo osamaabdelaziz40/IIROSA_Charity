@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -11,6 +11,9 @@ import { CharityService } from '../../charities/services/charity.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { OrphanCodingSearchRequest, OrphanLookupDto } from '../../families/models/family.model';
+import { OrphanReportCycleService } from '../../orphan-report-cycles/services/orphan-report-cycle.service';
+import { OrphanReportCycleStatus } from '../../orphan-report-cycles/models/orphan-report-cycle.model';
+import { CycleReportChooserComponent } from '../../orphan-report-cycles/cycle-report-chooser/cycle-report-chooser.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { BreadcrumbComponent, BreadcrumbItem, PaginationComponent } from '../../../shared/components';
 import { DropDownComponent } from '../../../shared/components/drop-down/drop-down.component';
@@ -18,10 +21,13 @@ import { SharedModule } from '../../../shared/shared.module';
 
 /**
  * Report-entry shortcut: search an orphan by name or sponsorship code (UC-ORP-02
- * shared read), then jump straight into the periodic report create form with the
- * orphan pre-resolved. The report itself is entered on the UC-6.11 form — this
- * screen only picks the subject.
+ * shared read), then jump straight into the periodic report flow with the orphan
+ * pre-resolved. The report itself is entered on the UC-6.11 form — this screen only
+ * picks the subject.
  *
+ * UC-ORC-06: the «إضافة تقرير دوري» action appears only while a cycle runs, and its
+ * click routes through the cycle chooser (direct when one cycle runs, explicit pick
+ * when several do, the existing report's edit route when already submitted).
  * Uncoded orphans render without the action: the report form resolves its subject
  * by code (UC-ORR-02), so no code means no report yet.
  */
@@ -39,13 +45,17 @@ import { SharedModule } from '../../../shared/shared.module';
     BreadcrumbComponent,
     PaginationComponent,
     DropDownComponent,
-    SharedModule
+    SharedModule,
+    CycleReportChooserComponent
   ],
   templateUrl: './orphan-search.component.html',
   styleUrls: ['./orphan-search.component.scss']
 })
 export class OrphanSearchComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+
+  /** UC-ORC-06 — hosts the chooser modal and owns the click decision. */
+  @ViewChild(CycleReportChooserComponent) private cycleChooser?: CycleReportChooserComponent;
 
   filterForm: FormGroup;
 
@@ -54,6 +64,9 @@ export class OrphanSearchComponent implements OnInit, OnDestroy {
   currentPage = 1;
   pageSize = 20;
   loading = false;
+
+  /** True while at least one report cycle is In Progress — gates the row action (UC-ORC-06). */
+  hasRunningCycle = false;
 
   /** HQ narrowing (كافة الجهات head option included); hidden from charity-scoped callers. */
   isSuperAdmin = false;
@@ -67,10 +80,10 @@ export class OrphanSearchComponent implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder,
-    private router: Router,
     private familyService: FamilyService,
     private charityService: CharityService,
     private authService: AuthService,
+    private cycleService: OrphanReportCycleService,
     private notification: NotificationService,
     private translate: TranslateService,
     private cdr: ChangeDetectorRef
@@ -86,6 +99,18 @@ export class OrphanSearchComponent implements OnInit, OnDestroy {
     if (this.isSuperAdmin) {
       this.loadCharityOptions();
     }
+
+    // UC-ORC-06 — the row action exists only while a cycle runs; one screen-scoped read.
+    this.cycleService.getSelector().pipe(takeUntil(this.destroy$)).subscribe({
+      next: cycles => {
+        this.hasRunningCycle = cycles.some(c => c.status === OrphanReportCycleStatus.InProgress);
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.hasRunningCycle = false;
+        this.cdr.markForCheck();
+      }
+    });
 
     // Type-ahead: one request after the caller stops typing, not one per keystroke.
     this.filterForm.get('searchValue')!.valueChanges
@@ -158,15 +183,16 @@ export class OrphanSearchComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Open the UC-6.11 create form with the orphan pre-resolved — the form reads the
-   * code query param and runs its UC-ORR-02 lookup itself, so an out-of-scope or
-   * since-decoded code still resolves through the one authoritative path.
+   * UC-ORC-06 — hand the row to the cycle chooser: it fetches the orphan's live
+   * In Progress cycles and routes (create deep-link, existing report's edit route,
+   * or the pick modal when several cycles run). The server re-derives the window at
+   * write time — this click is navigation, never the control.
    */
   addReport(orphan: OrphanLookupDto): void {
-    if (!orphan.code) {
+    if (!orphan.code || !this.hasRunningCycle || !this.cycleChooser) {
       return;
     }
-    this.router.navigate(['/periodic-orphan-reports/create'], { queryParams: { code: orphan.code } });
+    this.cycleChooser.openFor({ orphanId: orphan.orphanId, code: orphan.code, fullName: orphan.fullName });
   }
 
   getSerial(index: number): number {

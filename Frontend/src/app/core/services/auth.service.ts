@@ -149,6 +149,16 @@ const PERMISSION_ROLES: Record<string, string[]> = {
   'SeasonalAid.RecordDistribution': ['SuperAdmin', 'Admin', 'Charity'],
   'SeasonalAid.Reports': ['SuperAdmin', 'Admin'],
 
+  // OrphanReportCyclesController (UC-ORC, docs/Modules/26-UC-ORC): the register, create,
+  // update and delete actions are HQ-only per their [Authorize(Roles = "Admin,SuperAdmin")].
+  // The picker reads (selector, orphan report-status) and the coverage endpoint admit
+  // every authenticated caller and are reached from charity screens without a permission
+  // key — nothing to map here for them.
+  'OrphanReportCycles.View': ['SuperAdmin', 'Admin'],
+  'OrphanReportCycles.Create': ['SuperAdmin', 'Admin'],
+  'OrphanReportCycles.Edit': ['SuperAdmin', 'Admin'],
+  'OrphanReportCycles.Delete': ['SuperAdmin', 'Admin'],
+
   // CheckManagementController: the register, statement and detail reads admit the
   // financial read roles (FinancialOfficer = Financial Director); issue and edit are
   // the financial approver set. Charity holds no cheque screen, but the service still

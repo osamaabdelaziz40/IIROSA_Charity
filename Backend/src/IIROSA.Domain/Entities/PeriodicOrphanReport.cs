@@ -36,6 +36,13 @@ public class PeriodicOrphanReport : FullAuditedEntity
     public Guid? OrphanPaymentId { get; set; }
 
     /// <summary>
+    /// The reporting cycle this report was submitted inside (UC-ORC-07), when it came from
+    /// the cycle flow. Nullable forever (BR-ORC-10): pre-cycle rows, ad-hoc chapter-14
+    /// reports and housing reports (UC-HOU-06/08) stay cycle-less.
+    /// </summary>
+    public Guid? CycleId { get; set; }
+
+    /// <summary>
     /// Report Date (Required) - UC-6.11
     /// </summary>
     public DateTime ReportDate { get; set; }
@@ -526,6 +533,12 @@ public class PeriodicOrphanReport : FullAuditedEntity
     /// Navigation to OrphanPayment (optional) - UC-6.11
     /// </summary>
     public virtual OrphanPayment? OrphanPayment { get; set; }
+
+    /// <summary>
+    /// Navigation to the reporting cycle this report belongs to (UC-ORC-07) — null on
+    /// cycle-less rows (BR-ORC-10).
+    /// </summary>
+    public virtual OrphanReportCycle? Cycle { get; set; }
 
     /// <summary>
     /// Navigation to the housing family (UC-HOU-06/08) — null on non-housing reports.
