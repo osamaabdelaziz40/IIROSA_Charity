@@ -1,9 +1,13 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import type { ApexOptions } from 'apexcharts';
+import { EMPTY } from 'rxjs';
+import { catchError, switchMap } from 'rxjs/operators';
 import { BreadcrumbComponent, BreadcrumbItem, ApexChartComponent } from '../../shared/components';
 import { SelectedCharityService } from '../../core/services/selected-charity.service';
+import { DashboardService } from './services/dashboard.service';
+import { DashboardStatistics } from './models/dashboard-statistics.model';
 
 @Component({
   selector: 'app-dashboard',
@@ -12,7 +16,7 @@ import { SelectedCharityService } from '../../core/services/selected-charity.ser
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
   // Breadcrumb items
   breadcrumbs: BreadcrumbItem[] = [
     { label: 'common.home', url: '/dashboard' }
@@ -22,14 +26,28 @@ export class DashboardComponent {
   // Charities"/nothing is chosen.
   selectedCharity$ = this.selectedCharityService.selectedCharity$;
 
-  constructor(private selectedCharityService: SelectedCharityService) {}
+  constructor(
+    private selectedCharityService: SelectedCharityService,
+    private dashboardService: DashboardService
+  ) {}
+
+  ngOnInit(): void {
+    this.selectedCharity$.pipe(
+      switchMap(charity => this.dashboardService.getStatistics(charity?.id ?? null).pipe(
+        catchError(error => {
+          console.error('Failed to load dashboard statistics', error);
+          return EMPTY;
+        })
+      ))
+    ).subscribe(statistics => this.applyStatistics(statistics));
+  }
 
   // Dashboard statistics
   stats = {
-    totalCharities: 152,
-    totalOrphans: 2840,
-    totalFamilies: 485,
-    activeMissions: 24
+    totalCharities: 0,
+    totalOrphans: 0,
+    totalFamilies: 0,
+    activeMissions: 0
   };
 
   // Recent activities
@@ -47,10 +65,8 @@ export class DashboardComponent {
     { id: 3, title: 'Orphanage Visit', date: '2026-05-20', time: '02:00 PM' }
   ];
 
-  // Chart options are one-time readonly fields: the data is static, and handing
-  // apx-chart a fresh options object on every change-detection pass would force
-  // ApexCharts to re-render each cycle.
-  readonly monthlyChartOptions: ApexOptions = {
+  // Chart inputs are replaced only when the dashboard statistics request completes.
+  monthlyChartOptions: ApexOptions = {
     theme: { mode: 'dark' },
     chart: {
       type: 'bar',
@@ -60,8 +76,8 @@ export class DashboardComponent {
       zoom: { enabled: true }
     },
     series: [
-      { name: 'Charities', data: [32, 66, 44, 55, 41, 24, 67, 22, 43, 32, 66, 44] },
-      { name: 'Orphans', data: [7, 30, 13, 23, 20, 12, 8, 13, 27, 7, 30, 13] }
+      { name: 'Charities', data: [] },
+      { name: 'Orphans', data: [] }
     ],
     plotOptions: {
       bar: {
@@ -75,7 +91,7 @@ export class DashboardComponent {
       strokeDashArray: 4
     },
     xaxis: {
-      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      categories: [],
       axisBorder: { show: false },
       axisTicks: { show: false },
       labels: { style: { colors: '#9ca3af' } }
@@ -85,7 +101,7 @@ export class DashboardComponent {
     fill: { opacity: 1 }
   };
 
-  readonly financialChartOptions: ApexOptions = {
+  financialChartOptions: ApexOptions = {
     theme: { mode: 'dark' },
     chart: {
       type: 'line',
@@ -95,8 +111,8 @@ export class DashboardComponent {
       zoom: { enabled: false }
     },
     series: [
-      { name: 'Donations', data: [31, 28, 30, 51, 42, 109, 100, 31, 40, 28, 31, 58] },
-      { name: 'Expenses', data: [11, 45, 20, 32, 34, 52, 41, 11, 32, 45, 11, 75] }
+      { name: 'Allocated', data: [] },
+      { name: 'Received', data: [] }
     ],
     stroke: {
       curve: 'smooth',
@@ -107,7 +123,7 @@ export class DashboardComponent {
       strokeDashArray: 4
     },
     xaxis: {
-      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      categories: [],
       axisBorder: { show: false },
       axisTicks: { show: false },
       labels: { style: { colors: '#9ca3af' } }
@@ -117,7 +133,7 @@ export class DashboardComponent {
     tooltip: { theme: 'dark' }
   };
 
-  readonly familyGrowthChartOptions: ApexOptions = {
+  familyGrowthChartOptions: ApexOptions = {
     theme: { mode: 'dark' },
     chart: {
       type: 'area',
@@ -127,8 +143,7 @@ export class DashboardComponent {
       toolbar: { show: false }
     },
     series: [
-      { name: 'Active Families', data: [31, 28, 30, 51, 42, 109, 100, 31, 40, 28, 31, 58] },
-      { name: 'New Families', data: [11, 45, 20, 32, 34, 52, 41, 11, 32, 45, 11, 75] }
+      { name: 'Families Added', data: [] }
     ],
     stroke: {
       curve: 'smooth',
@@ -139,7 +154,7 @@ export class DashboardComponent {
       strokeDashArray: 4
     },
     xaxis: {
-      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      categories: [],
       axisBorder: { show: false },
       axisTicks: { show: false },
       labels: { style: { colors: '#9ca3af' } }
@@ -148,7 +163,7 @@ export class DashboardComponent {
     legend: { position: 'top', labels: { colors: '#9ca3af' } }
   };
 
-  readonly budgetChartOptions: ApexOptions = {
+  budgetChartOptions: ApexOptions = {
     theme: { mode: 'dark' },
     chart: {
       type: 'donut',
@@ -156,8 +171,8 @@ export class DashboardComponent {
       background: 'transparent',
       toolbar: { show: false }
     },
-    series: [44, 55, 20, 41],
-    labels: ['Education', 'Healthcare', 'Housing', 'Food'],
+    series: [],
+    labels: [],
     plotOptions: {
       pie: {
         donut: {
@@ -176,7 +191,7 @@ export class DashboardComponent {
     }
   };
 
-  readonly performanceChartOptions: ApexOptions = {
+  performanceChartOptions: ApexOptions = {
     theme: { mode: 'dark' },
     chart: {
       type: 'radar',
@@ -185,8 +200,8 @@ export class DashboardComponent {
       toolbar: { show: false }
     },
     series: [
-      { name: 'This Year', data: [80, 50, 30, 40, 100, 20] },
-      { name: 'Last Year', data: [20, 30, 40, 80, 20, 80] }
+      { name: 'Completed', data: [] },
+      { name: 'Pending', data: [] }
     ],
     plotOptions: {
       radar: {
@@ -197,9 +212,140 @@ export class DashboardComponent {
       }
     },
     xaxis: {
-      categories: ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6'],
+      categories: [],
       labels: { style: { colors: '#9ca3af' } }
     },
     yaxis: { labels: { style: { colors: '#9ca3af' } } }
   };
+
+  mostActiveCharitiesChartOptions: ApexOptions = {
+    theme: { mode: 'dark' },
+    chart: { type: 'bar', height: 350, background: 'transparent', toolbar: { show: false } },
+    series: [{ name: 'Interactions', data: [] }],
+    plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '55%' } },
+    xaxis: {
+      categories: [],
+      labels: { style: { colors: '#9ca3af' } }
+    },
+    grid: { borderColor: 'rgba(255, 255, 255, 0.1)', strokeDashArray: 4 },
+    legend: { labels: { colors: '#9ca3af' } },
+    dataLabels: { enabled: true, style: { colors: ['#fff'] } }
+  };
+
+  familiesByCharityChartOptions: ApexOptions = {
+    theme: { mode: 'dark' },
+    chart: { type: 'bar', height: 350, background: 'transparent', toolbar: { show: false } },
+    series: [{ name: 'Families', data: [] }],
+    plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '55%' } },
+    xaxis: {
+      categories: [],
+      labels: { style: { colors: '#9ca3af' } }
+    },
+    grid: { borderColor: 'rgba(255, 255, 255, 0.1)', strokeDashArray: 4 },
+    dataLabels: { enabled: true, style: { colors: ['#fff'] } }
+  };
+
+  orphansByCharityChartOptions: ApexOptions = {
+    theme: { mode: 'dark' },
+    chart: { type: 'bar', height: 350, background: 'transparent', toolbar: { show: false } },
+    series: [{ name: 'Orphans', data: [] }],
+    plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '55%' } },
+    xaxis: {
+      categories: [],
+      labels: { style: { colors: '#9ca3af' } }
+    },
+    grid: { borderColor: 'rgba(255, 255, 255, 0.1)', strokeDashArray: 4 },
+    dataLabels: { enabled: true, style: { colors: ['#fff'] } }
+  };
+
+  mostActiveUsersChartOptions: ApexOptions = {
+    theme: { mode: 'dark' },
+    chart: { type: 'bar', height: 350, background: 'transparent', toolbar: { show: false } },
+    series: [{ name: 'Interactions', data: [] }],
+    plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '55%' } },
+    xaxis: {
+      categories: [],
+      labels: { style: { colors: '#9ca3af' } }
+    },
+    grid: { borderColor: 'rgba(255, 255, 255, 0.1)', strokeDashArray: 4 },
+    dataLabels: { enabled: true, style: { colors: ['#fff'] } }
+  };
+
+  orphanGenderChartOptions: ApexOptions = {
+    theme: { mode: 'dark' },
+    chart: { type: 'donut', height: 350, background: 'transparent', toolbar: { show: false } },
+    series: [],
+    labels: ['Male', 'Female'],
+    plotOptions: { pie: { donut: { size: '68%' } } },
+    dataLabels: { enabled: true },
+    legend: { position: 'bottom', labels: { colors: '#9ca3af' } },
+    stroke: { show: true, colors: ['#1f2937'] }
+  };
+
+  private applyStatistics(data: DashboardStatistics): void {
+    this.stats = {
+      totalCharities: data.totalCharities,
+      totalOrphans: data.totalOrphans,
+      totalFamilies: data.totalFamilies,
+      activeMissions: data.activeMissions
+    };
+    this.monthlyChartOptions = {
+      ...this.monthlyChartOptions,
+      series: [
+        { name: 'Charities', data: data.charitiesCreatedByMonth },
+        { name: 'Orphans', data: data.orphansCreatedByMonth }
+      ],
+      xaxis: { ...(this.monthlyChartOptions.xaxis as object), categories: data.months }
+    };
+    this.financialChartOptions = {
+      ...this.financialChartOptions,
+      series: [
+        { name: 'Allocated', data: data.allocatedPaymentsByMonth },
+        { name: 'Received', data: data.receivedPaymentsByMonth }
+      ],
+      xaxis: { ...(this.financialChartOptions.xaxis as object), categories: data.months }
+    };
+    this.familyGrowthChartOptions = {
+      ...this.familyGrowthChartOptions,
+      series: [{ name: 'Families Added', data: data.familiesCreatedByMonth }],
+      xaxis: { ...(this.familyGrowthChartOptions.xaxis as object), categories: data.months }
+    };
+    this.budgetChartOptions = {
+      ...this.budgetChartOptions,
+      series: data.paymentStatusValues,
+      labels: data.paymentStatusLabels
+    };
+    this.performanceChartOptions = {
+      ...this.performanceChartOptions,
+      series: [
+        { name: 'Completed', data: data.completedMissionsByQuarter },
+        { name: 'Pending', data: data.pendingMissionsByQuarter }
+      ],
+      xaxis: { ...(this.performanceChartOptions.xaxis as object), categories: data.missionQuarterLabels }
+    };
+    this.mostActiveCharitiesChartOptions = this.withBarData(
+      this.mostActiveCharitiesChartOptions, 'Interactions', data.activeCharityInteractions, data.activeCharityNames
+    );
+    this.familiesByCharityChartOptions = this.withBarData(
+      this.familiesByCharityChartOptions, 'Families', data.familiesByCharity, data.familyCharityNames
+    );
+    this.orphansByCharityChartOptions = this.withBarData(
+      this.orphansByCharityChartOptions, 'Orphans', data.orphansByCharity, data.orphanCharityNames
+    );
+    this.mostActiveUsersChartOptions = this.withBarData(
+      this.mostActiveUsersChartOptions, 'Interactions', data.userInteractions, data.activeUserNames
+    );
+    this.orphanGenderChartOptions = {
+      ...this.orphanGenderChartOptions,
+      series: [data.maleOrphans, data.femaleOrphans]
+    };
+  }
+
+  private withBarData(options: ApexOptions, name: string, values: number[], categories: string[]): ApexOptions {
+    return {
+      ...options,
+      series: [{ name, data: values }],
+      xaxis: { ...(options.xaxis as object), categories }
+    };
+  }
 }

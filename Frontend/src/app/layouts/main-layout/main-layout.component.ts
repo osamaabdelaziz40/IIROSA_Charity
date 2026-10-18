@@ -43,6 +43,7 @@ export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   // Impersonation
   canImpersonate = false;
   isSuperAdmin = false;
+  canSelectCharity = false;
 
   // Header charity switcher (select2)
   charities: CharityDto[] = [];
@@ -144,6 +145,7 @@ export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
       // Set impersonation flags
       this.canImpersonate = this.authService.hasAnyRole(['SuperAdmin', 'Admin']);
       this.isSuperAdmin = this.authService.hasRole('SuperAdmin');
+      this.canSelectCharity = this.authService.hasAnyRole(['SuperAdmin', 'Admin']);
     }
 
     // Header charity switcher — see loadCharities() for the scoping note
@@ -355,10 +357,23 @@ export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
    * own record — the same GET /api/Charities the charities list screen uses.
    */
   private loadCharities(): void {
+    if (!this.canSelectCharity) {
+      // Remove any HQ selection left in this browser. The API still pins Charity
+      // users from their signed claim; this only keeps the dashboard display in sync.
+      this.selectedCharityService.clear();
+    }
     this.charitiesSub = this.charityService.getCharities({ pageNumber: 1, pageSize: 10000 })
       .subscribe({
         next: response => {
           this.charities = response.items || [];
+          if (!this.canSelectCharity) {
+            if (this.charities.length > 0) {
+              this.selectedCharityService.setPinnedCharity(this.charities[0]);
+            } else {
+              this.selectedCharityService.selectAll();
+            }
+            return;
+          }
           this.initCharitySelect2();
         },
         error: error => console.warn('Header charity switcher: failed to load charities', error)

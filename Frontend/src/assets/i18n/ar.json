@@ -140,7 +140,19 @@
     "projectStatus": "حالة المشروع",
     "noRecentActivities": "لا توجد أنشطة حديثة",
     "upcomingEvents": "الفعاليات القادمة",
-    "noUpcomingEvents": "لا توجد فعاليات قادمة"
+    "noUpcomingEvents": "لا توجد فعاليات قادمة",
+    "charts": {
+      "monthlyStatistics": "الإحصائيات الشهرية",
+      "monthlyOrphanPayments": "مدفوعات الأيتام الشهرية",
+      "familyGrowth": "نمو الأسر",
+      "orphanPaymentStatus": "حالة مدفوعات الأيتام",
+      "missionProgressByQuarter": "تقدم المهام حسب الربع السنوي",
+      "mostActiveCharities": "أكثر الجمعيات الخيرية نشاطًا",
+      "familiesByCharity": "عدد الأسر حسب الجمعية الخيرية",
+      "orphansByCharity": "عدد الأيتام حسب الجمعية الخيرية",
+      "mostActiveUsersNonCharity": "أكثر المستخدمين نشاطًا (من خارج دور الجمعية)",
+      "orphansByGender": "توزيع الأيتام حسب النوع"
+    }
   },
   "employees": {
     "title": "الموظفون",

@@ -140,7 +140,19 @@
     "projectStatus": "Project Status",
     "noRecentActivities": "No recent activities",
     "upcomingEvents": "Upcoming Events",
-    "noUpcomingEvents": "No upcoming events"
+    "noUpcomingEvents": "No upcoming events",
+    "charts": {
+      "monthlyStatistics": "Monthly Statistics",
+      "monthlyOrphanPayments": "Monthly Orphan Payments",
+      "familyGrowth": "Family Growth",
+      "orphanPaymentStatus": "Orphan Payment Status",
+      "missionProgressByQuarter": "Mission Progress by Quarter",
+      "mostActiveCharities": "Most Active Charitable Organizations",
+      "familiesByCharity": "Families by Charitable Organization",
+      "orphansByCharity": "Orphans by Charitable Organization",
+      "mostActiveUsersNonCharity": "Most Active Users (Non-Association Roles)",
+      "orphansByGender": "Orphans by Gender"
+    }
   },
   "employees": {
     "title": "Employees",

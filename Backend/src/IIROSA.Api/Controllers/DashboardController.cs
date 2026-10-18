@@ -27,6 +27,29 @@ public class DashboardController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>Home page statistics, aggregated from the caller's permitted database scope.</summary>
+    [HttpGet("statistics")]
+    [ProducesResponseType(typeof(DashboardStatisticsDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetStatistics(
+        [FromQuery] Guid? charityId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _dashboardService.GetStatisticsAsync(charityId, cancellationToken));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Home page statistics query failed");
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                new { message = "An error occurred while loading dashboard statistics." });
+        }
+    }
+
     /// <summary>
     /// The batch's cover figures — orphan count, total disbursed, per-state counts/amounts
     /// (received / not-received / stopped) and cheque totals. HQ-only surface

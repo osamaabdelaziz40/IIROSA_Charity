@@ -13,5 +13,6 @@ namespace Framework.Core.SharedServices
         DbSet<NotificationTemplate> NotificationTemplates { get; set; }
         DbSet<SystemSetting> SystemSettings { get; set; }
         DbSet<NotificationType> NotificationTypes { get; set; }
+        DbSet<AuditLog> AuditLogs { get; set; }
     }
 }

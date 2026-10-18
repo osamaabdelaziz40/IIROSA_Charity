@@ -14,7 +14,7 @@
       <i class="fe fe-menu navbar-toggler-icon"></i>
     </button>
 <!-- Global charity switcher (select2 — initialised in the component) -->
-    <div class="charity-switcher mr-auto" id="charitySwitcher">
+    <div class="charity-switcher mr-auto" id="charitySwitcher" *ngIf="canSelectCharity">
       <select id="charitySelect" class="form-control select2"
               [attr.dir]="currentLang === 'ar' ? 'rtl' : 'ltr'"
               [attr.aria-label]="'layout.selectCharity' | translate">

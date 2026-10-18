@@ -9,6 +9,11 @@ namespace IIROSA.Application.Interfaces;
 /// </summary>
 public interface IDashboardService
 {
+    /// <summary>Returns caller-scoped, database-backed home page statistics.</summary>
+    Task<DashboardStatisticsDto> GetStatisticsAsync(
+        Guid? charityId = null,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// The summary figures of the payment batch that <paramref name="paymentId"/>'s group
     /// belongs to (groups sharing its BatchNo aggregate together — the 18-29/30/31 batch

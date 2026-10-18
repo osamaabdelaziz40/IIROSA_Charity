@@ -6,6 +6,9 @@ using IIROSA.Domain.Entities;
 using IIROSA.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Framework.Core.SharedServices;
+using Framework.Identity.Data.Entities;
+using Microsoft.AspNetCore.Identity;
 
 namespace IIROSA.Application.Services;
 
@@ -23,12 +26,20 @@ public class DashboardService : IDashboardService
     private readonly IRepository<OrphanPayment> _orphanPaymentRepository;
     private readonly ICurrentUserService _currentUser;
     private readonly ILogger<DashboardService> _logger;
+    private readonly IRepository<Family> _familyRepository;
+    private readonly IRepository<Mission> _missionRepository;
+    private readonly ICommonsDbContext _commonsContext;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     public DashboardService(
         IOrphanRepository orphanRepository,
         IRepository<OrphanPaymentItem> paymentItemRepository,
         IRepository<Charity> charityRepository,
         IRepository<OrphanPayment> orphanPaymentRepository,
+        IRepository<Family> familyRepository,
+        IRepository<Mission> missionRepository,
+        ICommonsDbContext commonsContext,
+        UserManager<ApplicationUser> userManager,
         ICurrentUserService currentUser,
         ILogger<DashboardService> logger)
     {
@@ -36,8 +47,154 @@ public class DashboardService : IDashboardService
         _paymentItemRepository = paymentItemRepository;
         _charityRepository = charityRepository;
         _orphanPaymentRepository = orphanPaymentRepository;
+        _familyRepository = familyRepository;
+        _missionRepository = missionRepository;
+        _commonsContext = commonsContext;
+        _userManager = userManager;
         _currentUser = currentUser;
         _logger = logger;
+    }
+
+    /// <inheritdoc />
+    public async Task<DashboardStatisticsDto> GetStatisticsAsync(
+        Guid? charityId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var charities = _charityRepository.TableNoTracking.Where(c => !c.IsDeleted);
+        if (_currentUser.CharityId.HasValue)
+            charities = charities.Where(c => c.Id == _currentUser.CharityId.Value);
+        else if (!_currentUser.IsHeadOffice)
+            throw new UnauthorizedAccessException("Caller has no charity or head-office scope.");
+        else if (charityId.HasValue)
+            charities = charities.Where(c => c.Id == charityId.Value);
+
+        var charityRows = await charities.Select(c => new { c.Id, c.Name })
+            .ToListAsync(cancellationToken);
+        var charityIds = charityRows.Select(c => c.Id).ToList();
+        var families = _familyRepository.TableNoTracking.Where(f => !f.IsDeleted
+            && ((f.CharityId.HasValue && charityIds.Contains(f.CharityId.Value))
+                || (f.FK_CharityId.HasValue && charityIds.Contains(f.FK_CharityId.Value))));
+        var scopedFamilyIds = families.Select(f => f.Id);
+        var orphans = _orphanRepository.TableNoTracking.Where(o => !o.IsDeleted
+            && ((o.FK_CharityId.HasValue && charityIds.Contains(o.FK_CharityId.Value))
+                || (o.FamilyId.HasValue && scopedFamilyIds.Contains(o.FamilyId.Value))));
+        var missions = _missionRepository.TableNoTracking.Where(m => !m.IsDeleted
+            && m.FK_CharityId.HasValue && charityIds.Contains(m.FK_CharityId.Value));
+
+        var today = DateTime.UtcNow.Date;
+        var firstMonth = new DateTime(today.Year, today.Month, 1).AddMonths(-11);
+        var months = Enumerable.Range(0, 12).Select(i => firstMonth.AddMonths(i)).ToList();
+        var monthEnd = months[^1].AddMonths(1);
+        var charityDates = await charities.Where(c => c.CreatedOn >= firstMonth && c.CreatedOn < monthEnd)
+            .Select(c => c.CreatedOn).ToListAsync(cancellationToken);
+        var familyDates = await families.Where(f => f.CreatedOn >= firstMonth && f.CreatedOn < monthEnd)
+            .Select(f => f.CreatedOn).ToListAsync(cancellationToken);
+        var orphanDates = await orphans.Where(o => o.CreatedOn >= firstMonth && o.CreatedOn < monthEnd)
+            .Select(o => o.CreatedOn).ToListAsync(cancellationToken);
+
+        var result = new DashboardStatisticsDto
+        {
+            TotalCharities = charityRows.Count,
+            TotalFamilies = await families.CountAsync(cancellationToken),
+            TotalOrphans = await orphans.CountAsync(cancellationToken),
+            ActiveMissions = await missions.CountAsync(m => !m.IsMissionCompleted, cancellationToken),
+            Months = months.Select(m => m.ToString("MMM yyyy")).ToList(),
+            CharitiesCreatedByMonth = months.Select(m => charityDates.Count(d => d.Year == m.Year && d.Month == m.Month)).ToList(),
+            FamiliesCreatedByMonth = months.Select(m => familyDates.Count(d => d.Year == m.Year && d.Month == m.Month)).ToList(),
+            OrphansCreatedByMonth = months.Select(m => orphanDates.Count(d => d.Year == m.Year && d.Month == m.Month)).ToList()
+        };
+
+        var familyCounts = await families.GroupBy(f =>
+                f.CharityId.HasValue && charityIds.Contains(f.CharityId.Value) ? f.CharityId : f.FK_CharityId)
+            .Select(g => new { CharityId = g.Key, Count = g.Count() }).ToListAsync(cancellationToken);
+        var orphanCounts = await orphans.Select(o => new
+            {
+                CharityId = o.FK_CharityId.HasValue && charityIds.Contains(o.FK_CharityId.Value)
+                    ? o.FK_CharityId
+                    : o.Family != null && o.Family.CharityId.HasValue && charityIds.Contains(o.Family.CharityId.Value)
+                        ? o.Family.CharityId
+                        : o.Family != null ? o.Family.FK_CharityId : null
+            })
+            .GroupBy(o => o.CharityId)
+            .Select(g => new { CharityId = g.Key, Count = g.Count() }).ToListAsync(cancellationToken);
+        var familyById = familyCounts.Where(g => g.CharityId.HasValue).ToDictionary(g => g.CharityId!.Value, g => g.Count);
+        var orphanById = orphanCounts.Where(g => g.CharityId.HasValue).ToDictionary(g => g.CharityId!.Value, g => g.Count);
+        var charityTotals = charityRows.Select(c => new
+        {
+            c.Id, c.Name,
+            Families = familyById.GetValueOrDefault(c.Id),
+            Orphans = orphanById.GetValueOrDefault(c.Id)
+        }).ToList();
+        var topFamilyCharities = charityTotals.OrderByDescending(c => c.Families).Take(10).ToList();
+        result.FamilyCharityNames = topFamilyCharities.Select(c => c.Name).ToList();
+        result.FamiliesByCharity = topFamilyCharities.Select(c => c.Families).ToList();
+        var topOrphanCharities = charityTotals.OrderByDescending(c => c.Orphans).Take(10).ToList();
+        result.OrphanCharityNames = topOrphanCharities.Select(c => c.Name).ToList();
+        result.OrphansByCharity = topOrphanCharities.Select(c => c.Orphans).ToList();
+
+        var scopedCharityIds = charityIds;
+        var activityQuery = _commonsContext.AuditLogs.AsNoTracking()
+            .Where(a => a.CharityId.HasValue && scopedCharityIds.Contains(a.CharityId.Value));
+        var charityActivity = await activityQuery.Where(a => a.UserId != null)
+            .GroupBy(a => a.CharityId).Select(g => new { CharityId = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+        var activityByCharity = charityActivity.Where(a => a.CharityId.HasValue)
+            .ToDictionary(a => a.CharityId!.Value, a => a.Count);
+        var activeOrganizations = charityRows.Select(c => new { c.Name, Count = activityByCharity.GetValueOrDefault(c.Id) })
+            .OrderByDescending(c => c.Count).Take(10).ToList();
+        result.ActiveCharityNames = activeOrganizations.Select(c => c.Name).ToList();
+        result.ActiveCharityInteractions = activeOrganizations.Select(c => c.Count).ToList();
+
+        var associationUsers = await _userManager.GetUsersInRoleAsync("Charity");
+        var associationUserIds = associationUsers.Select(user => user.Id).ToList();
+        var userActivity = await _commonsContext.AuditLogs.AsNoTracking()
+            .Where(a => a.UserId.HasValue && !associationUserIds.Contains(a.UserId.Value))
+            .GroupBy(a => a.UserName).Select(g => new { UserName = g.Key, Count = g.Count() })
+            .OrderByDescending(a => a.Count).Take(5).ToListAsync(cancellationToken);
+        result.ActiveUserNames = userActivity.Select(u => u.UserName).ToList();
+        result.UserInteractions = userActivity.Select(u => u.Count).ToList();
+
+        var genders = await orphans.GroupBy(o => o.Gender)
+            .Select(g => new { Gender = g.Key, Count = g.Count() }).ToListAsync(cancellationToken);
+        result.MaleOrphans = genders.Where(g => g.Gender == "Male" || g.Gender == "ذكر").Sum(g => g.Count);
+        result.FemaleOrphans = genders.Where(g => g.Gender == "Female" || g.Gender == "أنثى").Sum(g => g.Count);
+
+        var paymentRows = await _paymentItemRepository.TableNoTracking
+            .Where(i => !i.IsDeleted && i.OrphanPayment != null && !i.OrphanPayment.IsDeleted
+                && orphans.Select(o => o.Id).Contains(i.OrphanId))
+            .Select(i => new
+            {
+                AllocationDate = i.OrphanPayment!.PaymentDate ?? i.OrphanPayment.GroupDate,
+                ReceivedDate = i.ReceivedOn,
+                i.Amount,
+                i.IsGotIt,
+                i.IsStopped
+            })
+            .ToListAsync(cancellationToken);
+        result.AllocatedPaymentsByMonth = months.Select(m => paymentRows
+            .Where(p => p.AllocationDate.Year == m.Year && p.AllocationDate.Month == m.Month)
+            .Sum(p => p.Amount ?? 0m)).ToList();
+        result.ReceivedPaymentsByMonth = months.Select(m => paymentRows
+            .Where(p => p.IsGotIt && (p.ReceivedDate ?? p.AllocationDate).Year == m.Year
+                && (p.ReceivedDate ?? p.AllocationDate).Month == m.Month)
+            .Sum(p => p.Amount ?? 0m)).ToList();
+        result.PaymentStatusLabels = new List<string> { "Received", "Pending", "Stopped" };
+        result.PaymentStatusValues = new List<int>
+        {
+            paymentRows.Count(p => p.IsGotIt),
+            paymentRows.Count(p => !p.IsGotIt && !p.IsStopped),
+            paymentRows.Count(p => p.IsStopped)
+        };
+
+        var yearStart = new DateTime(today.Year, 1, 1);
+        var missionRows = await missions.Where(m => m.MissionDate >= yearStart && m.MissionDate < yearStart.AddYears(1))
+            .Select(m => new { m.MissionDate, m.IsMissionCompleted }).ToListAsync(cancellationToken);
+        result.MissionQuarterLabels = new List<string> { "Q1", "Q2", "Q3", "Q4" };
+        result.CompletedMissionsByQuarter = Enumerable.Range(1, 4).Select(q => missionRows
+            .Count(m => ((m.MissionDate.Month - 1) / 3) + 1 == q && m.IsMissionCompleted)).ToList();
+        result.PendingMissionsByQuarter = Enumerable.Range(1, 4).Select(q => missionRows
+            .Count(m => ((m.MissionDate.Month - 1) / 3) + 1 == q && !m.IsMissionCompleted)).ToList();
+        return result;
     }
 
     /// <inheritdoc />

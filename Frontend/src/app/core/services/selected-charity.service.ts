@@ -6,7 +6,7 @@ import { CharityDto } from '../../modules/charities/models/charity.model';
  * Global "selected charity" state behind the header switcher.
  *
  * The header dropdown stores its choice here instead of navigating; screens
- * that care (currently the dashboard card) subscribe to selectedCharity$. The
+ * that care (the dashboard card and charts) subscribe to selectedCharity$. The
  * choice is persisted to localStorage so it survives the full page reload the
  * language switcher performs. "All Charities" is stored as the sentinel id
  * 'all' with no charity attached.
@@ -39,6 +39,12 @@ export class SelectedCharityService {
   setCharity(charity: CharityDto): void {
     this.stored.id = charity.id;
     localStorage.setItem(SelectedCharityService.STORAGE_KEY, JSON.stringify({ id: charity.id, charity }));
+    this.selectedCharitySubject.next(charity);
+  }
+
+  /** Publish a charity-role user's server-pinned charity without persisting it as a navbar choice. */
+  setPinnedCharity(charity: CharityDto): void {
+    this.stored.id = null;
     this.selectedCharitySubject.next(charity);
   }
 

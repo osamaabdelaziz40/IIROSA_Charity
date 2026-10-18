@@ -135,7 +135,7 @@
   <div class="col-12 col-lg-6 mb-4">
     <div class="card shadow">
       <div class="card-header">
-        <strong class="card-title mb-0">Monthly Statistics</strong>
+        <strong class="card-title mb-0">{{ 'dashboard.charts.monthlyStatistics' | translate }}</strong>
       </div>
       <div class="card-body">
         <apx-chart [options]="monthlyChartOptions"></apx-chart>
@@ -145,7 +145,7 @@
   <div class="col-12 col-lg-6 mb-4">
     <div class="card shadow">
       <div class="card-header">
-        <strong class="card-title mb-0">Financial Overview</strong>
+        <strong class="card-title mb-0">{{ 'dashboard.charts.monthlyOrphanPayments' | translate }}</strong>
       </div>
       <div class="card-body">
         <apx-chart [options]="financialChartOptions"></apx-chart>
@@ -158,7 +158,7 @@
   <div class="col-12 col-lg-6 mb-4">
     <div class="card shadow">
       <div class="card-header">
-        <strong class="card-title mb-0">Family Growth</strong>
+        <strong class="card-title mb-0">{{ 'dashboard.charts.familyGrowth' | translate }}</strong>
       </div>
       <div class="card-body">
         <apx-chart [options]="familyGrowthChartOptions"></apx-chart>
@@ -168,7 +168,7 @@
   <div class="col-12 col-lg-3 mb-4">
     <div class="card shadow">
       <div class="card-header">
-        <strong class="card-title mb-0">Budget Allocation</strong>
+        <strong class="card-title mb-0">{{ 'dashboard.charts.orphanPaymentStatus' | translate }}</strong>
       </div>
       <div class="card-body text-center">
         <apx-chart [options]="budgetChartOptions"></apx-chart>
@@ -178,11 +178,45 @@
   <div class="col-12 col-lg-3 mb-4">
     <div class="card shadow">
       <div class="card-header">
-        <strong class="card-title mb-0">Performance</strong>
+        <strong class="card-title mb-0">{{ 'dashboard.charts.missionProgressByQuarter' | translate }}</strong>
       </div>
       <div class="card-body">
         <apx-chart [options]="performanceChartOptions"></apx-chart>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Organization, user activity, and beneficiary statistics -->
+<div class="row">
+  <div class="col-12 col-lg-6 mb-4">
+    <div class="card shadow">
+      <div class="card-header"><strong class="card-title mb-0">{{ 'dashboard.charts.mostActiveCharities' | translate }}</strong></div>
+      <div class="card-body"><apx-chart [options]="mostActiveCharitiesChartOptions"></apx-chart></div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6 mb-4">
+    <div class="card shadow">
+      <div class="card-header"><strong class="card-title mb-0">{{ 'dashboard.charts.familiesByCharity' | translate }}</strong></div>
+      <div class="card-body"><apx-chart [options]="familiesByCharityChartOptions"></apx-chart></div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6 mb-4">
+    <div class="card shadow">
+      <div class="card-header"><strong class="card-title mb-0">{{ 'dashboard.charts.orphansByCharity' | translate }}</strong></div>
+      <div class="card-body"><apx-chart [options]="orphansByCharityChartOptions"></apx-chart></div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6 mb-4">
+    <div class="card shadow">
+      <div class="card-header"><strong class="card-title mb-0">{{ 'dashboard.charts.mostActiveUsersNonCharity' | translate }}</strong></div>
+      <div class="card-body"><apx-chart [options]="mostActiveUsersChartOptions"></apx-chart></div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6 mb-4">
+    <div class="card shadow">
+      <div class="card-header"><strong class="card-title mb-0">{{ 'dashboard.charts.orphansByGender' | translate }}</strong></div>
+      <div class="card-body"><apx-chart [options]="orphanGenderChartOptions"></apx-chart></div>
     </div>
   </div>
 </div>
