@@ -23,15 +23,18 @@ public class CharitiesController : ControllerBase
 
     private readonly ICharityService _charityService;
     private readonly ICurrentUserService _currentUser;
+    private readonly IAuditService _auditService;
     private readonly ILogger<CharitiesController> _logger;
 
     public CharitiesController(
         ICharityService charityService,
         ICurrentUserService currentUser,
+        IAuditService auditService,
         ILogger<CharitiesController> logger)
     {
         _charityService = charityService;
         _currentUser = currentUser;
+        _auditService = auditService;
         _logger = logger;
     }
 
@@ -115,6 +118,43 @@ public class CharitiesController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving charity: {Id}", id);
             return StatusCode(500, new { message = "Error retrieving charity", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Audit trail recorded against this charity (UC-17 charity view): every logged
+    /// Create/Update attributed to the charity, newest first, with parsed field changes.
+    /// Same access rule as GetCharity — the tenancy claim decides, head office may read any.
+    /// </summary>
+    [HttpGet("{id}/audit-logs")]
+    [Authorize(Roles = "SuperAdmin,Admin,Charity")]
+    [ProducesResponseType(typeof(CharityAuditLogsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> GetCharityAuditLogs(
+        Guid id,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        try
+        {
+            var charity = await _charityService.GetByIdAsync(id);
+            if (charity == null)
+            {
+                return NotFound(new { message = $"Charity with ID '{id}' not found" });
+            }
+
+            if (!HasAccessToCharity(id))
+            {
+                return Forbid();
+            }
+
+            var result = await _auditService.GetCharityAuditLogsAsync(id, charity.Name, page, pageSize);
+            return Ok(new { result.Items, result.TotalCount });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving audit logs for charity: {Id}", id);
+            return StatusCode(500, new { message = "Error retrieving charity audit logs", error = ex.Message });
         }
     }
 

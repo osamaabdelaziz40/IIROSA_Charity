@@ -223,6 +223,23 @@
     "noAccount": "بدون حساب دخول"
   },
   "charities": {
+    "auditLog": {
+      "title": "سجل التدقيق",
+      "date": "التاريخ",
+      "user": "المستخدم",
+      "action": "الإجراء",
+      "entityType": "السجل",
+      "ipAddress": "عنوان IP",
+      "changes": "التغييرات على الحقول",
+      "field": "الحقل",
+      "oldValue": "القيمة القديمة",
+      "newValue": "القيمة الجديدة",
+      "create": "إضافة",
+      "update": "تعديل",
+      "noLogs": "لا توجد سجلات تدقيق لهذه الجمعية حتى الآن",
+      "noFieldChanges": "لا توجد تفاصيل حقول مسجلة",
+      "loadFailed": "فشل تحميل سجل التدقيق"
+    },
     "title": "الجمعيات",
     "manageCharities": "إدارة الجمعيات الخيرية",
     "addCharity": "إضافة جمعية",

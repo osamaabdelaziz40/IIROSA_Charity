@@ -8,11 +8,12 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { BreadcrumbComponent, BreadcrumbItem } from '../../../shared/components';
 import { FileViewerComponent } from '../../../shared/components/file-viewer';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { CharityAuditLogComponent } from '../charity-audit-log/charity-audit-log.component';
 
 @Component({
   selector: 'app-charity-detail',
   standalone: true,
-  imports: [CommonModule, PageHeaderComponent, BreadcrumbComponent, TranslateModule, FileViewerComponent],
+  imports: [CommonModule, PageHeaderComponent, BreadcrumbComponent, TranslateModule, FileViewerComponent, CharityAuditLogComponent],
   templateUrl: './charity-detail.component.html',
   styleUrls: ['./charity-detail.component.scss']
 })

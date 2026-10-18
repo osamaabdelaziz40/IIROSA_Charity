@@ -205,6 +205,9 @@ namespace Framework.Core.Migrations
                     b.Property<string>("AdditionalContext")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("CharityId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("CorrelationId")
                         .HasColumnType("uniqueidentifier");
 
@@ -264,6 +267,9 @@ namespace Framework.Core.Migrations
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_AuditLog_UserId");
+
+                    b.HasIndex("CharityId", "Timestamp")
+                        .HasDatabaseName("IX_AuditLog_CharityId_Timestamp");
 
                     b.HasIndex("EntityType", "EntityId", "Timestamp")
                         .HasDatabaseName("IX_AuditLog_Entity_EntityId_Timestamp");

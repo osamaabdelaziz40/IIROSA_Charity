@@ -171,17 +171,32 @@ export interface CharityPagedResult {
   totalPages: number;
 }
 
+export interface CharityAuditLogChange {
+  field: string;
+  oldValue?: string;
+  newValue?: string;
+}
+
+/**
+ * One audited action attributed to a charity — GET /api/Charities/{id}/audit-logs
+ * (UC-17 charity view). A row expands to `changes`: the action's field-level
+ * old/new values, parsed server-side out of the stored FieldChanges JSON.
+ */
 export interface CharityAuditLog {
   id: string;
   charityId: string;
   charityName: string;
   action: string;
-  field?: string;
-  oldValue?: string;
-  newValue?: string;
+  entityType: string;
   performedBy: string;
-  performedOn: Date;
+  performedOn: string;
   ipAddress?: string;
+  changes: CharityAuditLogChange[];
+}
+
+export interface CharityAuditLogPagedResult {
+  items: CharityAuditLog[];
+  totalCount: number;
 }
 
 /**

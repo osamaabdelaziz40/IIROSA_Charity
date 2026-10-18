@@ -313,6 +313,30 @@ namespace IIROSA.Infrastructure.Data.Repository
             };
         }
 
+        public async Task<PagedAuditLogResultDto> GetByCharityAsync(Guid charityId, int pageNumber, int pageSize)
+        {
+            var query = _context.AuditLogs
+                .AsNoTracking()
+                .Where(a => a.CharityId == charityId);
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(a => a.Timestamp)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return new PagedAuditLogResultDto
+            {
+                Items = items.Select(MapToEntry).ToList(),
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            };
+        }
+
         #endregion
 
         #region Export Operations
@@ -408,7 +432,8 @@ namespace IIROSA.Infrastructure.Data.Repository
                 FieldChanges = entry.FieldChanges,
                 AdditionalContext = entry.AdditionalContext,
                 CorrelationId = entry.CorrelationId,
-                UserAgent = entry.UserAgent
+                UserAgent = entry.UserAgent,
+                CharityId = entry.CharityId
             };
         }
 
@@ -429,7 +454,8 @@ namespace IIROSA.Infrastructure.Data.Repository
                 FieldChanges = entity.FieldChanges,
                 AdditionalContext = entity.AdditionalContext,
                 CorrelationId = entity.CorrelationId,
-                UserAgent = entity.UserAgent
+                UserAgent = entity.UserAgent,
+                CharityId = entity.CharityId
             };
         }
 

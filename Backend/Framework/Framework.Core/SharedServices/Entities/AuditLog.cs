@@ -90,5 +90,13 @@ namespace Framework.Core.SharedServices.Entities
         /// </summary>
         [MaxLength(512)]
         public string UserAgent { get; set; }
+
+        /// <summary>
+        /// The charity this change belongs to (tenancy attribution).
+        /// For a changed Charity row: the charity's own Id; for entities carrying a
+        /// CharityId: that value; otherwise the acting user's charity. Null for
+        /// system-wide events performed outside a charity context.
+        /// </summary>
+        public Guid? CharityId { get; set; }
     }
 }

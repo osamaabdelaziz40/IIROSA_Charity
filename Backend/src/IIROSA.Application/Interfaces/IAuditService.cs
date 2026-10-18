@@ -1,4 +1,5 @@
 using IIROSA.Application.DTOs.AuditLog;
+using IIROSA.Application.DTOs.Charity;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -70,6 +71,12 @@ namespace IIROSA.Application.Interfaces
         /// Get user activity log with summary
         /// </summary>
         Task<UserActivityLogDto> GetUserActivityAsync(UserActivityFilterDto filter);
+
+        /// <summary>
+        /// Get the audit trail attributed to one charity (UC-17 charity view): every logged
+        /// Create/Update, newest first, with parsed field changes
+        /// </summary>
+        Task<CharityAuditLogsDto> GetCharityAuditLogsAsync(Guid charityId, string charityName, int pageNumber, int pageSize);
 
         #endregion
 

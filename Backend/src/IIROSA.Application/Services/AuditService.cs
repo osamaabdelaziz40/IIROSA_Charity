@@ -1,4 +1,5 @@
 using IIROSA.Application.DTOs.AuditLog;
+using IIROSA.Application.DTOs.Charity;
 using IIROSA.Application.Enums;
 using IIROSA.Application.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -303,6 +304,75 @@ namespace IIROSA.Application.Services
                 Activities = activities.Items.Select(MapToDetailDto).ToList(),
                 Summary = summary
             };
+        }
+
+        public async Task<CharityAuditLogsDto> GetCharityAuditLogsAsync(Guid charityId, string charityName, int pageNumber, int pageSize)
+        {
+            pageNumber = Math.Max(1, pageNumber);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var result = await _auditLogRepository.GetByCharityAsync(charityId, pageNumber, pageSize);
+
+            return new CharityAuditLogsDto
+            {
+                Items = result.Items.Select(a => new CharityAuditLogDto
+                {
+                    Id = a.AuditLogId,
+                    CharityId = charityId,
+                    CharityName = charityName,
+                    Action = a.Operation,
+                    EntityType = a.EntityType,
+                    PerformedBy = a.UserName,
+                    PerformedOn = a.Timestamp,
+                    IpAddress = a.IpAddress,
+                    Changes = ParseCharityFieldChanges(a.FieldChanges)
+                }).ToList(),
+                TotalCount = result.TotalCount,
+                PageNumber = result.PageNumber,
+                PageSize = result.PageSize,
+                TotalPages = result.TotalPages
+            };
+        }
+
+        private List<CharityAuditLogChangeDto> ParseCharityFieldChanges(string fieldChangesJson)
+        {
+            var changes = new List<CharityAuditLogChangeDto>();
+            if (string.IsNullOrEmpty(fieldChangesJson))
+                return changes;
+
+            try
+            {
+                using var document = JsonDocument.Parse(fieldChangesJson);
+
+                foreach (var property in document.RootElement.EnumerateObject())
+                {
+                    string oldValue = null;
+                    string newValue = null;
+
+                    if (property.Value.TryGetProperty("old", out var oldElement) &&
+                        oldElement.ValueKind != JsonValueKind.Null)
+                        oldValue = oldElement.ToString();
+
+                    if (property.Value.TryGetProperty("new", out var newElement) &&
+                        newElement.ValueKind != JsonValueKind.Null)
+                        newValue = newElement.ToString();
+
+                    changes.Add(new CharityAuditLogChangeDto
+                    {
+                        Field = property.Name,
+                        OldValue = oldValue,
+                        NewValue = newValue
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                // A malformed payload must never break the audit view; the raw JSON remains
+                // available through the admin AuditLogs endpoints.
+                _logger.LogWarning(ex, "Could not parse audit FieldChanges JSON for charity view");
+            }
+
+            return changes;
         }
 
         #endregion

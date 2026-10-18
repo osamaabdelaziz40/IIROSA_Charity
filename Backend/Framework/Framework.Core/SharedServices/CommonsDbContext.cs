@@ -147,6 +147,8 @@ namespace Framework.Core.SharedServices
                 entity.HasIndex(e => e.CorrelationId).HasDatabaseName("IX_AuditLog_CorrelationId");
                 entity.HasIndex(e => new { e.EntityType, e.EntityId, e.Timestamp })
                     .HasDatabaseName("IX_AuditLog_Entity_EntityId_Timestamp");
+                entity.HasIndex(e => new { e.CharityId, e.Timestamp })
+                    .HasDatabaseName("IX_AuditLog_CharityId_Timestamp");
             });
 
             modelBuilder.AddSeedData();

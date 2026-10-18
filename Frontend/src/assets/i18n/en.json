@@ -208,6 +208,23 @@
     "noAccount": "No login account"
   },
   "charities": {
+    "auditLog": {
+      "title": "Audit Log",
+      "date": "Date",
+      "user": "User",
+      "action": "Action",
+      "entityType": "Record",
+      "ipAddress": "IP Address",
+      "changes": "Field changes",
+      "field": "Field",
+      "oldValue": "Old Value",
+      "newValue": "New Value",
+      "create": "Create",
+      "update": "Update",
+      "noLogs": "No audit records for this charity yet",
+      "noFieldChanges": "No field details recorded",
+      "loadFailed": "Failed to load the audit log"
+    },
     "title": "Charities",
     "manageCharities": "Manage Charitable Organizations",
     "addCharity": "Add Charity",

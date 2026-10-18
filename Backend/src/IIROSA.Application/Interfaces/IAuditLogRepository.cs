@@ -66,6 +66,11 @@ namespace IIROSA.Application.Interfaces
         /// </summary>
         Task<PagedAuditLogResultDto> GetUserActivityAsync(UserActivityFilterDto filter);
 
+        /// <summary>
+        /// Get audit logs attributed to one charity (tenancy view), newest first
+        /// </summary>
+        Task<PagedAuditLogResultDto> GetByCharityAsync(Guid charityId, int pageNumber, int pageSize);
+
         #endregion
 
         #region Export Operations
@@ -111,6 +116,7 @@ namespace IIROSA.Application.Interfaces
         public string AdditionalContext { get; set; }
         public Guid? CorrelationId { get; set; }
         public string UserAgent { get; set; }
+        public Guid? CharityId { get; set; }
     }
 
     /// <summary>

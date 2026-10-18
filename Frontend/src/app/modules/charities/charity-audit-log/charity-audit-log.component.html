@@ -1,0 +1,88 @@
+<!-- UC-17 (charity view) — سجل التدقيق -->
+<div class="card shadow-sm charity-audit-log">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="card-title mb-0">
+      <i class="fe fe-activity mr-2"></i>{{ 'charities.auditLog.title' | translate }}
+    </h6>
+    <span class="badge badge-light" *ngIf="totalCount > 0">{{ totalCount }}</span>
+  </div>
+
+  <div class="card-body">
+    <div *ngIf="loading" class="text-center py-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">{{ 'common.loading' | translate }}</span>
+      </div>
+    </div>
+
+    <div *ngIf="!loading" class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th></th>
+            <th>{{ 'charities.auditLog.date' | translate }}</th>
+            <th>{{ 'charities.auditLog.user' | translate }}</th>
+            <th>{{ 'charities.auditLog.action' | translate }}</th>
+            <th>{{ 'charities.auditLog.entityType' | translate }}</th>
+            <th>{{ 'charities.auditLog.ipAddress' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let log of logs; trackBy: trackByLogId">
+            <tr class="audit-row" [class.table-active]="expandedId === log.id" (click)="toggleExpanded(log.id)">
+              <td class="expander">
+                <i class="fe" [ngClass]="expandedId === log.id ? 'fe-chevron-down' : 'fe-chevron-right'"></i>
+              </td>
+              <td>{{ log.performedOn | date:'medium' }}</td>
+              <td>{{ log.performedBy || '-' }}</td>
+              <td>
+                <span class="badge" [ngClass]="log.action === 'Create' ? 'badge-success' : 'badge-info'">
+                  {{ (log.action === 'Create' ? 'charities.auditLog.create' : 'charities.auditLog.update') | translate }}
+                </span>
+              </td>
+              <td>{{ log.entityType }}</td>
+              <td>{{ log.ipAddress || '-' }}</td>
+            </tr>
+            <tr *ngIf="expandedId === log.id" class="audit-detail-row">
+              <td colspan="6">
+                <div class="changes-title">
+                  {{ 'charities.auditLog.changes' | translate }} ({{ log.changes ? log.changes.length : 0 }})
+                </div>
+                <table class="table table-sm table-bordered mb-0" *ngIf="log.changes && log.changes.length > 0">
+                  <thead>
+                    <tr>
+                      <th>{{ 'charities.auditLog.field' | translate }}</th>
+                      <th>{{ 'charities.auditLog.oldValue' | translate }}</th>
+                      <th>{{ 'charities.auditLog.newValue' | translate }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let change of log.changes; trackBy: trackByChangeField">
+                      <td>{{ change.field }}</td>
+                      <td>{{ change.oldValue ? change.oldValue : '—' }}</td>
+                      <td>{{ change.newValue ? change.newValue : '—' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div *ngIf="!log.changes || log.changes.length === 0" class="text-muted">
+                  {{ 'charities.auditLog.noFieldChanges' | translate }}
+                </div>
+              </td>
+            </tr>
+          </ng-container>
+          <tr *ngIf="logs.length === 0">
+            <td colspan="6" class="text-center text-muted py-4">
+              {{ 'charities.auditLog.noLogs' | translate }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination *ngIf="totalCount > pageSize"
+                    [currentPage]="currentPage"
+                    [pageSize]="pageSize"
+                    [totalCount]="totalCount"
+                    (pageChange)="loadPage($event)">
+    </app-pagination>
+  </div>
+</div>

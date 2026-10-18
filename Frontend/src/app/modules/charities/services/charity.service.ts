@@ -10,6 +10,7 @@ import {
   CharitySearchRequest,
   CharityPagedResult,
   CharityAuditLog,
+  CharityAuditLogPagedResult,
   CharityPasswordResetResult,
   CharityStatusUpdateDto,
   CharityNameAvailability,
@@ -371,8 +372,8 @@ export class CharityService {
 
   // ==================== AUDIT LOG ====================
 
-  getAuditLogs(id: string, page: number = 1, pageSize: number = 20): Observable<CharityAuditLog[]> {
-    return this.http.get<CharityAuditLog[]>(`${this.apiUrl}/${id}/audit-logs`, {
+  getAuditLogs(id: string, page: number = 1, pageSize: number = 20): Observable<CharityAuditLogPagedResult> {
+    return this.http.get<CharityAuditLogPagedResult>(`${this.apiUrl}/${id}/audit-logs`, {
       headers: this.getHeaders(),
       params: { page, pageSize }
     }).pipe(

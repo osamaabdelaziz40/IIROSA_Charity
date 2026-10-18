@@ -1,0 +1,19 @@
+.charity-audit-log {
+  .audit-row {
+    cursor: pointer;
+
+    .expander {
+      width: 2rem;
+      color: var(--tblr-secondary-color, #6c757d);
+    }
+  }
+
+  .audit-detail-row > td {
+    background: rgba(var(--tblr-primary-rgb, 32, 107, 196), 0.04);
+  }
+
+  .changes-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+}

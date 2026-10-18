@@ -1,4 +1,5 @@
 using IIROSA.Application.Interfaces;
+using IIROSA.Domain.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,13 +12,17 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Framework.Core.SharedServices;
+using Framework.Core.SharedServices.Entities;
 
 namespace IIROSA.Infrastructure.Data.Interceptors
 {
     /// <summary>
-    /// EF Core interceptor for automatic audit logging
-    /// Logs all Create, Update, and Delete operations when SaveChanges is called
-    /// Implements UC-17.1, UC-17.2, UC-17.3: Automatic logging of entity changes
+    /// EF Core interceptor for automatic audit logging.
+    /// Captures every Create (Added) and Update (Modified) when SaveChanges is called on
+    /// ApplicationDbContext and writes one AuditLog row per changed entity to CommonsDbContext
+    /// after the business save succeeds. Implements UC-17.1 / UC-17.2: automatic logging of
+    /// entity changes, with charity attribution for tenancy-scoped audit views.
     /// </summary>
     public class AuditLogSaveChangesInterceptor : SaveChangesInterceptor
     {
@@ -25,10 +30,18 @@ namespace IIROSA.Infrastructure.Data.Interceptors
         private readonly ILogger<AuditLogSaveChangesInterceptor> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        // IAuditService must be resolved lazily (see CreateAuditLogAsync), not injected here:
+        // Pending entries captured in SavingChanges and persisted in SavedChanges, only after
+        // the business save succeeded. The interceptor is registered scoped and resolved inside
+        // the scoped AddDbContext options lambda, so this instance state lives per request scope.
+        // It is cleared at the start of every capture and on save failure.
+        private List<CapturedEntry> _pendingEntries;
+
+        // IAuditService must be resolved lazily (see PersistAsync), not injected here:
         // this interceptor is constructed while DbContextOptions are being built, and
         // IAuditService -> IAuditLogRepository -> ApplicationDbContext loops straight back
-        // into that options lambda, exhausting the stack and hanging startup.
+        // into that options lambda, exhausting the stack and hanging startup. The same
+        // rule is applied to ICurrentUserService and CommonsDbContext: both are resolved
+        // per save, never in the constructor.
         public AuditLogSaveChangesInterceptor(
             IServiceProvider serviceProvider,
             ILogger<AuditLogSaveChangesInterceptor> logger,
@@ -43,7 +56,7 @@ namespace IIROSA.Infrastructure.Data.Interceptors
             DbContextEventData eventData,
             InterceptionResult<int> result)
         {
-            LogAuditEntries(eventData.Context);
+            CaptureEntries(eventData.Context);
             return base.SavingChanges(eventData, result);
         }
 
@@ -52,195 +65,299 @@ namespace IIROSA.Infrastructure.Data.Interceptors
             InterceptionResult<int> result,
             CancellationToken cancellationToken = default)
         {
-            LogAuditEntries(eventData.Context);
+            CaptureEntries(eventData.Context);
             return base.SavingChangesAsync(eventData, result, cancellationToken);
         }
 
-        // Note: SavedAfter and SavedAfterAsync are not available in SaveChangesInterceptor
-        // Audit logging is done synchronously in SavingChanges before the save operation
-        // For async logging, consider using background tasks or a different approach
-
-        private List<AuditEntry> OnBeforeSaveChanges(DbContext context)
+        public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
         {
-            if (context == null) return null;
-
-            var auditEntries = new List<AuditEntry>();
-            var changeTracker = context.ChangeTracker;
-
-            // Get current user information
-            var currentUser = GetCurrentUser();
-            var currentIpAddress = GetCurrentIpAddress();
-            var currentUserAgent = GetCurrentUserAgent();
-
-            foreach (var entry in changeTracker.Entries())
-            {
-                // Skip entities that don't have audit attributes
-                if (ShouldSkipEntity(entry.Entity.GetType()))
-                    continue;
-
-                var auditEntry = new AuditEntry(entry)
-                {
-                    TableName = entry.Entity.GetType().Name,
-                    UserId = GetUserId(currentUser),
-                    UserName = currentUser,
-                    IpAddress = currentIpAddress,
-                    UserAgent = currentUserAgent,
-                    Timestamp = DateTime.UtcNow
-                };
-
-                // Collect the current and original values
-                foreach (var property in entry.Properties)
-                {
-                    string propertyName = property.Metadata.Name;
-
-                    // Skip shadow properties and navigation properties
-                    if (property.IsTemporary || property.Metadata.IsPrimaryKey())
-                        continue;
-
-                    // Skip navigation properties and collections
-                    if (property.Metadata.IsShadowProperty())
-                        continue;
-
-                    switch (entry.State)
-                    {
-                        case EntityState.Added:
-                            auditEntry.NewValues[propertyName] = property.CurrentValue;
-                            break;
-
-                        case EntityState.Deleted:
-                            auditEntry.OldValues[propertyName] = property.OriginalValue;
-                            break;
-
-                        case EntityState.Modified:
-                            if (property.IsModified)
-                            {
-                                auditEntry.OldValues[propertyName] = property.OriginalValue;
-                                auditEntry.NewValues[propertyName] = property.CurrentValue;
-                            }
-                            break;
-                    }
-                }
-
-                auditEntries.Add(auditEntry);
-            }
-
-            return auditEntries;
+            Persist(eventData.Context);
+            return base.SavedChanges(eventData, result);
         }
 
-        private async Task CreateAuditLogAsync(AuditEntry auditEntry, DbContext context)
+        public override ValueTask<int> SavedChangesAsync(
+            SaveChangesCompletedEventData eventData,
+            int result,
+            CancellationToken cancellationToken = default)
         {
+            var persistTask = PersistAsync(eventData.Context, cancellationToken);
+            if (persistTask.IsCompletedSuccessfully)
+                return new ValueTask<int>(result);
+
+            return AwaitPersistThenReturnResultAsync(persistTask, result);
+        }
+
+        private async ValueTask<int> AwaitPersistThenReturnResultAsync(Task persistTask, int result)
+        {
+            // PersistAsync never throws (it swallows and logs), so the business result is unaffected.
+            await persistTask.ConfigureAwait(false);
+            return result;
+        }
+
+        public override void SaveChangesFailed(DbContextErrorEventData eventData)
+        {
+            _pendingEntries = null; // a failed business save must not be audited
+            base.SaveChangesFailed(eventData);
+        }
+
+        public override Task SaveChangesFailedAsync(
+            DbContextErrorEventData eventData,
+            CancellationToken cancellationToken = default)
+        {
+            _pendingEntries = null;
+            return base.SaveChangesFailedAsync(eventData, cancellationToken);
+        }
+
+        /// <summary>
+        /// Snapshot the change tracker before the save: original values are still intact and
+        /// the HTTP context (user, IP, user agent) is still available. Values that EF generates
+        /// during SaveChanges (sequential Guid keys) are read later, in the persist phase.
+        /// </summary>
+        private void CaptureEntries(DbContext context)
+        {
+            _pendingEntries = null;
+            if (context == null) return;
+
+            ICurrentUserService currentUser = null;
             try
             {
-                var entity = auditEntry.Entry.Entity;
-                var entityId = GetEntityId(auditEntry.Entry, entity);
-
-                // Build field changes JSON
-                var fieldChanges = BuildFieldChangesJson(auditEntry);
-
-                // Determine operation
-                var operation = auditEntry.Entry.State switch
-                {
-                    EntityState.Added => "Create",
-                    EntityState.Modified => "Update",
-                    EntityState.Deleted => "Delete",
-                    _ => null
-                };
-
-                if (operation == null) return;
-
-                // Create the audit log through the service
-                var auditLog = new AuditLogEntry
-                {
-                    AuditLogId = Guid.NewGuid(),
-                    EntityType = auditEntry.TableName,
-                    EntityId = entityId,
-                    Operation = operation,
-                    UserId = auditEntry.UserId,
-                    UserName = auditEntry.UserName ?? "System",
-                    IpAddress = auditEntry.IpAddress,
-                    Timestamp = auditEntry.Timestamp,
-                    FieldChanges = fieldChanges,
-                    AdditionalContext = JsonSerializer.Serialize(new
-                    {
-                        action = operation.ToLower(),
-                        entityState = auditEntry.Entry.State.ToString()
-                    }),
-                    UserAgent = auditEntry.UserAgent
-                };
-
-                // Log the audit entry using the service (resolved lazily — by this point
-                // the ApplicationDbContext instance already exists, so no DI cycle occurs)
-                // Note: In a production environment, you might want to batch these
-                // or use a background task to avoid slowing down the main operation
-                _serviceProvider.GetRequiredService<IAuditService>()
-                    .LogCreationAsync(auditLog, auditEntry.UserName, auditEntry.IpAddress, auditEntry.UserAgent)
-                    .ContinueWith(t => _logger.LogError(t.Exception, "Failed to log audit entry"),
-                        CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+                currentUser = _serviceProvider.GetService<ICurrentUserService>();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating audit log entry for {EntityType}", auditEntry.TableName);
+                // Design-time / background saves may run without the full application container.
+                _logger.LogWarning(ex, "Could not resolve ICurrentUserService for audit capture");
+            }
+
+            var userName = Truncate(
+                currentUser is { IsAuthenticated: true }
+                    ? _httpContextAccessor?.HttpContext?.User?.Identity?.Name
+                    : null,
+                256) ?? "System";
+
+            var entries = new List<CapturedEntry>();
+            foreach (var entry in context.ChangeTracker.Entries())
+            {
+                if (entry.State is not (EntityState.Added or EntityState.Modified)) continue;
+                if (ShouldSkipEntity(entry.Metadata.ClrType)) continue;
+
+                var captured = new CapturedEntry
+                {
+                    Entry = entry,
+                    EntityType = Truncate(entry.Metadata.ClrType.Name, 256),
+                    Operation = entry.State == EntityState.Added ? "Create" : "Update",
+                    UserId = currentUser?.UserId,
+                    UserName = userName,
+                    IpAddress = Truncate(GetCurrentIpAddress(), 64),
+                    UserAgent = Truncate(GetCurrentUserAgent(), 512),
+                    Timestamp = DateTime.UtcNow
+                };
+
+                foreach (var property in entry.Properties)
+                {
+                    var propertyName = property.Metadata.Name;
+
+                    // Skip keys, shadow properties and the maintenance columns BaseDbContext
+                    // stamps on every save (CreatedBy/CreatedOn/UpdatedBy/UpdatedOn) — they are
+                    // bookkeeping, not business changes. IsDeleted/DeletedOn/DeletedBy are kept:
+                    // a soft delete is business-relevant.
+                    if (property.Metadata.IsPrimaryKey()) continue;
+                    if (property.Metadata.IsShadowProperty()) continue;
+                    if (MaintenanceColumns.Contains(propertyName)) continue;
+                    if (SensitiveFields.Contains(propertyName)) continue;
+
+                    if (entry.State == EntityState.Added)
+                    {
+                        captured.NewValues[propertyName] = SerializeSafe(property.CurrentValue);
+                    }
+                    else if (property.IsModified && !Equals(property.OriginalValue, property.CurrentValue))
+                    {
+                        captured.OldValues[propertyName] = SerializeSafe(property.OriginalValue);
+                        captured.NewValues[propertyName] = SerializeSafe(property.CurrentValue);
+                    }
+                }
+
+                // An update that changed nothing (e.g. only the stamped audit columns) is not logged.
+                if (entry.State == EntityState.Modified && captured.NewValues.Count == 0) continue;
+
+                entries.Add(captured);
+            }
+
+            if (entries.Count > 0)
+                _pendingEntries = entries;
+        }
+
+        /// <summary>
+        /// Write the captured entries as AuditLog rows. Runs only after the business save
+        /// succeeded. Everything is best-effort: an audit failure must never fail the
+        /// business operation, so exceptions are swallowed and logged.
+        /// </summary>
+        private async Task PersistAsync(DbContext context, CancellationToken cancellationToken)
+        {
+            var entries = TakePendingEntries();
+            if (entries == null || entries.Count == 0) return;
+
+            try
+            {
+                // CommonsDbContext has no interceptor registered and its constructor chain never
+                // touches ApplicationDbContext, so this save cannot recurse or re-enter.
+                var commons = _serviceProvider.GetRequiredService<CommonsDbContext>();
+
+                var logs = new List<AuditLog>(entries.Count);
+                foreach (var captured in entries)
+                {
+                    logs.Add(new AuditLog
+                    {
+                        AuditLogId = Guid.NewGuid(),
+                        EntityType = captured.EntityType,
+                        EntityId = GetKeyGuid(captured.Entry),
+                        Operation = captured.Operation,
+                        UserId = captured.UserId,
+                        UserName = captured.UserName ?? "System",
+                        IpAddress = captured.IpAddress,
+                        Timestamp = captured.Timestamp,
+                        FieldChanges = BuildFieldChangesJson(captured),
+                        AdditionalContext = JsonSerializer.Serialize(new
+                        {
+                            action = captured.Operation.ToLowerInvariant(),
+                            entityState = captured.Operation == "Create" ? "Added" : "Modified"
+                        }),
+                        UserAgent = captured.UserAgent,
+                        CharityId = ResolveCharityId(captured.Entry)
+                    });
+                }
+
+                commons.AddRange(logs);
+                await commons.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Audit logging failed after a successful business save; the business operation is unaffected");
             }
         }
 
-        private static string BuildFieldChangesJson(AuditEntry auditEntry)
+        private void Persist(DbContext context)
+        {
+            var entries = TakePendingEntries();
+            if (entries == null || entries.Count == 0) return;
+
+            try
+            {
+                var commons = _serviceProvider.GetRequiredService<CommonsDbContext>();
+
+                var logs = new List<AuditLog>(entries.Count);
+                foreach (var captured in entries)
+                {
+                    logs.Add(new AuditLog
+                    {
+                        AuditLogId = Guid.NewGuid(),
+                        EntityType = captured.EntityType,
+                        EntityId = GetKeyGuid(captured.Entry),
+                        Operation = captured.Operation,
+                        UserId = captured.UserId,
+                        UserName = captured.UserName ?? "System",
+                        IpAddress = captured.IpAddress,
+                        Timestamp = captured.Timestamp,
+                        FieldChanges = BuildFieldChangesJson(captured),
+                        AdditionalContext = JsonSerializer.Serialize(new
+                        {
+                            action = captured.Operation.ToLowerInvariant(),
+                            entityState = captured.Operation == "Create" ? "Added" : "Modified"
+                        }),
+                        UserAgent = captured.UserAgent,
+                        CharityId = ResolveCharityId(captured.Entry)
+                    });
+                }
+
+                commons.AddRange(logs);
+                commons.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Audit logging failed after a successful business save; the business operation is unaffected");
+            }
+        }
+
+        private List<CapturedEntry> TakePendingEntries()
+        {
+            var entries = _pendingEntries;
+            _pendingEntries = null;
+            return entries;
+        }
+
+        private static string BuildFieldChangesJson(CapturedEntry captured)
         {
             var changes = new Dictionary<string, object>();
 
-            foreach (var kvp in auditEntry.NewValues)
+            foreach (var kvp in captured.NewValues)
             {
-                var fieldName = kvp.Key;
-                var oldValue = auditEntry.OldValues.ContainsKey(fieldName) ? auditEntry.OldValues[fieldName] : null;
-                var newValue = kvp.Value;
-
-                changes[fieldName] = new { old = oldValue, @new = newValue };
-            }
-
-            // For deletes, add all old values
-            if (auditEntry.Entry.State == EntityState.Deleted)
-            {
-                foreach (var kvp in auditEntry.OldValues)
-                {
-                    if (!changes.ContainsKey(kvp.Key))
-                    {
-                        changes[kvp.Key] = new { old = kvp.Value, @new = (object)null };
-                    }
-                }
+                var oldValue = captured.OldValues.TryGetValue(kvp.Key, out var old) ? old : null;
+                changes[kvp.Key] = new { old = oldValue, @new = kvp.Value };
             }
 
             return JsonSerializer.Serialize(changes);
         }
 
-        private static Guid? GetEntityId(EntityEntry entry, object entity)
+        /// <summary>Primary key value for the (now saved) entity; null for non-Guid keys.</summary>
+        private static Guid? GetKeyGuid(EntityEntry entry)
         {
             var idProperty = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey());
-            if (idProperty != null && idProperty.CurrentValue is Guid guid)
-                return guid;
+            return idProperty?.CurrentValue as Guid?;
+        }
 
-            // Try to get Id from the entity directly
-            var idProp = entity.GetType().GetProperty("Id");
-            if (idProp != null && idProp.PropertyType == typeof(Guid))
+        /// <summary>
+        /// Charity attribution: the Charity entity is the tenant root (its key is the charity id),
+        /// entities carrying a CharityId property are attributed to that charity, everything else
+        /// falls back to the acting user's charity (null for head-office / system actions).
+        /// </summary>
+        private Guid? ResolveCharityId(EntityEntry entry)
+        {
+            if (entry.Entity is Charity charity)
+                return charity.Id;
+
+            var charityIdProperty = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "CharityId");
+            if (charityIdProperty?.CurrentValue is Guid charityId)
+                return charityId;
+
+            try
             {
-                return (Guid)idProp.GetValue(entity);
+                return _serviceProvider.GetService<ICurrentUserService>()?.CharityId;
             }
-
-            return null;
+            catch
+            {
+                return null;
+            }
         }
 
-        private static Guid? GetUserId(string userName)
+        private static readonly HashSet<string> MaintenanceColumns = new HashSet<string>
         {
-            if (Guid.TryParse(userName, out var guid))
-                return guid;
-            return null;
+            "CreatedBy", "CreatedOn", "UpdatedBy", "UpdatedOn"
+        };
+
+        // No entity carries these today; the guard exists so a future field cannot leak.
+        private static readonly HashSet<string> SensitiveFields = new HashSet<string>
+        {
+            "Password", "Secret", "Token"
+        };
+
+        /// <summary>Mask values JSON cannot represent usefully and humanise enums.</summary>
+        private static object SerializeSafe(object value)
+        {
+            return value switch
+            {
+                null => null,
+                byte[] _ => "[binary]",
+                Enum enumValue => enumValue.ToString(),
+                _ => value
+            };
         }
 
-        private string GetCurrentUser()
+        private static string Truncate(string value, int maxLength)
         {
-            var httpContext = _httpContextAccessor?.HttpContext;
-            if (httpContext?.User?.Identity?.IsAuthenticated == true)
-                return httpContext.User.Identity.Name;
-
-            return "System";
+            if (string.IsNullOrEmpty(value)) return value;
+            return value.Length <= maxLength ? value : value.Substring(0, maxLength);
         }
 
         private string GetCurrentIpAddress()
@@ -269,65 +386,23 @@ namespace IIROSA.Infrastructure.Data.Interceptors
             return skipTypes.Contains(entityType.Name);
         }
 
-        private void LogAuditEntries(DbContext context)
+        /// <summary>
+        /// Snapshot of one changed entity, taken before the save. The EntityEntry reference is
+        /// kept deliberately: values EF generates during SaveChanges (sequential Guid keys) are
+        /// only readable after the save completes.
+        /// </summary>
+        private sealed class CapturedEntry
         {
-            // This is called before SaveChanges - we just prepare the entries
-            // Actual logging happens in SavedAfter after successful save
-        }
-
-        // Queue for pending audit logs to be saved after successful SaveChanges
-        private static readonly Queue<AuditLogEntry> _pendingAuditLogs = new Queue<AuditLogEntry>();
-
-        public static IEnumerable<AuditLogEntry> GetPendingAuditLogs()
-        {
-            while (_pendingAuditLogs.Count > 0)
-            {
-                yield return _pendingAuditLogs.Dequeue();
-            }
+            public EntityEntry Entry { get; init; }
+            public string EntityType { get; init; }
+            public string Operation { get; init; }
+            public Guid? UserId { get; init; }
+            public string UserName { get; init; }
+            public string IpAddress { get; init; }
+            public string UserAgent { get; init; }
+            public DateTime Timestamp { get; init; }
+            public Dictionary<string, object> OldValues { get; } = new Dictionary<string, object>();
+            public Dictionary<string, object> NewValues { get; } = new Dictionary<string, object>();
         }
     }
-
-    #region Helper Classes
-
-    /// <summary>
-    /// Public class to hold audit entry data during SaveChanges processing
-    /// </summary>
-    public class AuditEntry
-    {
-        public AuditEntry(EntityEntry entry)
-        {
-            Entry = entry;
-        }
-
-        public EntityEntry Entry { get; }
-        public string TableName { get; set; }
-        public Guid? UserId { get; set; }
-        public string UserName { get; set; }
-        public string IpAddress { get; set; }
-        public string UserAgent { get; set; }
-        public DateTime Timestamp { get; set; }
-        public Dictionary<string, object> OldValues { get; } = new Dictionary<string, object>();
-        public Dictionary<string, object> NewValues { get; } = new Dictionary<string, object>();
-    }
-
-    /// <summary>
-    /// Public class for audit log entry data
-    /// </summary>
-    public class AuditLogEntry
-    {
-        public Guid AuditLogId { get; set; }
-        public string EntityType { get; set; }
-        public Guid? EntityId { get; set; }
-        public string Operation { get; set; }
-        public Guid? UserId { get; set; }
-        public string UserName { get; set; }
-        public string IpAddress { get; set; }
-        public DateTime Timestamp { get; set; }
-        public string FieldChanges { get; set; }
-        public string AdditionalContext { get; set; }
-        public Guid? CorrelationId { get; set; }
-        public string UserAgent { get; set; }
-    }
-
-    #endregion
 }
