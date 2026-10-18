@@ -214,6 +214,24 @@
         font-weight: bold;
         font-size: 20px;
       }
+
+      /* Khatam (8-point star) page texture — one consumer, three theme tiles.
+         The tile is a data-URI SVG assigned to --body-pattern at the end of
+         app-light.css / app-dark.css / app-navy.css (a data URI cannot read
+         CSS variables, so the fill is baked per theme). Theme-independent,
+         like everything else in this block. */
+      body {
+        background-image: var(--body-pattern, none);
+        background-repeat: repeat;
+        background-size: 120px 120px;
+      }
+
+      /* Reports print from the browser — keep paper clean */
+      @media print {
+        body {
+          background-image: none !important;
+        }
+      }
     </style>
 
   </head>

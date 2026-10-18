@@ -1,0 +1,4 @@
+- generic [ref=f2e34]:
+  - heading "An unexpected error occurred" [level=1] [ref=f2e35]
+  - paragraph [ref=f2e36]: We are sorry about that. The error has been logged and our support team will review it — you can return to the dashboard and try again.
+  - button "Back to dashboard" [ref=f2e37] [cursor=pointer]

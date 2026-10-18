@@ -12419,3 +12419,15 @@ footer.footer p { color: inherit; margin-bottom: 0; }
 }
 /* Breathing room so page content clears the fixed bar */
 .vertical .main-content { padding-bottom: 4rem; }
+
+/* ===== IIROSA page texture — khatam (8-point star) tile ====================
+   Subtle geometric texture behind the content gutters. The consumer rule
+   lives in index.html's <style> block (background-image: var(--body-pattern));
+   a data-URI SVG cannot read CSS variables, so the fill and opacity are
+   baked per theme. Two squares rotated 45° = one khatam star; stars sit on
+   the tile corners + centre, so tiling yields a seamless diagonal lattice.
+   Mirrored (with theme colours only) in app-light.css and app-dark.css —
+   keep the geometry in sync across the three files. */
+:root {
+  --body-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%2328a745' stroke-opacity='0.05' stroke-width='1.5'%3E%3Crect x='36' y='36' width='48' height='48'/%3E%3Crect x='36' y='36' width='48' height='48' transform='rotate(45 60 60)'/%3E%3Crect x='-24' y='-24' width='48' height='48'/%3E%3Crect x='-24' y='-24' width='48' height='48' transform='rotate(45 0 0)'/%3E%3Crect x='96' y='-24' width='48' height='48'/%3E%3Crect x='96' y='-24' width='48' height='48' transform='rotate(45 120 0)'/%3E%3Crect x='-24' y='96' width='48' height='48'/%3E%3Crect x='-24' y='96' width='48' height='48' transform='rotate(45 0 120)'/%3E%3Crect x='96' y='96' width='48' height='48'/%3E%3Crect x='96' y='96' width='48' height='48' transform='rotate(45 120 120)'/%3E%3C/g%3E%3C/svg%3E");
+}
