@@ -1882,7 +1882,10 @@
     "passwordRequired": "كلمة المرور مطلوبة",
     "basicInformation": "المعلومات الأساسية",
     "rolesSection": "الأدوار",
-    "settings": "الإعدادات"
+    "settings": "الإعدادات",
+    "charity": "الجمعية",
+    "selectCharity": "اختر الجمعية",
+    "charityRequired": "اختيار الجمعية مطلوب لدور الجمعية"
   },
   "menu": {
     "dashboard": "لوحة التحكم",

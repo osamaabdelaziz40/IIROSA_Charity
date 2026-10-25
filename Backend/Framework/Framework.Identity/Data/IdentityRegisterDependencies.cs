@@ -38,6 +38,10 @@ namespace Framework.Identity.Data
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10); // Lockout duration (60 minutes)
             })
             .AddEntityFrameworkStores<AppIdentityDbContext>()
+            // Replaces the default UserStore: the legacy UserRoles table has a surrogate Id
+            // PK, and the default store's FindAsync(userId, roleId) throws
+            // "2 values were passed to the Find method" against a single-key entity.
+            .AddUserStore<AppUserStore>()
             .AddDefaultTokenProviders();
 
             // Configure cookie authentication to return 401 for API requests instead of redirecting

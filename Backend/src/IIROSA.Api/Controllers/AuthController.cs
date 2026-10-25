@@ -7,6 +7,8 @@ using Framework.Identity.Data.Entities;
 using IIROSA.Application.Services;
 using IIROSA.Application.DTOs;
 
+using IIROSA.Domain.Interfaces;
+
 namespace IIROSA.Api.Controllers;
 
 /// <summary>
@@ -19,16 +21,19 @@ public class AuthController : ApiController
     private readonly IUserAppService _userAppService;
     private readonly ITokenService _tokenService;
     private readonly IRefreshTokenService _refreshTokenService;
+    private readonly ICharityRepository _charityRepository;
 
     public AuthController(
         IUserAppService userAppService,
         ITokenService tokenService,
         IRefreshTokenService refreshTokenService,
+        ICharityRepository charityRepository,
         ILogger<AuthController> logger) : base(logger)
     {
         _userAppService = userAppService;
         _tokenService = tokenService;
         _refreshTokenService = refreshTokenService;
+        _charityRepository = charityRepository;
     }
 
     /// <summary>
@@ -51,6 +56,24 @@ public class AuthController : ApiController
                 HttpContext.Connection.RemoteIpAddress?.ToString(),
                 Request.Headers["User-Agent"].ToString());
 
+            string? charityId = result.Value.CharityId?.ToString();
+            string? charityName = null;
+
+            if (result.Value.CharityId.HasValue)
+            {
+                var charity = await _charityRepository.GetByIdAsync(result.Value.CharityId.Value);
+                charityName = charity?.Name;
+            }
+            else if (result.Value.Id.HasValue)
+            {
+                var charity = await _charityRepository.GetByUserIdAsync(result.Value.Id.Value.ToString());
+                if (charity != null)
+                {
+                    charityId = charity.Id.ToString();
+                    charityName = charity.Name;
+                }
+            }
+
             return Ok(new LoginResponse
             {
                 Token = accessToken,
@@ -62,7 +85,9 @@ public class AuthController : ApiController
                     Username = result.Value.UserName ?? string.Empty,
                     Email = result.Value.Email ?? string.Empty,
                     FullName = result.Value.FullName ?? string.Empty,
-                    Roles = result.Value.RoleNames?.ToList() ?? new List<string>()
+                    Roles = result.Value.RoleNames?.ToList() ?? new List<string>(),
+                    CharityId = charityId,
+                    CharityName = charityName
                 }
             });
         }

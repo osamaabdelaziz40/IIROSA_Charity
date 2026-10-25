@@ -31,6 +31,8 @@ public class LoginUser
     public string Email { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public IList<string> Roles { get; set; } = new List<string>();
+    public string? CharityId { get; set; }
+    public string? CharityName { get; set; }
 }
 
 /// <summary>

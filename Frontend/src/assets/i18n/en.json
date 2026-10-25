@@ -1883,7 +1883,10 @@
     "passwordRequired": "Password is required",
     "basicInformation": "Basic Information",
     "rolesSection": "Roles",
-    "settings": "Settings"
+    "settings": "Settings",
+    "charity": "Charity",
+    "selectCharity": "Select Charity",
+    "charityRequired": "Charity selection is required for Charity role"
   },
   "menu": {
     "dashboard": "Dashboard",

@@ -55,6 +55,9 @@ namespace Framework.Identity.Data.Services.Interfaces
         public DateTime? UpdatedOn { get; set; }
         public string? PhoneNumber { get; set; }
         public string PreferredNotificationLanguage { get; set; }
+        public Guid? CharityId { get; set; }
+        public string? CharityName { get; set; }
+        public int? CountryId { get; set; }
     }
 
     public class UserManagementInsertResultDto
@@ -90,6 +93,8 @@ namespace Framework.Identity.Data.Services.Interfaces
         public string? PhoneNumber { get; set; }
         public bool? IsActive { get; set; }
         public List<string>? Roles { get; set; }
+        public Guid? CharityId { get; set; }
+        public int? CountryId { get; set; }
     }
 
     public class UserFilterDto

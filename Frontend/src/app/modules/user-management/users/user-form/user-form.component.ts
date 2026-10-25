@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { UserManagementService } from '../../services/user-management.service';
+import { CharityService } from '../../../charities/services/charity.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { User, CreateUserRequest, UpdateUserRequest } from '../../../../core/models/user.model';
 import { Role } from '../../../../core/models/role.model';
@@ -39,6 +40,8 @@ export class UserFormComponent implements OnInit {
   loading = false;
   submitting = false;
   loadingRoles = false;
+  loadingCharities = false;
+  isCharityRoleSelected = false;
   isEdit = false;
   userId?: string;
   allRoles: Role[] = [];
@@ -46,6 +49,8 @@ export class UserFormComponent implements OnInit {
 
   // Dropdown data for roles
   rolesDropdownData: Array<{ id: string; name: string }> = [];
+  // Dropdown data for charities
+  charitiesDropdownData: Array<{ id: string; name: string }> = [];
 
   // Collapsible section cards — opened programmatically after a failed submit
   // so invalid fields hidden in collapsed cards are revealed
@@ -65,6 +70,7 @@ export class UserFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private userManagementService: UserManagementService,
+    private charityService: CharityService,
     private notification: NotificationService,
     private translate: TranslateService
   ) {
@@ -73,6 +79,7 @@ export class UserFormComponent implements OnInit {
       email: ['', [Validators.required, Validators.email]],
       phoneNumber: [''],
       roles: [[], Validators.required],
+      charityId: [null],
       isActive: [true],
       password: ['']
     });
@@ -82,6 +89,11 @@ export class UserFormComponent implements OnInit {
     // Page actions are now directly bound
 
     this.userId = this.route.snapshot.params['id'];
+
+    // Listen to role changes to conditionally require charity selection
+    this.userForm.get('roles')?.valueChanges.subscribe(roles => {
+      this.updateCharityValidation(roles);
+    });
 
     if (this.userId) {
       this.isEdit = true;
@@ -150,6 +162,36 @@ export class UserFormComponent implements OnInit {
     });
   }
 
+  loadCharities(): void {
+    this.loadingCharities = true;
+    this.charityService.getCharities({ pageNumber: 1, pageSize: 1000 }).subscribe({
+      next: (response) => {
+        this.charitiesDropdownData = (response.items || []).map(c => ({ id: c.id, name: c.name }));
+        this.loadingCharities = false;
+      },
+      error: (error) => {
+        console.error('Error loading charities:', error);
+        this.loadingCharities = false;
+      }
+    });
+  }
+
+  updateCharityValidation(roles: string[] | null): void {
+    const hasCharity = Array.isArray(roles) && roles.includes('Charity');
+    this.isCharityRoleSelected = hasCharity;
+    const charityControl = this.userForm.get('charityId');
+    if (hasCharity) {
+      charityControl?.setValidators([Validators.required]);
+      if (this.charitiesDropdownData.length === 0 && !this.loadingCharities) {
+        this.loadCharities();
+      }
+    } else {
+      charityControl?.clearValidators();
+      charityControl?.setValue(null);
+    }
+    charityControl?.updateValueAndValidity();
+  }
+
   loadUser() {
     this.loading = true;
     this.userManagementService.getUserById(this.userId!).subscribe({
@@ -164,8 +206,10 @@ export class UserFormComponent implements OnInit {
           email: user.email,
           phoneNumber: user.phoneNumber || '',
           roles: userRoles,
+          charityId: user.charityId || null,
           isActive: user.isActive
         });
+        this.updateCharityValidation(userRoles);
         this.loading = false;
       },
       error: () => {
@@ -193,7 +237,8 @@ export class UserFormComponent implements OnInit {
         email: this.f['email'].value,
         phoneNumber: this.f['phoneNumber'].value,
         roles: this.f['roles'].value,
-        isActive: this.f['isActive'].value
+        isActive: this.f['isActive'].value,
+        charityId: this.isCharityRoleSelected ? this.f['charityId'].value : undefined
       };
 
       this.userManagementService.updateUser(this.userId!, updateRequest).subscribe({
@@ -212,7 +257,8 @@ export class UserFormComponent implements OnInit {
         email: this.f['email'].value,
         phoneNumber: this.f['phoneNumber'].value,
         roles: this.f['roles'].value,
-        password: this.f['password'].value || 'P@ssw0rd@2022' // Default password as per use case
+        password: this.f['password'].value || 'P@ssw0rd@2022',
+        charityId: this.isCharityRoleSelected ? this.f['charityId'].value : undefined
       };
 
       this.userManagementService.createUser(createRequest).subscribe({

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using System;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -20,7 +20,9 @@ namespace Framework.Identity.Data.Entities
 
         [Column(Order = 303)]
         public DateTime? UpdatedOn { get; set; }
+        [ForeignKey(nameof(UserId))]
         public virtual ApplicationUser User { get; set; }
+        [ForeignKey(nameof(RoleId))]
         public virtual ApplicationRole Role { get; set; }
     }
 }

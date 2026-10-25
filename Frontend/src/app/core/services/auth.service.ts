@@ -19,6 +19,8 @@ export interface LoginResponse {
     email: string;
     fullName: string;
     roles: string[];
+    charityId?: string;
+    charityName?: string;
   };
 }
 
@@ -41,6 +43,8 @@ export interface User {
   fullName: string;
   roles: string[];
   profileImage?: string;
+  charityId?: string;
+  charityName?: string;
 }
 
 export interface TokenInfo {
@@ -413,10 +417,34 @@ export class AuthService {
   public sessionTimeoutWarning$ = this.sessionTimeoutWarning.asObservable();
 
   private setAuthData(accessToken: string, refreshToken: string, expiration: string, user: any): void {
+    if (user && !user.charityId && accessToken) {
+      try {
+        const payload = this.parseJwt(accessToken);
+        if (payload?.charityId) {
+          user.charityId = payload.charityId;
+        }
+      } catch (e) {
+        // ignore parse error
+      }
+    }
+
     localStorage.setItem('currentUser', JSON.stringify(user));
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
     localStorage.setItem('tokenExpiration', expiration);
+
+    if (user?.id) {
+      localStorage.setItem('userId', user.id);
+    }
+
+    if (user?.charityId) {
+      localStorage.setItem('charityId', user.charityId);
+      localStorage.setItem('CharityRelatedId', user.charityId);
+    } else {
+      localStorage.removeItem('charityId');
+      localStorage.removeItem('CharityRelatedId');
+    }
+
     this.currentUserSubject.next(user);
   }
 
@@ -425,6 +453,9 @@ export class AuthService {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('tokenExpiration');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('charityId');
+    localStorage.removeItem('CharityRelatedId');
     this.currentUserSubject.next(null);
   }
 
@@ -434,6 +465,21 @@ export class AuthService {
 
   getRefreshToken(): string | null {
     return localStorage.getItem('refreshToken');
+  }
+
+  getUserId(): string | null {
+    const user = this.getCurrentUser();
+    return user?.id || localStorage.getItem('userId');
+  }
+
+  getCharityId(): string | null {
+    const user = this.getCurrentUser();
+    return user?.charityId || localStorage.getItem('charityId') || localStorage.getItem('CharityRelatedId');
+  }
+
+  getCharityName(): string | null {
+    const user = this.getCurrentUser();
+    return user?.charityName || null;
   }
 
   isAuthenticated(): boolean {

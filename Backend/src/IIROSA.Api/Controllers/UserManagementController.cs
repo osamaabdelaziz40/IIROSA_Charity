@@ -1,6 +1,7 @@
 using Framework.Identity.Data.Entities;
 using Framework.Identity.Data.Helper;
 using Framework.Identity.Data.Services.Interfaces;
+using IIROSA.Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -22,16 +23,28 @@ namespace IIROSA.Api.Controllers
     {
         private readonly IUserAppServiceExtended _userAppService;
         private readonly IRoleAppService _roleAppService;
+        private readonly ICharityRepository _charityRepository;
         private readonly ILogger<UserManagementController> _logger;
 
         public UserManagementController(
             IUserAppServiceExtended userAppService,
             IRoleAppService roleAppService,
+            ICharityRepository charityRepository,
             ILogger<UserManagementController> logger)
         {
             _userAppService = userAppService;
             _roleAppService = roleAppService;
+            _charityRepository = charityRepository;
             _logger = logger;
+        }
+
+        private async Task EnrichUserWithCharityNameAsync(UserDetailDto user)
+        {
+            if (user != null && user.CharityId.HasValue && user.CharityId != Guid.Empty)
+            {
+                var charity = await _charityRepository.GetByIdAsync(user.CharityId.Value);
+                user.CharityName = charity?.Name;
+            }
         }
 
         /// <summary>
@@ -82,6 +95,7 @@ namespace IIROSA.Api.Controllers
                     return NotFound(new { message = "User not found" });
                 }
 
+                await EnrichUserWithCharityNameAsync(user);
                 return Ok(user);
             }
             catch (Exception ex)
@@ -108,6 +122,7 @@ namespace IIROSA.Api.Controllers
                 }
 
                 var user = await _userAppService.GetUserDetailAsync(result.InsertedId);
+                await EnrichUserWithCharityNameAsync(user);
                 return CreatedAtAction(nameof(GetUser), new { id = result.InsertedId }, user);
             }
             catch (Exception ex)
@@ -134,6 +149,7 @@ namespace IIROSA.Api.Controllers
                 }
 
                 var user = await _userAppService.GetUserDetailAsync(id);
+                await EnrichUserWithCharityNameAsync(user);
                 return Ok(user);
             }
             catch (Exception ex)

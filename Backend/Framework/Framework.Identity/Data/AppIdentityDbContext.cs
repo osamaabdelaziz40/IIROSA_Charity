@@ -1,4 +1,4 @@
-﻿using Framework.Core.Data;
+using Framework.Core.Data;
 using Framework.Core.Helper;
 using Framework.Identity.Data.Entities;
 using Framework.Identity.Data.Extensions;
@@ -44,6 +44,27 @@ namespace Framework.Identity.Data
             });
 
             builder.ApplyConfiguration(new RoleConfiguration());
+            // ApplicationUserRoles keeps the legacy surrogate Id PK (matches the DB and the
+            // snapshot). Identity's 2-value FindAsync(userId, roleId) only works against the
+            // composite key, which is why AppUserStore is registered in
+            // IdentityRegisterDependencies to override FindUserRoleAsync/CreateUserRole.
+            builder.Entity<ApplicationUserRoles>(b =>
+            {
+                // Primary key is surrogate Id
+                b.HasKey(ur => ur.Id);
+
+                // Foreign key to ApplicationUser via UserId
+                b.HasOne(ur => ur.User)
+                    .WithMany(u => u.UserRoles)
+                    .HasForeignKey(ur => ur.UserId)
+                    .IsRequired();
+
+                // Foreign key to ApplicationRole via RoleId
+                b.HasOne(ur => ur.Role)
+                    .WithMany()
+                    .HasForeignKey(ur => ur.RoleId)
+                    .IsRequired();
+            });
 
             //builder.ApplyConfiguration(new AdminConfiguration());
             //builder.ApplyConfiguration(new UsersWithRolesConfig());

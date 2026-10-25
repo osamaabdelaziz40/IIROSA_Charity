@@ -9,6 +9,9 @@ export interface User {
   updatedOn?: Date;
   roles?: string[];
   token?: string;
+  charityId?: string;
+  charityName?: string;
+  countryId?: number;
 }
 
 export interface CreateUserRequest {
@@ -17,6 +20,8 @@ export interface CreateUserRequest {
   phoneNumber?: string;
   roles: string[];
   password?: string;
+  charityId?: string;
+  countryId?: number;
 }
 
 export interface UpdateUserRequest {
@@ -25,6 +30,8 @@ export interface UpdateUserRequest {
   phoneNumber?: string;
   isActive?: boolean;
   roles?: string[];
+  charityId?: string;
+  countryId?: number;
 }
 
 export interface UserListResponse {

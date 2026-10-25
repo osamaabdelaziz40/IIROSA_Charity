@@ -94,7 +94,9 @@ namespace Framework.Identity.Data.Services
                 CreatedOn = user.CreatedOn,
                 UpdatedOn = user.UpdatedOn,
                 PhoneNumber = user.PhoneNumber,
-                PreferredNotificationLanguage = user.PreferredNotificationLanguage ?? "ar"
+                PreferredNotificationLanguage = user.PreferredNotificationLanguage ?? "ar",
+                CharityId = user.CharityId,
+                CountryId = user.CountryId
             };
         }
 
@@ -110,6 +112,14 @@ namespace Framework.Identity.Data.Services
             if (existingUser != null)
             {
                 result.VerificationMSG = "EmailAlreadyExists";
+                result.Success = false;
+                return result;
+            }
+
+            // If user is assigned to Charity role, charity must be selected
+            if (userDto.Roles != null && userDto.Roles.Contains("Charity") && (!userDto.CharityId.HasValue || userDto.CharityId == Guid.Empty))
+            {
+                result.VerificationMSG = "CharityIsRequiredForCharityRole";
                 result.Success = false;
                 return result;
             }
@@ -202,6 +212,16 @@ namespace Framework.Identity.Data.Services
                 user.IsActive = userDto.IsActive.Value;
             }
 
+            if (userDto.CharityId.HasValue)
+            {
+                user.CharityId = userDto.CharityId.Value;
+            }
+
+            if (userDto.CountryId.HasValue)
+            {
+                user.CountryId = userDto.CountryId.Value;
+            }
+
             user.UpdatedBy = CurrentUserName;
             user.UpdatedOn = DateTime.UtcNow;
 
@@ -214,6 +234,12 @@ namespace Framework.Identity.Data.Services
             // Update roles if provided
             if (userDto.Roles != null)
             {
+                // Enforce charity selection if charity role is assigned
+                if (userDto.Roles.Contains("Charity") && (!user.CharityId.HasValue || user.CharityId == Guid.Empty))
+                {
+                    return Guid.Empty;
+                }
+
                 var currentRoles = await _userManager.GetRolesAsync(user);
                 var rolesToRemove = currentRoles.Except(userDto.Roles).ToList();
                 var rolesToAdd = userDto.Roles.Except(currentRoles).ToList();

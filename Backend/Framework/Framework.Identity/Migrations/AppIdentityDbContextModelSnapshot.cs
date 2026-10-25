@@ -275,9 +275,6 @@ namespace Framework.Identity.Migrations
                     b.Property<Guid>("RoleId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("RoleId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnOrder(302);
@@ -289,20 +286,14 @@ namespace Framework.Identity.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("UserId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("Id");
+                    b.HasIndex("Id")
+                        .HasDatabaseName("IX_UserRoles_Id");
 
                     b.HasIndex("RoleId");
 
-                    b.HasIndex("RoleId1");
-
                     b.HasIndex("UserId");
-
-                    b.HasIndex("UserId1");
 
                     b.ToTable("UserRoles", "identity");
                 });
@@ -471,25 +462,17 @@ namespace Framework.Identity.Migrations
 
             modelBuilder.Entity("Framework.Identity.Data.Entities.ApplicationUserRoles", b =>
                 {
-                    b.HasOne("Framework.Identity.Data.Entities.ApplicationRole", null)
+                    b.HasOne("Framework.Identity.Data.Entities.ApplicationRole", "Role")
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Framework.Identity.Data.Entities.ApplicationRole", "Role")
-                        .WithMany()
-                        .HasForeignKey("RoleId1");
-
-                    b.HasOne("Framework.Identity.Data.Entities.ApplicationUser", null)
-                        .WithMany()
+                    b.HasOne("Framework.Identity.Data.Entities.ApplicationUser", "User")
+                        .WithMany("UserRoles")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("Framework.Identity.Data.Entities.ApplicationUser", "User")
-                        .WithMany("UserRoles")
-                        .HasForeignKey("UserId1");
 
                     b.Navigation("Role");
 

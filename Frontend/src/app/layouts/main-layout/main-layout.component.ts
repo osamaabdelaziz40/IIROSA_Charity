@@ -44,6 +44,7 @@ export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   canImpersonate = false;
   isSuperAdmin = false;
   canSelectCharity = false;
+  pinnedCharityName: string | null = null;
 
   // Header charity switcher (select2)
   charities: CharityDto[] = [];
@@ -146,6 +147,7 @@ export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
       this.canImpersonate = this.authService.hasAnyRole(['SuperAdmin', 'Admin']);
       this.isSuperAdmin = this.authService.hasRole('SuperAdmin');
       this.canSelectCharity = this.authService.hasAnyRole(['SuperAdmin', 'Admin']);
+      this.pinnedCharityName = this.authService.getCharityName();
     }
 
     // Header charity switcher — see loadCharities() for the scoping note
@@ -368,6 +370,7 @@ export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
           this.charities = response.items || [];
           if (!this.canSelectCharity) {
             if (this.charities.length > 0) {
+              this.pinnedCharityName = this.charities[0].name;
               this.selectedCharityService.setPinnedCharity(this.charities[0]);
             } else {
               this.selectedCharityService.selectAll();
