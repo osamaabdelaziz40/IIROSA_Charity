@@ -30,7 +30,6 @@ public static class ServiceCollectionExtensions
 
         // Memory Cache
         services.AddMemoryCache();
-        services.AddScoped<Microsoft.Extensions.Caching.Memory.IMemoryCache, Microsoft.Extensions.Caching.Memory.MemoryCache>();
 
         // Identity Token Manager (required by Framework DbContexts)
         services.AddScoped<Framework.Core.Helper.IIdentityTokenManager, Framework.Core.Helper.JwtIdentityTokenManager>();

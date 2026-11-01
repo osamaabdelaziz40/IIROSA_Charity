@@ -1,0 +1,17 @@
+# Families, Children, and Parents Cache Invalidation Matrix
+
+In this codebase children are `Orphan` records, parents are `Father` and `Mother`, and additional guardians are `Provider`. Family reads are served by `FamilyService`. `FamilyDto` embeds father, mother, providers, relatives, and children; `FamilyListDto` projects father/mother names, child/relative counts, and fields used by provider/child search. `HousingFamilyDetailDto` and housing beneficiary results also include member fields. All query keys include their filter and authorization scope.
+
+Cache key conventions: `Families:ById:{id}:{scopeHash}`, `Families:List:{queryHash}`, `Families:Statistics:{scopeHash}`, `Families:HousingDetail:{id}:{scopeHash}`, `Families:HousingBeneficiaries:{id}:{queryHash}`, `Children:ByFamily:{familyId}:list`, `Children:Search:{queryHash}`, `Parents:ByFamily:{familyId}:father|mother`, and `Parents:ByFamily:{familyId}:provider:{scopeHash}`. Family-by-code is currently an uncached lookup; no individual child/parent-by-ID read endpoint exists.
+
+| Write operation | Individual keys removed | Query prefixes removed | Rationale |
+|---|---|---|---|
+| Insert Family | New `Families:ById:{id}:*`; matching child/parent family keys | `Families:List:*`, `Families:Statistics:*` | FamilyDto/HousingFamilyDetailDto include family data; new rows change register list and totals. |
+| Update Family | `Families:ById:{id}:*`, `Families:HousingDetail:{id}:*`, `Families:HousingBeneficiaries:{id}:*` | `Families:List:*`, `Families:Statistics:*` | FamilyDto and housing responses project family fields; list filters and summary values depend on those fields. |
+| Deactivate/Delete Family | Same family keys; `Children:ByFamily:{id}:*`, `Parents:ByFamily:{id}:*` | `Families:List:*`, `Families:Statistics:*`, `Children:Search:*` | Family visibility/scope changes; member endpoints and child search must not expose members through a deleted family. |
+| Transfer Family | Same family detail keys; `Children:ByFamily:{id}:*` | `Families:List:*`, `Families:Statistics:*`, `Children:Search:*` | Family and child charity scope change; list/search results are scoped by charity. |
+| Insert Child (`Orphan`) | `Children:ByFamily:{familyId}:*`, affected family detail/housing keys | `Children:Search:*`, `Families:List:*` | OrphanListDto and housing responses include child data; FamilyDto embeds children and family lists show child counts/search by child. |
+| Update Child (`Orphan`) | `Children:ByFamily:{familyId}:*`, affected family detail/housing keys | `Children:Search:*`, `Families:List:*` | Child name/code/status/demographics affect child results, family detail, child search, and family list filters/counts. |
+| Delete/Move Child (`Orphan`) | Same child/family keys for old and new family IDs | `Children:Search:*`, `Families:List:*` | FamilyId and child fields change family aggregates and scoped child search results. |
+| Insert/Update/Delete Parent (`Father`/`Mother`) | `Parents:ByFamily:{familyId}:*`, affected family detail/housing keys | `Families:List:*` | FatherDto/MotherDto feed FamilyDto; FamilyListDto projects parent names and the list supports parent-name search. |
+| Insert/Update/Delete Provider | `Parents:ByFamily:{familyId}:*`, affected family detail/housing keys | `Families:List:*` | ProviderDto is embedded in family/housing details; provider name/type participates in family list filtering. |

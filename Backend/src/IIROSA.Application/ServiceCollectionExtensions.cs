@@ -28,6 +28,7 @@ namespace IIROSA.Application
     {
         public static void ConfigureApplicationServices(this IServiceCollection services, IConfiguration configuration)
         {
+            services.AddSingleton<Caching.EntityMemoryCache>();
             // Register Application Services dynamically (Interface -> Implementation mapping)
             RegisterApplicationServices(services);
 

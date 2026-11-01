@@ -1,5 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using IIROSA.Application.Caching;
 using IIROSA.Application.Interfaces;
 using IIROSA.Application.DTOs.Family;
 using IIROSA.Application.DTOs.Reports;
@@ -20,6 +24,7 @@ namespace IIROSA.Application.Services;
 public class FamilyService : IFamilyService
 {
     private readonly IFamilyRepository _familyRepository;
+    private readonly EntityMemoryCache _entityCache;
     private readonly IIROSA.Application.Interfaces.ICharityWriteGuard _charityWriteGuard;
     private readonly IFatherRepository _fatherRepository;
     private readonly IMotherRepository _motherRepository;
@@ -68,6 +73,7 @@ public class FamilyService : IFamilyService
 
     public FamilyService(
         IFamilyRepository familyRepository,
+        EntityMemoryCache entityCache,
         IIROSA.Application.Interfaces.ICharityWriteGuard charityWriteGuard,
         IFatherRepository fatherRepository,
         IMotherRepository motherRepository,
@@ -98,6 +104,7 @@ public class FamilyService : IFamilyService
         IIROSA.Application.Interfaces.ICurrentUserService currentUser)
     {
         _familyRepository = familyRepository;
+        _entityCache = entityCache;
         _fatherRepository = fatherRepository;
         _charityWriteGuard = charityWriteGuard;
         _motherRepository = motherRepository;
@@ -313,6 +320,9 @@ public class FamilyService : IFamilyService
 
         _logger.LogInformation("Family created successfully with ID: {Id}", family.Id);
 
+        InvalidateFamily(family.Id, family.Code);
+        InvalidateChildren(family.Id);
+        InvalidateParents(family.Id);
         return await GetByIdAsync(family.Id);
     }
 
@@ -373,6 +383,12 @@ public class FamilyService : IFamilyService
     /// </summary>
     public async Task<HousingFamilyDetailDto> GetHousingFamilyAsync(Guid id, Guid? userCharityId, string? userRole)
     {
+        var key = QueryCacheKey($"Families:HousingDetail:{id}:", id, userCharityId, userRole);
+        return await _entityCache.GetOrCreateAsync(key, _ => GetHousingFamilyUncachedAsync(id, userCharityId, userRole));
+    }
+
+    private async Task<HousingFamilyDetailDto> GetHousingFamilyUncachedAsync(Guid id, Guid? userCharityId, string? userRole)
+    {
         var family = await _familyRepository.IncludeNavigationProperties()
             .FirstOrDefaultAsync(f => f.Id == id && !f.IsDeleted
                 && f.FamilyType == Domain.Enums.FamilyType.Housing);
@@ -394,6 +410,13 @@ public class FamilyService : IFamilyService
     /// from the list, never resolved by code (legacy resolves كود الطالب الابن).
     /// </summary>
     public async Task<List<DTOs.Family.HousingBeneficiaryDto>> GetHousingBeneficiariesAsync(
+        Guid familyId, string? code, Guid? userCharityId, string? userRole)
+    {
+        var key = QueryCacheKey($"Families:HousingBeneficiaries:{familyId}:", code?.Trim(), userCharityId, userRole);
+        return await _entityCache.GetOrCreateAsync(key, _ => GetHousingBeneficiariesUncachedAsync(familyId, code, userCharityId, userRole));
+    }
+
+    private async Task<List<DTOs.Family.HousingBeneficiaryDto>> GetHousingBeneficiariesUncachedAsync(
         Guid familyId, string? code, Guid? userCharityId, string? userRole)
     {
         var family = await _familyRepository.IncludeNavigationProperties()
@@ -660,6 +683,9 @@ public class FamilyService : IFamilyService
 
         await _unitOfWork.SaveChangesAsync();
 
+        InvalidateFamily(family.Id, family.Code);
+        InvalidateChildren(family.Id);
+        InvalidateParents(family.Id);
         return await MapToHousingFamilyDetailAsync(family);
     }
 
@@ -713,6 +739,7 @@ public class FamilyService : IFamilyService
             await _unitOfWork.SaveChangesAsync();
         }
 
+        InvalidateParents(familyId, father.Id);
         return _mapper.Map<FatherDto>(father);
     }
 
@@ -740,6 +767,7 @@ public class FamilyService : IFamilyService
             await _unitOfWork.SaveChangesAsync();
         }
 
+        InvalidateParents(familyId, mother.Id);
         return _mapper.Map<MotherDto>(mother);
     }
 
@@ -764,6 +792,7 @@ public class FamilyService : IFamilyService
         family.OrphansCount = orphans.Count();
         _familyRepository.Update(family);
         await _unitOfWork.SaveChangesAsync();
+        InvalidateChildren(familyId, orphan.Id);
 
         var result = _mapper.Map<OrphanDto>(orphan);
         result.Age = CalculateAge(dto.DateOfBirth);
@@ -787,6 +816,7 @@ public class FamilyService : IFamilyService
         family.ProviderType = providerType;
         _familyRepository.Update(family);
         await _unitOfWork.SaveChangesAsync();
+        InvalidateFamily(familyId, family.Code);
 
         _logger.LogInformation("Provider type set successfully for family: {FamilyId}", familyId);
     }
@@ -835,6 +865,7 @@ public class FamilyService : IFamilyService
         _familyRepository.Update(family);
         await _unitOfWork.SaveChangesAsync();
 
+        InvalidateParents(familyId, provider.Id);
         return _mapper.Map<ProviderDto>(provider);
     }
 
@@ -932,6 +963,7 @@ public class FamilyService : IFamilyService
 
         await _unitOfWork.SaveChangesAsync();
 
+        InvalidateParents(familyId, provider.Id);
         _logger.LogInformation("Provider updated successfully for family: {FamilyId}", familyId);
         return _mapper.Map<ProviderDto>(provider);
     }
@@ -944,27 +976,19 @@ public class FamilyService : IFamilyService
     public async Task<ProviderDto> GetProviderByFamilyAsync(Guid familyId, Guid? userCharityId, string? userRole)
     {
         _logger.LogInformation("Getting provider for family: {FamilyId}", familyId);
-
-        var family = await _familyRepository.GetByIdAsync(familyId);
-        if (family == null || family.IsDeleted)
+        var key = QueryCacheKey($"Parents:ByFamily:{familyId}:provider:", familyId, userCharityId, userRole);
+        return await _entityCache.GetOrCreateAsync(key, async _ =>
         {
-            throw new KeyNotFoundException($"Family with ID '{familyId}' not found");
-        }
-
-        // Apply data isolation check (same rule as the family read) — fail CLOSED: a Charity
-        // role with no parseable charity claim never falls through to the unscoped branch (D4).
-        if (userRole == "Charity" && (userCharityId == null || family.FK_CharityId != userCharityId.Value))
-        {
-            throw new UnauthorizedAccessException("You do not have access to this family");
-        }
-
-        var provider = await _providerRepository.GetByFamilyIdAsync(familyId);
-        if (provider == null)
-        {
-            throw new KeyNotFoundException($"No provider found for family '{familyId}'");
-        }
-
-        return _mapper.Map<ProviderDto>(provider);
+            var family = await _familyRepository.GetByIdAsync(familyId);
+            if (family == null || family.IsDeleted)
+                throw new KeyNotFoundException($"Family with ID '{familyId}' not found");
+            // Fail closed for charity callers, including tokens with no parsed charity claim.
+            if (userRole == "Charity" && (userCharityId == null || family.FK_CharityId != userCharityId.Value))
+                throw new UnauthorizedAccessException("You do not have access to this family");
+            var provider = await _providerRepository.GetByFamilyIdAsync(familyId);
+            if (provider == null) throw new KeyNotFoundException($"No provider found for family '{familyId}'");
+            return _mapper.Map<ProviderDto>(provider);
+        });
     }
 
     #endregion
@@ -1035,6 +1059,7 @@ public class FamilyService : IFamilyService
         _familyRepository.Update(family);
         await _unitOfWork.SaveChangesAsync();
 
+        InvalidateParents(familyId);
         _logger.LogInformation("Parent provider verified successfully for family: {FamilyId}", familyId);
     }
 
@@ -1130,6 +1155,8 @@ public class FamilyService : IFamilyService
 
         _familyRepository.Update(family);
         await _unitOfWork.SaveChangesAsync();
+
+        InvalidateFamily(family.Id, family.Code);
 
         _logger.LogInformation("Family updated successfully: {Id}", family.Id);
 
@@ -1228,6 +1255,8 @@ public class FamilyService : IFamilyService
         _fatherRepository.Update(father);
         await _unitOfWork.SaveChangesAsync();
 
+        InvalidateParents(father.FamilyId, father.Id);
+
         _logger.LogInformation("Father updated successfully: {Id}", father.Id);
 
         return _mapper.Map<FatherDto>(father);
@@ -1274,6 +1303,8 @@ public class FamilyService : IFamilyService
         _motherRepository.Update(mother);
         await _unitOfWork.SaveChangesAsync();
 
+        InvalidateParents(mother.FamilyId, mother.Id);
+
         _logger.LogInformation("Mother updated successfully: {Id}", mother.Id);
 
         return _mapper.Map<MotherDto>(mother);
@@ -1319,6 +1350,8 @@ public class FamilyService : IFamilyService
         _orphanRepository.Update(orphan);
         await _unitOfWork.SaveChangesAsync();
 
+        InvalidateChildren(orphan.FamilyId, orphan.Id);
+
         _logger.LogInformation("Orphan updated successfully: {Id}", orphan.Id);
 
         var result = _mapper.Map<OrphanDto>(orphan);
@@ -1334,6 +1367,17 @@ public class FamilyService : IFamilyService
     #region UC-4.12: View Family List
 
     public async Task<(IEnumerable<FamilyListDto> Items, int TotalCount)> GetFamiliesAsync(FamilyFilterDto filter, Guid? userCharityId, string? userRole)
+    {
+        var key = QueryCacheKey("Families:List:", filter, userCharityId, userRole);
+        var page = await _entityCache.GetOrCreateAsync(key, async _ =>
+        {
+            var result = await GetFamiliesUncachedAsync(filter, userCharityId, userRole);
+            return new CachedPage<FamilyListDto>(result.Items.ToList(), result.TotalCount);
+        });
+        return (page.Items, page.TotalCount);
+    }
+
+    private async Task<(IEnumerable<FamilyListDto> Items, int TotalCount)> GetFamiliesUncachedAsync(FamilyFilterDto filter, Guid? userCharityId, string? userRole)
     {
         _logger.LogInformation("Getting families with filter: {@Filter}, for user role: {Role}", filter, userRole);
 
@@ -1516,6 +1560,12 @@ public class FamilyService : IFamilyService
     /// </remarks>
     public async Task<FamilyStatisticsDto> GetStatisticsAsync(string? familyType, Guid? userCharityId, string? userRole)
     {
+        var key = QueryCacheKey("Families:Statistics:", familyType, userCharityId, userRole);
+        return await _entityCache.GetOrCreateAsync(key, _ => GetStatisticsUncachedAsync(familyType, userCharityId, userRole));
+    }
+
+    private async Task<FamilyStatisticsDto> GetStatisticsUncachedAsync(string? familyType, Guid? userCharityId, string? userRole)
+    {
         _logger.LogInformation("Getting family register statistics for user role: {Role}, family type: {FamilyType}", userRole, familyType);
 
         // TableNoTracking is the lightest queryable the repository surface offers — the counts
@@ -1634,22 +1684,17 @@ public class FamilyService : IFamilyService
     public async Task<FamilyDto> GetFamilyByIdAsync(Guid id, Guid? userCharityId, string? userRole)
     {
         _logger.LogInformation("Getting family details: {Id}", id);
-
-        var family = await _familyRepository.IncludeNavigationProperties()
-            .FirstOrDefaultAsync(f => f.Id == id && !f.IsDeleted);
-
-        if (family == null)
+        var key = QueryCacheKey($"Families:ById:{id}:", id, userCharityId, userRole);
+        var result = await _entityCache.GetOrCreateAsync(key, async _ =>
         {
-            throw new KeyNotFoundException($"Family with ID '{id}' not found");
-        }
-
-        // Apply data isolation check
-        if (userRole == "Charity" && userCharityId.HasValue && family.FK_CharityId != userCharityId.Value)
-        {
-            throw new UnauthorizedAccessException("You do not have access to this family");
-        }
-
-        return await MapToFamilyDtoAsync(family);
+            var family = await _familyRepository.IncludeNavigationProperties()
+                .FirstOrDefaultAsync(f => f.Id == id && !f.IsDeleted);
+            if (family == null) throw new KeyNotFoundException($"Family with ID '{id}' not found");
+            if (userRole == "Charity" && userCharityId.HasValue && family.FK_CharityId != userCharityId.Value)
+                throw new UnauthorizedAccessException("You do not have access to this family");
+            return await MapToFamilyDtoAsync(family);
+        });
+        return result;
     }
 
     #endregion
@@ -1672,6 +1717,9 @@ public class FamilyService : IFamilyService
         _familyRepository.Update(family);
         await _unitOfWork.SaveChangesAsync();
 
+        InvalidateFamily(family.Id, family.Code);
+        InvalidateChildren(family.Id);
+        InvalidateParents(family.Id);
         _logger.LogInformation("Family deactivated successfully: {Id}", id);
     }
 
@@ -1761,6 +1809,8 @@ public class FamilyService : IFamilyService
 
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
+            InvalidateFamily(family.Id, family.Code);
+            InvalidateChildren(familyId);
         }
         catch
         {
@@ -1955,6 +2005,18 @@ public class FamilyService : IFamilyService
 
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
+            if (dto.MemberType == 1)
+            {
+                InvalidateChildren(familyId);
+                InvalidateChildren(targetFamily.Id);
+            }
+            else
+            {
+                InvalidateParents(familyId);
+                InvalidateParents(targetFamily.Id);
+            }
+            InvalidateFamily(familyId, family.Code);
+            InvalidateFamily(targetFamily.Id, targetFamily.Code);
         }
         catch
         {
@@ -2100,6 +2162,7 @@ public class FamilyService : IFamilyService
             throw;
         }
 
+        InvalidateParents(familyId);
         _logger.LogInformation(
             "Guardian sponsorship link removed: {LinkDescription} of family {FamilyId} (by {User})",
             linkDescription, familyId, userName ?? "HQ");
@@ -2310,10 +2373,12 @@ public class FamilyService : IFamilyService
 
     public async Task<FamilyDto?> GetByIdAsync(Guid id)
     {
-        var family = await _familyRepository.IncludeNavigationProperties()
-            .FirstOrDefaultAsync(f => f.Id == id && !f.IsDeleted);
-
-        return family == null ? null : await MapToFamilyDtoAsync(family);
+        return await _entityCache.GetOrCreateAsync($"Families:ById:{id}:unscoped", async _ =>
+        {
+            var family = await _familyRepository.IncludeNavigationProperties()
+                .FirstOrDefaultAsync(f => f.Id == id && !f.IsDeleted);
+            return family == null ? null! : await MapToFamilyDtoAsync(family);
+        });
     }
 
     public async Task<FamilyDto?> GetByCodeAsync(string code)
@@ -2329,39 +2394,51 @@ public class FamilyService : IFamilyService
 
     public async Task<IEnumerable<OrphanListDto>> GetFamilyOrphansAsync(Guid familyId)
     {
-        var orphans = await _orphanRepository.GetByFamilyIdAsync(familyId);
-        return orphans.Select(o => new OrphanListDto
+        return await _entityCache.GetOrCreateAsync($"Children:ByFamily:{familyId}:list", async _ =>
         {
-            Id = o.Id,
-            Code = o.Code,
-            FullName = o.FullName,
-            NationalId = o.NationalId,
-            FamilyId = o.FamilyId,
-            FamilyCode = o.Family?.Code,
-            DateOfBirth = o.DateOfBirth,
-            Age = o.DateOfBirth.HasValue ? CalculateAge(o.DateOfBirth.Value) : null,
-            Gender = o.Gender,
-            SponsorshipStatus = o.SponsorshipStatus,
-            IsActive = true
-        }).ToList();
+            var orphans = await _orphanRepository.GetByFamilyIdAsync(familyId);
+            return orphans.Select(o => new OrphanListDto
+            {
+                Id = o.Id,
+                Code = o.Code,
+                FullName = o.FullName,
+                NationalId = o.NationalId,
+                FamilyId = o.FamilyId,
+                FamilyCode = o.Family?.Code,
+                DateOfBirth = o.DateOfBirth,
+                Age = o.DateOfBirth.HasValue ? CalculateAge(o.DateOfBirth.Value) : null,
+                Gender = o.Gender,
+                SponsorshipStatus = o.SponsorshipStatus,
+                IsActive = true
+            }).ToList();
+        });
     }
 
     public async Task<FatherDto?> GetFamilyFatherAsync(Guid familyId)
     {
-        var father = await _fatherRepository.GetByFamilyIdAsync(familyId);
-        return father == null ? null : _mapper.Map<FatherDto>(father);
+        return await _entityCache.GetOrCreateAsync($"Parents:ByFamily:{familyId}:father", async _ =>
+        {
+            var father = await _fatherRepository.GetByFamilyIdAsync(familyId);
+            return father == null ? null! : _mapper.Map<FatherDto>(father);
+        });
     }
 
     public async Task<MotherDto?> GetFamilyMotherAsync(Guid familyId)
     {
-        var mother = await _motherRepository.GetByFamilyIdAsync(familyId);
-        return mother == null ? null : _mapper.Map<MotherDto>(mother);
+        return await _entityCache.GetOrCreateAsync($"Parents:ByFamily:{familyId}:mother", async _ =>
+        {
+            var mother = await _motherRepository.GetByFamilyIdAsync(familyId);
+            return mother == null ? null! : _mapper.Map<MotherDto>(mother);
+        });
     }
 
     public async Task<ProviderDto?> GetFamilyProviderAsync(Guid familyId)
     {
-        var provider = await _providerRepository.GetByFamilyIdAsync(familyId);
-        return provider == null ? null : _mapper.Map<ProviderDto>(provider);
+        return await _entityCache.GetOrCreateAsync($"Parents:ByFamily:{familyId}:provider", async _ =>
+        {
+            var provider = await _providerRepository.GetByFamilyIdAsync(familyId);
+            return provider == null ? null! : _mapper.Map<ProviderDto>(provider);
+        });
     }
 
     #endregion
@@ -2797,6 +2874,17 @@ public class FamilyService : IFamilyService
 
     public async Task<(IEnumerable<OrphanLookupDto> Items, int TotalCount)> SearchOrphansAsync(OrphanSearchFilterDto filter, Guid? userCharityId, string? userRole)
     {
+        var key = QueryCacheKey("Children:Search:", filter, userCharityId, userRole);
+        var page = await _entityCache.GetOrCreateAsync(key, async _ =>
+        {
+            var result = await SearchOrphansUncachedAsync(filter, userCharityId, userRole);
+            return new CachedPage<OrphanLookupDto>(result.Items.ToList(), result.TotalCount);
+        });
+        return (page.Items, page.TotalCount);
+    }
+
+    private async Task<(IEnumerable<OrphanLookupDto> Items, int TotalCount)> SearchOrphansUncachedAsync(OrphanSearchFilterDto filter, Guid? userCharityId, string? userRole)
+    {
         await _orphanSearchValidator.ValidateAndThrowAsync(filter);
 
         // UC-ORP-03: the coding worklist is a head-office function (legacy «Gen. Director, Staff»).
@@ -3185,6 +3273,8 @@ public class FamilyService : IFamilyService
         _orphanRepository.Update(orphan);
         await _unitOfWork.SaveChangesAsync();
 
+        InvalidateChildren(orphan.FamilyId, orphan.Id);
+
         _logger.LogInformation("Code assigned to orphan {OrphanId}: {Code}", orphan.Id, code);
 
         var result = _mapper.Map<OrphanDto>(orphan);
@@ -3503,4 +3593,46 @@ public class FamilyService : IFamilyService
     }
 
     #endregion
+
+    private static string QueryCacheKey(string prefix, object? query, Guid? userCharityId, string? userRole)
+    {
+        var payload = JsonSerializer.Serialize(new { query, userCharityId, userRole });
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
+        return prefix + hash;
+    }
+
+    private void InvalidateFamily(Guid? familyId, string? code = null, bool includeStatistics = true)
+    {
+        if (familyId.HasValue)
+        {
+            var id = familyId.Value;
+            _entityCache.RemovePrefix($"Families:ById:{id}:");
+            _entityCache.RemovePrefix($"Families:HousingDetail:{id}:");
+            _entityCache.RemovePrefix($"Families:HousingBeneficiaries:{id}:");
+        }
+        _entityCache.RemovePrefix("Families:List:");
+        if (includeStatistics) _entityCache.RemovePrefix("Families:Statistics:");
+    }
+
+    private void InvalidateChildren(Guid? familyId, Guid? childId = null)
+    {
+        if (childId.HasValue) _entityCache.RemovePrefix($"Children:ById:{childId.Value}:");
+        if (familyId.HasValue) _entityCache.RemovePrefix($"Children:ByFamily:{familyId.Value}:");
+        _entityCache.RemovePrefix("Children:Search:");
+        InvalidateFamily(familyId, includeStatistics: false);
+    }
+
+    private void InvalidateParents(Guid? familyId, Guid? parentId = null)
+    {
+        if (parentId.HasValue) _entityCache.RemovePrefix($"Parents:ById:{parentId.Value}:");
+        if (familyId.HasValue) _entityCache.RemovePrefix($"Parents:ByFamily:{familyId.Value}:");
+        InvalidateFamily(familyId, includeStatistics: false);
+    }
+
+    private sealed class CachedPage<T>(List<T> items, int totalCount) : ICacheResultPolicy
+    {
+        public List<T> Items { get; } = items;
+        public int TotalCount { get; } = totalCount;
+        public bool ShouldCache => Items.Count > 0;
+    }
 }
